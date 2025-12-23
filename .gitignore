@@ -3,6 +3,8 @@
 # Auto Claude data directory
 .auto-claude/
 
+.worktrees/
+
 # Environment variables (NEVER commit secrets)
 .env
 .env.local
