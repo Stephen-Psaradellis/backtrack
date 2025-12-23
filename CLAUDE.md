@@ -67,8 +67,8 @@ npx eas build --platform all
 
 ### Tech Stack
 
-- **Mobile**: Expo SDK 52, React Native 0.76.5, React 19
-- **Web**: Next.js 15 with App Router, React 19
+- **Mobile**: Expo SDK 52, React Native 0.76.5, React 18.3
+- **Web**: Next.js 15 with App Router, React 18.3
 - **Backend**: Supabase (PostgreSQL with PostGIS, Auth, Realtime, Storage)
 - **Maps**: Google Maps API (Places, Geocoding) via `@vis.gl/react-google-maps`
 - **State**: Zustand (lightweight state management)
