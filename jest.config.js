@@ -1,19 +1,22 @@
-/**
- * Jest configuration for Love Ledger mobile app
- *
- * Uses jest-expo preset for Expo/React Native compatibility.
- */
-
-module.exports = {
+/** @type {import('jest').Config} */
+const config = {
   preset: 'jest-expo',
   testEnvironment: 'node',
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect', '<rootDir>/jest.setup.js'],
+  roots: ['<rootDir>/__tests__'],
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|avataaars)',
   ],
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.json',
+      },
+    ],
+  },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
-    // Handle module aliases
     '^@/(.*)$': '<rootDir>/$1',
   },
   collectCoverageFrom: [
@@ -24,7 +27,9 @@ module.exports = {
     '!**/babel.config.js',
     '!**/jest.config.js',
     '!**/jest.setup.js',
+    '!**/*.d.ts',
   ],
+  coverageDirectory: 'coverage',
   coverageThreshold: {
     global: {
       branches: 50,
@@ -44,4 +49,7 @@ module.exports = {
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
+  verbose: true,
 }
+
+module.exports = config

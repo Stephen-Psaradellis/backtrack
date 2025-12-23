@@ -10,7 +10,7 @@
 !.env.example
 
 # Dependencies
-node_modules/
+/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -36,7 +36,6 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-*.orig.*
 
 # iOS
 ios/Pods/
@@ -70,15 +69,15 @@ local.properties
 # Metro bundler
 .metro-health-check*
 
-# Debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-.pnpm-debug.log*
-
 # Testing
-coverage/
+/coverage
 .jest/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # IDE
 .idea/

@@ -49,6 +49,7 @@ COMMENT ON COLUMN profiles.updated_at IS 'Timestamp when the profile was last up
 -- Create indexes for faster queries
 CREATE INDEX IF NOT EXISTS idx_profiles_updated_at ON profiles(updated_at DESC);
 CREATE INDEX IF NOT EXISTS profiles_username_idx ON profiles(username);
+CREATE INDEX IF NOT EXISTS profiles_updated_at_idx ON profiles(updated_at DESC);
 
 -- ============================================================================
 -- LOCATIONS TABLE
@@ -61,8 +62,8 @@ CREATE TABLE IF NOT EXISTS locations (
     google_place_id TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     address TEXT,
-    latitude DECIMAL(10, 8) NOT NULL,
-    longitude DECIMAL(11, 8) NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
     place_id TEXT,
     place_types TEXT[],
     post_count INTEGER DEFAULT 0 NOT NULL,
@@ -75,8 +76,8 @@ COMMENT ON COLUMN locations.id IS 'Unique identifier for the location';
 COMMENT ON COLUMN locations.google_place_id IS 'Unique identifier from Google Places API';
 COMMENT ON COLUMN locations.name IS 'Name of the venue/location';
 COMMENT ON COLUMN locations.address IS 'Full address of the location';
-COMMENT ON COLUMN locations.latitude IS 'GPS latitude coordinate (10 total digits, 8 after decimal)';
-COMMENT ON COLUMN locations.longitude IS 'GPS longitude coordinate (11 total digits, 8 after decimal)';
+COMMENT ON COLUMN locations.latitude IS 'GPS latitude coordinate';
+COMMENT ON COLUMN locations.longitude IS 'GPS longitude coordinate';
 COMMENT ON COLUMN locations.place_id IS 'Google Maps place ID for venue identification';
 COMMENT ON COLUMN locations.place_types IS 'Array of place types from Google (e.g., gym, cafe)';
 COMMENT ON COLUMN locations.post_count IS 'Count of posts at this location';
@@ -89,6 +90,7 @@ CREATE INDEX IF NOT EXISTS idx_locations_name ON locations(name);
 CREATE INDEX IF NOT EXISTS idx_locations_created_at ON locations(created_at DESC);
 CREATE INDEX IF NOT EXISTS locations_google_place_id_idx ON locations(google_place_id);
 CREATE INDEX IF NOT EXISTS locations_post_count_idx ON locations(post_count DESC);
+CREATE INDEX IF NOT EXISTS locations_name_idx ON locations(name);
 
 -- PostGIS geospatial index for proximity queries
 -- Uses SRID 4326 (WGS 84) which is standard for GPS coordinates
@@ -106,13 +108,13 @@ CREATE TABLE IF NOT EXISTS posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     producer_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
     location_id UUID REFERENCES locations(id) ON DELETE CASCADE NOT NULL,
+    selfie_url TEXT NOT NULL,
     target_avatar JSONB NOT NULL,
-    note TEXT NOT NULL,
-    selfie_url TEXT,
     target_description TEXT,
-    message TEXT,
+    message TEXT NOT NULL,
+    note TEXT,
     seen_at TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT true NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days') NOT NULL
 );
@@ -122,11 +124,11 @@ COMMENT ON TABLE posts IS 'Missed connection posts created by producers at locat
 COMMENT ON COLUMN posts.id IS 'Unique identifier for the post';
 COMMENT ON COLUMN posts.producer_id IS 'User who created this post';
 COMMENT ON COLUMN posts.location_id IS 'Location where this post was created';
+COMMENT ON COLUMN posts.selfie_url IS 'URL to producer''s selfie in Supabase Storage';
 COMMENT ON COLUMN posts.target_avatar IS 'JSONB avatar configuration describing the person of interest';
-COMMENT ON COLUMN posts.note IS 'Anonymous note/message left by the producer';
-COMMENT ON COLUMN posts.selfie_url IS 'Private selfie URL for verification (not publicly visible)';
 COMMENT ON COLUMN posts.target_description IS 'Additional text description';
 COMMENT ON COLUMN posts.message IS 'The note left for the person';
+COMMENT ON COLUMN posts.note IS 'Anonymous note/message left by the producer';
 COMMENT ON COLUMN posts.seen_at IS 'When the producer saw the person of interest';
 COMMENT ON COLUMN posts.created_at IS 'Timestamp when the post was created';
 COMMENT ON COLUMN posts.expires_at IS 'Timestamp when the post expires (defaults to 30 days)';
@@ -135,6 +137,8 @@ COMMENT ON COLUMN posts.is_active IS 'Whether the post is currently active and v
 -- Create indexes for post queries
 CREATE INDEX IF NOT EXISTS idx_posts_producer_id ON posts(producer_id);
 CREATE INDEX IF NOT EXISTS idx_posts_location_id ON posts(location_id);
+CREATE INDEX IF NOT EXISTS posts_location_idx ON posts(location_id);
+CREATE INDEX IF NOT EXISTS posts_producer_idx ON posts(producer_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_expires_at ON posts(expires_at);
 CREATE INDEX IF NOT EXISTS idx_posts_is_active ON posts(is_active) WHERE is_active = true;
@@ -329,30 +333,4 @@ CREATE TRIGGER posts_decrement_location_count
 -- ============================================================================
 
 -- Ensure note has content
-ALTER TABLE posts ADD CONSTRAINT posts_note_not_empty
-    CHECK (LENGTH(TRIM(note)) > 0);
-
--- Ensure target_avatar is a valid JSON object
-ALTER TABLE posts ADD CONSTRAINT posts_target_avatar_is_object
-    CHECK (jsonb_typeof(target_avatar) = 'object');
-
--- Ensure location name has content
-ALTER TABLE locations ADD CONSTRAINT locations_name_not_empty
-    CHECK (LENGTH(TRIM(name)) > 0);
-
--- Ensure latitude is within valid range (-90 to 90)
-ALTER TABLE locations ADD CONSTRAINT locations_latitude_range
-    CHECK (latitude >= -90 AND latitude <= 90);
-
--- Ensure longitude is within valid range (-180 to 180)
-ALTER TABLE locations ADD CONSTRAINT locations_longitude_range
-    CHECK (longitude >= -180 AND longitude <= 180);
-
--- ============================================================================
--- INITIAL SETUP NOTES
--- ============================================================================
--- After running this migration:
--- 1. Run 004_rls_policies.sql to enable Row Level Security
--- 2. Configure storage buckets via 005_storage_policies.sql
--- 3. Test that profile is auto-created when user signs up
--- ============================================================================
+ALTER TABLE posts ADD CONSTRAINT posts_message_not_empty CHECK (LENGTH(TRIM(message)) > 0);

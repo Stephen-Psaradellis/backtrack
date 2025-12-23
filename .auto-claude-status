@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "009-split-chatscreen-tsx-into-smaller-focused-componen",
+  "spec": "011-virtualize-avatarbuilder-option-previews-to-reduce",
   "state": "building",
   "subtasks": {
-    "completed": 0,
-    "total": 0,
+    "completed": 6,
+    "total": 14,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "",
-    "id": 0,
-    "total": 0
+    "current": "Lazy Loading Enhancement",
+    "id": null,
+    "total": 2
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 14,
-    "started_at": "2025-12-23T09:56:13.607724"
+    "number": 8,
+    "started_at": "2025-12-23T09:56:18.047622"
   },
-  "last_update": "2025-12-23T11:10:19.273401"
+  "last_update": "2025-12-23T10:21:38.653490"
 }

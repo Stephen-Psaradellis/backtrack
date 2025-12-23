@@ -270,10 +270,10 @@ export interface AvatarConfig {
   avatarStyle?: AvatarStyle
   /** Hair/hat style */
   topType?: TopType
-  /** Hair color (applicable when topType is a hair style) */
-  hairColor?: HairColor
   /** Glasses or other face accessories */
   accessoriesType?: AccessoriesType
+  /** Hair color (applicable when topType is a hair style) */
+  hairColor?: HairColor
   /** Facial hair style (beard, moustache) */
   facialHairType?: FacialHairType
   /** Facial hair color */
@@ -307,8 +307,8 @@ export type PartialAvatarConfig = Partial<AvatarConfig>
 export const DEFAULT_AVATAR_CONFIG: Required<AvatarConfig> = {
   avatarStyle: 'Circle',
   topType: 'ShortHairShortFlat',
-  hairColor: 'Brown',
   accessoriesType: 'Blank',
+  hairColor: 'Brown',
   facialHairType: 'Blank',
   facialHairColor: 'Brown',
   clotheType: 'ShirtCrewNeck',
@@ -316,7 +316,7 @@ export const DEFAULT_AVATAR_CONFIG: Required<AvatarConfig> = {
   graphicType: 'Bat',
   eyeType: 'Default',
   eyebrowType: 'Default',
-  mouthType: 'Smile',
+  mouthType: 'Default',
   skinColor: 'Light',
 }
 
@@ -348,9 +348,9 @@ export const AVATAR_OPTIONS = {
     'LongHairFrida',
     'LongHairFro',
     'LongHairFroBand',
+    'LongHairMiaWallace',
     'LongHairNotTooLong',
     'LongHairShavedSides',
-    'LongHairMiaWallace',
     'LongHairStraight',
     'LongHairStraight2',
     'LongHairStraightStrand',
@@ -367,6 +367,16 @@ export const AVATAR_OPTIONS = {
     'ShortHairTheCaesarSidePart',
   ] as const satisfies readonly TopType[],
 
+  accessoriesType: [
+    'Blank',
+    'Kurt',
+    'Prescription01',
+    'Prescription02',
+    'Round',
+    'Sunglasses',
+    'Wayfarers',
+  ] as const satisfies readonly AccessoriesType[],
+
   hairColor: [
     'Auburn',
     'Black',
@@ -380,16 +390,6 @@ export const AVATAR_OPTIONS = {
     'Red',
     'SilverGray',
   ] as const satisfies readonly HairColor[],
-
-  accessoriesType: [
-    'Blank',
-    'Kurt',
-    'Prescription01',
-    'Prescription02',
-    'Round',
-    'Sunglasses',
-    'Wayfarers',
-  ] as const satisfies readonly AccessoriesType[],
 
   facialHairType: [
     'Blank',
@@ -521,20 +521,20 @@ export type AvatarAttribute = keyof AvatarConfig
 /**
  * Human-readable labels for avatar attributes (for UI)
  */
-export const AVATAR_ATTRIBUTE_LABELS: Record<AvatarAttribute, string> = {
+export const AVATAR_OPTION_LABELS: Record<AvatarAttribute, string> = {
   avatarStyle: 'Style',
-  topType: 'Hair/Hat Style',
-  hairColor: 'Hair Color',
+  topType: 'Hair / Head',
   accessoriesType: 'Accessories',
+  hairColor: 'Hair Color',
   facialHairType: 'Facial Hair',
   facialHairColor: 'Facial Hair Color',
-  clotheType: 'Clothing',
-  clotheColor: 'Clothing Color',
+  clotheType: 'Clothes',
+  clotheColor: 'Clothes Color',
   graphicType: 'Graphic',
   eyeType: 'Eyes',
   eyebrowType: 'Eyebrows',
   mouthType: 'Mouth',
-  skinColor: 'Skin Tone',
+  skinColor: 'Skin Color',
 }
 
 /**
