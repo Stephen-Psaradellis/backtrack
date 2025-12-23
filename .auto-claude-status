@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "004-document-supabase-database-schema-and-rls-policies",
+  "spec": "005-add-developer-getting-started-guide",
   "state": "building",
   "subtasks": {
-    "completed": 14,
-    "total": 17,
+    "completed": 3,
+    "total": 12,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Functions and Triggers Documentation",
+    "current": "Create CONTRIBUTING.md Guide",
     "id": null,
-    "total": 1
+    "total": 8
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 16,
-    "started_at": "2025-12-23T00:46:53.119009"
+    "number": 5,
+    "started_at": "2025-12-23T00:46:59.994569"
   },
-  "last_update": "2025-12-23T02:10:25.728863"
+  "last_update": "2025-12-23T01:04:00.026738"
 }
