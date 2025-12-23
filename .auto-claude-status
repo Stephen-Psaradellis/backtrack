@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "003-add-architecture-overview-documentation",
+  "spec": "004-document-supabase-database-schema-and-rls-policies",
   "state": "building",
   "subtasks": {
-    "completed": 5,
-    "total": 9,
+    "completed": 14,
+    "total": 17,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Technical Architecture Documentation",
+    "current": "Functions and Triggers Documentation",
     "id": null,
-    "total": 3
+    "total": 1
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 7,
-    "started_at": "2025-12-23T00:46:50.760267"
+    "number": 16,
+    "started_at": "2025-12-23T00:46:53.119009"
   },
-  "last_update": "2025-12-23T01:15:32.411316"
+  "last_update": "2025-12-23T02:10:25.728863"
 }
