@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "008-add-unit-tests-for-critical-business-logic-and-hoo",
+  "spec": "009-split-chatscreen-tsx-into-smaller-focused-componen",
   "state": "building",
   "subtasks": {
-    "completed": 18,
-    "total": 19,
+    "completed": 0,
+    "total": 0,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Verification and Coverage",
-    "id": null,
-    "total": 2
+    "current": "",
+    "id": 0,
+    "total": 0
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 20,
-    "started_at": "2025-12-23T09:56:09.688188"
+    "number": 14,
+    "started_at": "2025-12-23T09:56:13.607724"
   },
-  "last_update": "2025-12-23T11:03:58.900914"
+  "last_update": "2025-12-23T11:10:19.273401"
 }

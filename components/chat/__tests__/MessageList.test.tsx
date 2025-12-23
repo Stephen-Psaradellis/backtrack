@@ -1,0 +1,371 @@
+/**
+ * MessageList Component Tests
+ *
+ * Tests for the MessageList component including:
+ * - Rendering messages list
+ * - Empty state display
+ * - Date separators
+ * - Loading states
+ * - Scroll behavior
+ * - Typing indicator display
+ * - Accessibility requirements
+ */
+
+import React from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { MessageList } from '../MessageList'
+import type { MessageWithSender } from '../../../types/chat'
+import type { UUID } from '../../../types/database'
+
+// Mock CSS module
+jest.mock('../styles/ChatScreen.module.css', () => ({
+  messageListContainer: 'messageListContainer',
+  loadMoreTrigger: 'loadMoreTrigger',
+  loadingMoreContainer: 'loadingMoreContainer',
+  spinner: 'spinner',
+  loadingMoreText: 'loadingMoreText',
+  emptyState: 'emptyState',
+  emptyStateIcon: 'emptyStateIcon',
+  emptyStateText: 'emptyStateText',
+  messagesList: 'messagesList',
+  messageWrapper: 'messageWrapper',
+  dateSeparator: 'dateSeparator',
+  dateSeparatorLine: 'dateSeparatorLine',
+  dateSeparatorText: 'dateSeparatorText',
+  scrollAnchor: 'scrollAnchor',
+}))
+
+// Mock MessageBubble component
+jest.mock('../MessageBubble', () => ({
+  MessageBubble: jest.fn(({ message, isOwn }) => (
+    <div data-testid={`message-${message.id}`} data-is-own={isOwn}>
+      {message.content}
+    </div>
+  )),
+}))
+
+// Mock TypingIndicator component
+jest.mock('../TypingIndicator', () => ({
+  TypingIndicator: jest.fn(({ isTyping, username }) =>
+    isTyping ? <div data-testid="typing-indicator">{username} is typing...</div> : null
+  ),
+}))
+
+// Mock formatters
+jest.mock('../utils/formatters', () => ({
+  shouldShowDateSeparator: jest.fn((current, previous) => !previous),
+  getDateSeparatorText: jest.fn(() => 'Today'),
+}))
+
+// Mock IntersectionObserver
+const mockIntersectionObserver = jest.fn()
+mockIntersectionObserver.mockReturnValue({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+})
+window.IntersectionObserver = mockIntersectionObserver
+
+// Test data
+const mockCurrentUserId = 'user-123' as UUID
+
+const createMockMessage = (
+  id: string,
+  senderId: string,
+  content: string,
+  createdAt: string
+): MessageWithSender => ({
+  id: id as UUID,
+  conversation_id: 'conv-123' as UUID,
+  sender_id: senderId as UUID,
+  content,
+  is_read: false,
+  created_at: createdAt,
+  sender: {
+    id: senderId as UUID,
+    username: senderId === mockCurrentUserId ? 'You' : 'OtherUser',
+    avatar_config: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
+})
+
+const createMockMessages = (count: number): MessageWithSender[] => {
+  return Array.from({ length: count }, (_, i) => {
+    const isOwn = i % 2 === 0
+    return createMockMessage(
+      `msg-${i}`,
+      isOwn ? mockCurrentUserId : 'other-user',
+      `Message ${i}`,
+      `2024-01-15T10:${String(i).padStart(2, '0')}:00Z`
+    )
+  })
+}
+
+const defaultProps = {
+  messages: [] as MessageWithSender[],
+  currentUserId: mockCurrentUserId,
+  isLoadingMore: false,
+  hasMoreMessages: false,
+  isOtherUserTyping: false,
+  otherUserName: 'OtherUser',
+  onLoadMore: jest.fn(),
+  onRetryMessage: jest.fn(),
+  onDeleteMessage: jest.fn(),
+}
+
+describe('MessageList', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  describe('Basic Rendering', () => {
+    it('should render with role="log"', () => {
+      render(<MessageList {...defaultProps} />)
+
+      expect(screen.getByRole('log')).toBeInTheDocument()
+    })
+
+    it('should have aria-label for chat messages', () => {
+      render(<MessageList {...defaultProps} />)
+
+      expect(screen.getByRole('log')).toHaveAttribute('aria-label', 'Chat messages')
+    })
+
+    it('should have aria-live="polite"', () => {
+      render(<MessageList {...defaultProps} />)
+
+      expect(screen.getByRole('log')).toHaveAttribute('aria-live', 'polite')
+    })
+  })
+
+  describe('Empty State', () => {
+    it('should show empty state when no messages', () => {
+      render(<MessageList {...defaultProps} messages={[]} />)
+
+      expect(screen.getByText('No messages yet. Start the conversation!')).toBeInTheDocument()
+    })
+
+    it('should not show empty state when loading', () => {
+      render(<MessageList {...defaultProps} messages={[]} isLoadingMore={true} />)
+
+      expect(screen.queryByText('No messages yet. Start the conversation!')).not.toBeInTheDocument()
+    })
+
+    it('should not show empty state when messages exist', () => {
+      render(<MessageList {...defaultProps} messages={createMockMessages(3)} />)
+
+      expect(screen.queryByText('No messages yet. Start the conversation!')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Message Rendering', () => {
+    it('should render all messages', () => {
+      const messages = createMockMessages(3)
+      render(<MessageList {...defaultProps} messages={messages} />)
+
+      expect(screen.getByTestId('message-msg-0')).toBeInTheDocument()
+      expect(screen.getByTestId('message-msg-1')).toBeInTheDocument()
+      expect(screen.getByTestId('message-msg-2')).toBeInTheDocument()
+    })
+
+    it('should correctly identify own messages', () => {
+      const messages = createMockMessages(2)
+      render(<MessageList {...defaultProps} messages={messages} />)
+
+      // First message (even index) should be own message
+      expect(screen.getByTestId('message-msg-0')).toHaveAttribute('data-is-own', 'true')
+      // Second message (odd index) should be from other user
+      expect(screen.getByTestId('message-msg-1')).toHaveAttribute('data-is-own', 'false')
+    })
+
+    it('should display message content', () => {
+      const messages = createMockMessages(2)
+      render(<MessageList {...defaultProps} messages={messages} />)
+
+      expect(screen.getByText('Message 0')).toBeInTheDocument()
+      expect(screen.getByText('Message 1')).toBeInTheDocument()
+    })
+  })
+
+  describe('Date Separators', () => {
+    it('should render date separator for first message', () => {
+      const { shouldShowDateSeparator } = require('../utils/formatters')
+      shouldShowDateSeparator.mockReturnValue(true)
+
+      const messages = createMockMessages(1)
+      render(<MessageList {...defaultProps} messages={messages} />)
+
+      expect(screen.getByRole('separator')).toBeInTheDocument()
+      expect(screen.getByText('Today')).toBeInTheDocument()
+    })
+
+    it('should have separator with role="separator"', () => {
+      const { shouldShowDateSeparator } = require('../utils/formatters')
+      shouldShowDateSeparator.mockReturnValue(true)
+
+      const messages = createMockMessages(1)
+      render(<MessageList {...defaultProps} messages={messages} />)
+
+      expect(screen.getByRole('separator')).toBeInTheDocument()
+    })
+  })
+
+  describe('Loading States', () => {
+    it('should show loading indicator when loading more', () => {
+      render(<MessageList {...defaultProps} isLoadingMore={true} />)
+
+      expect(screen.getByText('Loading older messages...')).toBeInTheDocument()
+    })
+
+    it('should show loading spinner with role="status"', () => {
+      render(<MessageList {...defaultProps} isLoadingMore={true} />)
+
+      expect(screen.getByRole('status')).toBeInTheDocument()
+    })
+
+    it('should not show loading indicator when not loading', () => {
+      render(<MessageList {...defaultProps} isLoadingMore={false} />)
+
+      expect(screen.queryByText('Loading older messages...')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Load More Trigger', () => {
+    it('should render load more trigger when hasMoreMessages is true', () => {
+      const { container } = render(
+        <MessageList {...defaultProps} hasMoreMessages={true} />
+      )
+
+      expect(container.querySelector('.loadMoreTrigger')).toBeInTheDocument()
+    })
+
+    it('should not render load more trigger when hasMoreMessages is false', () => {
+      const { container } = render(
+        <MessageList {...defaultProps} hasMoreMessages={false} />
+      )
+
+      expect(container.querySelector('.loadMoreTrigger')).not.toBeInTheDocument()
+    })
+
+    it('should set up IntersectionObserver for load more', () => {
+      render(<MessageList {...defaultProps} hasMoreMessages={true} />)
+
+      expect(mockIntersectionObserver).toHaveBeenCalled()
+    })
+  })
+
+  describe('Typing Indicator', () => {
+    it('should show typing indicator when other user is typing', () => {
+      render(<MessageList {...defaultProps} isOtherUserTyping={true} />)
+
+      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
+      expect(screen.getByText('OtherUser is typing...')).toBeInTheDocument()
+    })
+
+    it('should not show typing indicator when other user is not typing', () => {
+      render(<MessageList {...defaultProps} isOtherUserTyping={false} />)
+
+      expect(screen.queryByTestId('typing-indicator')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Scroll Behavior', () => {
+    it('should handle scroll events', () => {
+      const { container } = render(
+        <MessageList {...defaultProps} messages={createMockMessages(10)} hasMoreMessages={true} />
+      )
+
+      const scrollContainer = container.querySelector('.messageListContainer')
+      expect(scrollContainer).toBeInTheDocument()
+
+      // Simulate scroll event
+      fireEvent.scroll(scrollContainer!)
+    })
+  })
+
+  describe('Callback Props', () => {
+    it('should pass onRetryMessage to MessageBubble', () => {
+      const { MessageBubble } = require('../MessageBubble')
+      const onRetryMessage = jest.fn()
+      const messages = createMockMessages(1)
+
+      render(<MessageList {...defaultProps} messages={messages} onRetryMessage={onRetryMessage} />)
+
+      expect(MessageBubble).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onRetry: onRetryMessage,
+        }),
+        expect.anything()
+      )
+    })
+
+    it('should pass onDeleteMessage to MessageBubble', () => {
+      const { MessageBubble } = require('../MessageBubble')
+      const onDeleteMessage = jest.fn()
+      const messages = createMockMessages(1)
+
+      render(<MessageList {...defaultProps} messages={messages} onDeleteMessage={onDeleteMessage} />)
+
+      expect(MessageBubble).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onDelete: onDeleteMessage,
+        }),
+        expect.anything()
+      )
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('should have proper ARIA attributes on container', () => {
+      render(<MessageList {...defaultProps} />)
+
+      const container = screen.getByRole('log')
+      expect(container).toHaveAttribute('aria-label', 'Chat messages')
+      expect(container).toHaveAttribute('aria-live', 'polite')
+    })
+
+    it('should have aria-hidden on load more trigger', () => {
+      const { container } = render(
+        <MessageList {...defaultProps} hasMoreMessages={true} />
+      )
+
+      const trigger = container.querySelector('.loadMoreTrigger')
+      expect(trigger).toHaveAttribute('aria-hidden', 'true')
+    })
+
+    it('should have aria-live="polite" on loading indicator', () => {
+      render(<MessageList {...defaultProps} isLoadingMore={true} />)
+
+      expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should handle large number of messages', () => {
+      const messages = createMockMessages(100)
+      render(<MessageList {...defaultProps} messages={messages} />)
+
+      expect(screen.getByTestId('message-msg-0')).toBeInTheDocument()
+      expect(screen.getByTestId('message-msg-99')).toBeInTheDocument()
+    })
+
+    it('should handle messages with same timestamp', () => {
+      const messages = [
+        createMockMessage('msg-1', 'other-user', 'First', '2024-01-15T10:00:00Z'),
+        createMockMessage('msg-2', mockCurrentUserId, 'Second', '2024-01-15T10:00:00Z'),
+      ]
+
+      render(<MessageList {...defaultProps} messages={messages} />)
+
+      expect(screen.getByText('First')).toBeInTheDocument()
+      expect(screen.getByText('Second')).toBeInTheDocument()
+    })
+
+    it('should handle empty username', () => {
+      render(<MessageList {...defaultProps} otherUserName="" isOtherUserTyping={true} />)
+
+      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
+    })
+  })
+})

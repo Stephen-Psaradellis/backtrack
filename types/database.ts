@@ -45,15 +45,6 @@ export interface Profile {
 }
 
 /**
- * Fields that can be updated on a profile
- */
-export interface ProfileUpdate {
-  username?: string | null
-  avatar_config?: AvatarConfig | null
-  updated_at?: Timestamp
-}
-
-/**
  * Fields required when inserting a new profile
  */
 export interface ProfileInsert {
@@ -61,6 +52,15 @@ export interface ProfileInsert {
   username?: string | null
   avatar_config?: AvatarConfig | null
   created_at?: Timestamp
+  updated_at?: Timestamp
+}
+
+/**
+ * Fields that can be updated on a profile
+ */
+export interface ProfileUpdate {
+  username?: string | null
+  avatar_config?: AvatarConfig | null
   updated_at?: Timestamp
 }
 
@@ -96,19 +96,6 @@ export interface Location {
 }
 
 /**
- * Fields that can be updated on a location
- */
-export interface LocationUpdate {
-  google_place_id?: string
-  name?: string
-  address?: string | null
-  latitude?: number
-  longitude?: number
-  place_types?: string[]
-  post_count?: number
-}
-
-/**
  * Fields required when inserting a new location
  */
 export interface LocationInsert {
@@ -121,6 +108,19 @@ export interface LocationInsert {
   place_types?: string[]
   post_count?: number
   created_at?: Timestamp
+}
+
+/**
+ * Fields that can be updated on a location
+ */
+export interface LocationUpdate {
+  google_place_id?: string
+  name?: string
+  address?: string | null
+  latitude?: number
+  longitude?: number
+  place_types?: string[]
+  post_count?: number
 }
 
 // ============================================================================
@@ -159,19 +159,6 @@ export interface Post {
 }
 
 /**
- * Fields that can be updated on a post
- */
-export interface PostUpdate {
-  selfie_url?: string
-  target_avatar?: AvatarConfig
-  target_description?: string | null
-  message?: string
-  seen_at?: Timestamp | null
-  is_active?: boolean
-  expires_at?: Timestamp
-}
-
-/**
  * Fields required when inserting a new post
  */
 export interface PostInsert {
@@ -189,26 +176,16 @@ export interface PostInsert {
 }
 
 /**
- * Post with expanded location and profile data
- * Used for displaying posts in the ledger
+ * Fields that can be updated on a post
  */
-export interface PostWithDetails extends Post {
-  location: Location
-  producer: Profile
-}
-
-/**
- * Post with location information
- */
-export interface PostWithLocation extends Post {
-  location: Location
-}
-
-/**
- * Post with producer information
- */
-export interface PostWithProducer extends Post {
-  producer: Profile
+export interface PostUpdate {
+  selfie_url?: string
+  target_avatar?: AvatarConfig
+  target_description?: string | null
+  message?: string
+  seen_at?: Timestamp | null
+  is_active?: boolean
+  expires_at?: Timestamp
 }
 
 // ============================================================================
@@ -246,15 +223,6 @@ export interface Conversation {
 }
 
 /**
- * Fields that can be updated on a conversation
- */
-export interface ConversationUpdate {
-  status?: ConversationStatus
-  producer_accepted?: boolean
-  updated_at?: Timestamp
-}
-
-/**
  * Fields required when inserting a new conversation
  */
 export interface ConversationInsert {
@@ -269,23 +237,12 @@ export interface ConversationInsert {
 }
 
 /**
- * Conversation with expanded related data
- * Used for displaying in chat list
+ * Fields that can be updated on a conversation
  */
-export interface ConversationWithDetails extends Conversation {
-  post: Pick<Post, 'id' | 'target_avatar' | 'message'>
-  other_user?: Pick<Profile, 'id' | 'username' | 'avatar_config'>
-  last_message?: Pick<Message, 'content' | 'created_at' | 'sender_id'>
-  unread_count?: number
-}
-
-/**
- * Conversation with all participants and related data
- */
-export interface ConversationWithParticipants extends Conversation {
-  producer: Profile
-  consumer: Profile
-  post: Post
+export interface ConversationUpdate {
+  status?: ConversationStatus
+  producer_accepted?: boolean
+  updated_at?: Timestamp
 }
 
 // ============================================================================
@@ -313,14 +270,6 @@ export interface Message {
 }
 
 /**
- * Fields that can be updated on a message
- */
-export interface MessageUpdate {
-  content?: string
-  is_read?: boolean
-}
-
-/**
  * Fields required when inserting a new message
  */
 export interface MessageInsert {
@@ -333,10 +282,11 @@ export interface MessageInsert {
 }
 
 /**
- * Message with sender information
+ * Fields that can be updated on a message
  */
-export interface MessageWithSender extends Message {
-  sender: Profile
+export interface MessageUpdate {
+  content?: string
+  is_read?: boolean
 }
 
 // ============================================================================
@@ -369,13 +319,6 @@ export interface Notification {
 }
 
 /**
- * Fields that can be updated on a notification
- */
-export interface NotificationUpdate {
-  is_read?: boolean
-}
-
-/**
  * Fields required when inserting a new notification
  */
 export interface NotificationInsert {
@@ -388,11 +331,10 @@ export interface NotificationInsert {
 }
 
 /**
- * Notification with related data
+ * Fields that can be updated on a notification
  */
-export interface NotificationWithReference extends Notification {
-  conversation?: Conversation
-  post?: Post
+export interface NotificationUpdate {
+  is_read?: boolean
 }
 
 // ============================================================================
@@ -422,6 +364,26 @@ export interface BlockInsert {
   blocked_id: UUID
 }
 
+/**
+ * Alternative block type with explicit ID field
+ */
+export interface BlockedUser {
+  id: UUID
+  blocker_id: UUID
+  blocked_id: UUID
+  created_at: Timestamp
+}
+
+/**
+ * Fields required when inserting a new blocked user
+ */
+export interface BlockedUserInsert {
+  id?: UUID
+  blocker_id: UUID
+  blocked_id: UUID
+  created_at?: Timestamp
+}
+
 // ============================================================================
 // REPORTS
 // ============================================================================
@@ -446,7 +408,7 @@ export interface Report {
   /** Unique identifier for the report */
   id: UUID
   /** User who submitted the report */
-reporter_id: UUID
+  reporter_id: UUID
   /** Type of entity being reported: post, message, or user */
   reported_type: ReportedType
   /** UUID of the reported entity (post, message, or user) */
@@ -464,14 +426,6 @@ reporter_id: UUID
 }
 
 /**
- * Fields that can be updated on a report (for moderation)
- */
-export interface ReportUpdate {
-  status?: ReportStatus
-  reviewed_at?: Timestamp
-}
-
-/**
  * Fields required when inserting a new report
  */
 export interface ReportInsert {
@@ -480,6 +434,110 @@ export interface ReportInsert {
   reported_id: UUID
   reason: string
   additional_details?: string | null
+}
+
+/**
+ * Fields that can be updated on a report (for moderation)
+ */
+export interface ReportUpdate {
+  status?: ReportStatus
+  reviewed_at?: Timestamp
+}
+
+/**
+ * Alternative report type with predefined reasons
+ */
+export type ReportReason =
+  | 'spam'
+  | 'harassment'
+  | 'inappropriate_content'
+  | 'fake_profile'
+  | 'other'
+
+/**
+ * Simplified user report type
+ */
+export interface UserReport {
+  id: UUID
+  reporter_id: UUID
+  reported_id: UUID
+  reason: ReportReason
+  details: string | null
+  created_at: Timestamp
+}
+
+/**
+ * Fields required when inserting a new user report
+ */
+export interface UserReportInsert {
+  id?: UUID
+  reporter_id: UUID
+  reported_id: UUID
+  reason: ReportReason
+  details?: string | null
+  created_at?: Timestamp
+}
+
+// ============================================================================
+// JOINED TYPES (for queries with relations)
+// ============================================================================
+
+/**
+ * Post with location information
+ */
+export interface PostWithLocation extends Post {
+  location: Location
+}
+
+/**
+ * Post with producer information
+ */
+export interface PostWithProducer extends Post {
+  producer: Profile
+}
+
+/**
+ * Post with expanded location and profile data
+ * Used for displaying posts in the ledger
+ */
+export interface PostWithDetails extends Post {
+  location: Location
+  producer: Profile
+}
+
+/**
+ * Conversation with expanded related data
+ * Used for displaying in chat list
+ */
+export interface ConversationWithDetails extends Conversation {
+  post: Pick<Post, 'id' | 'target_avatar' | 'message'>
+  other_user?: Pick<Profile, 'id' | 'username' | 'avatar_config'>
+  last_message?: Pick<Message, 'content' | 'created_at' | 'sender_id'>
+  unread_count?: number
+}
+
+/**
+ * Conversation with all participants and related data
+ */
+export interface ConversationWithParticipants extends Conversation {
+  producer: Profile
+  consumer: Profile
+  post: Post
+}
+
+/**
+ * Message with sender information
+ */
+export interface MessageWithSender extends Message {
+  sender: Profile
+}
+
+/**
+ * Notification with related data
+ */
+export interface NotificationWithReference extends Notification {
+  conversation?: Conversation
+  post?: Post
 }
 
 // ============================================================================
@@ -530,10 +588,20 @@ export interface Database {
         Insert: BlockInsert
         Update: never // Blocks cannot be updated, only inserted or deleted
       }
+      blocked_users: {
+        Row: BlockedUser
+        Insert: BlockedUserInsert
+        Update: never
+      }
       reports: {
         Row: Report
         Insert: ReportInsert
         Update: ReportUpdate
+      }
+      user_reports: {
+        Row: UserReport
+        Insert: UserReportInsert
+        Update: never
       }
     }
     Views: Record<string, never>
@@ -589,40 +657,9 @@ export interface Database {
         Returns: UUID
       }
       get_report_count: {
-        Args: { p_reported_type: ReportedType; p_reported_id: UUID }
+        Args: { p_reported_type: ReportedType }
         Returns: number
       }
-      has_user_reported: {
-        Args: {
-          p_reporter_id: UUID
-          p_reported_type: ReportedType
-          p_reported_id: UUID
-        }
-        Returns: boolean
-      }
     }
-    Enums: Record<string, never>
   }
 }
-
-// ============================================================================
-// TYPE HELPERS
-// ============================================================================
-
-/**
- * Extract table row type from Database
- */
-export type TableRow<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Row']
-
-/**
- * Extract table insert type from Database
- */
-export type TableInsert<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Insert']
-
-/**
- * Extract table update type from Database
- */
-export type TableUpdate<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Update']

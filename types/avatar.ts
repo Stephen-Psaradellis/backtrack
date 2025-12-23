@@ -316,7 +316,7 @@ export const DEFAULT_AVATAR_CONFIG: Required<AvatarConfig> = {
   graphicType: 'Bat',
   eyeType: 'Default',
   eyebrowType: 'Default',
-  mouthType: 'Default',
+  mouthType: 'Smile',
   skinColor: 'Light',
 }
 

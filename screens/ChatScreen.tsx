@@ -2,7 +2,8 @@
  * ChatScreen
  *
  * Displays an anonymous chat conversation between a post producer and consumer.
- * Supports real-time message display, message input, and sending new messages.
+ * This component has been refactored to use smaller focused components and custom hooks
+ * while maintaining all original functionality.
  *
  * Features:
  * - Message list with ChatBubble components
@@ -12,27 +13,16 @@
  * - Pull-to-refresh for message history
  * - Keyboard-aware scrolling
  * - Message grouping with date separators
- * - **User's own avatar** displayed next to their sent messages
- * - **Supabase Realtime subscription** for live message updates from other user
- * - **User blocking** via header menu or message long-press
- * - **Content reporting** via header menu (report user) or message long-press (report message)
+ * - User's own avatar displayed next to their sent messages
+ * - Supabase Realtime subscription for live message updates from other user
+ * - User blocking via header menu or message long-press
+ * - Content reporting via header menu (report user) or message long-press (report message)
  *
- * Real-time Implementation:
- * - Subscribes to postgres_changes on the messages table filtered by conversation_id
- * - Incoming messages from other users are immediately added to the message list
- * - Own messages are added optimistically when sent (no duplicate handling needed)
- * - Subscription is cleaned up when component unmounts or conversation changes
- *
- * Blocking Implementation:
- * - Block user option in header menu (⋮ button) and message long-press
- * - Calls blockUser() from lib/moderation.ts which deactivates conversations
- * - After successful block, navigates back to previous screen
- *
- * Reporting Implementation:
- * - Report user option in header menu (⋮ button)
- * - Report message option in message long-press menu
- * - Uses ReportModal component with reason selection and optional details
- * - Calls submitReport() from lib/moderation.ts to save report to database
+ * Architecture:
+ * This component orchestrates chat functionality using:
+ * - Smaller focused UI components (ChatBubble, DateSeparator, etc.)
+ * - Custom hooks for logic separation (message fetching, sending, blocking, reporting)
+ * - Distributed state management for better separation of concerns
  *
  * @example
  * ```tsx
@@ -75,7 +65,7 @@ import {
   getOtherUserId,
   CONVERSATION_ERRORS,
 } from '../lib/conversations'
-import { blockUser, MODERATION_ERRORS } from '../lib/moderation'
+import { blockUser, submitReport, MODERATION_ERRORS } from '../lib/moderation'
 import type { ChatRouteProp, MainStackNavigationProp } from '../navigation/types'
 import type { Message, Conversation, MessageInsert } from '../types/database'
 import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/supabase-js'
@@ -90,16 +80,13 @@ import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/s
 interface MessageListItem {
   type: 'message' | 'separator'
   id: string
-  data: Message | string // Message for 'message' type, date string for 'separator'
+  data: Message | string
 }
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-/**
- * Colors used in the ChatScreen
- */
 const COLORS = {
   primary: '#007AFF',
   background: '#F2F2F7',
@@ -113,167 +100,24 @@ const COLORS = {
   error: '#FF3B30',
 } as const
 
-/**
- * Maximum message length
- */
 const MAX_MESSAGE_LENGTH = 10000
-
-/**
- * Number of messages to load per page
- */
 const MESSAGES_PER_PAGE = 50
 
 // ============================================================================
-// COMPONENT
+// CUSTOM HOOKS
 // ============================================================================
 
 /**
- * ChatScreen - Anonymous conversation between producer and consumer
- *
- * Fetches conversation and messages from Supabase,
- * displays messages in a scrollable list,
- * and provides input for sending new messages.
+ * Hook for managing chat messages, pagination, and realtime subscriptions
  */
-export function ChatScreen(): JSX.Element {
-  // ---------------------------------------------------------------------------
-  // HOOKS
-  // ---------------------------------------------------------------------------
-
-  const route = useRoute<ChatRouteProp>()
-  const navigation = useNavigation<MainStackNavigationProp>()
-  const { userId, profile } = useAuth()
-
-  const { conversationId } = route.params
-
-  // ---------------------------------------------------------------------------
-  // REFS
-  // ---------------------------------------------------------------------------
-
-  const flatListRef = useRef<FlatList<MessageListItem>>(null)
-  const inputRef = useRef<TextInput>(null)
-  const realtimeChannelRef = useRef<RealtimeChannel | null>(null)
-
-  // ---------------------------------------------------------------------------
-  // STATE
-  // ---------------------------------------------------------------------------
-
-  const [conversation, setConversation] = useState<Conversation | null>(null)
+function useChatMessages(conversationId: string, userId: string | null) {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [messageText, setMessageText] = useState('')
-  const [sending, setSending] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [blocking, setBlocking] = useState(false)
-  const [reportModalVisible, setReportModalVisible] = useState(false)
-  const [messageToReport, setMessageToReport] = useState<Message | null>(null)
-  const [userReportModalVisible, setUserReportModalVisible] = useState(false)
+  const realtimeChannelRef = useRef<RealtimeChannel | null>(null)
 
-  // ---------------------------------------------------------------------------
-  // COMPUTED VALUES
-  // ---------------------------------------------------------------------------
-
-  /**
-   * User's role in the conversation
-   */
-  const userRole = useMemo(() => {
-    if (!conversation || !userId) return null
-    return getUserRole(conversation, userId)
-  }, [conversation, userId])
-
-  /**
-   * The other participant's user ID
-   */
-  const otherUserId = useMemo(() => {
-    if (!conversation || !userId) return null
-    return getOtherUserId(conversation, userId)
-  }, [conversation, userId])
-
-  /**
-   * Whether the send button should be enabled
-   */
-  const canSend = useMemo(() => {
-    const trimmedMessage = messageText.trim()
-    return (
-      trimmedMessage.length > 0 &&
-      trimmedMessage.length <= MAX_MESSAGE_LENGTH &&
-      !sending &&
-      !error &&
-      conversation?.is_active
-    )
-  }, [messageText, sending, error, conversation])
-
-  /**
-   * Process messages into list items with date separators
-   */
-  const messageListItems = useMemo((): MessageListItem[] => {
-    if (messages.length === 0) return []
-
-    const items: MessageListItem[] = []
-
-    // Messages are sorted newest first (for inverted FlatList)
-    // So we iterate backwards to add date separators correctly
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const message = messages[i]
-      const prevMessage = i < messages.length - 1 ? messages[i + 1] : null
-      const prevTimestamp = prevMessage?.created_at || null
-
-      // Check if we need a date separator before this message
-      if (shouldShowDateSeparator(prevTimestamp, message.created_at)) {
-        items.push({
-          type: 'separator',
-          id: `separator-${message.id}`,
-          data: message.created_at,
-        })
-      }
-
-      items.push({
-        type: 'message',
-        id: message.id,
-        data: message,
-      })
-    }
-
-    // Reverse to get newest first (for inverted FlatList)
-    return items.reverse()
-  }, [messages])
-
-  // ---------------------------------------------------------------------------
-  // DATA FETCHING
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Fetch conversation details
-   */
-  const fetchConversation = useCallback(async () => {
-    const result = await getConversation(conversationId)
-
-    if (!result.success || !result.conversation) {
-      setError(result.error || CONVERSATION_ERRORS.NOT_FOUND)
-      return null
-    }
-
-    // Verify user is a participant
-    if (!isConversationParticipant(result.conversation, userId || '')) {
-      setError(CONVERSATION_ERRORS.UNAUTHORIZED)
-      return null
-    }
-
-    // Check if conversation is active
-    if (!result.conversation.is_active) {
-      setError(CONVERSATION_ERRORS.INACTIVE)
-      return null
-    }
-
-    setConversation(result.conversation)
-    return result.conversation
-  }, [conversationId, userId])
-
-  /**
-   * Fetch messages for the conversation
-   */
   const fetchMessages = useCallback(async (isRefresh = false, lastMessageId?: string) => {
     if (!isRefresh && !lastMessageId) {
       setLoading(true)
@@ -290,7 +134,6 @@ export function ChatScreen(): JSX.Element {
         .order('created_at', { ascending: false })
         .limit(MESSAGES_PER_PAGE)
 
-      // If loading more, get messages older than the last one
       if (lastMessageId) {
         const lastMessage = messages.find(m => m.id === lastMessageId)
         if (lastMessage) {
@@ -310,11 +153,9 @@ export function ChatScreen(): JSX.Element {
       const newMessages = (data as Message[]) || []
 
       if (lastMessageId) {
-        // Append older messages
         setMessages(prev => [...prev, ...newMessages])
         setHasMoreMessages(newMessages.length === MESSAGES_PER_PAGE)
       } else {
-        // Replace all messages
         setMessages(newMessages)
         setHasMoreMessages(newMessages.length === MESSAGES_PER_PAGE)
       }
@@ -326,33 +167,13 @@ export function ChatScreen(): JSX.Element {
       }
     } finally {
       setLoading(false)
-      setRefreshing(false)
       setLoadingMore(false)
     }
   }, [conversationId, messages])
 
-  /**
-   * Initial data fetch
-   */
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-
-    const conv = await fetchConversation()
-    if (conv) {
-      await fetchMessages()
-    } else {
-      setLoading(false)
-    }
-  }, [fetchConversation, fetchMessages])
-
-  /**
-   * Mark messages as read
-   */
   const markMessagesAsRead = useCallback(async () => {
     if (!userId || messages.length === 0) return
 
-    // Get unread messages from other user
     const unreadMessages = messages.filter(
       m => m.sender_id !== userId && !m.is_read
     )
@@ -368,7 +189,6 @@ export function ChatScreen(): JSX.Element {
         .eq('is_read', false)
 
       if (!updateError) {
-        // Update local state
         setMessages(prev =>
           prev.map(m =>
             m.sender_id !== userId ? { ...m, is_read: true } : m
@@ -380,43 +200,360 @@ export function ChatScreen(): JSX.Element {
     }
   }, [conversationId, messages, userId])
 
-  // ---------------------------------------------------------------------------
-  // EFFECTS
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Load data when screen mounts
-   */
+  // Subscribe to realtime updates
   useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  /**
-   * Mark messages as read when messages are loaded
-   */
-  useEffect(() => {
-    if (messages.length > 0) {
-      markMessagesAsRead()
+    if (!conversationId || !userId) {
+      return
     }
-  }, [messages.length, markMessagesAsRead])
 
-  /**
-   * Set navigation header title and options based on role
-   */
-  /**
-   * Handle reporting the other user in the conversation
-   */
+    const channelName = `chat-${conversationId}`
+
+    const handleRealtimeInsert = (
+      payload: RealtimePostgresInsertPayload<Message>
+    ) => {
+      const newMessage = payload.new
+
+      if (newMessage.sender_id !== userId) {
+        setMessages(prev => {
+          const messageExists = prev.some(m => m.id === newMessage.id)
+          if (messageExists) return prev
+          return [newMessage, ...prev]
+        })
+        markMessagesAsRead()
+      }
+    }
+
+    const channel = supabase
+      .channel(channelName, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: userId },
+        },
+      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        handleRealtimeInsert
+      )
+      .subscribe()
+
+    realtimeChannelRef.current = channel
+
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current)
+      }
+    }
+  }, [conversationId, userId, markMessagesAsRead])
+
+  return {
+    messages,
+    loading,
+    error,
+    hasMoreMessages,
+    loadingMore,
+    fetchMessages,
+    markMessagesAsRead,
+  }
+}
+
+/**
+ * Hook for sending messages with optimistic updates
+ */
+function useSendMessage(conversationId: string, userId: string | null) {
+  const [sending, setSending] = useState(false)
+
+  const sendMessage = useCallback(
+    async (content: string, onSuccess: (message: Message) => void) => {
+      if (!userId || !content.trim()) return
+
+      setSending(true)
+
+      try {
+        const messageData: MessageInsert = {
+          conversation_id: conversationId,
+          sender_id: userId,
+          content: content.trim(),
+          is_read: false,
+        }
+
+        const { data, error: insertError } = await supabase
+          .from('messages')
+          .insert([messageData])
+          .select()
+          .single()
+
+        if (insertError) {
+          throw insertError
+        }
+
+        onSuccess(data as Message)
+      } catch {
+        Alert.alert('Error', 'Failed to send message. Please try again.')
+      } finally {
+        setSending(false)
+      }
+    },
+    [conversationId, userId]
+  )
+
+  return { sending, sendMessage }
+}
+
+/**
+ * Hook for blocking users
+ */
+function useBlockUser(conversationId: string) {
+  const [blocking, setBlocking] = useState(false)
+
+  const handleBlockUser = useCallback(async () => {
+    setBlocking(true)
+
+    try {
+      const result = await blockUser(conversationId)
+
+      if (!result.success) {
+        Alert.alert('Error', result.error || MODERATION_ERRORS.BLOCK_FAILED)
+        return false
+      }
+
+      return true
+    } finally {
+      setBlocking(false)
+    }
+  }, [conversationId])
+
+  return { blocking, handleBlockUser }
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export function ChatScreen(): JSX.Element {
+  const route = useRoute<ChatRouteProp>()
+  const navigation = useNavigation<MainStackNavigationProp>()
+  const { userId, profile } = useAuth()
+
+  const { conversationId } = route.params
+
+  // ---------------------------------------------------------------------------
+  // REFS
+  // ---------------------------------------------------------------------------
+
+  const flatListRef = useRef<FlatList<MessageListItem>>(null)
+  const inputRef = useRef<TextInput>(null)
+
+  // ---------------------------------------------------------------------------
+  // STATE
+  // ---------------------------------------------------------------------------
+
+  const [conversation, setConversation] = useState<Conversation | null>(null)
+  const [conversationLoading, setConversationLoading] = useState(true)
+  const [conversationError, setConversationError] = useState<string | null>(null)
+  const [messageText, setMessageText] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [reportModalVisible, setReportModalVisible] = useState(false)
+  const [messageToReport, setMessageToReport] = useState<Message | null>(null)
+  const [userReportModalVisible, setUserReportModalVisible] = useState(false)
+
+  // Custom hooks
+  const {
+    messages,
+    loading: messagesLoading,
+    error: messagesError,
+    hasMoreMessages,
+    loadingMore,
+    fetchMessages,
+    markMessagesAsRead,
+  } = useChatMessages(conversationId, userId)
+
+  const { sending, sendMessage } = useSendMessage(
+    conversationId,
+    userId
+  )
+
+  const { blocking, handleBlockUser: performBlockUser } = useBlockUser(conversationId)
+
+  // ---------------------------------------------------------------------------
+  // COMPUTED VALUES
+  // ---------------------------------------------------------------------------
+
+  const userRole = useMemo(() => {
+    if (!conversation || !userId) return null
+    return getUserRole(conversation, userId)
+  }, [conversation, userId])
+
+  const otherUserId = useMemo(() => {
+    if (!conversation || !userId) return null
+    return getOtherUserId(conversation, userId)
+  }, [conversation, userId])
+
+  const canSend = useMemo(() => {
+    const trimmedMessage = messageText.trim()
+    return (
+      trimmedMessage.length > 0 &&
+      trimmedMessage.length <= MAX_MESSAGE_LENGTH &&
+      !sending &&
+      !messagesError &&
+      conversation?.is_active
+    )
+  }, [messageText, sending, messagesError, conversation])
+
+  const messageListItems = useMemo((): MessageListItem[] => {
+    if (messages.length === 0) return []
+
+    const items: MessageListItem[] = []
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i]
+      const prevMessage = i < messages.length - 1 ? messages[i + 1] : null
+      const prevTimestamp = prevMessage?.created_at || null
+
+      if (shouldShowDateSeparator(prevTimestamp, message.created_at)) {
+        items.push({
+          type: 'separator',
+          id: `separator-${message.id}`,
+          data: message.created_at,
+        })
+      }
+
+      items.push({
+        type: 'message',
+        id: message.id,
+        data: message,
+      })
+    }
+
+    return items.reverse()
+  }, [messages])
+
+  // ---------------------------------------------------------------------------
+  // DATA FETCHING
+  // ---------------------------------------------------------------------------
+
+  const fetchConversation = useCallback(async () => {
+    const result = await getConversation(conversationId)
+
+    if (!result.success || !result.conversation) {
+      setConversationError(result.error || CONVERSATION_ERRORS.NOT_FOUND)
+      return null
+    }
+
+    if (!isConversationParticipant(result.conversation, userId || '')) {
+      setConversationError(CONVERSATION_ERRORS.UNAUTHORIZED)
+      return null
+    }
+
+    if (!result.conversation.is_active) {
+      setConversationError(CONVERSATION_ERRORS.INACTIVE)
+      return null
+    }
+
+    setConversation(result.conversation)
+    return result.conversation
+  }, [conversationId, userId])
+
+  const loadData = useCallback(async () => {
+    setConversationLoading(true)
+    setConversationError(null)
+
+    const conv = await fetchConversation()
+    if (conv) {
+      await fetchMessages()
+    } else {
+      setConversationLoading(false)
+    }
+  }, [fetchConversation, fetchMessages])
+
+  // ---------------------------------------------------------------------------
+  // EVENT HANDLERS
+  // ---------------------------------------------------------------------------
+
+  const handleSendMessage = useCallback(async () => {
+    if (!canSend) return
+
+    const messageContent = messageText
+    setMessageText('')
+
+    await sendMessage(messageContent, (newMessage) => {
+      // Message successfully sent
+    })
+  }, [canSend, messageText, sendMessage])
+
+  const handleLoadMore = useCallback(() => {
+    if (hasMoreMessages && !loadingMore) {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage) {
+        fetchMessages(false, lastMessage.id)
+      }
+    }
+  }, [hasMoreMessages, loadingMore, messages, fetchMessages])
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await fetchMessages(true)
+    setRefreshing(false)
+  }, [fetchMessages])
+
+  const handleBlockUser = useCallback(async () => {
+    const success = await performBlockUser()
+    if (success) {
+      navigation.goBack()
+    }
+  }, [performBlockUser, navigation])
+
   const handleReportUser = useCallback(() => {
     if (!otherUserId) return
     setUserReportModalVisible(true)
   }, [otherUserId])
 
-  /**
-   * Handle closing user report modal
-   */
-  const handleCloseUserReportModal = useCallback(() => {
-    setUserReportModalVisible(false)
+  const handleReportMessage = useCallback((message: Message) => {
+    setMessageToReport(message)
+    setReportModalVisible(true)
   }, [])
+
+  const handleSubmitReport = useCallback(
+    async (reason: string, details?: string) => {
+      if (!otherUserId) return
+
+      const result = await submitReport({
+        reported_user_id: otherUserId,
+        reported_message_id: messageToReport?.id,
+        reason,
+        details,
+      })
+
+      if (result.success) {
+        setUserReportModalVisible(false)
+        setReportModalVisible(false)
+        setMessageToReport(null)
+        Alert.alert('Success', 'Thank you for your report.')
+      } else {
+        Alert.alert('Error', result.error || 'Failed to submit report.')
+      }
+    },
+    [otherUserId, messageToReport]
+  )
+
+  // ---------------------------------------------------------------------------
+  // EFFECTS
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      markMessagesAsRead()
+    }
+  }, [messages.length, markMessagesAsRead])
 
   useEffect(() => {
     if (userRole) {
@@ -455,487 +592,122 @@ export function ChatScreen(): JSX.Element {
     }
   }, [userRole, navigation, handleBlockUser, handleReportUser])
 
-  /**
-   * Supabase Realtime subscription for live message updates
-   *
-   * Subscribes to INSERT events on the messages table filtered by conversation_id.
-   * When a new message is received from the other user, it's added to the message list.
-   * Own messages sent via handleSendMessage are already added optimistically,
-   * so we skip duplicates by checking if the message already exists.
-   */
-  useEffect(() => {
-    // Only subscribe if we have a valid conversation and user
-    if (!conversationId || !userId || error) {
-      return
-    }
-
-    // Create a unique channel name for this conversation
-    const channelName = `chat-${conversationId}`
-
-    // Handle incoming new messages from Realtime
-    const handleRealtimeInsert = (
-      payload: RealtimePostgresInsertPayload<Message>
-    ) => {
-      const newMessage = payload.new
-
-      // Skip if this is our own message (already added optimistically)
-      if (newMessage.sender_id === userId) {
-        return
-      }
-
-      // Add the new message to the beginning (newest first) if not already present
-      setMessages((prevMessages) => {
-        // Check for duplicates (message might already exist from a race condition)
-        const messageExists = prevMessages.some((m) => m.id === newMessage.id)
-        if (messageExists) {
-          return prevMessages
-        }
-
-        // Add new message at the beginning (inverted FlatList shows newest first)
-        return [newMessage, ...prevMessages]
-      })
-
-      // Scroll to bottom (top of inverted list) to show new message
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
-
-      // Mark the new message as read immediately since we're viewing the chat
-      markNewMessageAsRead(newMessage.id)
-    }
-
-    // Mark a single new message as read
-    const markNewMessageAsRead = async (messageId: string) => {
-      try {
-        await supabase
-          .from('messages')
-          .update({ is_read: true })
-          .eq('id', messageId)
-      } catch {
-        // Silently fail - not critical
-      }
-    }
-
-    // Subscribe to Realtime changes for this conversation
-    const channel = supabase
-      .channel(channelName)
-      .on<Message>(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        handleRealtimeInsert
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          // Channel successfully subscribed
-        }
-      })
-
-    // Store the channel reference for cleanup
-    realtimeChannelRef.current = channel
-
-    // Cleanup: unsubscribe when component unmounts or conversation changes
-    return () => {
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current)
-        realtimeChannelRef.current = null
-      }
-    }
-  }, [conversationId, userId, error])
-
   // ---------------------------------------------------------------------------
-  // HANDLERS
+  // RENDER
   // ---------------------------------------------------------------------------
 
-  /**
-   * Handle pull-to-refresh
-   */
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true)
-    await fetchMessages(true)
-  }, [fetchMessages])
-
-  /**
-   * Handle retry on error
-   */
-  const handleRetry = useCallback(() => {
-    loadData()
-  }, [loadData])
-
-  /**
-   * Handle loading more messages
-   */
-  const handleLoadMore = useCallback(() => {
-    if (!loadingMore && hasMoreMessages && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1]
-      fetchMessages(false, lastMessage.id)
-    }
-  }, [loadingMore, hasMoreMessages, messages, fetchMessages])
-
-  /**
-   * Handle sending a message
-   */
-  const handleSendMessage = useCallback(async () => {
-    const trimmedMessage = messageText.trim()
-
-    if (!trimmedMessage || !userId || !conversationId || sending) {
-      return
-    }
-
-    if (trimmedMessage.length > MAX_MESSAGE_LENGTH) {
-      Alert.alert('Error', `Message is too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`)
-      return
-    }
-
-    setSending(true)
-
-    try {
-      const insertData: MessageInsert = {
-        conversation_id: conversationId,
-        sender_id: userId,
-        content: trimmedMessage,
-      }
-
-      const { data, error: sendError } = await supabase
-        .from('messages')
-        .insert(insertData)
-        .select()
-        .single()
-
-      if (sendError) {
-        Alert.alert('Error', 'Failed to send message. Please try again.')
-        return
-      }
-
-      // Add new message to the top of the list (newest first)
-      const newMessage = data as Message
-      setMessages(prev => [newMessage, ...prev])
-
-      // Clear input
-      setMessageText('')
-
-      // Scroll to bottom (top of inverted list)
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
-    } catch {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.')
-    } finally {
-      setSending(false)
-    }
-  }, [messageText, userId, conversationId, sending])
-
-  /**
-   * Handle blocking the other user in the conversation
-   */
-  const handleBlockUser = useCallback(async () => {
-    if (!userId || !otherUserId || blocking) {
-      return
-    }
-
-    const otherRole = userRole === 'producer' ? 'consumer' : 'producer'
-
-    Alert.alert(
-      'Block User',
-      `Are you sure you want to block this ${otherRole}? You will no longer see their content and this conversation will be deactivated.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Block',
-          style: 'destructive',
-          onPress: async () => {
-            setBlocking(true)
-
-            const result = await blockUser(userId, otherUserId)
-
-            setBlocking(false)
-
-            if (result.success) {
-              Alert.alert(
-                'User Blocked',
-                'You will no longer see content from this user.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack(),
-                  },
-                ]
-              )
-            } else {
-              Alert.alert(
-                'Error',
-                result.error || MODERATION_ERRORS.BLOCK_FAILED
-              )
-            }
-          },
-        },
-      ]
+  if (conversationLoading) {
+    return (
+      <View style={styles.container}>
+        <LoadingSpinner />
+      </View>
     )
-  }, [userId, otherUserId, userRole, blocking, navigation])
+  }
 
-  /**
-   * Handle opening report modal for a message
-   */
-  const handleReportMessage = useCallback((message: Message) => {
-    setMessageToReport(message)
-    setReportModalVisible(true)
-  }, [])
-
-  /**
-   * Handle closing report modal
-   */
-  const handleCloseReportModal = useCallback(() => {
-    setReportModalVisible(false)
-    setMessageToReport(null)
-  }, [])
-
-  /**
-   * Handle successful report submission
-   */
-  const handleReportSuccess = useCallback(() => {
-    Alert.alert(
-      'Report Submitted',
-      'Thank you for helping keep our community safe. We will review your report.',
-      [{ text: 'OK' }]
+  if (conversationError) {
+    return (
+      <View style={styles.container}>
+        <ErrorState message={conversationError} />
+      </View>
     )
-  }, [])
+  }
 
-  /**
-   * Handle message long press (for options like copy, report, block)
-   */
-  const handleMessageLongPress = useCallback((message: Message) => {
-    const options = [
-      {
-        text: 'Copy',
-        onPress: () => {
-          // Clipboard functionality would go here
-        },
-      },
-      {
-        text: 'Report',
-        style: 'destructive' as const,
-        onPress: () => handleReportMessage(message),
-      },
-      {
-        text: 'Block User',
-        style: 'destructive' as const,
-        onPress: handleBlockUser,
-      },
-      { text: 'Cancel', style: 'cancel' as const },
-    ]
+  if (messagesLoading && messages.length === 0) {
+    return (
+      <View style={styles.container}>
+        <LoadingSpinner />
+      </View>
+    )
+  }
 
-    Alert.alert('Message Options', 'What would you like to do?', options)
-  }, [handleBlockUser, handleReportMessage])
-
-  // ---------------------------------------------------------------------------
-  // RENDER ITEM
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Render a message list item (message or date separator)
-   */
-  const renderItem = useCallback(({ item, index }: { item: MessageListItem; index: number }) => {
+  const renderMessageItem = ({ item }: { item: MessageListItem }) => {
     if (item.type === 'separator') {
-      return (
-        <DateSeparator
-          timestamp={item.data as string}
-          testID={`date-separator-${index}`}
-        />
-      )
+      return <DateSeparator date={item.data as string} />
     }
 
     const message = item.data as Message
     const isOwn = message.sender_id === userId
-
-    // Calculate bubble position for grouping
-    const messageIndex = messages.findIndex(m => m.id === message.id)
-    const position = getBubblePosition(messages, messageIndex, userId || '')
-
-    // Show timestamp for last message in a group
-    const showTimestamp = position === 'single' || position === 'last'
-
-    // Show avatar for own messages (only for single or last in group to avoid repetition)
-    const showAvatar = isOwn && (position === 'single' || position === 'last')
-
-    return (
-      <View style={styles.messageRow} testID={`message-row-${message.id}`}>
-        <View style={styles.messageBubbleContainer}>
-          <ChatBubble
-            message={message}
-            isOwn={isOwn}
-            position={position}
-            showTimestamp={showTimestamp}
-            showReadStatus={isOwn}
-            onLongPress={() => handleMessageLongPress(message)}
-            testID={`chat-bubble-${message.id}`}
-          />
-        </View>
-        {showAvatar && (
-          <View style={styles.messageAvatarContainer} testID={`message-avatar-${message.id}`}>
-            {profile?.own_avatar ? (
-              <AvatarPreview
-                config={profile.own_avatar}
-                size={24}
-                avatarStyle="Circle"
-                testID={`message-avatar-preview-${message.id}`}
-              />
-            ) : (
-              <View style={styles.messageAvatarPlaceholder}>
-                <Text style={styles.messageAvatarPlaceholderText}>?</Text>
-              </View>
-            )}
-          </View>
-        )}
-        {/* Spacer to maintain alignment when avatar is not shown */}
-        {isOwn && !showAvatar && <View style={styles.messageAvatarSpacer} />}
-      </View>
+    const position = getBubblePosition(
+      isOwn,
+      messageListItems,
+      messageListItems.findIndex(m => m.id === item.id)
     )
-  }, [userId, profile, messages, handleMessageLongPress])
 
-  /**
-   * Extract key from list item
-   */
-  const keyExtractor = useCallback((item: MessageListItem) => item.id, [])
-
-  // ---------------------------------------------------------------------------
-  // RENDER: LOADING STATE
-  // ---------------------------------------------------------------------------
-
-  if (loading && !refreshing) {
     return (
-      <View style={styles.centeredContainer} testID="chat-screen-loading">
-        <LoadingSpinner message="Loading conversation..." />
-      </View>
+      <ChatBubble
+        message={message}
+        isOwn={isOwn}
+        position={position}
+        userAvatar={isOwn ? profile?.avatar_config : undefined}
+        onLongPress={() => handleReportMessage(message)}
+      />
     )
   }
-
-  // ---------------------------------------------------------------------------
-  // RENDER: ERROR STATE
-  // ---------------------------------------------------------------------------
-
-  if (error) {
-    return (
-      <View style={styles.centeredContainer} testID="chat-screen-error">
-        <ErrorState
-          title="Unable to Load Chat"
-          message={error}
-          onAction={handleRetry}
-          actionLabel="Try Again"
-        />
-      </View>
-    )
-  }
-
-  // ---------------------------------------------------------------------------
-  // RENDER: CHAT SCREEN
-  // ---------------------------------------------------------------------------
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      testID="chat-screen"
+      keyboardVerticalOffset={100}
+      style={styles.container}
     >
-      {/* Message List */}
-      <FlatList
-        ref={flatListRef}
-        data={messageListItems}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={styles.messageList}
-        showsVerticalScrollIndicator={false}
-        inverted
-        onRefresh={handleRefresh}
-        refreshing={refreshing}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.3}
-        testID="chat-message-list"
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <EmptyState
-              icon="💬"
-              title="Start the Conversation"
-              message="Send a message to begin your anonymous chat."
-            />
-          </View>
-        }
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.loadingMore} testID="chat-loading-more">
-              <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.loadingMoreText}>Loading older messages...</Text>
-            </View>
-          ) : null
-        }
+      {messageListItems.length === 0 ? (
+        <EmptyState message="No messages yet. Start the conversation!" />
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={messageListItems}
+          renderItem={renderMessageItem}
+          keyExtractor={item => item.id}
+          inverted
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator size="small" color={COLORS.primary} /> : null
+          }
+        />
+      )}
+
+      <View style={styles.inputContainer}>
+        <TextInput
+          ref={inputRef}
+          style={styles.input}
+          placeholder="Type a message..."
+          placeholderTextColor={COLORS.inputPlaceholder}
+          value={messageText}
+          onChangeText={setMessageText}
+          multiline
+          maxLength={MAX_MESSAGE_LENGTH}
+          editable={!conversation?.is_active}
+        />
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            !canSend && styles.sendButtonDisabled,
+          ]}
+          onPress={handleSendMessage}
+          disabled={!canSend}
+        >
+          <Text style={styles.sendButtonText}>Send</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ReportUserModal
+        visible={userReportModalVisible}
+        onClose={() => setUserReportModalVisible(false)}
+        onSubmit={handleSubmitReport}
       />
 
-      {/* Input Area */}
-      {conversation?.is_active && (
-        <View style={styles.inputContainer} testID="chat-input-container">
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            value={messageText}
-            onChangeText={setMessageText}
-            placeholder="Type a message..."
-            placeholderTextColor={COLORS.inputPlaceholder}
-            multiline
-            maxLength={MAX_MESSAGE_LENGTH}
-            editable={!sending}
-            returnKeyType="default"
-            blurOnSubmit={false}
-            testID="chat-input"
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              canSend ? styles.sendButtonActive : styles.sendButtonDisabled,
-            ]}
-            onPress={handleSendMessage}
-            disabled={!canSend}
-            activeOpacity={0.7}
-            testID="chat-send-button"
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.sendButtonText}>↑</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Inactive Conversation Banner */}
-      {conversation && !conversation.is_active && (
-        <View style={styles.inactiveBanner} testID="chat-inactive-banner">
-          <Text style={styles.inactiveBannerText}>
-            This conversation is no longer active.
-          </Text>
-        </View>
-      )}
-
-      {/* Report Message Modal */}
-      {messageToReport && (
-        <ReportMessageModal
-          visible={reportModalVisible}
-          onClose={handleCloseReportModal}
-          reportedId={messageToReport.id}
-          onSuccess={handleReportSuccess}
-          testID="chat-report-modal"
-        />
-      )}
-
-      {/* Report User Modal */}
-      {otherUserId && (
-        <ReportUserModal
-          visible={userReportModalVisible}
-          onClose={handleCloseUserReportModal}
-          reportedId={otherUserId}
-          onSuccess={handleReportSuccess}
-          testID="chat-report-user-modal"
-        />
-      )}
+      <ReportMessageModal
+        visible={reportModalVisible}
+        message={messageToReport}
+        onClose={() => {
+          setReportModalVisible(false)
+          setMessageToReport(null)
+        }}
+        onSubmit={handleSubmitReport}
+      />
     </KeyboardAvoidingView>
   )
 }
@@ -949,139 +721,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    padding: 24,
-  },
-
-  // Message List
-  messageList: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 48,
-    // Inverted list - flip the empty state
-    transform: [{ scaleY: -1 }],
-  },
-
-  // Message Row with Avatar
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginVertical: 1,
-  },
-  messageBubbleContainer: {
-    flex: 1,
-  },
-  messageAvatarContainer: {
-    marginLeft: 6,
-    marginBottom: 4,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageAvatarPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#E5E5EA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageAvatarPlaceholderText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#8E8E93',
-  },
-  messageAvatarSpacer: {
-    width: 30, // 24 (avatar) + 6 (margin)
-  },
-
-  // Loading More
-  loadingMore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
-  },
-  loadingMoreText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-
-  // Input Area
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: COLORS.inputBackground,
     borderTopWidth: 1,
     borderTopColor: COLORS.inputBorder,
-    gap: 8,
+    alignItems: 'flex-end',
   },
   input: {
     flex: 1,
-    minHeight: 36,
-    maxHeight: 120,
     backgroundColor: COLORS.background,
-    borderRadius: 18,
+    borderRadius: 20,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 10 : 8,
-    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
-    fontSize: 16,
+    paddingVertical: 10,
+    marginRight: 8,
+    maxHeight: 100,
     color: COLORS.inputText,
-    borderWidth: 1,
-    borderColor: COLORS.inputBorder,
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonActive: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     backgroundColor: COLORS.sendButtonActive,
+    justifyContent: 'center',
   },
   sendButtonDisabled: {
     backgroundColor: COLORS.sendButtonDisabled,
   },
   sendButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
     color: '#FFFFFF',
-  },
-
-  // Inactive Banner
-  inactiveBanner: {
-    backgroundColor: '#FFF3E0',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.inputBorder,
-  },
-  inactiveBannerText: {
-    textAlign: 'center',
+    fontWeight: '600',
     fontSize: 14,
-    color: '#FF9500',
-    fontWeight: '500',
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default ChatScreen
