@@ -6,34 +6,506 @@
  * where primary physical attributes (skin tone, hair style/color, facial hair,
  * accessories) carry more weight than secondary attributes (expressions, clothing).
  *
+ * The matching algorithm uses configurable weights and thresholds for flexible
+ * quality tier classification (excellent, good, fair, poor).
+ *
  * @module lib/matching
+ * @see docs/avatar-matching.md for detailed documentation
  */
 
-import {
+import type {
   AvatarConfig,
   AvatarAttribute,
+  SkinColor,
+  HairColor,
+  TopType,
+  FacialHairType,
+  FacialHairColor,
+  EyeType,
+  MouthType,
+  EyebrowType,
+  ClotheType,
+  ClotheColor,
+  AccessoriesType,
+  GraphicType,
   PartialAvatarConfig,
   PRIMARY_MATCHING_ATTRIBUTES,
   SECONDARY_MATCHING_ATTRIBUTES,
   AVATAR_OPTIONS,
 } from '../types/avatar'
-import type { MatchResult } from './types'
+import { DEFAULT_AVATAR_CONFIG } from '../types/avatar'
+import type { MatchResult as BaseMatchResult } from './types'
 
 // ============================================================================
-// CONFIGURATION
+// Match Weights Interface
 // ============================================================================
 
 /**
- * Weight applied to primary matching attributes (physical traits)
- * These are the most important for identifying a person
+ * Configurable weights for each avatar attribute in the matching algorithm.
+ *
+ * Weights determine how much each attribute contributes to the final match score.
+ * All weights should sum to 1.0 (100%) for proper normalization.
+ *
+ * @remarks
+ * The default configuration uses a 60/40 split between primary and secondary
+ * attributes:
+ * - **Primary attributes** (60%): Physical traits like skin color, hair color,
+ *   and hair style that define core appearance
+ * - **Secondary attributes** (40%): Expressions, clothing, and accessories
+ *   that represent style preferences
+ *
+ * @example
+ * ```typescript
+ * // Custom weights focusing on appearance
+ * const appearanceWeights: MatchWeights = {
+ *   skinColor: 0.35,    // Boost skin color importance
+ *   hairColor: 0.20,    // Boost hair color importance
+ *   topType: 0.15,
+ *   facialHairType: 0.08,
+ *   facialHairColor: 0.02,
+ *   eyeType: 0.04,
+ *   mouthType: 0.04,
+ *   eyebrowType: 0.02,
+ *   clotheType: 0.04,
+ *   clotheColor: 0.02,
+ *   accessoriesType: 0.03,
+ *   graphicType: 0.01,
+ * }
+ * ```
  */
-const PRIMARY_ATTRIBUTE_WEIGHT = 2.0
+export interface MatchWeights {
+  // ---- Primary Attributes (recommended total: 0.60) ----
+
+  /**
+   * Weight for skin color matching.
+   * Core physical identifier, highly visible and permanent.
+   * @default 0.25
+   */
+  skinColor: number
+
+  /**
+   * Weight for hair color matching.
+   * Major visual trait, immediately noticeable.
+   * @default 0.15
+   */
+  hairColor: number
+
+  /**
+   * Weight for top type (hair style/head covering) matching.
+   * Significant appearance element.
+   * @default 0.12
+   */
+  topType: number
+
+  /**
+   * Weight for facial hair type matching.
+   * Notable when present, differentiating for some users.
+   * @default 0.05
+   */
+  facialHairType: number
+
+  /**
+   * Weight for facial hair color matching.
+   * Only relevant when facial hair is present (conditional weight).
+   * @default 0.03
+   */
+  facialHairColor: number
+
+  // ---- Secondary Attributes (recommended total: 0.40) ----
+
+  /**
+   * Weight for eye type matching.
+   * Expression preference, affects avatar "mood".
+   * @default 0.08
+   */
+  eyeType: number
+
+  /**
+   * Weight for mouth type matching.
+   * Expression preference, affects perceived personality.
+   * @default 0.07
+   */
+  mouthType: number
+
+  /**
+   * Weight for eyebrow type matching.
+   * Minor expression element.
+   * @default 0.05
+   */
+  eyebrowType: number
+
+  /**
+   * Weight for clothing type matching.
+   * Style preference indicator.
+   * @default 0.08
+   */
+  clotheType: number
+
+  /**
+   * Weight for clothing color matching.
+   * Color preference in clothing.
+   * @default 0.05
+   */
+  clotheColor: number
+
+  /**
+   * Weight for accessories type matching.
+   * Notable visual element (glasses).
+   * @default 0.05
+   */
+  accessoriesType: number
+
+  /**
+   * Weight for graphic type matching.
+   * Only applies when clotheType is 'GraphicShirt' (conditional weight).
+   * @default 0.02
+   */
+  graphicType: number
+}
+
+// ============================================================================
+// Match Thresholds Interface
+// ============================================================================
 
 /**
- * Weight applied to secondary matching attributes (expressions, clothing)
- * These are less reliable for identification
+ * Configurable thresholds for match quality tier classification.
+ *
+ * Thresholds define the minimum score required for each quality tier.
+ * Scores are on a 0-100 scale.
+ *
+ * @remarks
+ * Quality tiers help categorize match results into meaningful groups:
+ * - **Excellent**: Near-identical avatars, only minor differences
+ * - **Good**: Similar appearance, same general look
+ * - **Fair**: Some similarities, notable differences
+ * - **Poor**: Significantly different avatars (scores below fair threshold)
+ *
+ * @example
+ * ```typescript
+ * // Strict thresholds for high-quality matching
+ * const strictThresholds: MatchThresholds = {
+ *   excellent: 95,  // Only near-perfect matches
+ *   good: 85,       // High similarity required
+ *   fair: 70,       // Moderate bar for "fair"
+ * }
+ * ```
  */
-const SECONDARY_ATTRIBUTE_WEIGHT = 0.5
+export interface MatchThresholds {
+  /**
+   * Minimum score for an "excellent" match.
+   * Scores at or above this threshold indicate near-identical avatars.
+   * @default 85
+   */
+  excellent: number
+
+  /**
+   * Minimum score for a "good" match.
+   * Scores at or above this threshold indicate similar appearance.
+   * @default 70
+   */
+  good: number
+
+  /**
+   * Minimum score for a "fair" match.
+   * Scores at or above this threshold indicate some similarities.
+   * Scores below this threshold are considered "poor" matches.
+   * @default 50
+   */
+  fair: number
+}
+
+// ============================================================================
+// Match Quality Type
+// ============================================================================
+
+/**
+ * Match quality tier classification.
+ *
+ * Used to categorize match scores into human-readable quality levels.
+ */
+export type MatchQuality = 'excellent' | 'good' | 'fair' | 'poor'
+
+// ============================================================================
+// Match Configuration Interface
+// ============================================================================
+
+/**
+ * Complete matching configuration combining weights and thresholds.
+ *
+ * This interface allows full customization of the matching algorithm behavior.
+ *
+ * @remarks
+ * The MatchConfig is passed to the main matching function to control:
+ * - How attributes are weighted in the score calculation
+ * - How the resulting score is classified into quality tiers
+ *
+ * @example
+ * ```typescript
+ * // Custom configuration for appearance-focused matching
+ * const config: MatchConfig = {
+ *   weights: {
+ *     skinColor: 0.35,
+ *     hairColor: 0.20,
+ *     topType: 0.15,
+ *     facialHairType: 0.08,
+ *     facialHairColor: 0.02,
+ *     eyeType: 0.04,
+ *     mouthType: 0.04,
+ *     eyebrowType: 0.02,
+ *     clotheType: 0.04,
+ *     clotheColor: 0.02,
+ *     accessoriesType: 0.03,
+ *     graphicType: 0.01,
+ *   },
+ *   thresholds: {
+ *     excellent: 85,
+ *     good: 70,
+ *     fair: 50,
+ *   },
+ * }
+ * ```
+ */
+export interface MatchConfig {
+  /**
+   * Attribute weights for score calculation.
+   * All weights should sum to 1.0 (100%).
+   */
+  weights: MatchWeights
+
+  /**
+   * Quality tier thresholds for score classification.
+   */
+  thresholds: MatchThresholds
+}
+
+// ============================================================================
+// Attribute Score Detail Interface
+// ============================================================================
+
+/**
+ * Detailed similarity score for a single attribute.
+ *
+ * Provides transparency into how each attribute contributed to the final score.
+ */
+export interface AttributeScoreDetail {
+  /**
+   * Raw similarity score for this attribute (0.0 to 1.0).
+   * - 1.0: Perfect match (identical values)
+   * - 0.0: No match (completely different)
+   * - Intermediate: Partial similarity based on attribute-specific logic
+   */
+  similarity: number
+
+  /**
+   * Weight assigned to this attribute (0.0 to 1.0).
+   * Represents the attribute's contribution proportion to the total score.
+   */
+  weight: number
+
+  /**
+   * Actual contribution to the final score (similarity * weight).
+   * Sum of all contributions equals the normalized total score.
+   */
+  contribution: number
+}
+
+/**
+ * Extended attribute score detail for conditional attributes.
+ *
+ * Some attributes (facialHairColor, graphicType) are only applicable
+ * in certain contexts and may be excluded from the calculation.
+ */
+export interface ConditionalAttributeScoreDetail extends AttributeScoreDetail {
+  /**
+   * Whether this attribute was included in the score calculation.
+   * - `true`: Attribute was applicable and included
+   * - `false`: Attribute was excluded (e.g., no facial hair, no graphic shirt)
+   */
+  applicable: boolean
+}
+
+// ============================================================================
+// Attribute Breakdown Interface
+// ============================================================================
+
+/**
+ * Complete breakdown of similarity scores by attribute.
+ *
+ * Provides detailed information about how each avatar attribute
+ * contributed to the final match score, useful for debugging and display.
+ *
+ * @remarks
+ * The breakdown includes all 12 matchable attributes:
+ * - 5 primary attributes: skinColor, hairColor, topType, facialHairType, facialHairColor
+ * - 7 secondary attributes: eyeType, eyebrowType, mouthType, clotheType, clotheColor, accessoriesType, graphicType
+ *
+ * Conditional attributes (facialHairColor, graphicType) include an `applicable` flag
+ * indicating whether they were included in the score calculation.
+ */
+export interface AttributeBreakdown {
+  // ---- Primary Attributes ----
+  skinColor: AttributeScoreDetail
+  hairColor: AttributeScoreDetail
+  topType: AttributeScoreDetail
+  facialHairType: AttributeScoreDetail
+  facialHairColor: ConditionalAttributeScoreDetail
+
+  // ---- Secondary Attributes ----
+  eyeType: AttributeScoreDetail
+  eyebrowType: AttributeScoreDetail
+  mouthType: AttributeScoreDetail
+  clotheType: AttributeScoreDetail
+  clotheColor: AttributeScoreDetail
+  accessoriesType: AttributeScoreDetail
+  graphicType: ConditionalAttributeScoreDetail
+}
+
+// ============================================================================
+// Match Result Interface
+// ============================================================================
+
+/**
+ * Complete result from an avatar matching calculation.
+ *
+ * Contains the final score, quality classification, and detailed breakdown
+ * of how each attribute contributed to the match.
+ *
+ * @remarks
+ * The MatchResult provides:
+ * - **score**: The overall match score (0-100)
+ * - **quality**: Human-readable tier classification
+ * - **breakdown**: Per-attribute contribution details
+ * - **isMatch**: Boolean helper based on a minimum threshold
+ *
+ * @example
+ * ```typescript
+ * const result: MatchResult = calculateAvatarMatchScore(avatarA, avatarB)
+ *
+ * console.log(`Match Score: ${result.score}%`)
+ * console.log(`Quality: ${result.quality}`)
+ *
+ * if (result.isMatch) {
+ *   console.log('These avatars are considered a match!')
+ * }
+ *
+ * // Inspect specific attribute contributions
+ * console.log(`Skin color contributed: ${result.breakdown.skinColor.contribution}`)
+ * ```
+ */
+export interface MatchResult extends BaseMatchResult {
+  /**
+   * Overall match score on a 0-100 scale.
+   * - 100: Identical avatars
+   * - 0: Completely different avatars
+   */
+  score: number
+
+  /**
+   * Match quality tier based on configured thresholds.
+   */
+  quality: MatchQuality
+
+  /**
+   * Detailed breakdown of similarity scores by attribute.
+   * Useful for understanding which attributes matched well or poorly.
+   */
+  breakdown: AttributeBreakdown
+
+  /**
+   * Whether the match meets the minimum threshold.
+   * Convenience field for quick pass/fail determination.
+   */
+  isMatch: boolean
+
+  /**
+   * The minimum threshold used for the isMatch determination.
+   * Typically corresponds to the "fair" threshold from MatchThresholds.
+   */
+  minThreshold: number
+}
+
+// ============================================================================
+// Type Guards and Utilities
+// ============================================================================
+
+/**
+ * Type guard to check if a value is a valid MatchQuality.
+ */
+export function isMatchQuality(value: unknown): value is MatchQuality {
+  return (
+    typeof value === 'string' &&
+    ['excellent', 'good', 'fair', 'poor'].includes(value)
+  )
+}
+
+/**
+ * Validates that weights sum to approximately 1.0 (within tolerance).
+ *
+ * @param weights - The weights to validate
+ * @param tolerance - Acceptable deviation from 1.0 (default: 0.01)
+ * @returns true if weights sum to 1.0 within tolerance
+ */
+export function validateWeightsSum(
+  weights: MatchWeights,
+  tolerance: number = 0.01
+): boolean {
+  const sum = Object.values(weights).reduce((acc, val) => acc + val, 0)
+  return Math.abs(sum - 1.0) <= tolerance
+}
+
+/**
+ * Validates that thresholds are in descending order.
+ *
+ * @param thresholds - The thresholds to validate
+ * @returns true if excellent > good > fair
+ */
+export function validateThresholdsOrder(thresholds: MatchThresholds): boolean {
+  return (
+    thresholds.excellent > thresholds.good &&
+    thresholds.good > thresholds.fair &&
+    thresholds.fair >= 0 &&
+    thresholds.excellent <= 100
+  )
+}
+
+// ============================================================================
+// DEFAULT CONFIGURATION
+// ============================================================================
+
+/**
+ * Default weight configuration with 60/40 split between primary and secondary
+ */
+export const DEFAULT_WEIGHTS: MatchWeights = {
+  skinColor: 0.25,
+  hairColor: 0.15,
+  topType: 0.12,
+  facialHairType: 0.05,
+  facialHairColor: 0.03,
+  eyeType: 0.08,
+  mouthType: 0.07,
+  eyebrowType: 0.05,
+  clotheType: 0.08,
+  clotheColor: 0.05,
+  accessoriesType: 0.05,
+  graphicType: 0.02,
+}
+
+/**
+ * Default threshold configuration
+ */
+export const DEFAULT_THRESHOLDS: MatchThresholds = {
+  excellent: 85,
+  good: 70,
+  fair: 50,
+}
+
+/**
+ * Default matching configuration
+ */
+export const DEFAULT_MATCH_CONFIG: MatchConfig = {
+  weights: DEFAULT_WEIGHTS,
+  thresholds: DEFAULT_THRESHOLDS,
+}
 
 /**
  * Default threshold for considering two avatars as a "match"
@@ -78,28 +550,65 @@ function getHairLengthCategory(topType: string): HairLengthCategory {
   return 'covered'
 }
 
+// ============================================================================
+// Skin Color Similarity
+// ============================================================================
+
 /**
- * Skin color similarity groups
- * Colors within the same group are considered somewhat similar
+ * Skin color groupings by tone family.
+ *
+ * Groups are used to calculate proximity-based similarity when
+ * colors don't match exactly.
  */
-const SKIN_COLOR_GROUPS: Record<string, string[]> = {
-  light: ['Pale', 'Light', 'Yellow'],
-  medium: ['Light', 'Tanned', 'Brown'],
-  dark: ['Brown', 'DarkBrown', 'Black'],
+const SKIN_COLOR_GROUPS: Record<SkinColor, 'light' | 'medium' | 'dark'> = {
+  Pale: 'light',
+  Light: 'light',
+  Tanned: 'medium',
+  Yellow: 'medium',
+  Brown: 'medium',
+  DarkBrown: 'dark',
+  Black: 'dark',
 }
 
 /**
- * Check if two skin colors are in the same or adjacent group
+ * Calculates similarity between two skin colors.
+ *
+ * Uses grouped proximity matching where colors in the same tone family
+ * score higher than colors in different families.
+ *
+ * @param a - First skin color
+ * @param b - Second skin color
+ * @returns Similarity score between 0.0 and 1.0
+ *
+ * @example
+ * ```typescript
+ * calculateSkinColorSimilarity('Light', 'Light')   // Returns 1.0 (exact)
+ * calculateSkinColorSimilarity('Light', 'Pale')    // Returns 0.7 (same group)
+ * calculateSkinColorSimilarity('Light', 'Brown')   // Returns 0.3 (adjacent)
+ * calculateSkinColorSimilarity('Pale', 'Black')    // Returns 0.0 (opposite)
+ * ```
  */
-function areSkinColorsSimilar(color1: string, color2: string): boolean {
-  if (color1 === color2) return true
+export function calculateSkinColorSimilarity(a: SkinColor, b: SkinColor): number {
+  // Exact match
+  if (a === b) return 1.0
 
-  for (const group of Object.values(SKIN_COLOR_GROUPS)) {
-    if (group.includes(color1) && group.includes(color2)) {
-      return true
-    }
-  }
-  return false
+  const groupA = SKIN_COLOR_GROUPS[a]
+  const groupB = SKIN_COLOR_GROUPS[b]
+
+  // Same group (e.g., Light and Pale both in 'light')
+  if (groupA === groupB) return 0.7
+
+  // Adjacent groups (light↔medium or medium↔dark)
+  const isAdjacent =
+(groupA === 'light' && groupB === 'medium') ||
+    (groupA === 'medium' && groupB === 'light') ||
+    (groupA === 'medium' && groupB === 'dark') ||
+    (groupA === 'dark' && groupB === 'medium')
+
+  if (isAdjacent) return 0.3
+
+  // Opposite groups
+  return 0
 }
 
 /**
@@ -147,7 +656,7 @@ function calculateAttributeSimilarity(
   // Special handling for different attribute types
   switch (attribute) {
     case 'skinColor':
-      return areSkinColorsSimilar(value1, value2) ? 0.7 : 0
+      return calculateSkinColorSimilarity(value1 as SkinColor, value2 as SkinColor)
     case 'hairColor':
     case 'facialHairColor':
       return areHairColorsSimilar(value1, value2) ? 0.6 : 0
@@ -193,16 +702,11 @@ function calculateAttributeSimilarity(
 }
 
 /**
- * Get the weight for a given attribute based on whether it's primary or secondary
+ * Get the weight for a given attribute from the weights configuration
  */
-function getAttributeWeight(attribute: AvatarAttribute): number {
-  if (PRIMARY_MATCHING_ATTRIBUTES.includes(attribute)) {
-    return PRIMARY_ATTRIBUTE_WEIGHT
-  }
-  if (SECONDARY_MATCHING_ATTRIBUTES.includes(attribute)) {
-    return SECONDARY_ATTRIBUTE_WEIGHT
-  }
-  return 1.0
+function getAttributeWeight(attribute: AvatarAttribute, weights: MatchWeights): number {
+  const weightKey = attribute as keyof MatchWeights
+  return weights[weightKey] ?? 1.0
 }
 
 // ============================================================================
@@ -244,23 +748,24 @@ export interface DetailedMatchResult extends MatchResult {
  *
  * @param targetAvatar - The avatar in the post (describing person of interest)
  * @param consumerAvatar - The consumer's own avatar (self-description)
- * @param threshold - Score threshold for considering it a match (default: 60)
- * @returns MatchResult with score, isMatch flag, and attribute details
+ * @param config - Matching configuration with weights and thresholds
+ * @returns MatchResult with score, isMatch flag, and attribute breakdown
  *
  * @example
  * ```typescript
  * const result = compareAvatars(post.targetAvatar, user.ownAvatar)
  * if (result.isMatch) {
- *   console.log(`Match found with ${result.score}% confidence`)
+ *   console.log(`Match found with ${result.score}% confidence (${result.quality})`)
  * }
  * ```
  */
 export function compareAvatars(
   targetAvatar: AvatarConfig,
   consumerAvatar: AvatarConfig,
-  threshold: number = DEFAULT_MATCH_THRESHOLD
+  config: MatchConfig = DEFAULT_MATCH_CONFIG
 ): MatchResult {
   const details: AttributeMatchDetail[] = []
+  const breakdown: Partial<AttributeBreakdown> = {}
   let totalWeightedScore = 0
   let maxPossibleScore = 0
 
@@ -273,7 +778,7 @@ export function compareAvatars(
   for (const attribute of allAttributes) {
     const targetValue = targetAvatar[attribute]
     const consumerValue = consumerAvatar[attribute]
-    const weight = getAttributeWeight(attribute)
+    const weight = getAttributeWeight(attribute, config.weights)
     const similarity = calculateAttributeSimilarity(
       attribute,
       targetValue,
@@ -281,27 +786,52 @@ export function compareAvatars(
     )
 
     const weightedAttributeScore = similarity * weight
+    const contribution = weightedAttributeScore
     totalWeightedScore += weightedAttributeScore
     maxPossibleScore += weight
 
     details.push({
       attribute,
-      matches: similarity >= 0.5, // Consider 50%+ similarity as a "match" for this attribute
+      matches: similarity >= 0.5,
       weight,
       similarity,
       targetValue,
       consumerValue,
     })
+
+    // Add to breakdown
+    const scoreDetail: AttributeScoreDetail = {
+      similarity,
+      weight,
+      contribution,
+    }
+
+    if (attribute === 'facialHairColor' || attribute === 'graphicType') {
+      const applicable = attribute === 'facialHairColor' 
+        ? targetAvatar.facialHairType !== 'Blank' && consumerAvatar.facialHairType !== 'Blank'
+        : targetAvatar.clotheType === 'GraphicShirt' && consumerAvatar.clotheType === 'GraphicShirt'
+      
+      breakdown[attribute as keyof AttributeBreakdown] = {
+        ...scoreDetail,
+        applicable,
+      } as ConditionalAttributeScoreDetail
+    } else {
+      breakdown[attribute as keyof AttributeBreakdown] = scoreDetail
+    }
   }
 
   // Calculate percentage score (0-100)
   const score = Math.round((totalWeightedScore / maxPossibleScore) * 100)
 
-  // Clamp threshold to valid range
-  const clampedThreshold = Math.max(
-    MIN_MATCH_THRESHOLD,
-    Math.min(MAX_MATCH_THRESHOLD, threshold)
-  )
+  // Determine quality tier
+  const quality: MatchQuality =
+    score >= config.thresholds.excellent
+      ? 'excellent'
+      : score >= config.thresholds.good
+      ? 'good'
+      : score >= config.thresholds.fair
+      ? 'fair'
+      : 'poor'
 
   // Build simplified attribute matches for MatchResult interface
   const attributeMatches = details.map((d) => ({
@@ -312,7 +842,10 @@ export function compareAvatars(
 
   return {
     score,
-    isMatch: score >= clampedThreshold,
+    quality,
+    isMatch: score >= config.thresholds.fair,
+    minThreshold: config.thresholds.fair,
+    breakdown: breakdown as AttributeBreakdown,
     attributeMatches,
   }
 }
@@ -322,7 +855,7 @@ export function compareAvatars(
  *
  * @param targetAvatar - The avatar in the post (describing person of interest)
  * @param consumerAvatar - The consumer's own avatar (self-description)
- * @param threshold - Score threshold for considering it a match (default: 60)
+ * @param config - Matching configuration with weights and thresholds
  * @returns DetailedMatchResult with full comparison details
  *
  * @example
@@ -339,8 +872,9 @@ export function compareAvatars(
 export function compareAvatarsDetailed(
   targetAvatar: AvatarConfig,
   consumerAvatar: AvatarConfig,
-  threshold: number = DEFAULT_MATCH_THRESHOLD
+  config: MatchConfig = DEFAULT_MATCH_CONFIG
 ): DetailedMatchResult {
+  const baseResult = compareAvatars(targetAvatar, consumerAvatar, config)
   const details: AttributeMatchDetail[] = []
   let totalWeightedScore = 0
   let maxPossibleScore = 0
@@ -353,7 +887,7 @@ export function compareAvatarsDetailed(
   for (const attribute of allAttributes) {
     const targetValue = targetAvatar[attribute]
     const consumerValue = consumerAvatar[attribute]
-    const weight = getAttributeWeight(attribute)
+    const weight = getAttributeWeight(attribute, config.weights)
     const similarity = calculateAttributeSimilarity(
       attribute,
       targetValue,
@@ -374,22 +908,8 @@ export function compareAvatarsDetailed(
     })
   }
 
-  const score = Math.round((totalWeightedScore / maxPossibleScore) * 100)
-  const clampedThreshold = Math.max(
-    MIN_MATCH_THRESHOLD,
-    Math.min(MAX_MATCH_THRESHOLD, threshold)
-  )
-
-  const attributeMatches = details.map((d) => ({
-    attribute: d.attribute,
-    matches: d.matches,
-    weight: d.weight,
-  }))
-
   return {
-    score,
-    isMatch: score >= clampedThreshold,
-    attributeMatches,
+    ...baseResult,
     details,
     maxPossibleScore,
     weightedScore: totalWeightedScore,
@@ -431,7 +951,7 @@ export function quickMatch(
  *
  * @param consumerAvatar - The consumer's avatar
  * @param posts - Array of posts with targetAvatar
- * @param threshold - Match threshold (default: 60)
+ * @param config - Matching configuration
  * @returns Array of {postId, score, isMatch} sorted by score descending
  *
  * @example
@@ -444,18 +964,14 @@ export function quickMatch(
 export function calculateBatchMatches<T extends { id: string; target_avatar: AvatarConfig }>(
   consumerAvatar: AvatarConfig,
   posts: T[],
-  threshold: number = DEFAULT_MATCH_THRESHOLD
+  config: MatchConfig = DEFAULT_MATCH_CONFIG
 ): Array<{ postId: string; score: number; isMatch: boolean }> {
   const results = posts.map((post) => {
-    const { score, isMatch } = compareAvatars(
-      post.target_avatar,
-      consumerAvatar,
-      threshold
-    )
+    const result = compareAvatars(post.target_avatar, consumerAvatar, config)
     return {
       postId: post.id,
-      score,
-      isMatch,
+      score: result.score,
+      isMatch: result.isMatch,
     }
   })
 
@@ -468,17 +984,17 @@ export function calculateBatchMatches<T extends { id: string; target_avatar: Ava
  *
  * @param consumerAvatar - The consumer's avatar
  * @param posts - Array of posts with targetAvatar
- * @param threshold - Match threshold (default: 60)
+ * @param config - Matching configuration
  * @returns Filtered array of posts that match
  */
 export function filterMatchingPosts<T extends { id: string; target_avatar: AvatarConfig }>(
   consumerAvatar: AvatarConfig,
   posts: T[],
-  threshold: number = DEFAULT_MATCH_THRESHOLD
+  config: MatchConfig = DEFAULT_MATCH_CONFIG
 ): T[] {
   return posts.filter((post) => {
-    const { isMatch } = compareAvatars(post.target_avatar, consumerAvatar, threshold)
-    return isMatch
+    const result = compareAvatars(post.target_avatar, consumerAvatar, config)
+    return result.isMatch
   })
 }
 
@@ -518,54 +1034,12 @@ export function getPrimaryMatchCount(
  * @returns Human-readable string describing the match
  */
 export function getMatchSummary(result: MatchResult): string {
-  if (result.score >= 90) {
-    return 'Excellent match!'
-  }
-  if (result.score >= 75) {
-    return 'Strong match'
-  }
-  if (result.score >= 60) {
-    return 'Good match'
-  }
-  if (result.score >= 40) {
-    return 'Partial match'
-  }
-  return 'Low match'
-}
-
-/**
- * Check if avatar configuration is valid for matching
- *
- * @param avatar - Avatar configuration to validate
- * @returns true if avatar has all required fields with valid values
- */
-export function isValidForMatching(avatar: PartialAvatarConfig | null | undefined): boolean {
-  if (!avatar || typeof avatar !== 'object') {
-    return false
+  const qualityDescriptions: Record<MatchQuality, string> = {
+    excellent: 'Excellent match',
+    good: 'Good match',
+    fair: 'Fair match',
+    poor: 'Poor match',
   }
 
-  // Check that all primary attributes are present and valid
-  for (const attribute of PRIMARY_MATCHING_ATTRIBUTES) {
-    const value = avatar[attribute]
-    if (!value || typeof value !== 'string') {
-      return false
-    }
-
-    // Validate against known options
-    const options = AVATAR_OPTIONS[attribute] as readonly string[]
-    if (!options.includes(value)) {
-      return false
-    }
-  }
-
-  return true
-}
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export {
-  PRIMARY_ATTRIBUTE_WEIGHT,
-  SECONDARY_ATTRIBUTE_WEIGHT,
+  return `${qualityDescriptions[result.quality]} (${result.score}%)`
 }
