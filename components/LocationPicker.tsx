@@ -57,6 +57,7 @@ import {
 
 import { LoadingSpinner } from './LoadingSpinner'
 import { EmptyState, NoSearchResults } from './EmptyState'
+import { selectionFeedback } from '../lib/haptics'
 import type { Location, Coordinates } from '../lib/types'
 import { calculateDistance } from '../hooks/useLocation'
 
@@ -418,6 +419,7 @@ export function LocationPicker({
    */
   const handleLocationSelect = useCallback(
     (location: LocationItem) => {
+      selectionFeedback()
       Keyboard.dismiss()
       onSelect(location)
     },
@@ -428,6 +430,7 @@ export function LocationPicker({
    * Handle current location selection
    */
   const handleCurrentLocationPress = useCallback(() => {
+    selectionFeedback()
     Keyboard.dismiss()
     onUseCurrentLocation?.()
   }, [onUseCurrentLocation])
@@ -555,54 +558,30 @@ export function LocationPicker({
         onPress={handleCurrentLocationPress}
         testID={`${testID}-current-location`}
       />
-      <View style={styles.sectionSeparator} />
-      {processedLocations.length > 0 && (
-        <Text style={styles.sectionHeader}>
-          {searchQuery.trim().length > 0 ? 'Search Results' : 'Nearby Locations'}
-        </Text>
-      )}
+      <ItemSeparator />
     </>
-  ) : (
-    processedLocations.length > 0 ? (
-      <Text style={styles.sectionHeader}>
-        {searchQuery.trim().length > 0 ? 'Search Results' : 'Nearby Locations'}
-      </Text>
-    ) : null
-  )
+  ) : null
 
   /**
-   * Empty list component
+   * List footer component (shown when no results)
    */
-  const ListEmpty = !loading ? (
-    <View style={styles.emptyContainer}>
-      {searchQuery.trim().length > 0 ? (
-        <NoSearchResults />
-      ) : (
-        <EmptyState
-          icon="📍"
+  const ListFooter =
+    processedLocations.length === 0 && searchQuery.length > 0 ? (
+      <View style={styles.stateContainer}>
+        <NoSearchResults
+          icon="🔍"
           title={emptyTitle}
           message={emptyMessage}
         />
-      )}
-    </View>
-  ) : (
-    <View style={styles.emptyContainer}>
-      <LoadingSpinner message={loadingMessage} size="small" />
-    </View>
-  )
+      </View>
+    ) : null
 
-  /**
-   * List footer (loading indicator for more results)
-   */
-  const ListFooter = loading && locations.length > 0 ? (
-    <View style={styles.footerLoading}>
-      <LoadingSpinner size="small" />
-    </View>
-  ) : null
+  // ---------------------------------------------------------------------------
+  // RENDER: MAIN
+  // ---------------------------------------------------------------------------
 
   return (
     <View style={[styles.container, style]} testID={testID}>
-      {/* Search input */}
       <SearchHeader
         value={searchQuery}
         onChangeText={handleSearchChange}
@@ -611,20 +590,16 @@ export function LocationPicker({
         testID={`${testID}-search`}
       />
 
-      {/* Location list */}
       <FlatList
+        style={listStyle}
         data={processedLocations}
         renderItem={renderLocationItem}
         keyExtractor={keyExtractor}
         ItemSeparatorComponent={ItemSeparator}
         ListHeaderComponent={ListHeader}
-        ListEmptyComponent={ListEmpty}
         ListFooterComponent={ListFooter}
-        style={[styles.list, listStyle]}
-        contentContainerStyle={styles.listContent}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        showsVerticalScrollIndicator={true}
+        scrollEnabled={true}
+        nestedScrollEnabled={false}
         testID={`${testID}-list`}
       />
     </View>
@@ -632,214 +607,127 @@ export function LocationPicker({
 }
 
 // ============================================================================
-// PRESET VARIANTS
-// ============================================================================
-
-/**
- * LocationPicker with current location option enabled
- */
-export function LocationPickerWithCurrent(
-  props: Omit<LocationPickerProps, 'showCurrentLocation'>
-): JSX.Element {
-  return <LocationPicker {...props} showCurrentLocation />
-}
-
-/**
- * Compact LocationPicker for modal/sheet usage
- */
-export function CompactLocationPicker(
-  props: Omit<LocationPickerProps, 'style'>
-): JSX.Element {
-  return <LocationPicker {...props} style={styles.compactContainer} />
-}
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Convert a database Location to LocationItem
- */
-export function locationToItem(location: Location): LocationItem {
-  return {
-    id: location.id,
-    name: location.name,
-    address: location.address,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    place_id: location.place_id,
-  }
-}
-
-/**
- * Create a new LocationItem from coordinates
- */
-export function createLocationItem(
-  id: string,
-  name: string,
-  coordinates: Coordinates,
-  options?: { address?: string | null; place_id?: string | null }
-): LocationItem {
-  return {
-    id,
-    name,
-    address: options?.address ?? null,
-    latitude: coordinates.latitude,
-    longitude: coordinates.longitude,
-    place_id: options?.place_id ?? null,
-  }
-}
-
-/**
- * Sort locations by distance from a point
- */
-export function sortByDistance(
-  locations: LocationItem[],
-  from: Coordinates
-): LocationItem[] {
-  return [...locations]
-    .map((loc) => ({
-      ...loc,
-      distance: calculateDistance(from, {
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-      }),
-    }))
-    .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
-}
-
-// ============================================================================
 // STYLES
 // ============================================================================
 
+/**
+ * StyleSheet definitions
+ */
 const styles = StyleSheet.create({
+  // Container
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  compactContainer: {
-    flex: 1,
-    maxHeight: 400,
-    backgroundColor: COLORS.background,
-  },
+
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   stateContainer: {
-    flex: 1,
+    paddingVertical: 40,
     paddingHorizontal: 20,
   },
 
-  // Search styles
+  // Search
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: COLORS.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.cardBackground,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    height: 36,
   },
+
   searchIcon: {
     fontSize: 16,
     marginRight: 8,
   },
+
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    height: 36,
+    fontSize: 14,
     color: COLORS.text,
-    height: '100%',
   },
+
   clearButton: {
     padding: 4,
+    marginLeft: 8,
   },
+
   clearButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     color: COLORS.secondary,
-  },
-
-  // List styles
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: COLORS.border,
-    marginLeft: 60,
-  },
-  sectionSeparator: {
-    height: 12,
-    backgroundColor: COLORS.background,
-  },
-  sectionHeader: {
-    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: COLORS.background,
   },
 
-  // Location item styles
+  // Location item
   locationItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    paddingHorizontal: 16,
     backgroundColor: COLORS.cardBackground,
   },
+
   locationItemSelected: {
     backgroundColor: COLORS.selectedBackground,
   },
+
   locationIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
+
   locationIconText: {
-    fontSize: 18,
+    fontSize: 16,
   },
+
   locationDetails: {
     flex: 1,
-    marginRight: 12,
   },
+
   locationName: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLORS.text,
     marginBottom: 2,
   },
+
   locationNameSelected: {
     color: COLORS.primary,
   },
+
   locationAddress: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.textSecondary,
   },
+
   distanceContainer: {
     marginRight: 8,
   },
+
   distanceText: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.secondary,
+    fontWeight: '500',
   },
+
   selectedIndicator: {
     width: 24,
     height: 24,
@@ -848,59 +736,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   selectedIndicatorText: {
-    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
+    color: COLORS.cardBackground,
+    fontWeight: 'bold',
   },
 
-  // Current location button styles
+  separator: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 12,
+  },
+
+  // Current location button
   currentLocationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.cardBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: COLORS.primary,
+    marginHorizontal: 12,
+    marginVertical: 8,
+    borderRadius: 8,
   },
+
   currentLocationIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E3F2FF',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
+
   currentLocationIconText: {
-    fontSize: 18,
+    fontSize: 14,
+    color: COLORS.cardBackground,
   },
+
   currentLocationText: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.cardBackground,
   },
+
   currentLocationArrow: {
-    fontSize: 18,
-    color: COLORS.primary,
-  },
-
-  // Empty state styles
-  emptyContainer: {
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-
-  // Footer loading styles
-  footerLoading: {
-    paddingVertical: 20,
-    alignItems: 'center',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default LocationPicker
-export type { LocationPickerProps, LocationItem }

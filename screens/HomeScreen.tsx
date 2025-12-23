@@ -33,6 +33,7 @@ import {
 import { useNavigation } from '@react-navigation/native'
 
 import { MapView, createRegion, createMarker, type MapMarker } from '../components/MapView'
+import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Button, OutlineButton } from '../components/Button'
 import { useLocation } from '../hooks/useLocation'
@@ -183,7 +184,8 @@ export function HomeScreen(): JSX.Element {
   /**
    * Handle map press to select a location
    */
-  const handleMapPress = useCallback((coordinates: Coordinates) => {
+  const handleMapPress = useCallback(async (coordinates: Coordinates) => {
+    await selectionFeedback()
     setSelectedLocation({
       coordinates,
       name: DEFAULT_LOCATION_NAME,
@@ -194,9 +196,10 @@ export function HomeScreen(): JSX.Element {
   /**
    * Handle marker press (existing location)
    */
-  const handleMarkerPress = useCallback((marker: MapMarker) => {
+  const handleMarkerPress = useCallback(async (marker: MapMarker) => {
     const location = nearbyLocations.find((loc) => loc.id === marker.id)
     if (location) {
+      await selectionFeedback()
       setSelectedLocation({
         coordinates: {
           latitude: Number(location.latitude),
@@ -494,189 +497,196 @@ export function HomeScreen(): JSX.Element {
 // ============================================================================
 
 const styles = StyleSheet.create({
+  // Container
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#ffffff',
   },
+
   centeredContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    padding: 24,
+    paddingHorizontal: 16,
   },
 
-  // Permission styles
+  // Permission States
   permissionContent: {
     alignItems: 'center',
-    maxWidth: 300,
+    gap: 12,
   },
+
   permissionIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: 8,
   },
+
   permissionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 12,
     textAlign: 'center',
   },
+
   permissionMessage: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  permissionHint: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  permissionHint: {
+    fontSize: 12,
+    color: '#999999',
     textAlign: 'center',
     fontStyle: 'italic',
   },
 
-  // Error styles
+  // Error States
   errorContent: {
     alignItems: 'center',
-    maxWidth: 300,
-  },
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    gap: 12,
   },
 
-  // Loading badge
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
+  },
+
+  errorMessage: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  // Loading Badge
   loadingBadge: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 16,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 16,
+    top: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
+
   loadingBadgeText: {
+    color: '#ffffff',
     fontSize: 14,
-    color: '#8E8E93',
     fontWeight: '500',
   },
 
-  // FAB button
+  // FAB Button
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 100,
+    bottom: 24,
+    right: 16,
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  fabIcon: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: '300',
-    marginTop: -2,
-  },
-
-  // Recenter button
-  recenterButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 170,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-  },
-  recenterIcon: {
-    fontSize: 24,
-    color: '#007AFF',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 
-  // Bottom sheet
+  fabIcon: {
+    fontSize: 32,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+
+  // Bottom Sheet
   bottomSheet: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 5,
   },
+
   bottomSheetHandle: {
-    width: 36,
+    width: 40,
     height: 4,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#CCCCCC',
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 12,
-  },
-  bottomSheetContent: {
-    paddingHorizontal: 20,
-  },
-  locationInfo: {
+    marginTop: 12,
     marginBottom: 16,
   },
+
+  bottomSheetContent: {
+    paddingHorizontal: 16,
+    gap: 16,
+  },
+
+  // Location Info
+  locationInfo: {
+    gap: 4,
+  },
+
   locationName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 4,
   },
+
   locationAddress: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#666666',
   },
+
+  // Action Buttons
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     gap: 12,
   },
+
+  // Recenter Button
+  recenterButton: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  recenterIcon: {
+    fontSize: 24,
+    color: '#007AFF',
+  },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default HomeScreen

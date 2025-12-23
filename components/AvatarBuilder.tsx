@@ -37,6 +37,7 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native'
+import { selectionFeedback, lightFeedback, successFeedback } from '../lib/haptics'
 import {
   AvatarConfig,
   AvatarAttribute,
@@ -376,6 +377,8 @@ export function AvatarBuilder({
   // Handle attribute change
   const handleAttributeChange = useCallback(
     (attribute: AvatarAttribute, value: string) => {
+      // Trigger selection haptic for option selection
+      selectionFeedback()
       const newConfig = {
         ...config,
         [attribute]: value,
@@ -388,6 +391,8 @@ export function AvatarBuilder({
 
   // Handle randomize
   const handleRandomize = useCallback(() => {
+    // Trigger light haptic for randomize button
+    lightFeedback()
     const randomConfig: AvatarConfig = {
       topType: getRandomOption(AVATAR_OPTIONS.topType),
       hairColor: getRandomOption(AVATAR_OPTIONS.hairColor),
@@ -407,11 +412,15 @@ export function AvatarBuilder({
 
   // Handle save
   const handleSave = useCallback(() => {
+    // Trigger success haptic on avatar save
+    successFeedback()
     onSave?.(config)
   }, [config, onSave])
 
   // Handle reset to default
   const handleReset = useCallback(() => {
+    // Trigger light haptic for reset button
+    lightFeedback()
     const defaultConfig = {
       ...DEFAULT_AVATAR_CONFIG,
       ...initialConfig,
@@ -419,6 +428,13 @@ export function AvatarBuilder({
     setConfig(defaultConfig)
     onChange?.(defaultConfig)
   }, [initialConfig, onChange])
+
+  // Handle category tab change
+  const handleCategoryChange = useCallback((categoryId: string) => {
+    // Trigger selection haptic for category tab change
+    selectionFeedback()
+    setActiveCategory(categoryId)
+  }, [])
 
   return (
     <View style={styles.container} testID={testID}>
@@ -469,7 +485,7 @@ export function AvatarBuilder({
             key={category.id}
             category={category}
             isActive={category.id === activeCategory}
-            onPress={() => setActiveCategory(category.id)}
+            onPress={() => handleCategoryChange(category.id)}
             testID={`${testID}-category-${category.id}`}
           />
         ))}
@@ -577,215 +593,158 @@ export const ModalAvatarBuilder = memo(function ModalAvatarBuilder(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
   },
-
-  // Preview section
   previewContainer: {
+    padding: 16,
     alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#F2F2F7',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    backgroundColor: '#f5f5f5',
   },
-
   quickActions: {
     flexDirection: 'row',
     marginTop: 16,
-    gap: 24,
+    gap: 12,
   },
-
   quickActionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-
-  quickActionIcon: {
-    fontSize: 14,
-  },
-
-  quickActionText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#007AFF',
-  },
-
-  // Category tabs
-  categoryTabs: {
-    maxHeight: 72,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-
-  categoryTabsContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     gap: 8,
   },
-
-  categoryTab: {
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F2F2F7',
-    minWidth: 70,
-  },
-
-  categoryTabActive: {
-    backgroundColor: '#007AFF',
-  },
-
-  categoryIcon: {
+  quickActionIcon: {
     fontSize: 18,
-    marginBottom: 2,
   },
-
-  categoryLabel: {
-    fontSize: 12,
+  quickActionText: {
+    fontSize: 14,
     fontWeight: '500',
-    color: '#666666',
+    color: '#333',
   },
-
+  categoryTabs: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  categoryTabsContent: {
+    paddingHorizontal: 8,
+  },
+  categoryTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  categoryTabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#007AFF',
+  },
+  categoryIcon: {
+    fontSize: 20,
+  },
+  categoryLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
   categoryLabelActive: {
-    color: '#FFFFFF',
+    color: '#007AFF',
   },
-
   categoryDescription: {
     fontSize: 13,
-    color: '#8E8E93',
-    textAlign: 'center',
-    paddingVertical: 8,
+    color: '#999',
     paddingHorizontal: 16,
-    backgroundColor: '#FAFAFA',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    paddingVertical: 8,
+    fontStyle: 'italic',
   },
-
-  // Options container
   optionsContainer: {
     flex: 1,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-
   attributeSection: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
-
   attributeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333333',
-    marginLeft: 16,
-    marginBottom: 8,
+    color: '#333',
+    marginBottom: 12,
   },
-
   optionsList: {
-    paddingHorizontal: 12,
-    gap: OPTION_MARGIN,
+    paddingRight: 16,
   },
-
-  // Option items (with mini preview)
   optionItem: {
-    width: OPTION_SIZE + 20,
+    marginRight: OPTION_MARGIN,
     alignItems: 'center',
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: '#F2F2F7',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
-
   optionItemSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#E3F2FD',
+    opacity: 1,
   },
-
   optionPreview: {
-    marginBottom: 4,
-  },
-
-  optionLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 12,
-  },
-
-  optionLabelSelected: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-
-  // Color swatches
-  colorSwatchContainer: {
-    alignItems: 'center',
-    padding: 6,
-    borderRadius: 12,
-    backgroundColor: '#F2F2F7',
+    width: OPTION_SIZE,
+    height: OPTION_SIZE,
+    marginBottom: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
     borderWidth: 2,
     borderColor: 'transparent',
-    width: COLOR_SWATCH_SIZE + 24,
   },
-
+  optionLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    width: OPTION_SIZE,
+  },
+  optionLabelSelected: {
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  colorSwatchContainer: {
+    marginRight: OPTION_MARGIN,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
   colorSwatchSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#E3F2FD',
+    opacity: 1,
   },
-
   colorSwatch: {
     width: COLOR_SWATCH_SIZE,
     height: COLOR_SWATCH_SIZE,
-    borderRadius: COLOR_SWATCH_SIZE / 2,
+    borderRadius: 12,
+    marginBottom: 8,
     borderWidth: 2,
-    borderColor: '#E5E5EA',
+    borderColor: 'transparent',
   },
-
   colorSwatchLabel: {
-    fontSize: 9,
-    fontWeight: '500',
-    color: '#666666',
+    fontSize: 12,
+    color: '#666',
     textAlign: 'center',
-    marginTop: 4,
+    maxWidth: COLOR_SWATCH_SIZE,
   },
-
   colorSwatchLabelSelected: {
-    color: '#007AFF',
     fontWeight: '600',
+    color: '#007AFF',
   },
-
-  // Action buttons
   actionButtons: {
     flexDirection: 'row',
-    padding: 16,
     gap: 12,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 24,
   },
-
   cancelButton: {
     flex: 1,
   },
-
   saveButton: {
-    flex: 2,
+    flex: 1,
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default AvatarBuilder

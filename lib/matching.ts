@@ -403,13 +403,13 @@ export interface MatchResult extends BaseMatchResult {
   /**
    * Match quality tier based on configured thresholds.
    */
-  quality: MatchQuality
+  quality?: MatchQuality
 
   /**
    * Detailed breakdown of similarity scores by attribute.
    * Useful for understanding which attributes matched well or poorly.
    */
-  breakdown: AttributeBreakdown
+  breakdown?: AttributeBreakdown
 
   /**
    * Whether the match meets the minimum threshold.
@@ -421,7 +421,7 @@ export interface MatchResult extends BaseMatchResult {
    * The minimum threshold used for the isMatch determination.
    * Typically corresponds to the "fair" threshold from MatchThresholds.
    */
-  minThreshold: number
+  minThreshold?: number
 }
 
 // ============================================================================
@@ -459,7 +459,7 @@ export function validateWeightsSum(
  * @param thresholds - The thresholds to validate
  * @returns true if excellent > good > fair
  */
-export function validateThresholdsOrder(thresholds: MatchThresholds): boolean {
+exportfunction validateThresholdsOrder(thresholds: MatchThresholds): boolean {
   return (
     thresholds.excellent > thresholds.good &&
     thresholds.good > thresholds.fair &&
@@ -550,65 +550,28 @@ function getHairLengthCategory(topType: string): HairLengthCategory {
   return 'covered'
 }
 
-// ============================================================================
-// Skin Color Similarity
-// ============================================================================
-
 /**
- * Skin color groupings by tone family.
- *
- * Groups are used to calculate proximity-based similarity when
- * colors don't match exactly.
+ * Skin color similarity groups
+ * Colors within the same group are considered somewhat similar
  */
-const SKIN_COLOR_GROUPS: Record<SkinColor, 'light' | 'medium' | 'dark'> = {
-  Pale: 'light',
-  Light: 'light',
-  Tanned: 'medium',
-  Yellow: 'medium',
-  Brown: 'medium',
-  DarkBrown: 'dark',
-  Black: 'dark',
+const SKIN_COLOR_GROUPS: Record<string, string[]> = {
+  light: ['Pale', 'Light', 'Yellow'],
+  medium: ['Light', 'Tanned', 'Brown'],
+  dark: ['Brown', 'DarkBrown', 'Black'],
 }
 
 /**
- * Calculates similarity between two skin colors.
- *
- * Uses grouped proximity matching where colors in the same tone family
- * score higher than colors in different families.
- *
- * @param a - First skin color
- * @param b - Second skin color
- * @returns Similarity score between 0.0 and 1.0
- *
- * @example
- * ```typescript
- * calculateSkinColorSimilarity('Light', 'Light')   // Returns 1.0 (exact)
- * calculateSkinColorSimilarity('Light', 'Pale')    // Returns 0.7 (same group)
- * calculateSkinColorSimilarity('Light', 'Brown')   // Returns 0.3 (adjacent)
- * calculateSkinColorSimilarity('Pale', 'Black')    // Returns 0.0 (opposite)
- * ```
+ * Check if two skin colors are in the same or adjacent group
  */
-export function calculateSkinColorSimilarity(a: SkinColor, b: SkinColor): number {
-  // Exact match
-  if (a === b) return 1.0
+function areSkinColorsSimilar(color1: string, color2: string): boolean {
+  if (color1 === color2) return true
 
-  const groupA = SKIN_COLOR_GROUPS[a]
-  const groupB = SKIN_COLOR_GROUPS[b]
-
-  // Same group (e.g., Light and Pale both in 'light')
-  if (groupA === groupB) return 0.7
-
-  // Adjacent groups (light↔medium or medium↔dark)
-  const isAdjacent =
-(groupA === 'light' && groupB === 'medium') ||
-    (groupA === 'medium' && groupB === 'light') ||
-    (groupA === 'medium' && groupB === 'dark') ||
-    (groupA === 'dark' && groupB === 'medium')
-
-  if (isAdjacent) return 0.3
-
-  // Opposite groups
-  return 0
+  for (const group of Object.values(SKIN_COLOR_GROUPS)) {
+    if (group.includes(color1) && group.includes(color2)) {
+      return true
+    }
+  }
+  return false
 }
 
 /**
@@ -635,10 +598,6 @@ function areHairColorsSimilar(color1: string, color2: string): boolean {
   return false
 }
 
-// ============================================================================
-// MATCHING SCORE CALCULATION
-// ============================================================================
-
 /**
  * Calculate partial match score for an attribute
  * Returns 0-1 where 1 is exact match, 0 is no match, and values in between for partial matches
@@ -656,7 +615,7 @@ function calculateAttributeSimilarity(
   // Special handling for different attribute types
   switch (attribute) {
     case 'skinColor':
-      return calculateSkinColorSimilarity(value1 as SkinColor, value2 as SkinColor)
+      return areSkinColorsSimilar(value1, value2) ? 0.7 : 0
     case 'hairColor':
     case 'facialHairColor':
       return areHairColorsSimilar(value1, value2) ? 0.6 : 0
@@ -702,11 +661,16 @@ function calculateAttributeSimilarity(
 }
 
 /**
- * Get the weight for a given attribute from the weights configuration
+ * Get the weight for a given attribute based on whether it's primary or secondary
  */
-function getAttributeWeight(attribute: AvatarAttribute, weights: MatchWeights): number {
-  const weightKey = attribute as keyof MatchWeights
-  return weights[weightKey] ?? 1.0
+function getAttributeWeight(attribute: AvatarAttribute): number {
+  if (PRIMARY_MATCHING_ATTRIBUTES.includes(attribute)) {
+    return 2.0
+  }
+  if (SECONDARY_MATCHING_ATTRIBUTES.includes(attribute)) {
+    return 0.5
+  }
+  return 1.0
 }
 
 // ============================================================================
@@ -748,24 +712,23 @@ export interface DetailedMatchResult extends MatchResult {
  *
  * @param targetAvatar - The avatar in the post (describing person of interest)
  * @param consumerAvatar - The consumer's own avatar (self-description)
- * @param config - Matching configuration with weights and thresholds
- * @returns MatchResult with score, isMatch flag, and attribute breakdown
+ * @param threshold - Score threshold for considering it a match (default: 60)
+ * @returns MatchResult with score, isMatch flag, and attribute details
  *
  * @example
  * ```typescript
  * const result = compareAvatars(post.targetAvatar, user.ownAvatar)
  * if (result.isMatch) {
- *   console.log(`Match found with ${result.score}% confidence (${result.quality})`)
+ *   console.log(`Match found with ${result.score}% confidence`)
  * }
  * ```
  */
 export function compareAvatars(
   targetAvatar: AvatarConfig,
   consumerAvatar: AvatarConfig,
-  config: MatchConfig = DEFAULT_MATCH_CONFIG
+  threshold: number = DEFAULT_MATCH_THRESHOLD
 ): MatchResult {
   const details: AttributeMatchDetail[] = []
-  const breakdown: Partial<AttributeBreakdown> = {}
   let totalWeightedScore = 0
   let maxPossibleScore = 0
 
@@ -778,7 +741,7 @@ export function compareAvatars(
   for (const attribute of allAttributes) {
     const targetValue = targetAvatar[attribute]
     const consumerValue = consumerAvatar[attribute]
-    const weight = getAttributeWeight(attribute, config.weights)
+    const weight = getAttributeWeight(attribute)
     const similarity = calculateAttributeSimilarity(
       attribute,
       targetValue,
@@ -786,67 +749,31 @@ export function compareAvatars(
     )
 
     const weightedAttributeScore = similarity * weight
-    const contribution = weightedAttributeScore
     totalWeightedScore += weightedAttributeScore
     maxPossibleScore += weight
 
     details.push({
       attribute,
-      matches: similarity >= 0.5,
+      matches: similarity >= 0.5, // Consider 50%+ similarity as a "match" for this attribute
       weight,
       similarity,
       targetValue,
       consumerValue,
     })
-
-    // Add to breakdown
-    const scoreDetail: AttributeScoreDetail = {
-      similarity,
-      weight,
-      contribution,
-    }
-
-    if (attribute === 'facialHairColor' || attribute === 'graphicType') {
-      const applicable = attribute === 'facialHairColor' 
-        ? targetAvatar.facialHairType !== 'Blank' && consumerAvatar.facialHairType !== 'Blank'
-        : targetAvatar.clotheType === 'GraphicShirt' && consumerAvatar.clotheType === 'GraphicShirt'
-      
-      breakdown[attribute as keyof AttributeBreakdown] = {
-        ...scoreDetail,
-        applicable,
-      } as ConditionalAttributeScoreDetail
-    } else {
-      breakdown[attribute as keyof AttributeBreakdown] = scoreDetail
-    }
   }
 
   // Calculate percentage score (0-100)
   const score = Math.round((totalWeightedScore / maxPossibleScore) * 100)
 
-  // Determine quality tier
-  const quality: MatchQuality =
-    score >= config.thresholds.excellent
-      ? 'excellent'
-      : score >= config.thresholds.good
-      ? 'good'
-      : score >= config.thresholds.fair
-      ? 'fair'
-      : 'poor'
-
-  // Build simplified attribute matches for MatchResult interface
-  const attributeMatches = details.map((d) => ({
-    attribute: d.attribute,
-    matches: d.matches,
-    weight: d.weight,
-  }))
+  // Clamp threshold to valid range
+  const clampedThreshold = Math.max(
+    MIN_MATCH_THRESHOLD,
+    Math.min(MAX_MATCH_THRESHOLD, threshold)
+  )
 
   return {
     score,
-    quality,
-    isMatch: score >= config.thresholds.fair,
-    minThreshold: config.thresholds.fair,
-    breakdown: breakdown as AttributeBreakdown,
-    attributeMatches,
+    isMatch: score >= clampedThreshold,
   }
 }
 
@@ -855,7 +782,7 @@ export function compareAvatars(
  *
  * @param targetAvatar - The avatar in the post (describing person of interest)
  * @param consumerAvatar - The consumer's own avatar (self-description)
- * @param config - Matching configuration with weights and thresholds
+ * @param threshold - Score threshold for considering it a match (default: 60)
  * @returns DetailedMatchResult with full comparison details
  *
  * @example
@@ -872,9 +799,8 @@ export function compareAvatars(
 export function compareAvatarsDetailed(
   targetAvatar: AvatarConfig,
   consumerAvatar: AvatarConfig,
-  config: MatchConfig = DEFAULT_MATCH_CONFIG
+  threshold: number = DEFAULT_MATCH_THRESHOLD
 ): DetailedMatchResult {
-  const baseResult = compareAvatars(targetAvatar, consumerAvatar, config)
   const details: AttributeMatchDetail[] = []
   let totalWeightedScore = 0
   let maxPossibleScore = 0
@@ -887,7 +813,7 @@ export function compareAvatarsDetailed(
   for (const attribute of allAttributes) {
     const targetValue = targetAvatar[attribute]
     const consumerValue = consumerAvatar[attribute]
-    const weight = getAttributeWeight(attribute, config.weights)
+    const weight = getAttributeWeight(attribute)
     const similarity = calculateAttributeSimilarity(
       attribute,
       targetValue,
@@ -908,8 +834,15 @@ export function compareAvatarsDetailed(
     })
   }
 
+  const score = Math.round((totalWeightedScore / maxPossibleScore) * 100)
+  const clampedThreshold = Math.max(
+    MIN_MATCH_THRESHOLD,
+    Math.min(MAX_MATCH_THRESHOLD, threshold)
+  )
+
   return {
-    ...baseResult,
+    score,
+    isMatch: score >= clampedThreshold,
     details,
     maxPossibleScore,
     weightedScore: totalWeightedScore,
@@ -951,7 +884,7 @@ export function quickMatch(
  *
  * @param consumerAvatar - The consumer's avatar
  * @param posts - Array of posts with targetAvatar
- * @param config - Matching configuration
+ * @param threshold - Match threshold (default: 60)
  * @returns Array of {postId, score, isMatch} sorted by score descending
  *
  * @example
@@ -964,14 +897,18 @@ export function quickMatch(
 export function calculateBatchMatches<T extends { id: string; target_avatar: AvatarConfig }>(
   consumerAvatar: AvatarConfig,
   posts: T[],
-  config: MatchConfig = DEFAULT_MATCH_CONFIG
+  threshold: number = DEFAULT_MATCH_THRESHOLD
 ): Array<{ postId: string; score: number; isMatch: boolean }> {
   const results = posts.map((post) => {
-    const result = compareAvatars(post.target_avatar, consumerAvatar, config)
+    const { score, isMatch } = compareAvatars(
+      post.target_avatar,
+      consumerAvatar,
+      threshold
+    )
     return {
       postId: post.id,
-      score: result.score,
-      isMatch: result.isMatch,
+      score,
+      isMatch,
     }
   })
 
@@ -984,17 +921,17 @@ export function calculateBatchMatches<T extends { id: string; target_avatar: Ava
  *
  * @param consumerAvatar - The consumer's avatar
  * @param posts - Array of posts with targetAvatar
- * @param config - Matching configuration
+ * @param threshold - Match threshold (default: 60)
  * @returns Filtered array of posts that match
  */
 export function filterMatchingPosts<T extends { id: string; target_avatar: AvatarConfig }>(
   consumerAvatar: AvatarConfig,
   posts: T[],
-  config: MatchConfig = DEFAULT_MATCH_CONFIG
+  threshold: number = DEFAULT_MATCH_THRESHOLD
 ): T[] {
   return posts.filter((post) => {
-    const result = compareAvatars(post.target_avatar, consumerAvatar, config)
-    return result.isMatch
+    const { isMatch } = compareAvatars(post.target_avatar, consumerAvatar, threshold)
+    return isMatch
   })
 }
 
@@ -1025,21 +962,4 @@ export function getPrimaryMatchCount(
   }
 
   return { matchCount, total }
-}
-
-/**
- * Get human-readable match summary
- *
- * @param result - Match result from compareAvatars
- * @returns Human-readable string describing the match
- */
-export function getMatchSummary(result: MatchResult): string {
-  const qualityDescriptions: Record<MatchQuality, string> = {
-    excellent: 'Excellent match',
-    good: 'Good match',
-    fair: 'Fair match',
-    poor: 'Poor match',
-  }
-
-  return `${qualityDescriptions[result.quality]} (${result.score}%)`
 }

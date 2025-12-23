@@ -5,7 +5,7 @@
  * Provides a consistent button experience throughout the app.
  */
 
-import React from 'react'
+import React, { useCallback } from 'react'
 import {
   TouchableOpacity,
   Text,
@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native'
+import { lightFeedback, warningFeedback } from '../lib/haptics'
 
 // ============================================================================
 // TYPES
@@ -51,6 +52,8 @@ export interface ButtonProps {
   testID?: string
   /** Accessibility label */
   accessibilityLabel?: string
+  /** Whether to disable haptic feedback on press (default: false) */
+  hapticDisabled?: boolean
 }
 
 // ============================================================================
@@ -99,9 +102,23 @@ export function Button({
   textStyle,
   testID = 'button',
   accessibilityLabel,
+  hapticDisabled = false,
 }: ButtonProps): JSX.Element {
   // Determine if button should be interactive
   const isDisabled = disabled || loading
+
+  // Wrap onPress to trigger haptic feedback before executing callback
+  const handlePress = useCallback(async () => {
+    if (!hapticDisabled) {
+      // Danger variant uses warning feedback, all others use light feedback
+      if (variant === 'danger') {
+        await warningFeedback()
+      } else {
+        await lightFeedback()
+      }
+    }
+    onPress()
+  }, [hapticDisabled, variant, onPress])
 
   // Get styles based on variant and size
   const containerStyles = [
@@ -129,7 +146,7 @@ export function Button({
   return (
     <TouchableOpacity
       style={containerStyles}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={isDisabled}
       activeOpacity={0.7}
       testID={testID}
@@ -216,6 +233,7 @@ export function IconButton({
   disabled = false,
   testID = 'icon-button',
   accessibilityLabel,
+  hapticDisabled = false,
 }: {
   icon: React.ReactNode
   onPress: () => void
@@ -224,7 +242,17 @@ export function IconButton({
   disabled?: boolean
   testID?: string
   accessibilityLabel: string
+  /** Whether to disable haptic feedback on press (default: false) */
+  hapticDisabled?: boolean
 }): JSX.Element {
+  // Wrap onPress to trigger haptic feedback before executing callback
+  const handlePress = useCallback(async () => {
+    if (!hapticDisabled) {
+      await lightFeedback()
+    }
+    onPress()
+  }, [hapticDisabled, onPress])
+
   const containerStyles = [
     styles.iconButton,
     styles[`iconButton_${size}` as keyof typeof styles],
@@ -235,7 +263,7 @@ export function IconButton({
   return (
     <TouchableOpacity
       style={containerStyles}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.7}
       testID={testID}

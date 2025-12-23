@@ -38,6 +38,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native'
 
 import { LargeAvatarPreview } from '../components/AvatarPreview'
+import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { ErrorState } from '../components/EmptyState'
 import { Button, OutlineButton } from '../components/Button'
@@ -237,6 +238,7 @@ export function PostDetailScreen(): JSX.Element {
    */
   const handleStartChat = useCallback(async () => {
     if (!post || !userId) {
+      await errorFeedback()
       Alert.alert('Error', 'Unable to start chat. Please try again.')
       return
     }
@@ -251,8 +253,10 @@ export function PostDetailScreen(): JSX.Element {
     setStartingChat(false)
 
     if (result.success && result.conversationId) {
+      await successFeedback()
       navigation.navigate('Chat', { conversationId: result.conversationId })
     } else {
+      await errorFeedback()
       Alert.alert(
         'Error',
         result.error || 'Failed to start chat. Please try again later.'
@@ -280,6 +284,7 @@ export function PostDetailScreen(): JSX.Element {
       return
     }
 
+    await warningFeedback()
     Alert.alert(
       'Block User',
       'Are you sure you want to block this user? You will no longer see their posts or be able to chat with them.',
@@ -296,6 +301,7 @@ export function PostDetailScreen(): JSX.Element {
             setBlocking(false)
 
             if (result.success) {
+              await successFeedback()
               Alert.alert(
                 'User Blocked',
                 'You will no longer see content from this user.',
@@ -307,6 +313,7 @@ export function PostDetailScreen(): JSX.Element {
                 ]
               )
             } else {
+              await errorFeedback()
               Alert.alert(
                 'Error',
                 result.error || MODERATION_ERRORS.BLOCK_FAILED
@@ -365,7 +372,7 @@ export function PostDetailScreen(): JSX.Element {
           refreshing={refreshing}
           onRefresh={handleRefresh}
           tintColor={COLORS.primary}
-          colors={[COLORS.primary]}
+colors={[COLORS.primary]}
           testID="post-detail-refresh-control"
         />
       }
@@ -480,31 +487,14 @@ export function PostDetailScreen(): JSX.Element {
             title={startingChat ? 'Starting Chat...' : 'Start Chat'}
             onPress={handleStartChat}
             loading={startingChat}
-            disabled={startingChat || blocking}
             testID="post-detail-start-chat"
           />
-          {matchResult?.isMatch && (
-            <Text style={styles.matchHint}>
-              You appear to match this description!
-            </Text>
-          )}
-          {!hasValidAvatar && (
-            <Text style={styles.avatarHint}>
-              Create your avatar in Profile to see if you match!
-            </Text>
-          )}
-          <View style={styles.blockSection}>
-            <Button
-              title={blocking ? 'Blocking...' : 'Block User'}
-              onPress={handleBlockUser}
-              loading={blocking}
-              disabled={blocking || startingChat}
-              variant="outline"
-              size="small"
-              testID="post-detail-block-user"
-              textStyle={styles.blockButtonText}
-            />
-          </View>
+          <OutlineButton
+            title={blocking ? 'Blocking...' : 'Block User'}
+            onPress={handleBlockUser}
+            loading={blocking}
+            testID="post-detail-block-user"
+          />
         </View>
       )}
     </ScrollView>
@@ -521,103 +511,107 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   contentContainer: {
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   centeredContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    padding: 24,
   },
-
-  // Avatar Section
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
     position: 'relative',
   },
   matchBadge: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    position: 'absolute',
+    bottom: -12,
+    right: -12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   matchBadgeText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
+    fontSize: 12,
   },
-
-  // Match Section
   matchSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 16,
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
   },
   matchTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 4,
   },
   matchSubtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
   },
-
-  // Note Section
   noteSection: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.textSecondary,
+    marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 8,
-    marginLeft: 4,
   },
   noteCard: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   noteText: {
     fontSize: 16,
-    lineHeight: 24,
     color: COLORS.textPrimary,
+    lineHeight: 24,
   },
-
-  // Location Section
   locationSection: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   locationCard: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   locationInfo: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
   },
   locationIcon: {
-    fontSize: 20,
+    fontSize: 24,
     marginRight: 12,
   },
   locationText: {
@@ -627,75 +621,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.textPrimary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   locationAddress: {
     fontSize: 14,
     color: COLORS.textSecondary,
   },
-
-  // Timestamp Section
   timestampSection: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
     alignItems: 'center',
-    marginBottom: 24,
   },
   timestampText: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textSecondary,
   },
   expiresText: {
     fontSize: 12,
-    color: COLORS.textTertiary,
-    marginTop: 4,
-  },
-
-  // Own Post Banner
-  ownPostBanner: {
-    backgroundColor: '#FFF3E0',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  ownPostText: {
-    fontSize: 15,
-    fontWeight: '600',
     color: COLORS.warning,
-  },
-
-  // Action Section
-  actionSection: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  matchHint: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: COLORS.success,
-    marginTop: 12,
+    marginTop: 4,
     fontWeight: '500',
   },
-  avatarHint: {
-    textAlign: 'center',
+  ownPostBanner: {
+    backgroundColor: COLORS.primary + '10',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  ownPostText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 12,
-    fontStyle: 'italic',
+    color: COLORS.primary,
+    fontWeight: '500',
+    textAlign: 'center',
   },
-  blockSection: {
-    marginTop: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    alignItems: 'center',
-  },
-  blockButtonText: {
-    color: '#FF3B30', // iOS red for destructive action
+  actionSection: {
+    gap: 12,
+    marginTop: 16,
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default PostDetailScreen

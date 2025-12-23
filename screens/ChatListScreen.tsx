@@ -34,6 +34,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
 import { SmallAvatarPreview, MediumAvatarPreview } from '../components/AvatarPreview'
+import { lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyChats, ErrorState } from '../components/EmptyState'
 import { supabase } from '../lib/supabase'
@@ -403,7 +404,8 @@ export function ChatListScreen(): JSX.Element {
    * Handle conversation press - navigate to chat
    */
   const handleConversationPress = useCallback(
-    (conversation: ConversationItem) => {
+    async (conversation: ConversationItem) => {
+      await lightFeedback()
       navigation.navigate('Chat', { conversationId: conversation.id })
     },
     [navigation]
@@ -470,17 +472,17 @@ export function ChatListScreen(): JSX.Element {
               </Text>
             )}
 
-            {/* Message preview row */}
-            <View style={styles.previewRow}>
+            {/* Message preview and badge row */}
+            <View style={styles.messageRow}>
               <Text
-                style={[styles.preview, hasUnread && styles.previewUnread]}
+                style={[styles.messagePreview, isOwnLastMessage && styles.ownMessage]}
                 numberOfLines={1}
               >
-                {isOwnLastMessage && item.last_message_content ? 'You: ' : ''}
+                {isOwnLastMessage && 'You: '}
                 {truncateMessage(item.last_message_content)}
               </Text>
               {hasUnread && (
-                <View style={styles.unreadBadge} testID={`unread-badge-${item.id}`}>
+                <View style={styles.unreadBadge}>
                   <Text style={styles.unreadBadgeText}>
                     {item.unread_count > 99 ? '99+' : item.unread_count}
                   </Text>
@@ -494,88 +496,31 @@ export function ChatListScreen(): JSX.Element {
     [userId, handleConversationPress]
   )
 
-  /**
-   * Render empty state when no conversations exist
-   */
-  const renderEmptyState = useCallback(() => {
-    if (loading) return null
-
-    return (
-      <View style={styles.emptyContainer}>
-        <EmptyChats testID="chat-list-empty" />
-      </View>
-    )
-  }, [loading])
-
-  /**
-   * Key extractor for FlatList
-   */
-  const keyExtractor = useCallback((item: ConversationItem) => item.id, [])
-
-  /**
-   * Item separator
-   */
-  const renderSeparator = useCallback(
-    () => <View style={styles.separator} />,
-    []
-  )
-
   // ---------------------------------------------------------------------------
-  // RENDER: LOADING STATE
+  // RENDER
   // ---------------------------------------------------------------------------
 
-  if (loading && !refreshing) {
-    return (
-      <View style={styles.centeredContainer} testID="chat-list-loading">
-        <LoadingSpinner message="Loading conversations..." />
-      </View>
-    )
+  if (loading && conversations.length === 0) {
+    return <LoadingSpinner />
   }
 
-  // ---------------------------------------------------------------------------
-  // RENDER: ERROR STATE
-  // ---------------------------------------------------------------------------
-
-  if (error && conversations.length === 0) {
-    return (
-      <View style={styles.centeredContainer} testID="chat-list-error">
-        <ErrorState
-          title="Failed to Load Conversations"
-          message={error}
-          onAction={handleRetry}
-          actionLabel="Try Again"
-        />
-      </View>
-    )
+  if (error) {
+    return <ErrorState message={error} onRetry={handleRetry} />
   }
 
-  // ---------------------------------------------------------------------------
-  // RENDER: CONVERSATION LIST
-  // ---------------------------------------------------------------------------
+  if (conversations.length === 0) {
+    return <EmptyChats />
+  }
 
   return (
-    <View style={styles.container} testID="chat-list-screen">
+    <View style={styles.container}>
       <FlatList
         data={conversations}
         renderItem={renderConversation}
-        keyExtractor={keyExtractor}
-        ItemSeparatorComponent={renderSeparator}
-        ListEmptyComponent={renderEmptyState}
-        contentContainerStyle={[
-          styles.listContent,
-          conversations.length === 0 && styles.listContentEmpty,
-        ]}
-        showsVerticalScrollIndicator={false}
+        keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
-            testID="chat-list-refresh-control"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
-        testID="chat-list"
       />
     </View>
   )
@@ -590,48 +535,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    padding: 24,
-  },
-  listContent: {
-    paddingVertical: 8,
-  },
-  listContentEmpty: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-
-  // Conversation item styles
   conversationItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    padding: 12,
     backgroundColor: COLORS.cardBackground,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    alignItems: 'flex-start',
   },
   avatarContainer: {
-    width: 60,
-    height: 60,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 4,
   },
   avatarPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.border,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarPlaceholderText: {
-    fontSize: 24,
-    color: COLORS.textSecondary,
+    fontSize: 20,
     fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   contentContainer: {
     flex: 1,
@@ -641,75 +568,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   title: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '500',
     color: COLORS.textPrimary,
-    flex: 1,
     marginRight: 8,
   },
   titleUnread: {
-    fontWeight: '700',
+    fontWeight: '600',
   },
   timestamp: {
     fontSize: 13,
     color: COLORS.textSecondary,
   },
   location: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
     marginBottom: 4,
   },
-  previewRow: {
+  messageRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  preview: {
+  messagePreview: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textSecondary,
+    fontStyle: 'italic',
     marginRight: 8,
   },
-  previewUnread: {
-    color: COLORS.textPrimary,
-    fontWeight: '500',
+  ownMessage: {
+    color: COLORS.textSecondary,
   },
   unreadBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
     backgroundColor: COLORS.unreadBadge,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 6,
+    minWidth: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   unreadBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
     color: COLORS.unreadBadgeText,
-  },
-
-  // Separator
-  separator: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginLeft: 88, // Align with content (16 + 60 + 12)
-  },
-
-  // Empty state
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 48,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default ChatListScreen

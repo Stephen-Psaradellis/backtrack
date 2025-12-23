@@ -40,6 +40,7 @@ import {
   Platform,
   Linking,
 } from 'react-native'
+import { selectionFeedback } from '../lib/haptics'
 
 // ============================================================================
 // TYPES
@@ -193,6 +194,7 @@ export const TermsModal = memo(function TermsModal({
    * Toggle age confirmation
    */
   const handleAgeToggle = useCallback(() => {
+    selectionFeedback()
     setIsAgeConfirmed((prev) => !prev)
   }, [])
 
@@ -200,6 +202,7 @@ export const TermsModal = memo(function TermsModal({
    * Toggle terms acceptance
    */
   const handleTermsToggle = useCallback(() => {
+    selectionFeedback()
     setIsTermsAccepted((prev) => !prev)
   }, [])
 
@@ -207,6 +210,7 @@ export const TermsModal = memo(function TermsModal({
    * Toggle privacy acceptance
    */
   const handlePrivacyToggle = useCallback(() => {
+    selectionFeedback()
     setIsPrivacyAccepted((prev) => !prev)
   }, [])
 
@@ -243,6 +247,7 @@ export const TermsModal = memo(function TermsModal({
    */
   const handleAccept = useCallback(() => {
     if (isAgeConfirmed && isTermsAccepted && isPrivacyAccepted) {
+      selectionFeedback()
       onAccept()
     }
   }, [isAgeConfirmed, isTermsAccepted, isPrivacyAccepted, onAccept])
@@ -369,7 +374,7 @@ export const TermsModal = memo(function TermsModal({
                 <Text style={styles.sectionTitle}>Privacy Policy</Text>
                 <View style={styles.termsSummary}>
                   <Text style={styles.termsSummaryText}>
-                    We respect your privacy. Here's how we handle your data:
+We respect your privacy. Here's how we handle your data:
                   </Text>
                   <View style={styles.termsList}>
                     <Text style={styles.termsListItem}>• We collect location data only when you create posts</Text>
@@ -475,132 +480,121 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
+    maxHeight: '90%',
     backgroundColor: COLORS.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    overflow: 'hidden',
   },
-
-  // Header
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 6,
   },
   closeButtonText: {
-    fontSize: 20,
+    fontSize: 24,
     color: COLORS.textSecondary,
+    fontWeight: '300',
   },
-
-  // Content
   content: {
-    maxHeight: 500,
+    flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   introText: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textSecondary,
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-
-  // Section
-  section: {
     marginBottom: 24,
+    lineHeight: 20,
+  },
+  section: {
+    marginBottom: 28,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
     color: COLORS.textPrimary,
     marginBottom: 12,
   },
-
-  // Age Notice
   ageNotice: {
     flexDirection: 'row',
-    backgroundColor: '#FFF3E0',
-    borderRadius: 10,
+    backgroundColor: '#FFF3CD',
+    borderRadius: 8,
     padding: 12,
     marginBottom: 12,
-    alignItems: 'flex-start',
   },
   ageNoticeIcon: {
-    fontSize: 18,
-    marginRight: 10,
-    marginTop: 1,
+    fontSize: 20,
+    marginRight: 8,
   },
   ageNoticeText: {
     flex: 1,
-    fontSize: 14,
-    color: '#E65100',
-    lineHeight: 20,
+    fontSize: 13,
+    color: '#856404',
+    lineHeight: 18,
   },
-
-  // Terms Summary
   termsSummary: {
     backgroundColor: COLORS.termsBackground,
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 12,
   },
   termsSummaryText: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textPrimary,
+    fontWeight: '500',
     marginBottom: 8,
-    lineHeight: 20,
   },
   termsList: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   termsListItem: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
-    lineHeight: 20,
-    marginBottom: 4,
+    marginBottom: 6,
+    lineHeight: 16,
   },
   linkText: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textLink,
     fontWeight: '500',
-    marginTop: 4,
   },
-
-  // Checkbox
+  linkInline: {
+    color: COLORS.textLink,
+    fontWeight: '500',
+  },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingVertical: 8,
+    paddingHorizontal: 0,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: COLORS.checkboxInactive,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    marginTop: 1,
+    marginTop: 2,
   },
   checkboxChecked: {
     backgroundColor: COLORS.checkboxActive,
@@ -610,72 +604,64 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: COLORS.background,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   checkboxLabelContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   checkboxLabel: {
-    fontSize: 15,
+    fontSize: 13,
     color: COLORS.textPrimary,
-    lineHeight: 22,
+    lineHeight: 18,
   },
   highlight: {
     fontWeight: '600',
     color: COLORS.textPrimary,
   },
-  linkInline: {
-    color: COLORS.textLink,
-    fontWeight: '500',
-  },
-
-  // Footer
   footer: {
     flexDirection: 'row',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    gap: 12,
   },
   declineButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   declineButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
   },
   acceptButton: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 10,
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   acceptButtonDisabled: {
-    backgroundColor: '#B0D4FF',
+    backgroundColor: COLORS.checkboxInactive,
   },
   acceptButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.background,
   },
   acceptButtonTextDisabled: {
-    color: '#FFFFFF',
+    color: COLORS.textSecondary,
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default TermsModal

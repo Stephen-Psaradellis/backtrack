@@ -49,6 +49,7 @@ import {
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
 import { submitReport, REPORT_REASONS, MODERATION_ERRORS } from '../lib/moderation'
+import { successFeedback, errorFeedback, selectionFeedback } from '../lib/haptics'
 import type { ReportedType } from '../types/database'
 
 // ============================================================================
@@ -226,6 +227,7 @@ export const ReportModal = memo(function ReportModal({
    * Handle reason selection
    */
   const handleSelectReason = useCallback((reason: string) => {
+    selectionFeedback()
     setSelectedReason(reason)
     setError(null)
   }, [])
@@ -243,12 +245,14 @@ export const ReportModal = memo(function ReportModal({
   const handleSubmit = useCallback(async () => {
     // Validate selection
     if (!selectedReason) {
+      errorFeedback()
       setError('Please select a reason for your report.')
       return
     }
 
     // Require additional details for "Other" reason
     if (selectedReason === REPORT_REASONS.OTHER && additionalDetails.trim().length === 0) {
+      errorFeedback()
       setError('Please provide details for your report.')
       return
     }
@@ -267,9 +271,11 @@ export const ReportModal = memo(function ReportModal({
     setSubmitting(false)
 
     if (result.success) {
+      successFeedback()
       onSuccess?.()
       onClose()
     } else {
+      errorFeedback()
       setError(result.error || MODERATION_ERRORS.REPORT_FAILED)
     }
   }, [
@@ -529,25 +535,18 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
+    maxHeight: '90%',
     backgroundColor: COLORS.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    overflow: 'hidden',
   },
-
-  // Header
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -555,47 +554,46 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: COLORS.textPrimary,
+    flex: 1,
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    marginRight: -8,
   },
   closeButtonText: {
-    fontSize: 20,
+    fontSize: 24,
     color: COLORS.textSecondary,
+    fontWeight: '300',
   },
-
-  // Content
   content: {
-    maxHeight: 400,
+    flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
   },
   description: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: 16,
     lineHeight: 20,
   },
-
-  // Reason List
   reasonList: {
-    marginBottom: 8,
+    gap: 8,
   },
   reasonItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.background,
   },
   reasonItemSelected: {
-    borderColor: COLORS.selectedBorder,
     backgroundColor: COLORS.selectedBackground,
+    borderColor: COLORS.selectedBorder,
   },
   radioButton: {
     width: 20,
@@ -603,9 +601,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: COLORS.textSecondary,
-    marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
   radioButtonSelected: {
     borderColor: COLORS.primary,
@@ -617,32 +615,27 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   reasonText: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textPrimary,
     flex: 1,
   },
   reasonTextSelected: {
-    color: COLORS.primary,
     fontWeight: '500',
   },
-
-  // Details Input
   detailsContainer: {
-    marginTop: 8,
+    gap: 8,
   },
   detailsLabel: {
     fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 8,
+    fontWeight: '500',
+    color: COLORS.textPrimary,
   },
   detailsInput: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 12,
-    fontSize: 15,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
     color: COLORS.textPrimary,
     minHeight: 100,
     textAlignVertical: 'top',
@@ -651,64 +644,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: 'right',
-    marginTop: 4,
   },
-
-  // Error
   errorContainer: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
     borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.error,
   },
   errorText: {
     fontSize: 14,
     color: COLORS.error,
-    textAlign: 'center',
   },
-
-  // Footer
   footer: {
     flexDirection: 'row',
-    padding: 20,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    gap: 12,
+    backgroundColor: COLORS.background,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
   },
   submitButton: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: COLORS.error,
-    alignItems: 'center',
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#FFB0AB',
+    opacity: 0.5,
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default ReportModal

@@ -17,6 +17,7 @@
  * - Supabase Realtime subscription for live message updates from other user
  * - User blocking via header menu or message long-press
  * - Content reporting via header menu (report user) or message long-press (report message)
+ * - Haptic feedback on key interactions
  *
  * Architecture:
  * This component orchestrates chat functionality using:
@@ -46,6 +47,12 @@ import {
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 
+import {
+  successFeedback,
+  errorFeedback,
+  warningFeedback,
+  notificationFeedback,
+} from '../lib/haptics'
 import {
   ChatBubble,
   DateSeparator,
@@ -103,6 +110,12 @@ const COLORS = {
 const MAX_MESSAGE_LENGTH = 10000
 const MESSAGES_PER_PAGE = 50
 
+/**
+ * Minimum interval between haptic feedback for received messages (in milliseconds)
+ * Prevents haptic spam when multiple messages arrive rapidly
+ */
+const HAPTIC_DEBOUNCE_MS = 500
+
 // ============================================================================
 // CUSTOM HOOKS
 // ============================================================================
@@ -117,6 +130,7 @@ function useChatMessages(conversationId: string, userId: string | null) {
   const [hasMoreMessages, setHasMoreMessages] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null)
+  const lastMessageHapticRef = useRef<number>(0)
 
   const fetchMessages = useCallback(async (isRefresh = false, lastMessageId?: string) => {
     if (!isRefresh && !lastMessageId) {
@@ -220,6 +234,13 @@ function useChatMessages(conversationId: string, userId: string | null) {
           return [newMessage, ...prev]
         })
         markMessagesAsRead()
+
+        // Trigger haptic feedback for incoming messages with debouncing
+        const now = Date.now()
+        if (now - lastMessageHapticRef.current > HAPTIC_DEBOUNCE_MS) {
+          notificationFeedback()
+          lastMessageHapticRef.current = now
+        }
       }
     }
 
@@ -292,8 +313,10 @@ function useSendMessage(conversationId: string, userId: string | null) {
           throw insertError
         }
 
+        successFeedback()
         onSuccess(data as Message)
       } catch {
+        errorFeedback()
         Alert.alert('Error', 'Failed to send message. Please try again.')
       } finally {
         setSending(false)
@@ -318,10 +341,12 @@ function useBlockUser(conversationId: string) {
       const result = await blockUser(conversationId)
 
       if (!result.success) {
+        warningFeedback()
         Alert.alert('Error', result.error || MODERATION_ERRORS.BLOCK_FAILED)
         return false
       }
 
+      successFeedback()
       return true
     } finally {
       setBlocking(false)
@@ -513,32 +538,86 @@ export function ChatScreen(): JSX.Element {
     setUserReportModalVisible(true)
   }, [otherUserId])
 
+  const handleCloseUserReportModal = useCallback(() => {
+    setUserReportModalVisible(false)
+  }, [])
+
   const handleReportMessage = useCallback((message: Message) => {
     setMessageToReport(message)
     setReportModalVisible(true)
   }, [])
 
-  const handleSubmitReport = useCallback(
-    async (reason: string, details?: string) => {
+  const handleCloseReportModal = useCallback(() => {
+    setReportModalVisible(false)
+    setMessageToReport(null)
+  }, [])
+
+  const handleSubmitUserReport = useCallback(
+    async (reason: string, details: string) => {
       if (!otherUserId) return
 
-      const result = await submitReport({
-        reported_user_id: otherUserId,
-        reported_message_id: messageToReport?.id,
-        reason,
-        details,
-      })
+      try {
+        const result = await submitReport({
+          reportType: 'user',
+          targetUserId: otherUserId,
+          reason,
+          details,
+        })
 
-      if (result.success) {
-        setUserReportModalVisible(false)
-        setReportModalVisible(false)
-        setMessageToReport(null)
-        Alert.alert('Success', 'Thank you for your report.')
-      } else {
-        Alert.alert('Error', result.error || 'Failed to submit report.')
+        if (result.success) {
+          successFeedback()
+          handleCloseUserReportModal()
+          Alert.alert(
+            'Report Submitted',
+            'Thank you for reporting this user. We will review it shortly.'
+          )
+        } else {
+          errorFeedback()
+          Alert.alert(
+            'Error',
+            result.error || 'Failed to submit report. Please try again.'
+          )
+        }
+      } catch {
+        errorFeedback()
+        Alert.alert('Error', 'An unexpected error occurred.')
       }
     },
-    [otherUserId, messageToReport]
+    [otherUserId, handleCloseUserReportModal]
+  )
+
+  const handleSubmitMessageReport = useCallback(
+    async (reason: string, details: string) => {
+      if (!messageToReport) return
+
+      try {
+        const result = await submitReport({
+          reportType: 'message',
+          targetMessageId: messageToReport.id,
+          reason,
+          details,
+        })
+
+        if (result.success) {
+          successFeedback()
+          handleCloseReportModal()
+          Alert.alert(
+            'Report Submitted',
+            'Thank you for reporting this message. We will review it shortly.'
+          )
+        } else {
+          errorFeedback()
+          Alert.alert(
+            'Error',
+            result.error || 'Failed to submit report. Please try again.'
+          )
+        }
+      } catch {
+        errorFeedback()
+        Alert.alert('Error', 'An unexpected error occurred.')
+      }
+    },
+    [messageToReport, handleCloseReportModal]
   )
 
   // ---------------------------------------------------------------------------
@@ -550,12 +629,6 @@ export function ChatScreen(): JSX.Element {
   }, [loadData])
 
   useEffect(() => {
-    if (messages.length > 0) {
-      markMessagesAsRead()
-    }
-  }, [messages.length, markMessagesAsRead])
-
-  useEffect(() => {
     if (userRole) {
       const otherRole = userRole === 'producer' ? 'Consumer' : 'Producer'
       navigation.setOptions({
@@ -564,6 +637,7 @@ export function ChatScreen(): JSX.Element {
         headerRight: () => (
           <TouchableOpacity
             onPress={() => {
+              notificationFeedback()
               Alert.alert(
                 'Chat Options',
                 'What would you like to do?',
@@ -596,9 +670,9 @@ export function ChatScreen(): JSX.Element {
   // RENDER
   // ---------------------------------------------------------------------------
 
-  if (conversationLoading) {
+  if (conversationLoading && messagesLoading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centerContainer}>
         <LoadingSpinner />
       </View>
     )
@@ -606,109 +680,146 @@ export function ChatScreen(): JSX.Element {
 
   if (conversationError) {
     return (
-      <View style={styles.container}>
-        <ErrorState message={conversationError} />
+      <View style={styles.centerContainer}>
+        <ErrorState
+          error={conversationError}
+          onRetry={loadData}
+        />
       </View>
     )
   }
 
-  if (messagesLoading && messages.length === 0) {
+  if (!conversation) {
     return (
-      <View style={styles.container}>
-        <LoadingSpinner />
+      <View style={styles.centerContainer}>
+        <ErrorState
+          error="Conversation not found"
+          onRetry={loadData}
+        />
       </View>
-    )
-  }
-
-  const renderMessageItem = ({ item }: { item: MessageListItem }) => {
-    if (item.type === 'separator') {
-      return <DateSeparator date={item.data as string} />
-    }
-
-    const message = item.data as Message
-    const isOwn = message.sender_id === userId
-    const position = getBubblePosition(
-      isOwn,
-      messageListItems,
-      messageListItems.findIndex(m => m.id === item.id)
-    )
-
-    return (
-      <ChatBubble
-        message={message}
-        isOwn={isOwn}
-        position={position}
-        userAvatar={isOwn ? profile?.avatar_config : undefined}
-        onLongPress={() => handleReportMessage(message)}
-      />
     )
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={100}
-      style={styles.container}
-    >
-      {messageListItems.length === 0 ? (
-        <EmptyState message="No messages yet. Start the conversation!" />
-      ) : (
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <FlatList
           ref={flatListRef}
           data={messageListItems}
-          renderItem={renderMessageItem}
-          keyExtractor={item => item.id}
+          renderItem={({ item }) => {
+            if (item.type === 'separator') {
+              return <DateSeparator date={item.data as string} />
+            }
+
+            const message = item.data as Message
+            const position = getBubblePosition(
+              messages,
+              message.id,
+              message.sender_id,
+              userId || ''
+            )
+
+            return (
+              <ChatBubble
+                message={message}
+                position={position}
+                isOwnMessage={message.sender_id === userId}
+                userAvatar={message.sender_id === userId ? profile?.avatar_url || null : null}
+                onLongPress={() => {
+                  notificationFeedback()
+                  if (message.sender_id === userId) {
+                    // Own message - can only report
+                    handleReportMessage(message)
+                  } else {
+                    // Other user's message - can report or block
+                    Alert.alert(
+                      'Message Options',
+                      'What would you like to do?',
+                      [
+                        {
+                          text: 'Report Message',
+                          style: 'destructive',
+                          onPress: () => handleReportMessage(message),
+                        },
+                        {
+                          text: 'Block User',
+                          style: 'destructive',
+                          onPress: handleBlockUser,
+                        },
+                        { text: 'Cancel', style: 'cancel' },
+                      ]
+                    )
+                  }
+                }}
+              />
+            )
+          }}
+          keyExtractor={(item) => item.id}
           inverted
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.1}
+          ListEmptyComponent={
+            messagesLoading ? (
+              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
+            ) : (
+              <EmptyState message="No messages yet. Start the conversation!" />
+            )
+          }
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          ListFooterComponent={
-            loadingMore ? <ActivityIndicator size="small" color={COLORS.primary} /> : null
-          }
+          scrollIndicatorInsets={{ right: 1 }}
         />
-      )}
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          ref={inputRef}
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor={COLORS.inputPlaceholder}
-          value={messageText}
-          onChangeText={setMessageText}
-          multiline
-          maxLength={MAX_MESSAGE_LENGTH}
-          editable={!conversation?.is_active}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            !canSend && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSendMessage}
-          disabled={!canSend}
-        >
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
+        {messagesError && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{messagesError}</Text>
+          </View>
+        )}
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            placeholder="Type a message..."
+            placeholderTextColor={COLORS.inputPlaceholder}
+            value={messageText}
+            onChangeText={setMessageText}
+            multiline
+            maxLength={MAX_MESSAGE_LENGTH}
+            editable={!sending && conversation.is_active}
+            testID="message-input"
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
+            onPress={handleSendMessage}
+            disabled={!canSend}
+            testID="send-button"
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.sendButtonText}>Send</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
 
       <ReportUserModal
         visible={userReportModalVisible}
-        onClose={() => setUserReportModalVisible(false)}
-        onSubmit={handleSubmitReport}
+        onClose={handleCloseUserReportModal}
+        onSubmit={handleSubmitUserReport}
       />
 
       <ReportMessageModal
         visible={reportModalVisible}
-        message={messageToReport}
-        onClose={() => {
-          setReportModalVisible(false)
-          setMessageToReport(null)
-        }}
-        onSubmit={handleSubmitReport}
+        onClose={handleCloseReportModal}
+        onSubmit={handleSubmitMessageReport}
       />
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 
@@ -719,6 +830,15 @@ export function ChatScreen(): JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: COLORS.background,
   },
   inputContainer: {
@@ -733,26 +853,39 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: COLORS.background,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 8,
-    maxHeight: 100,
     color: COLORS.inputText,
+    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 20,
+    maxHeight: 100,
   },
   sendButton: {
-    paddingHorizontal: 16,
+    backgroundColor: COLORS.sendButtonActive,
+    paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: COLORS.sendButtonActive,
     justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 40,
   },
   sendButtonDisabled: {
     backgroundColor: COLORS.sendButtonDisabled,
   },
   sendButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
+  },
+  errorBanner: {
+    backgroundColor: COLORS.error,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  errorBannerText: {
+    color: '#FFFFFF',
     fontSize: 14,
+    textAlign: 'center',
   },
 })

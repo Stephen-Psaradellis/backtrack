@@ -19,12 +19,13 @@
  * ```
  */
 
-import React from 'react'
-import { View } from 'react-native'
+import React, { useCallback } from 'react'
+import { View, Alert } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 
 import { locationToItem } from '../components/LocationPicker'
 import { LoadingSpinner } from '../components/LoadingSpinner'
+import { selectionFeedback, successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../navigation/types'
 
 // CreatePost module imports
@@ -62,6 +63,82 @@ export function CreatePostScreen(): JSX.Element {
   const form = useCreatePostForm({ navigation, route })
 
   // ---------------------------------------------------------------------------
+  // HAPTIC FEEDBACK HANDLERS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handle next step with selection haptic feedback
+   */
+  const handleNextWithFeedback = useCallback(() => {
+    selectionFeedback()
+    form.handleNext()
+  }, [form])
+
+  /**
+   * Handle back with warning haptic feedback for first step
+   */
+  const handleBackWithFeedback = useCallback(() => {
+    const currentIndex = STEPS.findIndex((s) => s.id === form.currentStep)
+    if (currentIndex === 0) {
+      warningFeedback()
+      Alert.alert(
+        'Discard Post?',
+        'Are you sure you want to discard this post? All progress will be lost.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+        ]
+      )
+    } else {
+      form.handleBack()
+    }
+  }, [form, navigation])
+
+  /**
+   * Handle selfie capture with success haptic feedback
+   */
+  const handleSelfieWithFeedback = useCallback((uri: string) => {
+    successFeedback()
+    form.handleSelfieCapture(uri)
+  }, [form])
+
+  /**
+   * Handle avatar save with selection haptic feedback
+   */
+  const handleAvatarWithFeedback = useCallback((config: any) => {
+    selectionFeedback()
+    form.handleAvatarSave(config)
+  }, [form])
+
+  /**
+   * Handle location select with selection haptic feedback
+   */
+  const handleLocationSelectWithFeedback = useCallback((location: any) => {
+    selectionFeedback()
+    form.handleLocationSelect(location)
+  }, [form])
+
+  /**
+   * Handle submit with success or error haptic feedback
+   */
+  const handleSubmitWithFeedback = useCallback(async () => {
+    if (!form.isFormValid) {
+      errorFeedback()
+    } else {
+      successFeedback()
+    }
+    await form.handleSubmit()
+  }, [form])
+
+  /**
+   * Handle retake selfie with selection haptic feedback
+   */
+  const handleRetakeSelfieWithFeedback = useCallback(() => {
+    selectionFeedback()
+    form.handleRetakeSelfie()
+  }, [form])
+
+  // ---------------------------------------------------------------------------
   // RENDER HELPERS
   // ---------------------------------------------------------------------------
 
@@ -74,10 +151,10 @@ export function CreatePostScreen(): JSX.Element {
         return (
           <SelfieStep
             selfieUri={form.formData.selfieUri}
-            onCapture={form.handleSelfieCapture}
-            onRetake={form.handleRetakeSelfie}
-            onNext={form.handleNext}
-            onBack={form.handleBack}
+            onCapture={handleSelfieWithFeedback}
+            onRetake={handleRetakeSelfieWithFeedback}
+            onNext={handleNextWithFeedback}
+            onBack={handleBackWithFeedback}
             testID="create-post"
           />
         )
@@ -87,8 +164,8 @@ export function CreatePostScreen(): JSX.Element {
           <AvatarStep
             avatarConfig={form.formData.targetAvatar}
             onChange={form.handleAvatarChange}
-            onSave={form.handleAvatarSave}
-            onBack={form.handleBack}
+            onSave={handleAvatarWithFeedback}
+            onBack={handleBackWithFeedback}
             testID="create-post"
           />
         )
@@ -99,8 +176,8 @@ export function CreatePostScreen(): JSX.Element {
             avatarConfig={form.formData.targetAvatar}
             note={form.formData.note}
             onNoteChange={form.handleNoteChange}
-            onNext={form.handleNext}
-            onBack={form.handleBack}
+            onNext={handleNextWithFeedback}
+            onBack={handleBackWithFeedback}
             testID="create-post"
           />
         )
@@ -110,15 +187,15 @@ export function CreatePostScreen(): JSX.Element {
           <LocationStep
             locations={form.nearbyLocations.map(locationToItem)}
             selectedLocation={form.formData.location}
-            onSelect={form.handleLocationSelect}
+            onSelect={handleLocationSelectWithFeedback}
             userCoordinates={
               form.userLatitude && form.userLongitude
                 ? { latitude: form.userLatitude, longitude: form.userLongitude }
                 : null
             }
             loading={form.loadingLocations || form.locationLoading}
-            onNext={form.handleNext}
-            onBack={form.handleBack}
+            onNext={handleNextWithFeedback}
+            onBack={handleBackWithFeedback}
             testID="create-post"
           />
         )
@@ -132,10 +209,10 @@ export function CreatePostScreen(): JSX.Element {
             location={form.formData.location}
             isSubmitting={form.isSubmitting}
             isFormValid={form.isFormValid}
-            onSubmit={form.handleSubmit}
-            onBack={form.handleBack}
+            onSubmit={handleSubmitWithFeedback}
+            onBack={handleBackWithFeedback}
             goToStep={form.goToStep}
-            onRetakeSelfie={form.handleRetakeSelfie}
+            onRetakeSelfie={handleRetakeSelfieWithFeedback}
             testID="create-post"
           />
         )
@@ -179,7 +256,7 @@ export function CreatePostScreen(): JSX.Element {
       {/* Header with step indicator */}
       <StepHeader
         stepConfig={form.currentStepConfig}
-        onBack={form.handleBack}
+        onBack={handleBackWithFeedback}
         testID="create-post"
       />
 

@@ -35,6 +35,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native'
 
 import { PostCard, createPostCardRenderer } from '../components/PostCard'
+import { selectionFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyLedger, ErrorState } from '../components/EmptyState'
 import { Button } from '../components/Button'
@@ -230,7 +231,8 @@ export function LedgerScreen(): JSX.Element {
    * Handle post card press - navigate to post detail
    */
   const handlePostPress = useCallback(
-    (post: Post | PostWithDetails) => {
+    async (post: Post | PostWithDetails) => {
+      await selectionFeedback()
       navigation.navigate('PostDetail', { postId: post.id })
     },
     [navigation]

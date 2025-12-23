@@ -27,6 +27,7 @@ import {
 } from 'react-native'
 
 import { useAuth } from '../contexts/AuthContext'
+import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { Button, DangerButton, OutlineButton } from '../components/Button'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { LargeAvatarPreview } from '../components/AvatarPreview'
@@ -124,6 +125,7 @@ export function ProfileScreen(): JSX.Element {
     // Validate
     const trimmedName = displayName.trim()
     if (trimmedName.length > 50) {
+      await errorFeedback()
       setErrors({ displayName: 'Display name must be 50 characters or less' })
       return
     }
@@ -137,11 +139,14 @@ export function ProfileScreen(): JSX.Element {
       })
 
       if (error) {
+        await errorFeedback()
         setErrors({ general: error.message || 'Failed to update profile' })
       } else {
+        await successFeedback()
         setIsEditing(false)
       }
     } catch {
+      await errorFeedback()
       setErrors({ general: 'An unexpected error occurred' })
     } finally {
       setIsSaving(false)
@@ -152,6 +157,9 @@ export function ProfileScreen(): JSX.Element {
    * Handle sign out with confirmation
    */
   const handleSignOut = useCallback(async () => {
+    // Trigger warning haptic when showing destructive action confirmation
+    await warningFeedback()
+
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
@@ -168,10 +176,12 @@ export function ProfileScreen(): JSX.Element {
             try {
               const { error } = await signOut()
               if (error) {
+                await errorFeedback()
                 Alert.alert('Error', 'Failed to sign out. Please try again.')
               }
               // Navigation will be handled automatically by auth state change
             } catch {
+              await errorFeedback()
               Alert.alert('Error', 'An unexpected error occurred.')
             } finally {
               setIsSigningOut(false)
@@ -210,13 +220,16 @@ export function ProfileScreen(): JSX.Element {
         })
 
         if (error) {
+          await errorFeedback()
           Alert.alert('Error', error.message || 'Failed to save avatar')
         } else {
+          await successFeedback()
           setIsAvatarModalVisible(false)
           // Refresh profile to get updated avatar
           await refreshProfile()
         }
       } catch {
+        await errorFeedback()
         Alert.alert('Error', 'An unexpected error occurred while saving avatar')
       } finally {
         setIsSavingAvatar(false)
@@ -229,6 +242,9 @@ export function ProfileScreen(): JSX.Element {
    * Delete/remove avatar from profile
    */
   const handleRemoveAvatar = useCallback(async () => {
+    // Trigger warning haptic when showing destructive action confirmation
+    await warningFeedback()
+
     Alert.alert(
       'Remove Avatar',
       'Are you sure you want to remove your avatar? This will affect matching.',
@@ -248,11 +264,14 @@ export function ProfileScreen(): JSX.Element {
               })
 
               if (error) {
+                await errorFeedback()
                 Alert.alert('Error', error.message || 'Failed to remove avatar')
               } else {
+                await successFeedback()
                 await refreshProfile()
               }
             } catch {
+              await errorFeedback()
               Alert.alert('Error', 'An unexpected error occurred')
             } finally {
               setIsSavingAvatar(false)
@@ -364,7 +383,7 @@ export function ProfileScreen(): JSX.Element {
                   onPress={handleCancelEditing}
                   size="small"
                   disabled={isSaving}
-                  testID="profile-cancel-edit-button"
+testID="profile-cancel-edit-button"
                 />
                 <Button
                   title="Save"
@@ -488,28 +507,17 @@ export function ProfileScreen(): JSX.Element {
             >
               <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>
-              {currentAvatarConfig ? 'Edit Your Avatar' : 'Create Your Avatar'}
-            </Text>
-            <View style={styles.modalHeaderSpacer} />
+            <Text style={styles.modalTitle}>Create Your Avatar</Text>
+            <View style={{ width: 60 }} />
           </View>
 
           {/* Avatar Builder */}
-          {isSavingAvatar ? (
-            <View style={styles.modalLoading}>
-              <LoadingSpinner message="Saving avatar..." />
-            </View>
-          ) : (
-            <AvatarBuilder
-              initialConfig={currentAvatarConfig || DEFAULT_AVATAR_CONFIG}
-              onSave={handleSaveAvatar}
-              onCancel={handleCloseAvatarBuilder}
-              saveLabel={currentAvatarConfig ? 'Save Changes' : 'Create Avatar'}
-              cancelLabel="Cancel"
-              showRandomize={true}
-              testID="profile-avatar-builder"
-            />
-          )}
+          <AvatarBuilder
+            initialConfig={currentAvatarConfig || DEFAULT_AVATAR_CONFIG}
+            onSave={handleSaveAvatar}
+            isSaving={isSavingAvatar}
+            testID="profile-avatar-builder"
+          />
         </SafeAreaView>
       </Modal>
     </ScrollView>
@@ -521,66 +529,72 @@ export function ProfileScreen(): JSX.Element {
 // ============================================================================
 
 const styles = StyleSheet.create({
+  // Container
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
   loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F2F2F7',
   },
 
   // Header Section
   headerSection: {
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    paddingVertical: 32,
-    marginBottom: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   avatarText: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   emailText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: '#3C3C43',
+    fontWeight: '500',
   },
 
   // Section Styles
   section: {
+    marginTop: 16,
     backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 16,
-  },
-
-  // Info Row Styles
-  infoRow: {
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+
+  // Info Row
+  infoRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
   },
   infoLabel: {
     fontSize: 14,
@@ -589,7 +603,8 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 16,
-    color: '#000000',
+    color: '#000',
+    fontWeight: '500',
   },
   valueRow: {
     flexDirection: 'row',
@@ -597,166 +612,151 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Edit Styles
+  // Edit Mode
   editContainer: {
     marginTop: 8,
   },
-  editLink: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  editLinkText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  editButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 12,
-  },
-
-  // Input Styles
   input: {
-    height: 44,
     borderWidth: 1,
     borderColor: '#E5E5EA',
     borderRadius: 8,
     paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 16,
-    color: '#000000',
+    color: '#000',
     backgroundColor: '#F9F9F9',
   },
   inputError: {
     borderColor: '#FF3B30',
+    backgroundColor: '#FFF5F5',
   },
   errorText: {
-    fontSize: 12,
     color: '#FF3B30',
+    fontSize: 13,
     marginTop: 4,
   },
-
-  // Error Banner
   errorBanner: {
-    backgroundColor: '#FFE5E5',
+    backgroundColor: '#FFEBEE',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF3B30',
   },
   errorBannerText: {
-    fontSize: 14,
-    color: '#FF3B30',
-    textAlign: 'center',
+    color: '#C41C00',
+    fontSize: 13,
+  },
+  editButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  editLink: {
+    padding: 4,
+  },
+  editLinkText: {
+    color: '#007AFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 
   // Avatar Section
-  avatarSection: {
-    alignItems: 'center',
-  },
   avatarDescription: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#8E8E93',
-    marginBottom: 16,
-    marginTop: -8,
+    marginBottom: 12,
+  },
+  avatarSection: {
+    marginTop: 12,
   },
   avatarConfigured: {
     alignItems: 'center',
-    paddingVertical: 8,
   },
   avatarActions: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 16,
+    width: '100%',
   },
   avatarEmpty: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderStyle: 'dashed',
   },
   avatarPlaceholderIcon: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#E5E5EA',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   avatarPlaceholderEmoji: {
-    fontSize: 48,
+    fontSize: 32,
   },
   avatarEmptyText: {
     fontSize: 14,
     color: '#8E8E93',
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-    paddingHorizontal: 16,
-  },
-
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    backgroundColor: '#FFFFFF',
-  },
-  modalCloseButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    minWidth: 60,
-  },
-  modalCloseText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
-    flex: 1,
-  },
-  modalHeaderSpacer: {
-    minWidth: 60,
-  },
-  modalLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 12,
   },
 
   // Footer
   footer: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
     marginTop: 16,
+    backgroundColor: '#F2F2F7',
   },
   footerText: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 16,
     fontWeight: '600',
+    color: '#3C3C43',
   },
   footerVersion: {
     fontSize: 12,
-    color: '#C7C7CC',
+    color: '#8E8E93',
     marginTop: 4,
   },
+
+  // Modal
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  modalCloseButton: {
+    padding: 8,
+    width: 60,
+  },
+  modalCloseText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'left',
+  },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default ProfileScreen

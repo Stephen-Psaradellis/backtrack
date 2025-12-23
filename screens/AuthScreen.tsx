@@ -34,6 +34,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { Button, GhostButton } from '../components/Button'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { TermsModal } from '../components/TermsModal'
+import { successFeedback, errorFeedback } from '../lib/haptics'
 import type { AuthStackNavigationProp } from '../navigation/types'
 
 // ============================================================================
@@ -124,7 +125,14 @@ export function AuthScreen(): JSX.Element {
     }
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const isValid = Object.keys(newErrors).length === 0
+
+    // Trigger error haptic feedback on validation failures
+    if (!isValid) {
+      errorFeedback()
+    }
+
+    return isValid
   }, [email, password, confirmPassword, mode])
 
   /**
@@ -172,10 +180,17 @@ export function AuthScreen(): JSX.Element {
           errorMessage = error.message
         }
 
+        // Trigger error haptic feedback on auth API errors
+        await errorFeedback()
         setErrors({ general: errorMessage })
+      } else {
+        // Trigger success haptic feedback on successful login
+        await successFeedback()
       }
       // Success case: AuthContext listener will handle navigation
     } catch {
+      // Trigger error haptic feedback on unexpected errors
+      await errorFeedback()
       setErrors({ general: 'An unexpected error occurred. Please try again.' })
     } finally {
       setIsSubmitting(false)
@@ -235,12 +250,18 @@ export function AuthScreen(): JSX.Element {
           errorMessage = error.message
         }
 
+        // Trigger error haptic feedback on auth API errors
+        await errorFeedback()
         setErrors({ general: errorMessage })
       } else {
+        // Trigger success haptic feedback on successful signup (before showing verification message)
+        await successFeedback()
         // Success - show verification message
         setSignupSuccess(true)
       }
     } catch {
+      // Trigger error haptic feedback on unexpected errors
+      await errorFeedback()
       setErrors({ general: 'An unexpected error occurred. Please try again.' })
     } finally {
       setIsSubmitting(false)
@@ -444,54 +465,51 @@ export function AuthScreen(): JSX.Element {
               </View>
             )}
 
-            {/* Forgot Password Link (Login only) */}
-            {mode === 'login' && (
-              <TouchableOpacity
-                style={styles.forgotPasswordContainer}
-                onPress={handleForgotPassword}
-                disabled={isSubmitting}
-                testID="auth-forgot-password"
-              >
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-            )}
-
             {/* Submit Button */}
             <Button
               title={mode === 'login' ? 'Sign In' : 'Create Account'}
               onPress={handleSubmit}
-              loading={isSubmitting}
-              disabled={isSubmitting}
               fullWidth
-              testID={mode === 'login' ? 'auth-login-button' : 'auth-signup-button'}
-            />
-          </View>
-        )}
-
-        {/* Footer - Toggle Mode Link */}
-        {!signupSuccess && (
-          <View style={styles.footerContainer}>
-            <Text style={styles.footerText}>
-              {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
-            </Text>
-            <GhostButton
-              title={mode === 'login' ? 'Sign Up' : 'Sign In'}
-              onPress={toggleMode}
-              size="small"
+              isLoading={isSubmitting}
               disabled={isSubmitting}
-              testID={mode === 'login' ? 'auth-signup-link' : 'auth-login-link'}
+              testID="auth-submit-button"
             />
+
+            {/* Forgot Password Link (Login only) */}
+            {mode === 'login' && (
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                testID="auth-forgot-password-button"
+              >
+                <Text style={styles.forgotPasswordLink}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Toggle Mode Link */}
+            <View style={styles.toggleModeContainer}>
+              <Text style={styles.toggleModeText}>
+                {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+              </Text>
+              <TouchableOpacity
+                onPress={toggleMode}
+                testID="auth-toggle-mode-button"
+              >
+                <Text style={styles.toggleModeLink}>
+                  {mode === 'login' ? 'Sign Up' : 'Sign In'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
-      </ScrollView>
 
-      {/* Terms Modal (shown during signup) */}
-      <TermsModal
-        visible={showTermsModal}
-        onAccept={handleTermsAccept}
-        onDecline={handleTermsDecline}
-        testID="auth-terms-modal"
-      />
+        {/* Terms Modal */}
+        <TermsModal
+          visible={showTermsModal}
+          onAccept={handleTermsAccept}
+          onDecline={handleTermsDecline}
+          testID="auth-terms-modal"
+        />
+      </ScrollView>
     </KeyboardAvoidingView>
   )
 }
@@ -501,44 +519,46 @@ export function AuthScreen(): JSX.Element {
 // ============================================================================
 
 const styles = StyleSheet.create({
+  // Layout
   container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+    padding: 20,
     justifyContent: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Header
   headerContainer: {
     marginBottom: 40,
-    alignItems: 'center',
+    marginTop: 20,
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#000000',
     marginBottom: 8,
-    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
+    fontWeight: '400',
+    color: '#666666',
+    lineHeight: 22,
   },
 
   // Form
   formContainer: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
+
+  // Input Group
   inputGroup: {
     marginBottom: 20,
   },
@@ -549,10 +569,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    height: 50,
+    height: 48,
     borderWidth: 1,
     borderColor: '#E5E5EA',
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#000000',
@@ -560,93 +580,86 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: '#FF3B30',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#FF3B30',
-    marginTop: 4,
+    backgroundColor: '#FFF5F5',
   },
 
-  // Error Banner
+  // Error Messages
+  errorText: {
+    fontSize: 13,
+    color: '#FF3B30',
+    marginTop: 6,
+    fontWeight: '500',
+  },
   errorBanner: {
-    backgroundColor: '#FFE5E5',
-    borderRadius: 10,
+    backgroundColor: '#FFF5F5',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF3B30',
     padding: 12,
+    borderRadius: 4,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
   },
   errorBannerText: {
     fontSize: 14,
     color: '#FF3B30',
-    textAlign: 'center',
-  },
-
-  // Forgot Password
-  forgotPasswordContainer: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
-    marginTop: -8,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: '#007AFF',
     fontWeight: '500',
   },
 
-  // Footer
-  footerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#8E8E93',
-  },
-
-  // Success Banner (Signup Success)
+  // Success Banner
   successContainer: {
-    marginBottom: 32,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 0,
   },
   successBanner: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    padding: 24,
+    backgroundColor: '#F0FFF4',
+    borderLeftWidth: 4,
+    borderLeftColor: '#34C759',
+    padding: 20,
+    borderRadius: 8,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    alignItems: 'center',
   },
   successTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#2E7D32',
-    marginBottom: 12,
-    textAlign: 'center',
+    color: '#34C759',
+    marginBottom: 8,
   },
   successText: {
-    fontSize: 16,
-    color: '#388E3C',
-    textAlign: 'center',
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
     marginBottom: 12,
-    lineHeight: 24,
   },
   successEmail: {
     fontWeight: '600',
-    color: '#1B5E20',
+    color: '#000000',
   },
   successSubtext: {
+    fontSize: 13,
+    color: '#666666',
+    lineHeight: 18,
+  },
+
+  // Buttons
+  toggleModeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  toggleModeText: {
     fontSize: 14,
-    color: '#66BB6A',
+    color: '#666666',
+  },
+  toggleModeLink: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  forgotPasswordLink: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+    marginTop: 16,
     textAlign: 'center',
-    lineHeight: 20,
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default AuthScreen

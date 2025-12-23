@@ -42,6 +42,7 @@ import {
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera'
 import { LoadingSpinner } from './LoadingSpinner'
 import { Button, GhostButton, OutlineButton } from './Button'
+import { successFeedback, lightFeedback } from '../lib/haptics'
 
 // ============================================================================
 // TYPES
@@ -184,6 +185,7 @@ export const SelfieCamera = memo(function SelfieCamera({
    * Toggle between front and back camera
    */
   const toggleFacing = useCallback(() => {
+    lightFeedback()
     setFacing((current) => (current === 'front' ? 'back' : 'front'))
   }, [])
 
@@ -231,6 +233,7 @@ export const SelfieCamera = memo(function SelfieCamera({
       })
 
       if (photo) {
+        successFeedback()
         onCapture(photo.uri)
       } else {
         onError?.('Failed to capture photo')
@@ -417,7 +420,7 @@ export const CompactSelfieCamera = memo(function CompactSelfieCamera(
   props: Omit<SelfieCameraProps, 'showFlipButton'>
 ) {
   return (
-    <SelfieCamera
+<SelfieCamera
       {...props}
       showFlipButton={false}
       testID={props.testID ?? 'selfie-camera-compact'}
@@ -588,18 +591,16 @@ const styles = StyleSheet.create({
     width: CAMERA_BUTTON_SIZES.action,
     height: CAMERA_BUTTON_SIZES.action,
     borderRadius: CAMERA_BUTTON_SIZES.action / 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 30,
-  },
-  actionButtonText: {
-    fontSize: 24,
   },
   actionButtonPlaceholder: {
     width: CAMERA_BUTTON_SIZES.action,
     height: CAMERA_BUTTON_SIZES.action,
-    marginHorizontal: 30,
+  },
+  actionButtonText: {
+    fontSize: 20,
   },
 
   // Capture button
@@ -610,8 +611,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
-    borderColor: '#FFFFFF',
+    marginHorizontal: 24,
   },
   captureButtonInner: {
     width: CAMERA_BUTTON_SIZES.captureInner,
@@ -620,40 +620,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   captureButtonCapturing: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#FFD700',
   },
 
-  // Capturing overlay
+  // Capture indicator
   capturingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // Instructions
   instructions: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 120 : 80,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
     paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   instructionsText: {
-    fontSize: 16,
     color: '#FFFFFF',
+    fontSize: 14,
     textAlign: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    overflow: 'hidden',
+    fontWeight: '500',
   },
 })
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default SelfieCamera
