@@ -1,7 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { shouldUseMockSupabase } from '@/lib/dev'
+import { createTypedDevSupabaseClient } from '@/lib/dev/mock-supabase'
 
 export async function createClient() {
+  // In development mode without credentials, use mock client
+  if (shouldUseMockSupabase()) {
+    return createTypedDevSupabaseClient()
+  }
+
   const cookieStore = await cookies()
 
   return createServerClient(
