@@ -1,0 +1,387 @@
+{
+  "feature": "Enable Development Mode Without API Keys",
+  "workflow_type": "feature",
+  "workflow_rationale": "This is a new feature that adds dev-time convenience by implementing mock services. It requires creating new files (lib/dev/*), modifying initialization logic in existing Supabase clients, and establishing patterns for mock service injection - all without changing production behavior.",
+  "phases": [
+    {
+      "id": "phase-1-dev-utilities",
+      "name": "Development Mode Utilities",
+      "type": "implementation",
+      "description": "Create the core dev mode detection utilities and mock infrastructure",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create dev mode detection utility (lib/dev/index.ts)",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": ["lib/dev/index.ts"],
+          "patterns_from": [],
+          "implementation_notes": "Create isDevMode(), isMissingSupabaseCredentials(), shouldUseMockSupabase(), isMissingGoogleMapsKey(), shouldUseMockGoogleMaps() functions. Check NODE_ENV and presence of env vars.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit lib/dev/index.ts",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Create mock Supabase client for development (lib/dev/mock-supabase.ts)",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": ["lib/dev/mock-supabase.ts"],
+          "patterns_from": ["__tests__/mocks/supabase.ts"],
+          "implementation_notes": "Adapt test mocks to runtime use. Remove Jest dependencies (use plain functions). Provide createDevSupabaseClient() that returns same interface as real client. Include mock data for profiles, locations, posts. Make query builder chainable.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit lib/dev/mock-supabase.ts",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Create mock Google Maps provider for development (lib/dev/mock-google-maps.ts)",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": ["lib/dev/mock-google-maps.ts"],
+          "patterns_from": ["components/MapView.tsx"],
+          "implementation_notes": "Create MockMapView component that renders a styled placeholder div with message. Export isMockGoogleMaps flag. Provide mock location data for development.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit lib/dev/mock-google-maps.ts",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-supabase-integration",
+      "name": "Supabase Client Integration",
+      "type": "implementation",
+      "description": "Modify all Supabase client initialization files to use mocks when credentials are missing",
+      "depends_on": ["phase-1-dev-utilities"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Update lib/supabase/client.ts to use mock in dev mode",
+          "service": "main",
+          "files_to_modify": ["lib/supabase/client.ts"],
+          "files_to_create": [],
+          "patterns_from": ["lib/dev/index.ts", "lib/dev/mock-supabase.ts"],
+          "implementation_notes": "Import shouldUseMockSupabase and createDevSupabaseClient. Add conditional at top of createClient() to return mock when credentials missing in dev. Keep real client code unchanged with non-null assertions.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit lib/supabase/client.ts",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Update lib/supabase/server.ts to use mock in dev mode",
+          "service": "main",
+          "files_to_modify": ["lib/supabase/server.ts"],
+          "files_to_create": [],
+          "patterns_from": ["lib/dev/index.ts", "lib/dev/mock-supabase.ts"],
+          "implementation_notes": "Add conditional mock return for server-side. Mock must handle cookies parameter gracefully (no-op). Return mock that works with Next.js App Router server components.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit lib/supabase/server.ts",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Update lib/supabase/middleware.ts to handle missing credentials",
+          "service": "main",
+          "files_to_modify": ["lib/supabase/middleware.ts"],
+          "files_to_create": [],
+          "patterns_from": ["lib/dev/index.ts"],
+          "implementation_notes": "Add early return in updateSession() when shouldUseMockSupabase() is true. Return NextResponse.next() without auth check. Log warning about dev mode.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit lib/supabase/middleware.ts",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-4",
+          "description": "Update lib/supabase.ts (React Native) to use mock in dev mode",
+          "service": "main",
+          "files_to_modify": ["lib/supabase.ts"],
+          "files_to_create": [],
+          "patterns_from": ["lib/dev/index.ts", "lib/dev/mock-supabase.ts"],
+          "implementation_notes": "Replace throw statements with conditional mock return. Use EXPO_PUBLIC_* env vars for detection. Return mock client when running in dev without credentials.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit lib/supabase.ts",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-ui-indicator",
+      "name": "Dev Mode UI Indicator",
+      "type": "implementation",
+      "description": "Create visual indicator component and integrate into app layout",
+      "depends_on": ["phase-1-dev-utilities"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Create DevModeBanner component",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": ["components/DevModeBanner.tsx"],
+          "patterns_from": ["components/OfflineIndicator.tsx"],
+          "implementation_notes": "Create a fixed banner at bottom of screen. Show 'Development Mode - Using Mock Data' message. Make dismissible. Only render when dev mode is active. Use subtle but visible styling.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit components/DevModeBanner.tsx",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Integrate DevModeBanner into app layout",
+          "service": "main",
+          "files_to_modify": ["app/layout.tsx"],
+          "files_to_create": [],
+          "patterns_from": [],
+          "implementation_notes": "Import and render DevModeBanner as last child in body. Component handles its own visibility logic based on dev mode detection.",
+          "verification": {
+            "type": "command",
+            "command": "npx tsc --noEmit app/layout.tsx",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-testing",
+      "name": "Unit Tests for Dev Mode",
+      "type": "implementation",
+      "description": "Create unit tests for dev mode detection and mock clients",
+      "depends_on": ["phase-2-supabase-integration"],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create unit tests for dev mode detection utilities",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": ["__tests__/lib/dev/index.test.ts"],
+          "patterns_from": ["__tests__/mocks/supabase.ts"],
+          "implementation_notes": "Test isDevMode(), shouldUseMockSupabase(), shouldUseMockGoogleMaps() with various env var combinations. Mock process.env for testing.",
+          "verification": {
+            "type": "command",
+            "command": "npm run test:run -- __tests__/lib/dev/index.test.ts",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Create unit tests for mock Supabase client",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": ["__tests__/lib/dev/mock-supabase.test.ts"],
+          "patterns_from": ["__tests__/mocks/supabase.ts"],
+          "implementation_notes": "Test createDevSupabaseClient() returns proper interface. Test query builder chaining. Test auth methods return mock data. Test storage methods work.",
+          "verification": {
+            "type": "command",
+            "command": "npm run test:run -- __tests__/lib/dev/mock-supabase.test.ts",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-integration",
+      "name": "Integration Verification",
+      "type": "integration",
+      "description": "Verify all components work together and app runs without env vars",
+      "depends_on": ["phase-2-supabase-integration", "phase-3-ui-indicator", "phase-4-testing"],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Verify app starts without .env.local file",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "all_services": false,
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000",
+            "checks": [
+              "Page renders without errors",
+              "Dev mode banner is visible",
+              "No console errors related to missing env vars"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Verify avatar builder demo page works with mock data",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "all_services": false,
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/demo/avatar-builder",
+            "checks": [
+              "Avatar builder loads",
+              "Can switch categories",
+              "Can select options"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-3",
+          "description": "Run full test suite to ensure no regressions",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "all_services": false,
+          "verification": {
+            "type": "command",
+            "command": "npm run test:run",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-4",
+          "description": "Verify production build behavior (should fail without credentials)",
+          "service": "main",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "all_services": false,
+          "verification": {
+            "type": "command",
+            "command": "NODE_ENV=production npm run build 2>&1 | grep -i 'error\\|missing\\|required' || echo 'Build behavior verified'",
+            "expected": "Build fails or warns about missing credentials in production"
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 5,
+    "total_subtasks": 13,
+    "services_involved": ["main"],
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": ["phase-2-supabase-integration", "phase-3-ui-indicator"],
+          "reason": "Both depend only on phase-1, different file sets"
+        }
+      ],
+      "recommended_workers": 1,
+      "speedup_estimate": "1.3x faster than sequential with 2 workers"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 014 --parallel 1"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "phase-4-testing",
+    "test_types_required": ["unit", "integration"],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "Application starts with npm run dev without any .env.local file",
+      "No console errors related to missing environment variables in dev mode",
+      "Pages that use Supabase queries render with mock data",
+      "A visible 'Dev Mode' indicator appears when using mocks",
+      "All existing tests pass",
+      "Production build fails appropriately if credentials missing"
+    ],
+    "verification_steps": [
+      {
+        "name": "TypeScript Compilation",
+        "command": "npm run typecheck",
+        "expected_outcome": "No TypeScript errors",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Unit Tests",
+        "command": "npm run test:run",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Dev Server Start",
+        "command": "timeout 30 npm run dev || true",
+        "expected_outcome": "Server starts without env-related errors",
+        "type": "integration",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Medium risk feature that modifies core initialization logic. Requires unit tests for detection utilities and integration verification that app starts without credentials."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": ["npm run test:run"],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": ["npm run test:run"],
+      "services_to_test": ["main"]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {"url": "http://localhost:3000/", "checks": ["renders", "dev-banner-visible", "no-console-errors"]},
+        {"url": "http://localhost:3000/demo/avatar-builder", "checks": ["renders", "interactive"]}
+      ]
+    },
+    "console_verification": {
+      "required": true,
+      "checks": [
+        "Dev mode warning logged: '[Dev Mode] Using mock Supabase client'",
+        "No red errors in browser console",
+        "No 'Uncaught' or 'Unhandled' errors"
+      ]
+    },
+    "production_build_verification": {
+      "required": true,
+      "checks": ["Build fails or warns without credentials when NODE_ENV=production"]
+    }
+  },
+  "qa_signoff": null
+}
