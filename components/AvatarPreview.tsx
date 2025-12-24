@@ -1,7 +1,7 @@
 /**
  * AvatarPreview Component
  *
- * Renders an avatar using the Avataaars library based on a given configuration.
+ * Renders an avatar using DiceBear's avataaars style based on a given configuration.
  * Used throughout the app to display user avatars and target descriptions.
  *
  * @example
@@ -20,9 +20,10 @@
  * ```
  */
 
-import React, { memo } from 'react'
+import React, { memo, useMemo } from 'react'
 import { View, StyleSheet, ViewStyle } from 'react-native'
-import Avatar from 'avataaars'
+import { SvgXml } from 'react-native-svg'
+import { createAvatarSvg } from '@/lib/avatar/dicebear'
 import {
   AvatarConfig,
   AvatarStyle,
@@ -98,7 +99,7 @@ export const AVATAR_SIZES = {
 // ============================================================================
 
 /**
- * AvatarPreview displays an avatar using the Avataaars library.
+ * AvatarPreview displays an avatar using DiceBear's avataaars style.
  *
  * Features:
  * - Renders avatar based on configuration props
@@ -114,32 +115,28 @@ export const AvatarPreview = memo(function AvatarPreview({
   style,
   testID = 'avatar-preview',
 }: AvatarPreviewProps) {
-  // Merge provided config with defaults to ensure all properties are set
-  const mergedConfig: AvatarConfig = {
-    ...DEFAULT_AVATAR_CONFIG,
-    ...config,
-  }
+  // Merge provided config with defaults and include avatarStyle
+  const mergedConfig: AvatarConfig = useMemo(
+    () => ({
+      ...DEFAULT_AVATAR_CONFIG,
+      ...config,
+      avatarStyle,
+    }),
+    [config, avatarStyle]
+  )
+
+  // Generate SVG string using DiceBear adapter
+  const svgString = useMemo(
+    () => createAvatarSvg(mergedConfig, size),
+    [mergedConfig, size]
+  )
 
   return (
     <View
       style={[styles.container, { width: size, height: size }, style]}
       testID={testID}
     >
-      <Avatar
-        style={{ width: size, height: size }}
-        avatarStyle={avatarStyle}
-        topType={mergedConfig.topType}
-        hairColor={mergedConfig.hairColor}
-        accessoriesType={mergedConfig.accessoriesType}
-        facialHairType={mergedConfig.facialHairType}
-        facialHairColor={mergedConfig.facialHairColor}
-        clotheType={mergedConfig.clotheType}
-        clotheColor={mergedConfig.clotheColor}
-        eyeType={mergedConfig.eyeType}
-        eyebrowType={mergedConfig.eyebrowType}
-        mouthType={mergedConfig.mouthType}
-        skinColor={mergedConfig.skinColor}
-      />
+      <SvgXml xml={svgString} width={size} height={size} />
     </View>
   )
 })
