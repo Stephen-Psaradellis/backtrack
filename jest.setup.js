@@ -124,7 +124,7 @@ jest.mock('react-native-maps', () => {
   }
 })
 
-// Mock react-native-svg for avataaars
+// Mock react-native-svg for DiceBear avatar rendering
 jest.mock('react-native-svg', () => {
   const { View } = require('react-native')
   return {
@@ -150,17 +150,24 @@ jest.mock('react-native-svg', () => {
     ClipPath: View,
     Pattern: View,
     Mask: View,
+    SvgXml: (props) => <View testID="svg-xml-mock" {...props} />,
   }
 })
 
-// Mock avataaars
-jest.mock('avataaars', () => {
-  const { View } = require('react-native')
-  return {
-    __esModule: true,
-    default: (props) => <View testID="avatar-mock" />,
-  }
-})
+// Mock @dicebear/core
+jest.mock('@dicebear/core', () => ({
+  createAvatar: jest.fn((style, options) => ({
+    toString: () => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#ccc"/></svg>',
+    toDataUri: () => 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23ccc"/></svg>',
+  })),
+}))
+
+// Mock @dicebear/collection
+jest.mock('@dicebear/collection', () => ({
+  avataaars: {
+    meta: { title: 'Avataaars' },
+  },
+}))
 
 // Mock @react-navigation/native
 jest.mock('@react-navigation/native', () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useMemo } from 'react'
-import Avatar from 'avataaars'
+import { createAvatarDataUri } from '@/lib/avatar/dicebear'
 import { AvatarConfig, DEFAULT_AVATAR_CONFIG } from '@/types/avatar'
 
 // ============================================================================
@@ -51,7 +51,7 @@ const SIZE_CLASSES: Record<AvatarPreviewSize, string> = {
 // ============================================================================
 
 /**
- * A memoized avatar preview component that renders an avatar using the avataaars library.
+ * A memoized avatar preview component that renders an avatar using DiceBear.
  * Supports multiple size variants and accepts a partial or complete avatar configuration.
  *
  * @example
@@ -76,20 +76,25 @@ function AvatarPreviewComponent({
   className = '',
   transparent = false,
 }: AvatarPreviewProps) {
-  // Merge provided config with defaults to ensure all required props are set
+  // Merge provided config with defaults and apply transparent override
   const mergedConfig = useMemo(
-    () => ({
+    (): AvatarConfig => ({
       ...DEFAULT_AVATAR_CONFIG,
       ...config,
+      // Override avatarStyle based on transparent prop
+      avatarStyle: transparent ? 'Transparent' : (config?.avatarStyle ?? DEFAULT_AVATAR_CONFIG.avatarStyle),
     }),
-    [config]
+    [config, transparent]
   )
-
-  // Determine avatar style based on transparent prop
-  const avatarStyle = transparent ? 'Transparent' : (mergedConfig.avatarStyle ?? 'Circle')
 
   const dimension = SIZE_DIMENSIONS[size]
   const containerClass = SIZE_CLASSES[size]
+
+  // Generate avatar data URI using DiceBear adapter
+  const avatarDataUri = useMemo(
+    () => createAvatarDataUri(mergedConfig, dimension),
+    [mergedConfig, dimension]
+  )
 
   const baseClasses = [
     'inline-flex items-center justify-center',
@@ -103,21 +108,12 @@ function AvatarPreviewComponent({
 
   return (
     <div className={baseClasses} aria-label="Avatar preview">
-      <Avatar
+      <img
+        src={avatarDataUri}
+        alt="Avatar"
+        width={dimension}
+        height={dimension}
         style={{ width: dimension, height: dimension }}
-        avatarStyle={avatarStyle}
-        topType={mergedConfig.topType}
-        accessoriesType={mergedConfig.accessoriesType}
-        hairColor={mergedConfig.hairColor}
-        facialHairType={mergedConfig.facialHairType}
-        facialHairColor={mergedConfig.facialHairColor}
-        clotheType={mergedConfig.clotheType}
-        clotheColor={mergedConfig.clotheColor}
-        graphicType={mergedConfig.graphicType}
-        eyeType={mergedConfig.eyeType}
-        eyebrowType={mergedConfig.eyebrowType}
-        mouthType={mergedConfig.mouthType}
-        skinColor={mergedConfig.skinColor}
       />
     </div>
   )

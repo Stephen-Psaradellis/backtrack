@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useMemo } from 'react'
-import Avatar from 'avataaars'
+import { createAvatarDataUri } from '@/lib/avatar/dicebear'
 import {
   AvatarConfig,
   AvatarOptionKey,
@@ -81,10 +81,21 @@ function SmallAvatarPreviewComponent<K extends AvatarOptionKey>({
   showLabel = false,
 }: SmallAvatarPreviewProps<K>) {
   // Create the preview config by applying the option to the base config
-  const previewConfig = useMemo(() => {
+  // Always use transparent style for small previews
+  const previewConfig = useMemo((): AvatarConfig => {
     const base = { ...DEFAULT_AVATAR_CONFIG, ...baseConfig }
-    return createPreviewConfig(base, optionKey, optionValue)
+    const config = createPreviewConfig(base, optionKey, optionValue)
+    return {
+      ...config,
+      avatarStyle: 'Transparent',
+    }
   }, [baseConfig, optionKey, optionValue])
+
+  // Generate avatar data URI using DiceBear adapter
+  const avatarDataUri = useMemo(
+    () => createAvatarDataUri(previewConfig, PREVIEW_DIMENSION),
+    [previewConfig]
+  )
 
   // Format the display label for the option value
   const displayLabel = useMemo(
@@ -142,21 +153,12 @@ function SmallAvatarPreviewComponent<K extends AvatarOptionKey>({
       aria-pressed={isSelected}
     >
       <div className={avatarContainerClasses}>
-        <Avatar
+        <img
+          src={avatarDataUri}
+          alt="Avatar option preview"
+          width={PREVIEW_DIMENSION}
+          height={PREVIEW_DIMENSION}
           style={{ width: PREVIEW_DIMENSION, height: PREVIEW_DIMENSION }}
-          avatarStyle="Transparent"
-          topType={previewConfig.topType}
-          accessoriesType={previewConfig.accessoriesType}
-          hairColor={previewConfig.hairColor}
-          facialHairType={previewConfig.facialHairType}
-          facialHairColor={previewConfig.facialHairColor}
-          clotheType={previewConfig.clotheType}
-          clotheColor={previewConfig.clotheColor}
-          graphicType={previewConfig.graphicType}
-          eyeType={previewConfig.eyeType}
-          eyebrowType={previewConfig.eyebrowType}
-          mouthType={previewConfig.mouthType}
-          skinColor={previewConfig.skinColor}
         />
       </div>
       {showLabel && (
