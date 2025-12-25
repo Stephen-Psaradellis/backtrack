@@ -60,3 +60,10 @@ CREATE INDEX IF NOT EXISTS idx_location_visits_user_location
 
 -- Index on created_at for cleanup operations
 CREATE INDEX IF NOT EXISTS idx_location_visits_created_at ON location_visits(created_at DESC);
+
+-- Partial index for efficient 3-hour window queries
+-- This index optimizes the most common query pattern: finding a user's recent visits
+-- The WHERE clause filters to only include visits within the 3-hour eligibility window
+CREATE INDEX IF NOT EXISTS idx_location_visits_recent
+    ON location_visits(user_id, visited_at DESC)
+    WHERE visited_at > NOW() - INTERVAL '3 hours';
