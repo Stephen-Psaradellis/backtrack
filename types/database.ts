@@ -124,6 +124,47 @@ export interface LocationUpdate {
 }
 
 // ============================================================================
+// LOCATION VISITS
+// ============================================================================
+
+/**
+ * Record of a user's physical visit to a location
+ *
+ * Tracks when users are physically present at a location (within ~50 meters).
+ * Used to verify eligibility for creating posts at a location.
+ * Visits older than 3 hours are considered expired for post creation.
+ */
+export interface LocationVisit {
+  /** Unique identifier for the visit record */
+  id: UUID
+  /** User who visited the location */
+  user_id: UUID
+  /** Location that was visited */
+  location_id: UUID
+  /** Timestamp when the visit was recorded (server-side) */
+  visited_at: Timestamp
+  /** GPS latitude at time of visit */
+  latitude: number
+  /** GPS longitude at time of visit */
+  longitude: number
+  /** GPS accuracy in meters at time of visit (optional) */
+  accuracy: number | null
+}
+
+/**
+ * Fields required when inserting a new location visit
+ */
+export interface LocationVisitInsert {
+  id?: UUID
+  user_id: UUID
+  location_id: UUID
+  visited_at?: Timestamp
+  latitude: number
+  longitude: number
+  accuracy?: number | null
+}
+
+// ============================================================================
 // POSTS
 // ============================================================================
 
@@ -619,6 +660,11 @@ export interface Database {
         Row: Location
         Insert: LocationInsert
         Update: LocationUpdate
+      }
+      location_visits: {
+        Row: LocationVisit
+        Insert: LocationVisitInsert
+        Update: never
       }
       posts: {
         Row: Post
