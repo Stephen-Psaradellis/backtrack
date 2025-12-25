@@ -3,23 +3,23 @@
   "spec": "016-limit-post-locations-to-recent-visits",
   "state": "building",
   "subtasks": {
-    "completed": 19,
+    "completed": 21,
     "total": 24,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "UI Components",
+    "current": "Integration & Testing",
     "id": null,
-    "total": 4
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 6,
+    "number": 8,
     "started_at": "2025-12-24T20:18:17.896732"
   },
-  "last_update": "2025-12-24T20:35:57.513778"
+  "last_update": "2025-12-24T20:44:18.710299"
 }
