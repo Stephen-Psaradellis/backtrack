@@ -3,7 +3,7 @@
   "spec": "016-limit-post-locations-to-recent-visits",
   "state": "building",
   "subtasks": {
-    "completed": 1,
+    "completed": 4,
     "total": 24,
     "in_progress": 1,
     "failed": 0
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 2,
+    "number": 5,
     "started_at": "2025-12-24T19:43:09.394920"
   },
-  "last_update": "2025-12-24T19:45:14.234914"
+  "last_update": "2025-12-24T19:52:24.703251"
 }

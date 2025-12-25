@@ -180,3 +180,58 @@ $$;
 
 COMMENT ON FUNCTION record_location_visit(UUID, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION) IS
   'Records a user visit to a location if within 50m proximity. Uses PostGIS ST_DWithin for accurate distance verification. Returns the visit record if within proximity, NULL otherwise.';
+
+-- ============================================================================
+-- GET_RECENTLY_VISITED_LOCATIONS FUNCTION
+-- ============================================================================
+-- Returns locations that the current user has visited within the last 3 hours.
+-- Used to determine which locations a user is eligible to post from.
+-- Returns unique locations with their most recent visit timestamp.
+-- Leverages the idx_location_visits_user_visited_at index for efficient queries.
+--
+-- Returns: TABLE with all location columns plus visited_at timestamp
+
+CREATE OR REPLACE FUNCTION get_recently_visited_locations()
+RETURNS TABLE (
+  id UUID,
+  google_place_id TEXT,
+  name TEXT,
+  address TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  place_types TEXT[],
+  post_count INTEGER,
+  created_at TIMESTAMPTZ,
+  visited_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+AS $$
+DECLARE
+  visit_window CONSTANT INTERVAL := INTERVAL '3 hours';
+BEGIN
+  RETURN QUERY
+  SELECT
+    l.id,
+    l.google_place_id,
+    l.name,
+    l.address,
+    l.latitude,
+    l.longitude,
+    l.place_types,
+    l.post_count,
+    l.created_at,
+    -- Get the most recent visit time for each location
+    MAX(lv.visited_at) AS visited_at
+  FROM locations l
+  INNER JOIN location_visits lv ON lv.location_id = l.id
+  WHERE lv.user_id = auth.uid()
+    AND lv.visited_at > NOW() - visit_window
+  GROUP BY l.id, l.google_place_id, l.name, l.address, l.latitude, l.longitude, l.place_types, l.post_count, l.created_at
+  ORDER BY MAX(lv.visited_at) DESC;
+END;
+$$;
+
+COMMENT ON FUNCTION get_recently_visited_locations() IS
+  'Returns locations visited by the current user within the last 3 hours. Used for post creation eligibility. Returns unique locations ordered by most recent visit.';
