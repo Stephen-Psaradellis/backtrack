@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "014-enable-development-mode-without-api-keys",
+  "spec": "016-limit-post-locations-to-recent-visits",
   "state": "building",
   "subtasks": {
-    "completed": 13,
-    "total": 15,
+    "completed": 22,
+    "total": 24,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration Verification",
+    "current": "Integration & Testing",
     "id": null,
-    "total": 4
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 13,
-    "started_at": "2025-12-23T21:01:47.715160"
+    "number": 9,
+    "started_at": "2025-12-24T20:18:17.896732"
   },
-  "last_update": "2025-12-23T21:38:17.105678"
+  "last_update": "2025-12-24T20:47:45.279199"
 }

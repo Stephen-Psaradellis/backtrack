@@ -2,19 +2,21 @@
  * LocationStep Component
  *
  * Fourth step in the CreatePost wizard flow. Allows the user to select
- * the location where they saw their missed connection. Wraps the LocationPicker
- * component with navigation buttons and provides proper styling for the wizard.
+ * the location where they saw their missed connection. Shows only locations
+ * the user has visited within the last 3 hours, with visit timestamps displayed.
  *
  * Features:
  * - Location search and selection via LocationPicker
- * - Displays nearby locations based on user coordinates
+ * - Displays only recently visited locations (within 3 hours)
+ * - Shows "Visited X ago" badges for each location
+ * - Empty state when no recent visits
  * - Back/Next navigation buttons
  * - Disabled Next button until location is selected
  *
  * @example
  * ```tsx
  * <LocationStep
- *   locations={nearbyLocations}
+ *   locations={visitedLocations}
  *   selectedLocation={formData.location}
  *   onSelect={handleLocationSelect}
  *   userCoordinates={{ latitude: 37.78, longitude: -122.41 }}
@@ -30,6 +32,7 @@ import { View, StyleSheet, ViewStyle } from 'react-native'
 
 import { LocationPicker, type LocationItem } from '../../../components/LocationPicker'
 import { Button, OutlineButton } from '../../../components/Button'
+import { EmptyState } from '../../../components/EmptyState'
 import { COLORS } from '../styles'
 
 // ============================================================================
@@ -49,7 +52,7 @@ interface Coordinates {
  */
 export interface LocationStepProps {
   /**
-   * Array of nearby locations to display
+   * Array of recently visited locations to display (visited within last 3 hours)
    */
   locations: LocationItem[]
 
@@ -101,8 +104,10 @@ export interface LocationStepProps {
  * LocationStep - Location selection step in the CreatePost wizard
  *
  * Displays:
- * 1. LocationPicker with search and nearby locations
- * 2. Back/Next navigation buttons at the bottom
+ * 1. Empty state if user has no recent visits (visited within 3 hours)
+ * 2. LocationPicker with search and recently visited locations
+ * 3. "Visited X ago" badges on each location
+ * 4. Back/Next navigation buttons at the bottom
  *
  * The Next button is disabled until a location is selected.
  */
@@ -121,9 +126,40 @@ export const LocationStep = memo(function LocationStep({
   // ---------------------------------------------------------------------------
 
   const isLocationSelected = selectedLocation !== null
+  const hasNoVisits = !loading && locations.length === 0
 
   // ---------------------------------------------------------------------------
-  // RENDER
+  // RENDER: EMPTY STATE
+  // ---------------------------------------------------------------------------
+
+  if (hasNoVisits) {
+    return (
+      <View style={styles.locationContainer}>
+        <View style={styles.emptyStateContainer}>
+          <EmptyState
+            icon="📍"
+            title="No Recent Visits"
+            message="Visit a location to post there. You can only create posts at places you've been within the last 3 hours."
+            testID={`${testID}-empty-state`}
+          />
+        </View>
+
+        {/* Action buttons (Back only when no visits) */}
+        <View style={styles.locationActions}>
+          <Button
+            title="Back"
+            onPress={onBack}
+            variant="outline"
+            style={styles.locationFullWidthButton as ViewStyle}
+            testID={`${testID}-location-back`}
+          />
+        </View>
+      </View>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // RENDER: LOCATION LIST
   // ---------------------------------------------------------------------------
 
   return (
@@ -135,6 +171,7 @@ export const LocationStep = memo(function LocationStep({
         userCoordinates={userCoordinates}
         loading={loading}
         showCurrentLocation={false}
+        showVisitedAt={true}
         placeholder="Search for a venue..."
         testID={`${testID}-location-picker`}
       />
@@ -173,6 +210,15 @@ const styles = StyleSheet.create({
   },
 
   /**
+   * Container for empty state display (centered vertically)
+   */
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /**
    * Container for Back/Next action buttons
    */
   locationActions: {
@@ -196,6 +242,13 @@ const styles = StyleSheet.create({
    */
   locationNextButton: {
     flex: 2,
+  },
+
+  /**
+   * Full width button styling (used in empty state)
+   */
+  locationFullWidthButton: {
+    flex: 1,
   },
 })
 

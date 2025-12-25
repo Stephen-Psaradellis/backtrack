@@ -60,6 +60,7 @@ import { EmptyState, NoSearchResults } from './EmptyState'
 import { selectionFeedback } from '../lib/haptics'
 import type { Location, Coordinates } from '../lib/types'
 import { calculateDistance } from '../hooks/useLocation'
+import { formatVisitedAgo } from '../lib/utils/geo'
 
 // ============================================================================
 // TYPES
@@ -83,6 +84,45 @@ export interface LocationItem {
   place_id?: string | null
   /** Distance from user in meters (calculated if userCoordinates provided) */
   distance?: number
+  /** Timestamp when the user visited this location (for visited locations) */
+  visited_at?: string | null
+}
+
+/**
+ * Converts a Location database entity to a LocationItem for display.
+ * Handles both regular Location and LocationWithVisit types.
+ *
+ * @param location - Location entity from database
+ * @returns LocationItem for use in LocationPicker
+ *
+ * @example
+ * ```typescript
+ * // Convert a database location
+ * const item = locationToItem(location)
+ *
+ * // Convert a visited location (preserves visited_at)
+ * const visitedItem = locationToItem(visitedLocation)
+ * console.log(visitedItem.visited_at) // "2024-01-01T12:00:00Z"
+ * ```
+ */
+export function locationToItem(location: {
+  id: string
+  name: string
+  address?: string | null
+  latitude: number
+  longitude: number
+  google_place_id?: string | null
+  visited_at?: string | null
+}): LocationItem {
+  return {
+    id: location.id,
+    name: location.name,
+    address: location.address ?? null,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    place_id: location.google_place_id ?? null,
+    visited_at: location.visited_at ?? null,
+  }
 }
 
 /**
@@ -144,6 +184,8 @@ export interface LocationPickerProps {
   maxLocations?: number
   /** Whether to auto-focus the search input */
   autoFocus?: boolean
+  /** Whether to show "Visited X ago" badge when visited_at is available */
+  showVisitedAt?: boolean
   /** Custom container style */
   style?: StyleProp<ViewStyle>
   /** Custom list style */
@@ -160,6 +202,7 @@ interface LocationListItemProps {
   selected: boolean
   onPress: () => void
   showDistance: boolean
+  showVisitedAt: boolean
   testID?: string
 }
 
@@ -236,6 +279,7 @@ function LocationListItem({
   selected,
   onPress,
   showDistance,
+  showVisitedAt,
   testID,
 }: LocationListItemProps): JSX.Element {
   return (
@@ -258,15 +302,25 @@ function LocationListItem({
 
       {/* Location details */}
       <View style={styles.locationDetails}>
-        <Text
-          style={[
-            styles.locationName,
-            selected && styles.locationNameSelected,
-          ]}
-          numberOfLines={1}
-        >
-          {location.name}
-        </Text>
+        <View style={styles.locationNameRow}>
+          <Text
+            style={[
+              styles.locationName,
+              selected && styles.locationNameSelected,
+            ]}
+            numberOfLines={1}
+          >
+            {location.name}
+          </Text>
+          {/* Visited badge (if available) */}
+          {showVisitedAt && location.visited_at != null && (
+            <View style={styles.visitedBadge}>
+              <Text style={styles.visitedBadgeText}>
+                {formatVisitedAgo(location.visited_at)}
+              </Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.locationAddress} numberOfLines={1}>
           {formatAddress(location.address)}
         </Text>
@@ -410,6 +464,7 @@ export function LocationPicker({
   emptyMessage = DEFAULT_PROPS.emptyMessage,
   maxLocations = DEFAULT_PROPS.maxLocations,
   autoFocus = false,
+  showVisitedAt = false,
   style,
   listStyle,
   testID = 'location-picker',
@@ -554,6 +609,7 @@ export function LocationPicker({
       selected={item.id === selectedLocationId}
       onPress={() => handleLocationSelect(item)}
       showDistance={showDistance}
+      showVisitedAt={showVisitedAt}
       testID={`${testID}-item-${item.id}`}
     />
   )
@@ -736,6 +792,26 @@ const styles = StyleSheet.create({
   locationAddress: {
     fontSize: 12,
     color: COLORS.textSecondary,
+  },
+
+  locationNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  visitedBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+
+  visitedBadgeText: {
+    fontSize: 10,
+    color: '#2E7D32',
+    fontWeight: '600',
   },
 
   distanceContainer: {

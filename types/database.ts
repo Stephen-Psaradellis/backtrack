@@ -132,6 +132,47 @@ export interface LocationUpdate {
 }
 
 // ============================================================================
+// LOCATION VISITS
+// ============================================================================
+
+/**
+ * Record of a user's physical visit to a location
+ *
+ * Tracks when users are physically present at a location (within ~50 meters).
+ * Used to verify eligibility for creating posts at a location.
+ * Visits older than 3 hours are considered expired for post creation.
+ */
+export interface LocationVisit {
+  /** Unique identifier for the visit record */
+  id: UUID
+  /** User who visited the location */
+  user_id: UUID
+  /** Location that was visited */
+  location_id: UUID
+  /** Timestamp when the visit was recorded (server-side) */
+  visited_at: Timestamp
+  /** GPS latitude at time of visit */
+  latitude: number
+  /** GPS longitude at time of visit */
+  longitude: number
+  /** GPS accuracy in meters at time of visit (optional) */
+  accuracy: number | null
+}
+
+/**
+ * Fields required when inserting a new location visit
+ */
+export interface LocationVisitInsert {
+  id?: UUID
+  user_id: UUID
+  location_id: UUID
+  visited_at?: Timestamp
+  latitude: number
+  longitude: number
+  accuracy?: number | null
+}
+
+// ============================================================================
 // POSTS
 // ============================================================================
 
@@ -523,6 +564,16 @@ export interface LocationsWithActivePostsParams extends NearbyLocationParams {
 }
 
 /**
+ * Parameters for the get_recently_visited_locations database function.
+ * Returns locations the current user has visited within the eligibility window.
+ * Note: The RPC function uses auth.uid() internally, so no user_id is needed.
+ */
+export interface RecentlyVisitedLocationParams {
+  /** Maximum number of results to return (default: unlimited) */
+  max_results?: number
+}
+
+/**
  * Location with distance information from geospatial query.
  * Returned by the get_nearby_locations database function.
  */
@@ -541,6 +592,16 @@ export interface LocationWithActivePosts extends Omit<Location, 'post_count'> {
   active_post_count: number
   /** Distance from query point in meters */
   distance_meters: number
+}
+
+/**
+ * Location with visit timestamp information.
+ * Used when querying locations that a user has recently visited.
+ * Combines Location data with the user's most recent visit timestamp.
+ */
+export interface LocationWithVisit extends Location {
+  /** Timestamp when the user last visited this location */
+  visited_at: Timestamp
 }
 
 // ============================================================================
@@ -627,6 +688,11 @@ export interface Database {
         Row: Location
         Insert: LocationInsert
         Update: LocationUpdate
+      }
+      location_visits: {
+        Row: LocationVisit
+        Insert: LocationVisitInsert
+        Update: never
       }
       posts: {
         Row: Post

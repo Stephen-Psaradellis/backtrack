@@ -185,7 +185,7 @@ export function CreatePostScreen(): JSX.Element {
       case 'location':
         return (
           <LocationStep
-            locations={form.nearbyLocations.map(locationToItem)}
+            locations={form.visitedLocations.map(locationToItem)}
             selectedLocation={form.formData.location}
             onSelect={handleLocationSelectWithFeedback}
             userCoordinates={

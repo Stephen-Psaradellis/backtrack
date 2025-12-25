@@ -42,12 +42,14 @@ import { Alert, Animated } from 'react-native'
 import { locationToItem, type LocationItem } from '../../components/LocationPicker'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../hooks/useLocation'
+import { useVisitedLocations, useNearbyLocations } from '../../hooks/useNearbyLocations'
 import { supabase } from '../../lib/supabase'
 import { uploadSelfie } from '../../lib/storage'
+import { recordLocationVisit } from '../../lib/utils/geo'
 import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar'
 import type { AvatarConfig } from '../../types/avatar'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../../navigation/types'
-import type { Location as LocationEntity } from '../../lib/types'
+import type { Location as LocationEntity, LocationWithVisit } from '../../lib/types'
 
 import {
   type CreatePostStep,
@@ -113,9 +115,9 @@ export interface UseCreatePostFormResult {
   // Location Data
   // ---------------------------------------------------------------------------
 
-  /** Nearby locations fetched from server */
-  nearbyLocations: LocationEntity[]
-  /** Whether nearby locations are loading */
+  /** Recently visited locations (within 3 hours) */
+  visitedLocations: LocationWithVisit[]
+  /** Whether visited locations are loading */
   loadingLocations: boolean
   /** Preselected location from route params */
   preselectedLocation: LocationEntity | null
@@ -212,12 +214,42 @@ export function useCreatePostForm(
   const [currentStep, setCurrentStep] = useState<CreatePostStep>('selfie')
   const [formData, setFormData] = useState<CreatePostFormData>(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [nearbyLocations, setNearbyLocations] = useState<LocationEntity[]>([])
-  const [loadingLocations, setLoadingLocations] = useState(false)
   const [preselectedLocation, setPreselectedLocation] = useState<LocationEntity | null>(null)
+
+  // Fetch recently visited locations (within 3 hours) for post creation
+  const {
+    locations: visitedLocations,
+    isLoading: loadingLocations,
+    refetch: refetchVisitedLocations,
+  } = useVisitedLocations({
+    // Only fetch when user reaches the location step
+    enabled: currentStep === 'location',
+  })
+
+  // User coordinates for check-in functionality
+  const userCoordinates = useMemo(() => {
+    if (latitude && longitude) {
+      return { latitude, longitude }
+    }
+    return null
+  }, [latitude, longitude])
+
+  // Fetch nearby locations for check-in (recording visits for nearby POIs)
+  const {
+    locations: nearbyLocations,
+  } = useNearbyLocations(userCoordinates, {
+    // Only fetch when user reaches the location step and has valid coordinates
+    enabled: currentStep === 'location' && userCoordinates !== null,
+    // Use a smaller radius for check-in purposes (within walking distance)
+    radiusMeters: 200,
+    maxResults: 20,
+  })
 
   // Animation for progress bar
   const progressAnim = useRef(new Animated.Value(0)).current
+
+  // Track whether we've already triggered check-ins for this location step view
+  const hasTriggeredCheckIns = useRef(false)
 
   // ---------------------------------------------------------------------------
   // COMPUTED VALUES
@@ -300,14 +332,66 @@ export function useCreatePostForm(
   }, [preselectedLocationId])
 
   /**
-   * Fetch nearby locations when on location step
+   * Record check-ins for nearby locations when user views the location list.
+   *
+   * When the user reaches the location step, we attempt to record visits for
+   * all nearby POIs. The server-side 50m proximity check in the RPC ensures
+   * only legitimate visits are recorded. After recording, we refetch visited
+   * locations to update the list.
+   *
+   * This is a "fire and forget" operation - we don't block the UI while
+   * recording visits.
    */
   useEffect(() => {
-    if (currentStep === 'location' && latitude && longitude && nearbyLocations.length === 0) {
-      fetchNearbyLocations()
+    // Only trigger when on location step with nearby locations available
+    if (currentStep !== 'location') {
+      // Reset the flag when leaving location step
+      hasTriggeredCheckIns.current = false
+      return
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, latitude, longitude])
+
+    // Don't trigger if we've already done check-ins for this step view
+    if (hasTriggeredCheckIns.current) {
+      return
+    }
+
+    // Need valid user coordinates to record visits
+    if (!userCoordinates) {
+      return
+    }
+
+    // Wait until we have nearby locations to check in to
+    if (nearbyLocations.length === 0) {
+      return
+    }
+
+    // Mark that we've triggered check-ins
+    hasTriggeredCheckIns.current = true
+
+    // Fire-and-forget: Record visits for all nearby POIs
+    // The server-side proximity check (50m) will only record valid visits
+    const recordVisits = async () => {
+      try {
+        // Record visits in parallel for all nearby locations
+        const visitPromises = nearbyLocations.map((location) =>
+          recordLocationVisit(supabase, {
+            location_id: location.id,
+            user_lat: userCoordinates.latitude,
+            user_lon: userCoordinates.longitude,
+          }).catch(() => null) // Silently ignore individual failures
+        )
+
+        await Promise.all(visitPromises)
+
+        // Refetch visited locations to update the list with any new visits
+        await refetchVisitedLocations()
+      } catch {
+        // Silently fail - don't disrupt the user flow for check-in errors
+      }
+    }
+
+    recordVisits()
+  }, [currentStep, userCoordinates, nearbyLocations, refetchVisitedLocations])
 
   // ---------------------------------------------------------------------------
   // DATA FETCHING
@@ -340,35 +424,6 @@ export function useCreatePostForm(
     }
   }, [preselectedLocationId])
 
-  /**
-   * Fetch nearby locations
-   */
-  const fetchNearbyLocations = useCallback(async () => {
-    if (!latitude || !longitude) return
-
-    setLoadingLocations(true)
-    try {
-      const latDelta = 0.05
-      const lngDelta = 0.05
-
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .gte('latitude', latitude - latDelta)
-        .lte('latitude', latitude + latDelta)
-        .gte('longitude', longitude - lngDelta)
-        .lte('longitude', longitude + lngDelta)
-        .limit(50)
-
-      if (error) throw error
-
-      setNearbyLocations(data || [])
-    } catch {
-      // Silently fail - user can create a new location
-    } finally {
-      setLoadingLocations(false)
-    }
-  }, [latitude, longitude])
 
   // ---------------------------------------------------------------------------
   // HANDLERS
@@ -589,7 +644,7 @@ export function useCreatePostForm(
     progressAnim,
 
     // Location Data
-    nearbyLocations,
+    visitedLocations,
     loadingLocations,
     preselectedLocation,
     userLatitude: latitude,

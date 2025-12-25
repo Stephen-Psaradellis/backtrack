@@ -69,10 +69,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   Coordinates,
+  LocationVisit,
   LocationWithDistance,
   LocationWithActivePosts,
+  LocationWithVisit,
   NearbyLocationParams,
   LocationsWithActivePostsParams,
+  RecentlyVisitedLocationParams,
 } from '@/types/database'
 
 // ============================================================================
@@ -133,6 +136,31 @@ export const LATITUDE_RANGE = { min: -90, max: 90 } as const
  * @constant {{ min: -180, max: 180 }}
  */
 export const LONGITUDE_RANGE = { min: -180, max: 180 } as const
+
+/**
+ * Default proximity radius in meters for visit verification.
+ *
+ * Users must be within this distance of a POI to be considered
+ * "physically present" and eligible to record a visit.
+ *
+ * The 50m threshold balances:
+ * - GPS accuracy limitations (typical smartphone accuracy is 3-10m outdoors)
+ * - Reasonable proximity for "being at" a venue
+ * - Account for POI coordinate placement variance
+ *
+ * @constant {number}
+ */
+export const PROXIMITY_RADIUS_METERS = 50
+
+/**
+ * Earth's mean radius in meters.
+ *
+ * Used for Haversine formula distance calculations.
+ * This is the volumetric mean radius of Earth.
+ *
+ * @constant {number}
+ */
+export const EARTH_RADIUS_METERS = 6_371_000
 
 // ============================================================================
 // Error Types
@@ -542,6 +570,197 @@ export async function fetchLocationsWithActivePosts(
   return (data ?? []) as LocationWithActivePosts[]
 }
 
+/**
+ * Parameters for recording a location visit.
+ */
+export interface RecordLocationVisitParams {
+  /** UUID of the location being visited */
+  location_id: string
+  /** User's current latitude (-90 to 90) */
+  user_lat: number
+  /** User's current longitude (-180 to 180) */
+  user_lon: number
+  /** GPS accuracy in meters (optional, for audit/debugging) */
+  accuracy?: number
+}
+
+/**
+ * Records a user visit to a location if they are within proximity (50 meters).
+ *
+ * ## Purpose
+ *
+ * This function is the primary way to record user presence at a location.
+ * It performs server-side proximity verification using PostGIS to ensure
+ * the user is physically present (within 50m) before recording the visit.
+ *
+ * ## Proximity Verification
+ *
+ * The database function uses **ST_DWithin** with geography type to perform
+ * accurate meter-based distance calculations. If the user is more than 50m
+ * from the location coordinates, the visit is **not** recorded and null is returned.
+ *
+ * This server-side verification prevents clients from spoofing visits to
+ * locations they haven't actually visited.
+ *
+ * ## Use Cases
+ *
+ * 1. **Check-in on App Open**: When user opens the app near a POI, record the visit
+ * 2. **Background Location Update**: Silently record visits when user is at a POI
+ * 3. **Post Creation Flow**: Verify eligibility before showing location as an option
+ *
+ * ## Fire-and-Forget Pattern
+ *
+ * This function can be called without awaiting the result for non-blocking check-ins:
+ *
+ * ```typescript
+ * // Fire-and-forget (don't block UI)
+ * recordLocationVisit(supabase, params).catch(() => {})
+ * ```
+ *
+ * @param supabase - Supabase client instance (from createClient())
+ * @param params - Visit recording parameters
+ * @param params.location_id - UUID of the location to record a visit to
+ * @param params.user_lat - User's current latitude (-90 to 90)
+ * @param params.user_lon - User's current longitude (-180 to 180)
+ * @param params.accuracy - GPS accuracy in meters (optional, for audit)
+ * @returns Promise resolving to the created LocationVisit if within 50m, null if too far
+ * @throws {GeoError} INVALID_COORDINATES if lat/lon are out of range
+ * @throws {GeoError} DATABASE_ERROR if Supabase RPC call fails
+ *
+ * @example
+ * ```typescript
+ * import { createClient } from '@/lib/supabase/client'
+ * import { recordLocationVisit } from '@/lib/utils/geo'
+ *
+ * const supabase = createClient()
+ *
+ * // Record a visit when user is near a location
+ * const visit = await recordLocationVisit(supabase, {
+ *   location_id: 'abc-123-def',
+ *   user_lat: 37.7749,
+ *   user_lon: -122.4194,
+ *   accuracy: 10  // GPS accuracy in meters (optional)
+ * })
+ *
+ * if (visit) {
+ *   console.log(`Visit recorded at ${visit.visited_at}`)
+ * } else {
+ *   console.log('User is not within 50m of the location')
+ * }
+ * ```
+ *
+ * @see {@link PROXIMITY_RADIUS_METERS} The 50m proximity threshold
+ * @see {@link isWithinRadius} Client-side proximity check (use before calling this)
+ */
+export async function recordLocationVisit(
+  supabase: SupabaseClient,
+  params: RecordLocationVisitParams
+): Promise<LocationVisit | null> {
+  // Validate coordinates
+  assertValidCoordinates({
+    latitude: params.user_lat,
+    longitude: params.user_lon,
+  })
+
+  // Call the PostGIS function via RPC
+  // The database function handles the 50m proximity check
+  const { data, error } = await supabase.rpc('record_location_visit', {
+    p_location_id: params.location_id,
+    p_user_lat: params.user_lat,
+    p_user_lon: params.user_lon,
+    p_accuracy: params.accuracy ?? null,
+  })
+
+  if (error) {
+    throw new GeoError(
+      'DATABASE_ERROR',
+      `Failed to record location visit: ${error.message}`,
+      error
+    )
+  }
+
+  // The RPC returns null if user is not within proximity
+  return data as LocationVisit | null
+}
+
+/**
+ * Fetches locations that the current user has recently visited within the eligibility window (3 hours).
+ *
+ * This function is used in the post creation flow to determine which locations
+ * the user is eligible to post at. Only locations visited within the last 3 hours
+ * are returned, ensuring users can only create posts at places they've physically been.
+ *
+ * ## Performance
+ *
+ * This function calls the `get_recently_visited_locations` PostgreSQL function which:
+ * - Uses the current authenticated user (auth.uid())
+ * - Filters visits to within the 3-hour eligibility window
+ * - Joins with the `locations` table to return full location data
+ * - Orders by most recent visit first
+ *
+ * ## Authentication
+ *
+ * The database function uses `auth.uid()` internally to identify the current user,
+ * so no user_id parameter is needed. The user must be authenticated.
+ *
+ * ## Use Cases
+ *
+ * 1. **Post Creation Flow**: Get eligible locations for the location picker
+ * 2. **Visit History Display**: Show recent places the user has been
+ *
+ * @param supabase - Supabase client instance (from createClient())
+ * @param params - Query parameters (optional)
+ * @param params.max_results - Maximum results to return (default: no limit)
+ * @returns Promise resolving to array of locations with visited_at timestamp
+ * @throws {GeoError} DATABASE_ERROR if Supabase RPC call fails
+ *
+ * @example
+ * ```typescript
+ * import { createClient } from '@/lib/supabase/client'
+ * import { fetchRecentlyVisitedLocations } from '@/lib/utils/geo'
+ *
+ * const supabase = createClient()
+ *
+ * // Fetch all recently visited locations (within 3 hours)
+ * const visitedLocations = await fetchRecentlyVisitedLocations(supabase)
+ *
+ * // Display in location picker
+ * visitedLocations.forEach(loc => {
+ *   console.log(`${loc.name} - visited at ${loc.visited_at}`)
+ * })
+ *
+ * // With result limit
+ * const topFive = await fetchRecentlyVisitedLocations(supabase, {
+ *   max_results: 5
+ * })
+ * ```
+ *
+ * @see {@link recordLocationVisit} Function to record a new visit
+ * @see {@link hooks/useVisitedLocations} React hook for component integration
+ */
+export async function fetchRecentlyVisitedLocations(
+  supabase: SupabaseClient,
+  params: RecentlyVisitedLocationParams = {}
+): Promise<LocationWithVisit[]> {
+  const maxResults = params.max_results ?? null
+
+  // Call the database function via RPC
+  // The function uses auth.uid() internally to get the current user
+  const { data, error } = await supabase.rpc('get_recently_visited_locations', {
+    max_results: maxResults,
+  })
+
+  if (error) {
+    throw new GeoError(
+      'DATABASE_ERROR',
+      `Failed to fetch recently visited locations: ${error.message}`,
+      error
+    )
+  }
+
+  return (data ?? []) as LocationWithVisit[]
+}
+
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -632,4 +851,183 @@ export function formatDistance(meters: number): string {
   const km = meters / 1000
   // Show 1 decimal place for km
   return `${km.toFixed(1)}km`
+}
+
+/**
+ * Calculates the distance between two coordinate points using the Haversine formula.
+ *
+ * The Haversine formula calculates the great-circle distance between two points
+ * on a sphere given their longitudes and latitudes. This is accurate for short
+ * distances and suitable for proximity checks.
+ *
+ * ## Accuracy
+ *
+ * The Haversine formula assumes a perfectly spherical Earth, which introduces
+ * a maximum error of about 0.5% compared to geodesic calculations. For proximity
+ * checks at 50m, this is negligible (max ~0.25m error).
+ *
+ * ## Performance
+ *
+ * This is a pure JavaScript calculation (no database call) suitable for:
+ * - Client-side proximity filtering before database queries
+ * - Real-time location checks during user movement
+ * - Batch processing of multiple coordinate pairs
+ *
+ * @param point1 - First coordinate point (user's location)
+ * @param point2 - Second coordinate point (POI location)
+ * @returns Distance in meters between the two points
+ * @throws {GeoError} INVALID_COORDINATES if either point has invalid coordinates
+ *
+ * @example
+ * ```typescript
+ * import { calculateDistance } from '@/lib/utils/geo'
+ *
+ * const userLocation = { latitude: 37.7749, longitude: -122.4194 }
+ * const poiLocation = { latitude: 37.7750, longitude: -122.4195 }
+ *
+ * const distance = calculateDistance(userLocation, poiLocation)
+ * console.log(`Distance: ${distance.toFixed(1)}m`)  // Distance: 14.1m
+ * ```
+ */
+export function calculateDistance(point1: Coordinates, point2: Coordinates): number {
+  // Validate both coordinate pairs
+  assertValidCoordinates(point1)
+  assertValidCoordinates(point2)
+
+  // Convert degrees to radians
+  const lat1Rad = (point1.latitude * Math.PI) / 180
+  const lat2Rad = (point2.latitude * Math.PI) / 180
+  const deltaLatRad = ((point2.latitude - point1.latitude) * Math.PI) / 180
+  const deltaLonRad = ((point2.longitude - point1.longitude) * Math.PI) / 180
+
+  // Haversine formula
+  const a =
+    Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2) +
+    Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLonRad / 2) * Math.sin(deltaLonRad / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  return EARTH_RADIUS_METERS * c
+}
+
+/**
+ * Checks if a user is within a specified radius of a location.
+ *
+ * This function is the primary proximity check for visit verification.
+ * It determines whether a user is "physically present" at a POI.
+ *
+ * ## Use Cases
+ *
+ * 1. **Visit Recording**: Check if user is close enough to a POI to record a visit
+ * 2. **Eligibility Filtering**: Filter nearby locations to only those within reach
+ * 3. **Geofencing**: Trigger actions when user enters/exits a location boundary
+ *
+ * ## Defaults
+ *
+ * The default radius is {@link PROXIMITY_RADIUS_METERS} (50 meters), which is
+ * the standard threshold for "being at" a venue in the Love Ledger app.
+ *
+ * @param userLocation - User's current GPS coordinates
+ * @param poiLocation - POI (Point of Interest) coordinates
+ * @param radiusMeters - Maximum distance in meters (default: 50m)
+ * @returns true if user is within the radius, false otherwise
+ * @throws {GeoError} INVALID_COORDINATES if coordinates are invalid
+ * @throws {GeoError} INVALID_RADIUS if radius is not positive
+ *
+ * @example
+ * ```typescript
+ * import { isWithinRadius, PROXIMITY_RADIUS_METERS } from '@/lib/utils/geo'
+ *
+ * const userLocation = { latitude: 37.7749, longitude: -122.4194 }
+ * const cafeLocation = { latitude: 37.7750, longitude: -122.4195 }
+ *
+ * // Check with default 50m radius
+ * if (isWithinRadius(userLocation, cafeLocation)) {
+ *   console.log('User is at the cafe!')
+ *   await recordVisit(cafeLocation.id)
+ * }
+ *
+ * // Check with custom radius (100m)
+ * if (isWithinRadius(userLocation, cafeLocation, 100)) {
+ *   console.log('User is near the cafe')
+ * }
+ *
+ * // Filtering nearby locations to only those within proximity
+ * const eligibleLocations = nearbyLocations.filter(loc =>
+ *   isWithinRadius(userLocation, { latitude: loc.latitude, longitude: loc.longitude })
+ * )
+ * ```
+ *
+ * @see {@link calculateDistance} For getting the actual distance value
+ * @see {@link PROXIMITY_RADIUS_METERS} Default proximity threshold
+ */
+export function isWithinRadius(
+  userLocation: Coordinates,
+  poiLocation: Coordinates,
+  radiusMeters: number = PROXIMITY_RADIUS_METERS
+): boolean {
+  // Validate radius
+  assertValidRadius(radiusMeters)
+
+  // Calculate distance (this validates coordinates internally)
+  const distance = calculateDistance(userLocation, poiLocation)
+
+  return distance <= radiusMeters
+}
+
+/**
+ * Formats a visit timestamp into a human-readable "Visited X ago" string.
+ *
+ * Automatically chooses the best time unit:
+ * - < 1 minute: "Visited just now"
+ * - 1-59 minutes: "Visited X min ago"
+ * - 60+ minutes: "Visited X hr ago" (with hours rounded)
+ *
+ * @param visitedAt - ISO 8601 timestamp string or Date object of when the visit occurred
+ * @returns Formatted string (e.g., "Visited 5 min ago", "Visited 2 hr ago")
+ *
+ * @example
+ * ```typescript
+ * import { formatVisitedAgo } from '@/lib/utils/geo'
+ *
+ * // In a React component
+ * function LocationCard({ location }: { location: LocationWithVisit }) {
+ *   return (
+ *     <div>
+ *       <h3>{location.name}</h3>
+ *       <span className="text-muted">
+ *         {formatVisitedAgo(location.visited_at)}
+ *       </span>
+ *     </div>
+ *   )
+ * }
+ *
+ * // Output examples:
+ * formatVisitedAgo(new Date())                          // "Visited just now"
+ * formatVisitedAgo(new Date(Date.now() - 5 * 60000))    // "Visited 5 min ago"
+ * formatVisitedAgo(new Date(Date.now() - 90 * 60000))   // "Visited 2 hr ago"
+ * formatVisitedAgo('2024-01-01T12:00:00Z')              // "Visited X min/hr ago" (depends on current time)
+ * ```
+ *
+ * @see {@link fetchRecentlyVisitedLocations} Returns locations with visited_at timestamps
+ */
+export function formatVisitedAgo(visitedAt: string | Date): string {
+  const visitDate = typeof visitedAt === 'string' ? new Date(visitedAt) : visitedAt
+  const now = new Date()
+  const diffMs = now.getTime() - visitDate.getTime()
+
+  // Convert to minutes
+  const diffMinutes = Math.floor(diffMs / 60000)
+
+  if (diffMinutes < 1) {
+    return 'Visited just now'
+  }
+
+  if (diffMinutes < 60) {
+    return `Visited ${diffMinutes} min ago`
+  }
+
+  // Convert to hours (rounded)
+  const diffHours = Math.round(diffMinutes / 60)
+  return `Visited ${diffHours} hr ago`
 }
