@@ -5,7 +5,7 @@
  * Import all hooks from this file for convenience.
  *
  * @example
- * import { useLocation, useNetworkStatus } from '../hooks'
+ * import { useLocation, useNetworkStatus, useVisitedLocations, useRecordVisit } from '../hooks'
  */
 
 // Location hook
@@ -34,3 +34,26 @@ export {
   type UseNetworkStatusOptions,
   type UseNetworkStatusResult,
 } from './useNetworkStatus'
+
+// Nearby locations hook (geospatial queries)
+export {
+  useNearbyLocations,
+  useVisitedLocations,
+  type UseNearbyLocationsOptions,
+  type UseNearbyLocationsResult,
+  type UseVisitedLocationsOptions,
+  type UseVisitedLocationsResult,
+} from './useNearbyLocations'
+
+// User location hook (geolocation + visit recording)
+export {
+  useUserLocation,
+  useRecordVisit,
+  GeolocationError,
+  type GeolocationErrorCode,
+  type GeolocationPermissionState,
+  type UseUserLocationOptions,
+  type UseUserLocationResult,
+  type UseRecordVisitOptions,
+  type UseRecordVisitResult,
+} from './useUserLocation'
