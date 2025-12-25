@@ -576,6 +576,16 @@ export interface LocationWithActivePosts extends Omit<Location, 'post_count'> {
   distance_meters: number
 }
 
+/**
+ * Location with visit timestamp information.
+ * Used when querying locations that a user has recently visited.
+ * Combines Location data with the user's most recent visit timestamp.
+ */
+export interface LocationWithVisit extends Location {
+  /** Timestamp when the user last visited this location */
+  visited_at: Timestamp
+}
+
 // ============================================================================
 // JOINED TYPES (for queries with relations)
 // ============================================================================
