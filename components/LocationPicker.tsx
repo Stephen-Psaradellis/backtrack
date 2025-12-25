@@ -89,6 +89,43 @@ export interface LocationItem {
 }
 
 /**
+ * Converts a Location database entity to a LocationItem for display.
+ * Handles both regular Location and LocationWithVisit types.
+ *
+ * @param location - Location entity from database
+ * @returns LocationItem for use in LocationPicker
+ *
+ * @example
+ * ```typescript
+ * // Convert a database location
+ * const item = locationToItem(location)
+ *
+ * // Convert a visited location (preserves visited_at)
+ * const visitedItem = locationToItem(visitedLocation)
+ * console.log(visitedItem.visited_at) // "2024-01-01T12:00:00Z"
+ * ```
+ */
+export function locationToItem(location: {
+  id: string
+  name: string
+  address?: string | null
+  latitude: number
+  longitude: number
+  google_place_id?: string | null
+  visited_at?: string | null
+}): LocationItem {
+  return {
+    id: location.id,
+    name: location.name,
+    address: location.address ?? null,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    place_id: location.google_place_id ?? null,
+    visited_at: location.visited_at ?? null,
+  }
+}
+
+/**
  * Props for the LocationPicker component
  */
 export interface LocationPickerProps {
