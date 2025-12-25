@@ -98,3 +98,85 @@ CREATE POLICY "location_visits_insert_own"
 
 COMMENT ON POLICY "location_visits_select_own" ON location_visits IS 'Users can only view their own location visits for privacy';
 COMMENT ON POLICY "location_visits_insert_own" ON location_visits IS 'Users can only record their own location visits';
+
+-- ============================================================================
+-- RECORD_LOCATION_VISIT FUNCTION
+-- ============================================================================
+-- Records a user visit to a location if they are within 50 meters proximity.
+-- Uses ST_DWithin with geography type for accurate meter-based distance calculations.
+-- Verifies the user is physically present at the location before recording.
+--
+-- Parameters:
+--   p_location_id: UUID of the location being visited
+--   p_user_lat: User's current latitude (DOUBLE PRECISION)
+--   p_user_lon: User's current longitude (DOUBLE PRECISION)
+--   p_accuracy: GPS accuracy in meters (DOUBLE PRECISION), optional
+--
+-- Returns: The inserted location_visit record if within 50m, NULL otherwise
+
+CREATE OR REPLACE FUNCTION record_location_visit(
+  p_location_id UUID,
+  p_user_lat DOUBLE PRECISION,
+  p_user_lon DOUBLE PRECISION,
+  p_accuracy DOUBLE PRECISION DEFAULT NULL
+)
+RETURNS location_visits
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  user_point GEOGRAPHY;
+  location_point GEOGRAPHY;
+  proximity_radius CONSTANT DOUBLE PRECISION := 50.0; -- 50 meters
+  v_location locations%ROWTYPE;
+  v_visit location_visits%ROWTYPE;
+BEGIN
+  -- Look up the location to get its coordinates
+  SELECT * INTO v_location
+  FROM locations
+  WHERE id = p_location_id;
+
+  -- Return NULL if location not found
+  IF v_location IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Create geography points for user and location (SRID 4326 for WGS 84)
+  user_point := ST_SetSRID(ST_MakePoint(p_user_lon, p_user_lat), 4326)::geography;
+  location_point := ST_SetSRID(ST_MakePoint(v_location.longitude, v_location.latitude), 4326)::geography;
+
+  -- Check if user is within 50m of the location using ST_DWithin
+  IF NOT ST_DWithin(user_point, location_point, proximity_radius) THEN
+    -- User is not within proximity, return NULL without inserting
+    RETURN NULL;
+  END IF;
+
+  -- User is within proximity, insert the visit record
+  INSERT INTO location_visits (
+    user_id,
+    location_id,
+    visited_at,
+    latitude,
+    longitude,
+    accuracy
+  )
+  VALUES (
+    auth.uid(),
+    p_location_id,
+    NOW(),
+    p_user_lat,
+    p_user_lon,
+    p_accuracy
+  )
+  RETURNING * INTO v_visit;
+
+  RETURN v_visit;
+END;
+$$;
+
+-- ============================================================================
+-- FUNCTION COMMENTS
+-- ============================================================================
+
+COMMENT ON FUNCTION record_location_visit(UUID, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION) IS
+  'Records a user visit to a location if within 50m proximity. Uses PostGIS ST_DWithin for accurate distance verification. Returns the visit record if within proximity, NULL otherwise.';
