@@ -235,3 +235,38 @@ $$;
 
 COMMENT ON FUNCTION get_recently_visited_locations() IS
   'Returns locations visited by the current user within the last 3 hours. Used for post creation eligibility. Returns unique locations ordered by most recent visit.';
+
+-- ============================================================================
+-- CLEANUP_OLD_LOCATION_VISITS FUNCTION
+-- ============================================================================
+-- Deletes location visit records older than 3 hours.
+-- This function should be called periodically (e.g., via cron job or edge function)
+-- to maintain data privacy and keep the table size manageable.
+--
+-- The 3-hour threshold matches the eligibility window for post creation,
+-- so visits outside this window are no longer needed for any business logic.
+--
+-- Returns: INTEGER - the number of deleted records
+
+CREATE OR REPLACE FUNCTION cleanup_old_location_visits()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  cleanup_threshold CONSTANT INTERVAL := INTERVAL '3 hours';
+  rows_deleted INTEGER;
+BEGIN
+  -- Delete location visits older than 3 hours
+  DELETE FROM location_visits
+  WHERE visited_at < NOW() - cleanup_threshold;
+
+  -- Get the count of deleted rows
+  GET DIAGNOSTICS rows_deleted = ROW_COUNT;
+
+  RETURN rows_deleted;
+END;
+$$;
+
+COMMENT ON FUNCTION cleanup_old_location_visits() IS
+  'Deletes location visits older than 3 hours to maintain user privacy and table performance. Should be called periodically via cron job or edge function. Returns the number of deleted records.';
