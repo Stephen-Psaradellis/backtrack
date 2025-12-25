@@ -11,7 +11,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { Coordinates } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
+import { recordLocationVisit, GeoError } from '@/lib/utils/geo'
+import type { Coordinates, LocationVisit } from '@/types/database'
 
 // ============================================================================
 // Constants
@@ -406,6 +408,186 @@ export function useUserLocation(
     permissionState,
     requestLocation,
     clearLocation,
+  }
+}
+
+// ============================================================================
+// useRecordVisit Hook
+// ============================================================================
+
+/**
+ * Options for the useRecordVisit hook
+ */
+export interface UseRecordVisitOptions {
+  /**
+   * Whether to record visits automatically when coordinates change and a location is provided.
+   * If false, use the `recordVisit()` function manually.
+   * @default false
+   */
+  autoRecord?: boolean
+  /**
+   * Callback when a visit is successfully recorded.
+   */
+  onVisitRecorded?: (visit: LocationVisit) => void
+  /**
+   * Callback when a visit recording fails.
+   */
+  onError?: (error: GeoError) => void
+}
+
+/**
+ * Result of the useRecordVisit hook
+ */
+export interface UseRecordVisitResult {
+  /** The last recorded visit, or null if none */
+  lastVisit: LocationVisit | null
+  /** Whether a visit recording is in progress */
+  isRecording: boolean
+  /** Error object if the last recording failed */
+  error: GeoError | null
+  /** Function to manually record a visit to a specific location */
+  recordVisit: (locationId: string, coordinates: Coordinates, accuracy?: number) => Promise<LocationVisit | null>
+  /** Function to clear the last visit and error state */
+  clearState: () => void
+}
+
+/**
+ * React hook for recording user visits to locations.
+ *
+ * This hook provides a convenient way to record check-ins when a user
+ * is physically present at a POI (within 50 meters). The visit is verified
+ * server-side using PostGIS proximity calculations.
+ *
+ * Features:
+ * - Manual check-in via recordVisit() function
+ * - Optional auto-recording when coordinates change
+ * - Loading and error states
+ * - Callback support for visit success/failure
+ *
+ * @param options - Configuration options for the hook
+ * @returns Object containing visit data, loading state, error, and control functions
+ *
+ * @example
+ * // Manual check-in when user taps a location
+ * const { recordVisit, isRecording, error } = useRecordVisit()
+ *
+ * async function handleLocationSelect(location: Location) {
+ *   if (userCoordinates) {
+ *     const visit = await recordVisit(
+ *       location.id,
+ *       userCoordinates,
+ *       gpsAccuracy
+ *     )
+ *     if (visit) {
+ *       console.log('Checked in successfully!')
+ *     }
+ *   }
+ * }
+ *
+ * @example
+ * // With callbacks
+ * const { recordVisit } = useRecordVisit({
+ *   onVisitRecorded: (visit) => {
+ *     showToast(`Checked in at ${visit.visited_at}`)
+ *   },
+ *   onError: (error) => {
+ *     showToast(`Check-in failed: ${error.message}`)
+ *   }
+ * })
+ *
+ * @see {@link recordLocationVisit} The underlying API function
+ * @see {@link useUserLocation} Hook for getting user coordinates
+ */
+export function useRecordVisit(
+  options: UseRecordVisitOptions = {}
+): UseRecordVisitResult {
+  const { onVisitRecorded, onError } = options
+
+  // State
+  const [lastVisit, setLastVisit] = useState<LocationVisit | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [error, setError] = useState<GeoError | null>(null)
+
+  // Refs
+  const supabaseRef = useRef(createClient())
+  const isMountedRef = useRef(true)
+
+  /**
+   * Record a visit to a specific location
+   */
+  const recordVisit = useCallback(
+    async (
+      locationId: string,
+      coordinates: Coordinates,
+      accuracy?: number
+    ): Promise<LocationVisit | null> => {
+      if (!isMountedRef.current) return null
+
+      setIsRecording(true)
+      setError(null)
+
+      try {
+        const visit = await recordLocationVisit(supabaseRef.current, {
+          location_id: locationId,
+          user_lat: coordinates.latitude,
+          user_lon: coordinates.longitude,
+          accuracy,
+        })
+
+        if (!isMountedRef.current) return null
+
+        if (visit) {
+          setLastVisit(visit)
+          onVisitRecorded?.(visit)
+        }
+
+        return visit
+      } catch (err) {
+        if (!isMountedRef.current) return null
+
+        const geoError =
+          err instanceof GeoError
+            ? err
+            : new GeoError(
+                'NETWORK_ERROR',
+                err instanceof Error ? err.message : 'Failed to record visit',
+                err
+              )
+
+        setError(geoError)
+        onError?.(geoError)
+        return null
+      } finally {
+        if (isMountedRef.current) {
+          setIsRecording(false)
+        }
+      }
+    },
+    [onVisitRecorded, onError]
+  )
+
+  /**
+   * Clear the last visit and error state
+   */
+  const clearState = useCallback(() => {
+    setLastVisit(null)
+    setError(null)
+  }, [])
+
+  // Track mounted state
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  return {
+    lastVisit,
+    isRecording,
+    error,
+    recordVisit,
+    clearState,
   }
 }
 
