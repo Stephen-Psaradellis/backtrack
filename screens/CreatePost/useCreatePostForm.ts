@@ -42,12 +42,13 @@ import { Alert, Animated } from 'react-native'
 import { locationToItem, type LocationItem } from '../../components/LocationPicker'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../hooks/useLocation'
+import { useVisitedLocations } from '../../hooks/useNearbyLocations'
 import { supabase } from '../../lib/supabase'
 import { uploadSelfie } from '../../lib/storage'
 import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar'
 import type { AvatarConfig } from '../../types/avatar'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../../navigation/types'
-import type { Location as LocationEntity } from '../../lib/types'
+import type { Location as LocationEntity, LocationWithVisit } from '../../lib/types'
 
 import {
   type CreatePostStep,
@@ -113,9 +114,9 @@ export interface UseCreatePostFormResult {
   // Location Data
   // ---------------------------------------------------------------------------
 
-  /** Nearby locations fetched from server */
-  nearbyLocations: LocationEntity[]
-  /** Whether nearby locations are loading */
+  /** Recently visited locations (within 3 hours) */
+  visitedLocations: LocationWithVisit[]
+  /** Whether visited locations are loading */
   loadingLocations: boolean
   /** Preselected location from route params */
   preselectedLocation: LocationEntity | null
@@ -212,9 +213,16 @@ export function useCreatePostForm(
   const [currentStep, setCurrentStep] = useState<CreatePostStep>('selfie')
   const [formData, setFormData] = useState<CreatePostFormData>(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [nearbyLocations, setNearbyLocations] = useState<LocationEntity[]>([])
-  const [loadingLocations, setLoadingLocations] = useState(false)
   const [preselectedLocation, setPreselectedLocation] = useState<LocationEntity | null>(null)
+
+  // Fetch recently visited locations (within 3 hours) for post creation
+  const {
+    locations: visitedLocations,
+    isLoading: loadingLocations,
+  } = useVisitedLocations({
+    // Only fetch when user reaches the location step
+    enabled: currentStep === 'location',
+  })
 
   // Animation for progress bar
   const progressAnim = useRef(new Animated.Value(0)).current
@@ -299,15 +307,6 @@ export function useCreatePostForm(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedLocationId])
 
-  /**
-   * Fetch nearby locations when on location step
-   */
-  useEffect(() => {
-    if (currentStep === 'location' && latitude && longitude && nearbyLocations.length === 0) {
-      fetchNearbyLocations()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, latitude, longitude])
 
   // ---------------------------------------------------------------------------
   // DATA FETCHING
@@ -340,35 +339,6 @@ export function useCreatePostForm(
     }
   }, [preselectedLocationId])
 
-  /**
-   * Fetch nearby locations
-   */
-  const fetchNearbyLocations = useCallback(async () => {
-    if (!latitude || !longitude) return
-
-    setLoadingLocations(true)
-    try {
-      const latDelta = 0.05
-      const lngDelta = 0.05
-
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .gte('latitude', latitude - latDelta)
-        .lte('latitude', latitude + latDelta)
-        .gte('longitude', longitude - lngDelta)
-        .lte('longitude', longitude + lngDelta)
-        .limit(50)
-
-      if (error) throw error
-
-      setNearbyLocations(data || [])
-    } catch {
-      // Silently fail - user can create a new location
-    } finally {
-      setLoadingLocations(false)
-    }
-  }, [latitude, longitude])
 
   // ---------------------------------------------------------------------------
   // HANDLERS
@@ -589,7 +559,7 @@ export function useCreatePostForm(
     progressAnim,
 
     // Location Data
-    nearbyLocations,
+    visitedLocations,
     loadingLocations,
     preselectedLocation,
     userLatitude: latitude,

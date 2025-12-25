@@ -19,6 +19,7 @@ export type {
   Location,
   LocationInsert,
   LocationUpdate,
+  LocationWithVisit,
   Post,
   PostInsert,
   PostUpdate,
