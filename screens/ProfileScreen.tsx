@@ -10,9 +10,10 @@
  * - Create and edit own avatar for matching
  * - Sign out functionality
  * - Profile data refresh on pull
+ * - User verification status and badge
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -38,6 +39,8 @@ import {
   loadCurrentUserAvatar,
   deleteCurrentUserAvatar,
 } from '../lib/avatarService'
+import { VerifiedBadge } from '../components/VerifiedBadge'
+import { VerificationPrompt } from '../components/VerificationPrompt'
 
 // ============================================================================
 // TYPES
@@ -258,6 +261,24 @@ export function ProfileScreen(): JSX.Element {
     )
   }, [])
 
+  /**
+   * Handle verification CTA - show info about verification process
+   * Verification is completed through the selfie capture in CreatePost flow
+   */
+  const handleStartVerification = useCallback(() => {
+    Alert.alert(
+      'Get Verified',
+      'Verification is completed when you create a post. The selfie you take during post creation helps verify your identity and builds trust with other users.',
+      [
+        {
+          text: 'OK',
+          style: 'default',
+        },
+      ],
+      { cancelable: true }
+    )
+  }, [])
+
   // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
@@ -305,8 +326,21 @@ export function ProfileScreen(): JSX.Element {
           </Text>
         </View>
 
-        <Text style={styles.emailText}>{userEmail}</Text>
+        <View style={styles.emailRow}>
+          <Text style={styles.emailText}>{userEmail}</Text>
+          {profile?.is_verified && (
+            <VerifiedBadge size="md" testID="profile-verified-badge" />
+          )}
+        </View>
       </View>
+
+      {/* Verification Prompt for Non-Verified Users */}
+      {!profile?.is_verified && (
+        <VerificationPrompt
+          onVerify={handleStartVerification}
+          testID="profile-verification-prompt"
+        />
+      )}
 
       {/* Profile Info Section */}
       <View style={styles.section}>
@@ -343,7 +377,7 @@ export function ProfileScreen(): JSX.Element {
               />
               {errors.displayName && (
                 <Text style={styles.errorText} testID="profile-display-name-error">
-                  {errors.displayName}
+{errors.displayName}
                 </Text>
               )}
               <View style={styles.editButtonsRow}>
@@ -352,7 +386,7 @@ export function ProfileScreen(): JSX.Element {
                   onPress={handleCancelEditing}
                   size="small"
                   disabled={isSaving}
-testID="profile-cancel-edit-button"
+                  testID="profile-cancel-edit-button"
                 />
                 <Button
                   title="Save"
@@ -488,29 +522,23 @@ testID="profile-cancel-edit-button"
 // ============================================================================
 
 const styles = StyleSheet.create({
-  // Container
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#FFFFFF',
   },
   contentContainer: {
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
   },
-
-  // Header Section
   headerSection: {
     alignItems: 'center',
     paddingVertical: 24,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#F0F0F0',
   },
   avatarPlaceholder: {
     width: 80,
@@ -522,80 +550,84 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarText: {
+    color: '#FFFFFF',
     fontSize: 32,
     fontWeight: '600',
-    color: '#FFFFFF',
+  },
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   emailText: {
     fontSize: 16,
-    color: '#3C3C43',
+    color: '#333333',
     fontWeight: '500',
   },
-
-  // Section Styles
   section: {
-    marginTop: 16,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#F0F0F0',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#000',
-    marginBottom: 12,
-    marginTop: 4,
+    color: '#333333',
+    marginBottom: 16,
   },
-
-  // Info Row
   infoRow: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    marginBottom: 16,
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#8E8E93',
-    marginBottom: 4,
+    fontWeight: '500',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   infoValue: {
     fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
+    color: '#333333',
   },
   valueRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-
-  // Edit Mode
+  editLink: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  editLinkText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
   editContainer: {
-    marginTop: 8,
+    gap: 12,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: '#D0D0D0',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#000',
-    backgroundColor: '#F9F9F9',
+    color: '#333333',
   },
   inputError: {
     borderColor: '#FF3B30',
-    backgroundColor: '#FFF5F5',
   },
   errorText: {
+    fontSize: 12,
     color: '#FF3B30',
-    fontSize: 13,
     marginTop: 4,
   },
   errorBanner: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: '#FFE5E5',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -603,133 +635,80 @@ const styles = StyleSheet.create({
     borderLeftColor: '#FF3B30',
   },
   errorBannerText: {
-    color: '#C41C00',
-    fontSize: 13,
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '500',
   },
   editButtonsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
+    gap: 8,
+    marginTop: 8,
   },
-  editLink: {
-    padding: 4,
-  },
-  editLinkText: {
-    color: '#007AFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
-  // Avatar Section
   avatarDescription: {
     fontSize: 14,
     color: '#8E8E93',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   avatarSection: {
     marginTop: 12,
   },
-  avatarConfigured: {
+  avatarLoading: {
+    paddingVertical: 40,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarConfigured: {
+    gap: 12,
+  },
+  rpmAvatarInfo: {
+    paddingHorizontal: 12,
+  },
+  rpmAvatarLabel: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
   },
   avatarActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-    width: '100%',
+    gap: 8,
+    marginTop: 8,
   },
   avatarEmpty: {
     alignItems: 'center',
     paddingVertical: 24,
-    paddingHorizontal: 16,
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderStyle: 'dashed',
+    gap: 12,
   },
   avatarPlaceholderIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
   avatarPlaceholderEmoji: {
     fontSize: 32,
   },
   avatarEmptyText: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#666666',
     textAlign: 'center',
-    marginBottom: 12,
+    marginHorizontal: 16,
   },
-  avatarLoading: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  rpmAvatarInfo: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  rpmAvatarLabel: {
-    fontSize: 12,
-    color: '#8E8E93',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-
-  // Footer
   footer: {
+    paddingVertical: 24,
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    marginTop: 16,
-    backgroundColor: '#F2F2F7',
+    borderTopColor: '#F0F0F0',
   },
   footerText: {
-    fontSize: 16,
+    fontSize: 14,
+    color: '#333333',
     fontWeight: '600',
-    color: '#3C3C43',
   },
   footerVersion: {
     fontSize: 12,
     color: '#8E8E93',
     marginTop: 4,
-  },
-
-  // Modal
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#F2F2F7',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  modalCloseButton: {
-    padding: 8,
-    width: 60,
-  },
-  modalCloseText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'left',
   },
 })

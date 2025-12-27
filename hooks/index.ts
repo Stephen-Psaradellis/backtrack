@@ -57,3 +57,11 @@ export {
   type UseRecordVisitOptions,
   type UseRecordVisitResult,
 } from './useUserLocation'
+
+// Notification settings hook
+export {
+  useNotificationSettings,
+  type NotificationPreferences,
+  type NotificationSettingsResult,
+  type UseNotificationSettingsResult,
+} from './useNotificationSettings'

@@ -46,6 +46,10 @@ export interface Profile {
   rpm_avatar: StoredAvatar | null
   /** Ready Player Me avatar ID for quick lookups */
   rpm_avatar_id: string | null
+  /** Whether the user has completed identity verification */
+  is_verified: boolean
+  /** Timestamp when the user was verified (null if not verified) */
+  verified_at: Timestamp | null
   /** Timestamp when the profile was created */
   created_at: Timestamp
   /** Timestamp when the profile was last updated */
@@ -63,6 +67,8 @@ export interface ProfileInsert {
   own_avatar?: Record<string, unknown> | null
   rpm_avatar?: StoredAvatar | null
   rpm_avatar_id?: string | null
+  is_verified?: boolean
+  verified_at?: Timestamp | null
   created_at?: Timestamp
   updated_at?: Timestamp
 }
@@ -661,180 +667,13 @@ export interface LocationsWithActivePostsParams extends NearbyLocationParams {
 
 /**
  * Parameters for the get_recently_visited_locations database function.
- * Returns locations the current user has visited within the eligibility window.
- * Note: The RPC function uses auth.uid() internally, so no user_id is needed.
+ * Returns locations the user has visited recently.
  */
-export interface RecentlyVisitedLocationParams {
-  /** Maximum number of results to return (default: unlimited) */
+export interface RecentlyVisitedLocationsParams {
+  /** User ID to query visits for */
+  user_id: UUID
+  /** Time window in minutes to look back (default: 180 = 3 hours) */
+  minutes_back?: number
+  /** Maximum number of results to return (default: 50) */
   max_results?: number
-}
-
-/**
- * Location with distance information from geospatial query.
- * Returned by the get_nearby_locations database function.
- */
-export interface LocationWithDistance extends Location {
-  /** Distance from query point in meters */
-  distance_meters: number
-}
-
-/**
- * Location with active post count and distance information.
- * Returned by the get_locations_with_active_posts database function.
- * Note: Uses active_post_count (BIGINT) instead of post_count from base Location.
- */
-export interface LocationWithActivePosts extends Omit<Location, 'post_count'> {
-  /** Count of active, non-expired posts at this location */
-  active_post_count: number
-  /** Distance from query point in meters */
-  distance_meters: number
-}
-
-/**
- * Location with visit timestamp information.
- * Used when querying locations that a user has recently visited.
- * Combines Location data with the user's most recent visit timestamp.
- */
-export interface LocationWithVisit extends Location {
-  /** Timestamp when the user last visited this location */
-  visited_at: Timestamp
-}
-
-// ============================================================================
-// JOINED TYPES (for queries with relations)
-// ============================================================================
-
-/**
- * Post with location information
- */
-export interface PostWithLocation extends Post {
-  location: Location
-}
-
-/**
- * Post with producer information
- */
-export interface PostWithProducer extends Post {
-  producer: Profile
-}
-
-/**
- * Post with expanded location and profile data
- * Used for displaying posts in the ledger
- */
-export interface PostWithDetails extends Post {
-  location: Location
-  producer: Profile
-}
-
-/**
- * Conversation with expanded related data
- * Used for displaying in chat list
- */
-export interface ConversationWithDetails extends Conversation {
-  post: Pick<Post, 'id' | 'target_avatar' | 'message'>
-  other_user?: Pick<Profile, 'id' | 'username' | 'avatar_config'>
-  last_message?: Pick<Message, 'content' | 'created_at' | 'sender_id'>
-  unread_count?: number
-}
-
-/**
- * Conversation with all participants and related data
- */
-export interface ConversationWithParticipants extends Conversation {
-  producer: Profile
-  consumer: Profile
-  post: Post
-}
-
-/**
- * Message with sender information
- */
-export interface MessageWithSender extends Message {
-  sender: Profile
-}
-
-/**
- * Notification with related data
- */
-export interface NotificationWithReference extends Notification {
-  conversation?: Conversation
-  post?: Post
-}
-
-// ============================================================================
-// SUPABASE DATABASE TYPES
-// ============================================================================
-
-/**
- * Database type for Supabase client
- *
- * This follows the pattern expected by @supabase/supabase-js
- * for typed database operations.
- */
-export interface Database {
-  public: {
-    Tables: {
-      profiles: {
-        Row: Profile
-        Insert: ProfileInsert
-        Update: ProfileUpdate
-      }
-      locations: {
-        Row: Location
-        Insert: LocationInsert
-        Update: LocationUpdate
-      }
-      location_visits: {
-        Row: LocationVisit
-        Insert: LocationVisitInsert
-        Update: never
-      }
-      posts: {
-        Row: Post
-        Insert: PostInsert
-        Update: PostUpdate
-      }
-      conversations: {
-        Row: Conversation
-        Insert: ConversationInsert
-        Update: ConversationUpdate
-      }
-      messages: {
-        Row: Message
-        Insert: MessageInsert
-        Update: MessageUpdate
-      }
-      notifications: {
-        Row: Notification
-        Insert: NotificationInsert
-        Update: NotificationUpdate
-      }
-      profile_photos: {
-        Row: ProfilePhoto
-        Insert: ProfilePhotoInsert
-        Update: ProfilePhotoUpdate
-      }
-      blocks: {
-        Row: Block
-        Insert: BlockInsert
-        Update: never
-      }
-      blocked_users: {
-        Row: BlockedUser
-        Insert: BlockedUserInsert
-        Update: never
-      }
-      reports: {
-        Row: Report
-        Insert: ReportInsert
-        Update: ReportUpdate
-      }
-      user_reports: {
-        Row: UserReport
-        Insert: UserReportInsert
-        Update: never
-      }
-    }
-  }
 }

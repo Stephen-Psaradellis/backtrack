@@ -22,6 +22,19 @@
  *   onPress={(post) => navigation.navigate('PostDetail', { postId: post.id })}
  * />
  *
+ * // With producer profile for verification badge
+ * <PostCard
+ *   post={post}
+ *   producerProfile={producerProfile}
+ *   onPress={handlePress}
+ * />
+ *
+ * // With PostWithDetails (includes producer profile)
+ * <PostCard
+ *   post={postWithDetails}  // { ...post, producer: Profile, location: Location }
+ *   onPress={handlePress}
+ * />
+ *
  * // With match indicator
  * <PostCard
  *   post={post}
@@ -56,8 +69,10 @@ import {
   Alert,
 } from 'react-native'
 import { ReportPostModal } from './ReportModal'
-import { MediumAvatarPreview } from './ReadyPlayerMe'
-import type { Post, PostWithDetails, Location } from '../types/database'
+import { MediumAvatarPreview } from './AvatarPreview'
+import { VerifiedBadge } from './VerifiedBadge'
+import type { Post, PostWithDetails, Location, Profile } from '../types/database'
+import type { AvatarConfig } from '../types/avatar'
 
 // ============================================================================
 // TYPES
@@ -78,6 +93,13 @@ export interface PostCardProps {
    * Used when post is not PostWithDetails
    */
   location?: Location
+
+  /**
+   * Optional producer profile data (if not included in post)
+   * Used when post is not PostWithDetails
+   * Includes is_verified status for displaying verification badge
+   */
+  producerProfile?: Pick<Profile, 'id' | 'is_verified' | 'display_name' | 'username'>
 
   /**
    * Match score (0-100) if consumer has an avatar configured
@@ -275,6 +297,15 @@ function isPostWithDetails(
   return 'location' in post && post.location !== undefined
 }
 
+/**
+ * Check if a post has expanded producer data
+ */
+function hasProducerDetails(
+  post: Post | PostWithDetails
+): post is PostWithDetails {
+  return 'producer' in post && post.producer !== undefined
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -293,6 +324,7 @@ function isPostWithDetails(
 export const PostCard = memo(function PostCard({
   post,
   location,
+  producerProfile,
   matchScore,
   isMatch,
   onPress,
@@ -316,6 +348,13 @@ export const PostCard = memo(function PostCard({
 
   // Get location from post details or prop
   const postLocation = isPostWithDetails(post) ? post.location : location
+
+  // Get producer profile from post details or prop
+  // Used for displaying verification badge
+  const postProducer = hasProducerDetails(post) ? post.producer : producerProfile
+
+  // Check if the producer is verified
+  const isProducerVerified = postProducer?.is_verified ?? false
 
   // Truncate note for preview
   const maxLength = compact ? NOTE_PREVIEW_LENGTH_COMPACT : NOTE_PREVIEW_LENGTH
@@ -394,12 +433,10 @@ export const PostCard = memo(function PostCard({
       >
       {/* Avatar Section */}
       <View style={styles.avatarContainer} testID={`${testID}-avatar`}>
-        {post.target_rpm_avatar?.avatarId && (
-          <MediumAvatarPreview
-            avatarId={post.target_rpm_avatar.avatarId}
-            testID={`${testID}-avatar-preview`}
-          />
-        )}
+        <MediumAvatarPreview
+          config={post.target_avatar as AvatarConfig}
+          testID={`${testID}-avatar-preview`}
+        />
         {/* Match Badge */}
         {showMatchIndicator && isMatch && (
           <View
@@ -443,10 +480,15 @@ export const PostCard = memo(function PostCard({
             </View>
           )}
 
-          {/* Timestamp */}
-          <Text style={styles.timestampText} testID={`${testID}-timestamp`}>
-            {timeAgo}
-          </Text>
+          {/* Timestamp and Verified Badge */}
+          <View style={styles.timestampContainer}>
+            {isProducerVerified && (
+              <VerifiedBadge size="sm" testID={`${testID}-verified-badge`} />
+            )}
+            <Text style={styles.timestampText} testID={`${testID}-timestamp`}>
+              {timeAgo}
+            </Text>
+          </View>
         </View>
 
         {/* Match Indicator (if provided and is a match) */}
@@ -551,73 +593,22 @@ export interface PostCardListItemProps extends PostCardProps {
 }
 
 /**
- * PostCard wrapped for use in FlatList with separator
+ * PostCard list item with optional separator
+ *
+ * Useful for rendering PostCard in FlatList with separators between items
  */
 export const PostCardListItem = memo(function PostCardListItem({
-  index,
+  index = 0,
   showSeparator = true,
   ...props
 }: PostCardListItemProps) {
   return (
-    <View testID={`${props.testID ?? 'post-card-list-item'}-${index ?? 0}`}>
+    <View>
       <PostCard {...props} />
       {showSeparator && <View style={styles.separator} />}
     </View>
   )
 })
-
-// ============================================================================
-// RENDER ITEM HELPER
-// ============================================================================
-
-/**
- * Create a renderItem function for FlatList
- *
- * @param onPress - Callback when a post is pressed
- * @param matchScores - Optional map of postId -> matchScore for match indicators
- * @param matchThreshold - Score threshold for considering a match (default: 60)
- * @returns A function suitable for FlatList's renderItem prop
- *
- * @example
- * ```tsx
- * const renderItem = createPostCardRenderer(
- *   (post) => navigation.navigate('PostDetail', { postId: post.id }),
- *   matchScores,
- *   60
- * )
- *
- * <FlatList
- *   data={posts}
- *   renderItem={renderItem}
- *   keyExtractor={(item) => item.id}
- * />
- * ```
- */
-export function createPostCardRenderer(
-  onPress: (post: Post | PostWithDetails) => void,
-  matchScores?: Map<string, number>,
-  matchThreshold: number = 60
-) {
-  return ({
-    item,
-    index,
-  }: {
-    item: Post | PostWithDetails
-    index: number
-  }) => {
-    const score = matchScores?.get(item.id)
-    return (
-      <PostCardListItem
-        post={item}
-        onPress={onPress}
-        matchScore={score}
-        isMatch={score !== undefined && score >= matchThreshold}
-        index={index}
-        testID={`post-card-${item.id}`}
-      />
-    )
-  }
-}
 
 // ============================================================================
 // STYLES
@@ -626,92 +617,108 @@ export function createPostCardRenderer(
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: COLORS.background,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
+
   containerCompact: {
-    padding: 12,
-    borderRadius: 8,
+    paddingVertical: 8,
   },
+
   avatarContainer: {
     position: 'relative',
     marginRight: 12,
   },
+
   matchBadge: {
     position: 'absolute',
-    bottom: -4,
-    right: -4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 36,
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.background,
   },
+
   matchBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+    color: COLORS.background,
+    fontSize: 10,
     fontWeight: '700',
   },
+
   contentContainer: {
     flex: 1,
-    justifyContent: 'space-between',
   },
+
   noteText: {
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 20,
     color: COLORS.textPrimary,
     marginBottom: 8,
+    fontWeight: '500',
   },
+
   noteTextCompact: {
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 18,
-    marginBottom: 4,
+    marginBottom: 6,
   },
+
   metaContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
+
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 8,
   },
+
   locationIcon: {
     fontSize: 12,
     marginRight: 4,
   },
+
   locationText: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
     flex: 1,
   },
+
+  timestampContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
   timestampText: {
     fontSize: 12,
-    color: COLORS.textTertiary,
+    color: COLORS.textSecondary,
   },
+
   matchIndicator: {
     marginTop: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+    borderRadius: 4,
   },
+
   matchIndicatorText: {
     fontSize: 12,
     fontWeight: '600',
   },
+
   separator: {
     height: 1,
     backgroundColor: COLORS.border,
-    marginVertical: 8,
     marginHorizontal: 16,
   },
 })

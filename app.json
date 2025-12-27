@@ -2,6 +2,7 @@
   "expo": {
     "name": "Love Ledger",
     "slug": "love-ledger",
+    "scheme": "loveledger",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +23,8 @@
         "NSLocationWhenInUseUsageDescription": "Love Ledger needs your location to show nearby venues where you can post or browse missed connections.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Love Ledger uses your location to discover nearby venues and help you find missed connections.",
         "NSCameraUsageDescription": "Love Ledger needs camera access for selfie verification when posting missed connections.",
-        "NSPhotoLibraryUsageDescription": "Love Ledger needs photo library access to select photos for your profile."
+        "NSPhotoLibraryUsageDescription": "Love Ledger needs photo library access to select photos for your profile.",
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
@@ -67,6 +69,13 @@
         {
           "photosPermission": "Love Ledger needs photo library access to select photos for your profile.",
           "cameraPermission": "Love Ledger needs camera access for selfie verification when posting missed connections."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FF6B6B",
+          "defaultChannel": "default"
         }
       ]
     ],

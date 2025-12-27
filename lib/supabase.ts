@@ -87,3 +87,231 @@ export const exportedSupabaseUrl = supabaseUrl || MOCK_SUPABASE_URL
  * @deprecated Use exportedSupabaseUrl instead. This export is kept for backward compatibility.
  */
 export { exportedSupabaseUrl as supabaseUrl }
+
+// ============================================================================
+// PUSH TOKEN MANAGEMENT
+// ============================================================================
+
+/**
+ * Device information to store with push token
+ */
+export interface PushTokenDeviceInfo {
+  /** Device brand (e.g., 'Apple', 'Samsung') */
+  brand?: string | null
+  /** Device model name */
+  modelName?: string | null
+  /** OS name ('ios' or 'android') */
+  osName?: string | null
+  /** OS version string */
+  osVersion?: string | null
+  /** Device type identifier */
+  deviceType?: number | null
+}
+
+/**
+ * Result from push token operations
+ */
+export interface PushTokenResult {
+  /** Whether the operation was successful */
+  success: boolean
+  /** Error message if operation failed */
+  error: string | null
+}
+
+/**
+ * Save or update a push token for the authenticated user
+ *
+ * Uses the upsert_push_token RPC function to handle both insert and update
+ * cases. If the token already exists for this user, it updates the device info.
+ * If the token exists for a different user, it moves ownership to the current user.
+ *
+ * @param token - The Expo push token to register
+ * @param deviceInfo - Optional device information to store with the token
+ * @returns Result indicating success or failure
+ *
+ * @example
+ * ```tsx
+ * import { savePushToken } from 'lib/supabase'
+ *
+ * const result = await savePushToken('ExponentPushToken[xxxx]', {
+ *   brand: 'Apple',
+ *   modelName: 'iPhone 14',
+ *   osName: 'iOS',
+ *   osVersion: '17.0',
+ * })
+ *
+ * if (result.success) {
+ *   console.log('Push token saved successfully')
+ * }
+ * ```
+ */
+export async function savePushToken(
+  token: string,
+  deviceInfo?: PushTokenDeviceInfo
+): Promise<PushTokenResult> {
+  try {
+    // Get current user session
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError) {
+      return {
+        success: false,
+        error: `Authentication error: ${authError.message}`,
+      }
+    }
+
+    if (!user) {
+      return {
+        success: false,
+        error: 'User must be authenticated to register push token.',
+      }
+    }
+
+    // Validate token
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      return {
+        success: false,
+        error: 'Invalid push token provided.',
+      }
+    }
+
+    // Call the upsert_push_token RPC function
+    const { error: rpcError } = await supabase.rpc('upsert_push_token', {
+      p_user_id: user.id,
+      p_token: token.trim(),
+      p_device_info: deviceInfo || null,
+    })
+
+    if (rpcError) {
+      return {
+        success: false,
+        error: `Failed to save push token: ${rpcError.message}`,
+      }
+    }
+
+    return {
+      success: true,
+      error: null,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+    return {
+      success: false,
+      error: `Failed to save push token: ${message}`,
+    }
+  }
+}
+
+/**
+ * Remove a push token from the database
+ *
+ * Should be called when:
+ * - User logs out
+ * - User disables notifications
+ * - Token becomes invalid
+ *
+ * @param token - The Expo push token to remove
+ * @returns Result indicating success or failure
+ *
+ * @example
+ * ```tsx
+ * import { removePushToken } from 'lib/supabase'
+ *
+ * const result = await removePushToken('ExponentPushToken[xxxx]')
+ * if (result.success) {
+ *   console.log('Push token removed successfully')
+ * }
+ * ```
+ */
+export async function removePushToken(token: string): Promise<PushTokenResult> {
+  try {
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      return {
+        success: false,
+        error: 'Invalid push token provided.',
+      }
+    }
+
+    const { error } = await supabase
+      .from('expo_push_tokens')
+      .delete()
+      .eq('token', token.trim())
+
+    if (error) {
+      return {
+        success: false,
+        error: `Failed to remove push token: ${error.message}`,
+      }
+    }
+
+    return {
+      success: true,
+      error: null,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+    return {
+      success: false,
+      error: `Failed to remove push token: ${message}`,
+    }
+  }
+}
+
+/**
+ * Remove all push tokens for the current authenticated user
+ *
+ * Useful for logout to stop receiving notifications on all devices.
+ *
+ * @returns Result indicating success or failure
+ *
+ * @example
+ * ```tsx
+ * import { removeAllUserPushTokens } from 'lib/supabase'
+ *
+ * // On logout
+ * await removeAllUserPushTokens()
+ * ```
+ */
+export async function removeAllUserPushTokens(): Promise<PushTokenResult> {
+  try {
+    // Get current user session
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError) {
+      return {
+        success: false,
+        error: `Authentication error: ${authError.message}`,
+      }
+    }
+
+    if (!user) {
+      return {
+        success: false,
+        error: 'User must be authenticated to remove push tokens.',
+      }
+    }
+
+    const { error } = await supabase
+      .from('expo_push_tokens')
+      .delete()
+      .eq('user_id', user.id)
+
+    if (error) {
+      return {
+        success: false,
+        error: `Failed to remove push tokens: ${error.message}`,
+      }
+    }
+
+    return {
+      success: true,
+      error: null,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+    return {
+      success: false,
+      error: `Failed to remove push tokens: ${message}`,
+    }
+  }
+}

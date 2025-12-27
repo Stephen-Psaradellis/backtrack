@@ -9,6 +9,7 @@
  * - Shows last message preview and timestamp
  * - Unread message count badge
  * - Avatar display for the conversation partner
+ * - Verified badge for verified users
  * - Pull-to-refresh functionality
  * - Empty state when no conversations exist
  * - Loading and error states
@@ -33,6 +34,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
 import { MediumAvatarPreview, type StoredAvatar } from '../components/ReadyPlayerMe'
+import { VerifiedBadge } from '../components/VerifiedBadge'
 import { lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyChats, ErrorState } from '../components/EmptyState'
@@ -64,6 +66,8 @@ interface ConversationItem extends Conversation {
   unread_count: number
   /** Location name for context */
   location_name: string | null
+  /** Whether the other user in the conversation is verified */
+  other_user_is_verified: boolean
 }
 
 // ============================================================================
@@ -105,7 +109,7 @@ function formatConversationTime(timestamp: string | null): string {
   const date = new Date(timestamp)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffDays =Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
   // Today - show time
   if (diffDays === 0) {
@@ -249,6 +253,9 @@ export function ChatListScreen(): JSX.Element {
       // Fetch last message and unread count for each conversation
       const conversationItems: ConversationItem[] = await Promise.all(
         filteredConversations.map(async (conv) => {
+          // Determine the other user's ID
+          const otherUserId = conv.producer_id === userId ? conv.consumer_id : conv.producer_id
+
           // Fetch last message
           const { data: lastMessageData } = await supabase
             .from('messages')
@@ -265,6 +272,13 @@ export function ChatListScreen(): JSX.Element {
             .eq('conversation_id', conv.id)
             .eq('is_read', false)
             .neq('sender_id', userId)
+
+          // Fetch other user's verification status
+          const { data: otherUserProfile } = await supabase
+            .from('profiles')
+            .select('is_verified')
+            .eq('id', otherUserId)
+            .single()
 
           // Extract post data
           const post = conv.posts as unknown as {
@@ -283,6 +297,7 @@ export function ChatListScreen(): JSX.Element {
             last_message_sender_id: lastMessageData?.sender_id || null,
             unread_count: unreadCount || 0,
             location_name: post?.locations?.name || null,
+            other_user_is_verified: otherUserProfile?.is_verified ?? false,
           } as ConversationItem
         })
       )
@@ -437,10 +452,17 @@ export function ChatListScreen(): JSX.Element {
           activeOpacity={0.7}
           testID={`chat-list-item-${item.id}`}
         >
-          {/* Avatar */}
+          {/* Avatar with optional verified badge */}
           <View style={styles.avatarContainer}>
             {item.target_rpm_avatar?.avatarId ? (
-              <MediumAvatarPreview avatarId={item.target_rpm_avatar.avatarId} />
+              <>
+                <MediumAvatarPreview avatarId={item.target_rpm_avatar.avatarId} />
+                {item.other_user_is_verified && (
+                  <View style={styles.verifiedBadgeContainer}>
+                    <VerifiedBadge />
+                  </View>
+                )}
+              </>
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarPlaceholderText}>?</Text>
@@ -466,19 +488,25 @@ export function ChatListScreen(): JSX.Element {
             {/* Location subtitle */}
             {item.location_name && (
               <Text style={styles.location} numberOfLines={1}>
-                📍 {item.location_name}
+                {item.location_name}
               </Text>
             )}
 
-            {/* Message preview and badge row */}
+            {/* Message preview and unread badge */}
             <View style={styles.messageRow}>
               <Text
-                style={[styles.messagePreview, isOwnLastMessage && styles.ownMessage]}
+                style={[
+                  styles.messagePreview,
+                  isOwnLastMessage && styles.messagePreviewOwn,
+                  hasUnread && styles.messagePreviewUnread,
+                ]}
                 numberOfLines={1}
               >
-                {isOwnLastMessage && 'You: '}
+                {isOwnLastMessage ? 'You: ' : ''}
                 {truncateMessage(item.last_message_content)}
               </Text>
+
+              {/* Unread badge */}
               {hasUnread && (
                 <View style={styles.unreadBadge}>
                   <Text style={styles.unreadBadgeText}>
@@ -491,34 +519,53 @@ export function ChatListScreen(): JSX.Element {
         </TouchableOpacity>
       )
     },
-    [userId, handleConversationPress]
+    [userId]
   )
 
   // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
 
-  if (loading && conversations.length === 0) {
-    return <LoadingSpinner />
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <LoadingSpinner />
+      </View>
+    )
   }
 
   if (error) {
-    return <ErrorState error={error} onRetry={handleRetry} />
+    return (
+      <View style={styles.container}>
+        <ErrorState onRetry={handleRetry} />
+      </View>
+    )
   }
 
   if (conversations.length === 0) {
-    return <EmptyChats />
+    return (
+      <View style={styles.container}>
+        <EmptyChats />
+      </View>
+    )
   }
 
   return (
     <View style={styles.container}>
       <FlatList
         data={conversations}
-        renderItem={renderConversation}
         keyExtractor={(item) => item.id}
+        renderItem={renderConversation}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+          />
         }
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        testID="chat-list"
       />
     </View>
   )
@@ -533,28 +580,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  listContent: {
+    paddingBottom: 16,
+  },
   conversationItem: {
     flexDirection: 'row',
     padding: 12,
     backgroundColor: COLORS.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    alignItems: 'flex-start',
   },
   avatarContainer: {
+    position: 'relative',
     marginRight: 12,
     marginTop: 4,
+  },
+  verifiedBadgeContainer: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
   },
   avatarPlaceholder: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarPlaceholderText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
@@ -573,7 +626,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: COLORS.textPrimary,
-    marginRight: 8,
   },
   titleUnread: {
     fontWeight: '600',
@@ -581,6 +633,7 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 13,
     color: COLORS.textSecondary,
+    marginLeft: 8,
   },
   location: {
     fontSize: 12,
@@ -589,32 +642,35 @@ const styles = StyleSheet.create({
   },
   messageRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   messagePreview: {
     flex: 1,
     fontSize: 13,
     color: COLORS.textSecondary,
-    fontStyle: 'italic',
-    marginRight: 8,
   },
-  ownMessage: {
-    color: COLORS.textSecondary,
+  messagePreviewOwn: {
+    fontWeight: '500',
+  },
+  messagePreviewUnread: {
+    color: COLORS.textPrimary,
+    fontWeight: '500',
   },
   unreadBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
     backgroundColor: COLORS.unreadBadge,
-    minWidth: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
   },
   unreadBadgeText: {
     color: COLORS.unreadBadgeText,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: COLORS.border,
   },
 })

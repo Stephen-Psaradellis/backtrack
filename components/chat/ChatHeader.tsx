@@ -6,7 +6,8 @@
  * Displays the chat header bar with:
  * - Back navigation button
  * - Other user's avatar with online status indicator
- * - Username and presence status (online/last seen)
+ * - Username with optional verified badge
+ * - Presence status (online/last seen)
  * - Actions menu trigger button (for block, report, etc.)
  *
  * This component is designed to be used at the top of the ChatScreen
@@ -18,6 +19,7 @@
  *   username="Sarah"
  *   isOnline={true}
  *   lastSeen={null}
+ *   isVerified={true}
  *   onBack={() => navigation.goBack()}
  *   onActionsClick={() => setIsActionsMenuOpen(true)}
  * />
@@ -68,12 +70,46 @@ function MoreActionsIcon() {
 }
 
 /**
+ * Verified badge icon - blue circle with white checkmark
+ * Matches the VerifiedBadge component design for visual consistency
+ * Uses 'md' size (20px) as recommended for chat headers
+ */
+function VerifiedBadgeIcon() {
+  return (
+    <span
+      className={styles.verifiedBadge}
+      role="img"
+      aria-label="Verified user"
+      title="Verified user"
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="12" fill="#3B82F6" />
+        <path
+          d="M7.5 12.5L10.5 15.5L16.5 9.5"
+          stroke="white"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  )
+}
+
+/**
  * ChatHeader displays the header bar for a chat conversation
  *
  * @param username - The other user's display name
  * @param avatarLetter - Single character for avatar fallback (usually first letter of username)
  * @param isOnline - Whether the other user is currently online
  * @param lastSeen - ISO timestamp of when the user was last seen
+ * @param isVerified - Whether the other user is verified
  * @param onBack - Callback when back button is pressed
  * @param onActionsClick - Callback when actions menu button is pressed
  */
@@ -82,6 +118,7 @@ function ChatHeaderComponent({
   avatarLetter,
   isOnline,
   lastSeen,
+  isVerified,
   onBack,
   onActionsClick,
 }: ChatHeaderProps) {
@@ -119,7 +156,10 @@ function ChatHeaderComponent({
 
         {/* User Details */}
         <div className={styles.userDetails}>
-          <h1 className={styles.username}>{username || 'Unknown User'}</h1>
+          <div className={styles.usernameContainer}>
+            <h1 className={styles.username}>{username || 'Unknown User'}</h1>
+            {isVerified && <VerifiedBadgeIcon />}
+          </div>
           <UserPresenceIndicator isOnline={isOnline} lastSeen={lastSeen} />
         </div>
       </div>

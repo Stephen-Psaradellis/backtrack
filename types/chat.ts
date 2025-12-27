@@ -31,6 +31,8 @@ export interface ChatHeaderProps {
   isOnline: boolean
   /** ISO timestamp of when the user was last seen */
   lastSeen: string | null
+  /** Whether the other user is verified */
+  isVerified?: boolean
   /** Callback when back button is pressed */
   onBack: () => void
   /** Callback when actions menu button is pressed */

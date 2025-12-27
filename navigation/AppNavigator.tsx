@@ -10,9 +10,10 @@
  */
 
 import React from 'react'
-import { NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import * as Linking from 'expo-linking'
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
 
 import { useAuth } from '../contexts/AuthContext'
@@ -206,6 +207,7 @@ function MainStackNavigator() {
     <MainStack.Navigator
       screenOptions={{
         headerShown: true,
+        headerBackTitleVisible: false,
         headerTintColor: '#007AFF',
       }}
     >
@@ -287,16 +289,75 @@ function RootNavigator() {
 }
 
 // ============================================================================
+// DEEP-LINKING CONFIGURATION
+// ============================================================================
+
+/**
+ * Prefix for the deep-linking URL scheme
+ * Used for push notification deep-linking
+ */
+const prefix = Linking.createURL('/')
+
+/**
+ * Deep-linking configuration for push notifications
+ * Maps URLs like:
+ * - loveledger://conversation/:conversationId -> Chat screen
+ * - loveledger://match/:postId -> PostDetail screen
+ */
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: [prefix, 'loveledger://'],
+  config: {
+    screens: {
+      Main: {
+        screens: {
+          // Deep-link for message notifications
+          // URL: loveledger://conversation/:conversationId
+          Chat: {
+            path: 'conversation/:conversationId',
+            parse: {
+              conversationId: (conversationId: string) => conversationId,
+            },
+          },
+          // Deep-link for match notifications
+          // URL: loveledger://match/:postId
+          PostDetail: {
+            path: 'match/:postId',
+            parse: {
+              postId: (postId: string) => postId,
+            },
+          },
+          // Main tabs can also be deep-linked
+          MainTabs: {
+            screens: {
+              HomeTab: 'home',
+              ChatsTab: 'chats',
+              ProfileTab: 'profile',
+            },
+          },
+        },
+      },
+      // Auth screens (typically not deep-linked, but available for future use)
+      Auth: {
+        screens: {
+          Login: 'login',
+        },
+      },
+    },
+  },
+}
+
+// ============================================================================
 // APP NAVIGATOR (EXPORTED COMPONENT)
 // ============================================================================
 
 /**
  * Main app navigator wrapped in NavigationContainer
  * This is the top-level navigation component that should be rendered in App.tsx
+ * Includes deep-linking configuration for push notification navigation
  */
 export function AppNavigator() {
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <RootNavigator />
     </NavigationContainer>
   )

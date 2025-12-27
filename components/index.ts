@@ -152,3 +152,17 @@ export {
   type OfflineIndicatorProps,
   type ControlledOfflineIndicatorProps,
 } from './OfflineIndicator'
+
+// Verified Badge
+export {
+  VerifiedBadge,
+  type VerifiedBadgeProps,
+} from './VerifiedBadge'
+
+// Verification Prompt
+export {
+  VerificationPrompt,
+  CompactVerificationPrompt,
+  type VerificationPromptProps,
+  type VerificationPromptVariant,
+} from './VerificationPrompt'

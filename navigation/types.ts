@@ -9,6 +9,7 @@ import type { NativeStackScreenProps, NativeStackNavigationProp } from '@react-n
 import type { BottomTabScreenProps, BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { CompositeScreenProps, CompositeNavigationProp, NavigatorScreenParams } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
+import type { AvatarConfig } from '../types/avatar'
 
 // ============================================================================
 // STACK NAVIGATOR PARAM LISTS
@@ -36,12 +37,24 @@ export type MainStackParamList = {
   CreatePost: { locationId?: string }
   /** View posts at a specific location */
   Ledger: { locationId: string; locationName: string }
-  /** View details of a specific post */
+  /**
+   * View details of a specific post
+   * Deep-linked from match notifications: loveledger://match/:postId
+   */
   PostDetail: { postId: string }
-  /** Chat with a specific conversation */
+  /**
+   * Chat with a specific conversation
+   * Deep-linked from message notifications: loveledger://conversation/:conversationId
+   */
   Chat: { conversationId: string }
-  /** Ready Player Me avatar creator screen */
-  AvatarCreator: undefined
+  /** Avatar builder screen */
+  AvatarBuilder: {
+    /** Initial avatar configuration to edit */
+    initialConfig?: AvatarConfig
+    /** Callback when avatar is completed (passed via navigation params for serialization) */
+    returnScreen?: keyof MainStackParamList
+    returnParamKey?: string
+  }
 }
 
 /**
@@ -85,7 +98,7 @@ export type CreatePostScreenProps = NativeStackScreenProps<MainStackParamList, '
 export type LedgerScreenProps = NativeStackScreenProps<MainStackParamList, 'Ledger'>
 export type PostDetailScreenProps = NativeStackScreenProps<MainStackParamList, 'PostDetail'>
 export type ChatScreenProps = NativeStackScreenProps<MainStackParamList, 'Chat'>
-export type AvatarCreatorScreenProps = NativeStackScreenProps<MainStackParamList, 'AvatarCreator'>
+export type AvatarBuilderScreenProps = NativeStackScreenProps<MainStackParamList, 'AvatarBuilder'>
 
 // Tab Screen Props with composite navigation (can access both tab and stack navigation)
 export type HomeTabScreenProps = CompositeScreenProps<
@@ -138,7 +151,7 @@ export type CreatePostRouteProp = RouteProp<MainStackParamList, 'CreatePost'>
 export type LedgerRouteProp = RouteProp<MainStackParamList, 'Ledger'>
 export type PostDetailRouteProp = RouteProp<MainStackParamList, 'PostDetail'>
 export type ChatRouteProp = RouteProp<MainStackParamList, 'Chat'>
-export type AvatarCreatorRouteProp = RouteProp<MainStackParamList, 'AvatarCreator'>
+export type AvatarBuilderRouteProp = RouteProp<MainStackParamList, 'AvatarBuilder'>
 
 // ============================================================================
 // NAVIGATION CONSTANTS
@@ -162,7 +175,7 @@ export const SCREENS = {
   Ledger: 'Ledger' as const,
   PostDetail: 'PostDetail' as const,
   Chat: 'Chat' as const,
-  AvatarCreator: 'AvatarCreator' as const,
+  AvatarBuilder: 'AvatarBuilder' as const,
 
   // Tabs
   HomeTab: 'HomeTab' as const,
@@ -189,6 +202,49 @@ export const TAB_LABELS: Record<keyof MainTabParamList, string> = {
 }
 
 // ============================================================================
+// NOTIFICATION DEEP-LINK TYPES
+// ============================================================================
+
+/**
+ * Notification types that can trigger navigation
+ */
+export type NotificationType = 'match' | 'message'
+
+/**
+ * Deep-link parameter types for notification-triggered navigation
+ */
+export type NotificationDeepLinkParams = {
+  /** Match notification navigates to PostDetail with postId */
+  match: MainStackParamList['PostDetail']
+  /** Message notification navigates to Chat with conversationId */
+  message: MainStackParamList['Chat']
+}
+
+/**
+ * Helper type to get navigation params for a notification type
+ */
+export type NotificationNavParams<T extends NotificationType> = NotificationDeepLinkParams[T]
+
+/**
+ * Deep-link URL patterns for notifications
+ * Used by AppNavigator linking configuration
+ */
+export const NOTIFICATION_DEEP_LINK_PATHS = {
+  /** Match notification deep-link: loveledger://match/:postId */
+  match: 'match/:postId',
+  /** Message notification deep-link: loveledger://conversation/:conversationId */
+  message: 'conversation/:conversationId',
+} as const
+
+/**
+ * Target screens for notification types
+ */
+export const NOTIFICATION_TARGET_SCREENS: Record<NotificationType, keyof MainStackParamList> = {
+  match: 'PostDetail',
+  message: 'Chat',
+} as const
+
+// ============================================================================
 // TYPE GUARDS
 // ============================================================================
 
@@ -209,7 +265,7 @@ export function isMainScreen(screenName: string): screenName is keyof MainStackP
     'Ledger',
     'PostDetail',
     'Chat',
-    'AvatarCreator',
+    'AvatarBuilder',
   ]
   return mainScreens.includes(screenName as keyof MainStackParamList)
 }
