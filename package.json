@@ -9,10 +9,12 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "vitest run && jest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "vitest --config vitest.e2e.config.js",
+    "test:unit": "vitest run",
+    "test:components": "jest",
     "typecheck": "tsc --noEmit",
     "android": "expo run:android",
     "ios": "expo run:ios"

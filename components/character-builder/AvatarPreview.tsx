@@ -76,6 +76,11 @@ function AvatarPreviewComponent({
   className = '',
   transparent = false,
 }: AvatarPreviewProps) {
+  // Create a stable key for config changes using JSON.stringify
+  // This ensures useMemo only recalculates when actual values change,
+  // not when a new object reference with the same values is passed
+  const configKey = useMemo(() => JSON.stringify(config), [config])
+
   // Merge provided config with defaults and apply transparent override
   const mergedConfig = useMemo(
     (): AvatarConfig => ({
@@ -84,7 +89,8 @@ function AvatarPreviewComponent({
       // Override avatarStyle based on transparent prop
       avatarStyle: transparent ? 'Transparent' : (config?.avatarStyle ?? DEFAULT_AVATAR_CONFIG.avatarStyle),
     }),
-    [config, transparent]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [configKey, transparent]
   )
 
   const dimension = SIZE_DIMENSIONS[size]
@@ -121,7 +127,9 @@ function AvatarPreviewComponent({
 
 /**
  * Custom comparison function for React.memo
- * Only re-render if config or size actually changed
+ * Only re-render if config or size actually changed.
+ * Uses JSON.stringify for robust config comparison that automatically
+ * handles any new keys added to AvatarConfig interface.
  */
 function arePropsEqual(
   prevProps: AvatarPreviewProps,
@@ -132,7 +140,8 @@ function arePropsEqual(
   if (prevProps.className !== nextProps.className) return false
   if (prevProps.transparent !== nextProps.transparent) return false
 
-  // Check config equality
+  // Check config equality using JSON.stringify for deep comparison
+  // This approach automatically handles all AvatarConfig keys
   const prevConfig = prevProps.config
   const nextConfig = nextProps.config
 
@@ -142,28 +151,8 @@ function arePropsEqual(
   // One is undefined
   if (!prevConfig || !nextConfig) return false
 
-  // Compare config properties
-  const configKeys: (keyof AvatarConfig)[] = [
-    'avatarStyle',
-    'topType',
-    'accessoriesType',
-    'hairColor',
-    'facialHairType',
-    'facialHairColor',
-    'clotheType',
-    'clotheColor',
-    'graphicType',
-    'eyeType',
-    'eyebrowType',
-    'mouthType',
-    'skinColor',
-  ]
-
-  for (const key of configKeys) {
-    if (prevConfig[key] !== nextConfig[key]) return false
-  }
-
-  return true
+  // Deep compare config using JSON.stringify
+  return JSON.stringify(prevConfig) === JSON.stringify(nextConfig)
 }
 
 /**

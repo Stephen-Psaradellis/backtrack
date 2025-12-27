@@ -110,6 +110,10 @@ function AvatarBuilderComponent({
     [config, selectedCategory]
   )
 
+  // Generate a stable key for the preview to force re-renders on config changes
+  // This ensures the preview updates immediately when any trait is modified
+  const previewKey = useMemo(() => JSON.stringify(config), [config])
+
   // Build container classes
   const containerClasses = useMemo(
     () =>
@@ -131,7 +135,7 @@ function AvatarBuilderComponent({
     <div className={containerClasses} role="region" aria-label="Avatar builder">
       {/* Live Preview Section */}
       <div className="flex flex-col items-center gap-2 p-4 bg-muted/30">
-        <AvatarPreview config={config} size="xl" />
+        <AvatarPreview key={previewKey} config={config} size="xl" />
         <p className="text-sm text-muted-foreground">Your Avatar</p>
       </div>
 

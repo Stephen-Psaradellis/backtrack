@@ -115,6 +115,11 @@ export const AvatarPreview = memo(function AvatarPreview({
   style,
   testID = 'avatar-preview',
 }: AvatarPreviewProps) {
+  // Create a stable key for config changes using JSON.stringify
+  // This ensures useMemo only recalculates when actual values change,
+  // not when a new object reference with the same values is passed
+  const configKey = useMemo(() => JSON.stringify(config), [config])
+
   // Merge provided config with defaults and include avatarStyle
   const mergedConfig: AvatarConfig = useMemo(
     () => ({
@@ -122,7 +127,8 @@ export const AvatarPreview = memo(function AvatarPreview({
       ...config,
       avatarStyle,
     }),
-    [config, avatarStyle]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [configKey, avatarStyle]
   )
 
   // Generate SVG string using DiceBear adapter

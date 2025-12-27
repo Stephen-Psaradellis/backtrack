@@ -334,6 +334,18 @@ const OptionSelector = memo(function OptionSelector({
 })
 
 // ============================================================================
+// DEBUG LOGGING (Phase 1 Investigation - Remove after fixing)
+// ============================================================================
+
+const DEBUG_AVATAR_STATE = __DEV__ // Only log in development
+
+function debugLog(context: string, message: string, data?: unknown) {
+  if (DEBUG_AVATAR_STATE) {
+    console.log(`[AvatarBuilder:${context}]`, message, data ?? '')
+  }
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -360,10 +372,17 @@ export function AvatarBuilder({
   testID = 'avatar-builder',
 }: AvatarBuilderProps): JSX.Element {
   // Current avatar configuration
-  const [config, setConfig] = useState<AvatarConfig>({
-    ...DEFAULT_AVATAR_CONFIG,
-    ...initialConfig,
+  const [config, setConfig] = useState<AvatarConfig>(() => {
+    const initial = {
+      ...DEFAULT_AVATAR_CONFIG,
+      ...initialConfig,
+    }
+    debugLog('init', 'Initial config created', initial)
+    return initial
   })
+
+  // Debug: Log every render with current config
+  debugLog('render', 'Component rendering with config', { topType: config.topType, skinColor: config.skinColor })
 
   // Currently selected category
   const [activeCategory, setActiveCategory] = useState<string>(AVATAR_CATEGORIES[0].id)
@@ -374,16 +393,28 @@ export function AvatarBuilder({
     [activeCategory]
   )
 
+  // Generate a stable key for the avatar preview based on config hash
+  // This forces React to re-render XLargeAvatarPreview when any config value changes
+  const configKey = useMemo(() => {
+    return Object.entries(config)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}:${v}`)
+      .join('|')
+  }, [config])
+
   // Handle attribute change
   const handleAttributeChange = useCallback(
     (attribute: AvatarAttribute, value: string) => {
+      debugLog('handleAttributeChange', `Changing ${attribute}`, { from: config[attribute], to: value })
       // Trigger selection haptic for option selection
       selectionFeedback()
       const newConfig = {
         ...config,
         [attribute]: value,
       }
+      debugLog('handleAttributeChange', 'New config created, calling setConfig', { [attribute]: newConfig[attribute] })
       setConfig(newConfig)
+      debugLog('handleAttributeChange', 'setConfig called, calling onChange', { hasOnChange: !!onChange })
       onChange?.(newConfig)
     },
     [config, onChange]
@@ -391,6 +422,7 @@ export function AvatarBuilder({
 
   // Handle randomize
   const handleRandomize = useCallback(() => {
+    debugLog('handleRandomize', 'Randomize button pressed')
     // Trigger light haptic for randomize button
     lightFeedback()
     const randomConfig: AvatarConfig = {
@@ -406,7 +438,9 @@ export function AvatarBuilder({
       mouthType: getRandomOption(AVATAR_OPTIONS.mouthType),
       skinColor: getRandomOption(AVATAR_OPTIONS.skinColor),
     }
+    debugLog('handleRandomize', 'Random config created', { topType: randomConfig.topType, skinColor: randomConfig.skinColor })
     setConfig(randomConfig)
+    debugLog('handleRandomize', 'setConfig called, calling onChange', { hasOnChange: !!onChange })
     onChange?.(randomConfig)
   }, [onChange])
 
@@ -419,13 +453,16 @@ export function AvatarBuilder({
 
   // Handle reset to default
   const handleReset = useCallback(() => {
+    debugLog('handleReset', 'Reset button pressed')
     // Trigger light haptic for reset button
     lightFeedback()
     const defaultConfig = {
       ...DEFAULT_AVATAR_CONFIG,
       ...initialConfig,
     }
+    debugLog('handleReset', 'Default config created', { topType: defaultConfig.topType, skinColor: defaultConfig.skinColor })
     setConfig(defaultConfig)
+    debugLog('handleReset', 'setConfig called, calling onChange', { hasOnChange: !!onChange })
     onChange?.(defaultConfig)
   }, [initialConfig, onChange])
 
@@ -441,6 +478,7 @@ export function AvatarBuilder({
       {/* Avatar Preview */}
       <View style={styles.previewContainer}>
         <XLargeAvatarPreview
+          key={configKey}
           config={config}
           testID={`${testID}-preview`}
         />
