@@ -264,7 +264,7 @@ export function useNetworkStatus(
   // Ref to store the network subscription
   const subscriptionRef = useRef<NetInfoSubscription | null>(null)
   // Ref for periodic check interval
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ---------------------------------------------------------------------------
   // HELPER FUNCTIONS

@@ -138,7 +138,10 @@ export const STORAGE_ERRORS = {
   URL_FAILED: 'Failed to get selfie URL.',
   MISSING_USER_ID: 'User ID is required for storage operations.',
   MISSING_POST_ID: 'Post ID is required for storage operations.',
+  MISSING_PHOTO_ID: 'Photo ID is required for storage operations.',
   MISSING_FILE: 'No file provided for upload.',
+  PROFILE_PHOTO_UPLOAD_FAILED: 'Failed to upload photo. Please try again.',
+  PROFILE_PHOTO_DELETE_FAILED: 'Failed to delete photo.',
 } as const
 
 // ============================================================================
@@ -560,17 +563,371 @@ export async function uploadSelfieAndGetPath(
 }
 
 // ============================================================================
+// PROFILE PHOTO FUNCTIONS
+// ============================================================================
+
+/**
+ * Generate the storage path for a profile photo
+ *
+ * Path format: {user_id}/profile/{photo_id}.jpg
+ * This keeps profile photos separate from per-post selfies
+ *
+ * @param userId - The user's ID
+ * @param photoId - The photo's ID
+ * @returns Storage path string
+ */
+export function getProfilePhotoStoragePath(userId: string, photoId: string): string {
+  return `${userId}/profile/${photoId}.jpg`
+}
+
+/**
+ * Upload a profile photo to Supabase Storage
+ *
+ * Uploads the photo to the private 'selfies' bucket with the path format:
+ * {user_id}/profile/{photo_id}.jpg
+ *
+ * Note: After uploading, the photo should be sent to the moderation
+ * Edge Function for content safety verification.
+ *
+ * @param userId - The user's ID (must match authenticated user)
+ * @param photoId - The photo's UUID (generated before upload)
+ * @param imageUri - Local file URI of the image to upload
+ * @param options - Upload options
+ * @returns Upload result with path or error
+ *
+ * @example
+ * const photoId = uuid()
+ * const result = await uploadProfilePhoto(userId, photoId, imageUri)
+ * if (result.success) {
+ *   // Save to database and trigger moderation
+ *   await supabase.from('profile_photos').insert({
+ *     id: photoId,
+ *     user_id: userId,
+ *     storage_path: result.path,
+ *   })
+ * }
+ */
+export async function uploadProfilePhoto(
+  userId: string,
+  photoId: string,
+  imageUri: string,
+  options: UploadOptions = {}
+): Promise<UploadResult> {
+  // Validate inputs
+  if (!userId) {
+    return {
+      success: false,
+      path: null,
+      fullUrl: null,
+      error: STORAGE_ERRORS.MISSING_USER_ID,
+    }
+  }
+
+  if (!photoId) {
+    return {
+      success: false,
+      path: null,
+      fullUrl: null,
+      error: STORAGE_ERRORS.MISSING_PHOTO_ID,
+    }
+  }
+
+  if (!imageUri) {
+    return {
+      success: false,
+      path: null,
+      fullUrl: null,
+      error: STORAGE_ERRORS.MISSING_FILE,
+    }
+  }
+
+  try {
+    // Determine MIME type from URI
+    const mimeType = options.contentType || getImageMimeType(imageUri)
+
+    // Create upload payload (reuse existing helper)
+    const { blob, error: blobError } = await createUploadPayload(imageUri, mimeType)
+    if (blobError) {
+      return {
+        success: false,
+        path: null,
+        fullUrl: null,
+        error: blobError,
+      }
+    }
+
+    // Generate storage path for profile photo
+    const storagePath = getProfilePhotoStoragePath(userId, photoId)
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(SELFIES_BUCKET)
+      .upload(storagePath, blob, {
+        contentType: mimeType,
+        upsert: options.upsert ?? true,
+        cacheControl: options.cacheControl ?? 'public, max-age=31536000',
+      })
+
+    if (error) {
+      return {
+        success: false,
+        path: null,
+        fullUrl: null,
+        error: error.message || STORAGE_ERRORS.PROFILE_PHOTO_UPLOAD_FAILED,
+      }
+    }
+
+    // Construct full URL
+    const fullUrl = `${supabaseUrl}/storage/v1/object/${SELFIES_BUCKET}/${data.path}`
+
+    return {
+      success: true,
+      path: data.path,
+      fullUrl,
+      error: null,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : STORAGE_ERRORS.PROFILE_PHOTO_UPLOAD_FAILED
+    return {
+      success: false,
+      path: null,
+      fullUrl: null,
+      error: message,
+    }
+  }
+}
+
+/**
+ * Get a signed URL for accessing a profile photo
+ *
+ * Creates a time-limited signed URL for downloading the photo.
+ * Only the owner can get a signed URL due to RLS policies.
+ *
+ * @param userId - The user's ID
+ * @param photoId - The photo's ID
+ * @param expiresIn - URL expiration time in seconds (default: 1 hour)
+ * @returns Signed URL result
+ */
+export async function getProfilePhotoUrl(
+  userId: string,
+  photoId: string,
+  expiresIn: number = DEFAULT_SIGNED_URL_EXPIRY
+): Promise<SignedUrlResult> {
+  if (!userId) {
+    return {
+      success: false,
+      signedUrl: null,
+      expiresIn: null,
+      error: STORAGE_ERRORS.MISSING_USER_ID,
+    }
+  }
+
+  if (!photoId) {
+    return {
+      success: false,
+      signedUrl: null,
+      expiresIn: null,
+      error: STORAGE_ERRORS.MISSING_PHOTO_ID,
+    }
+  }
+
+  try {
+    const storagePath = getProfilePhotoStoragePath(userId, photoId)
+
+    const { data, error } = await supabase.storage
+      .from(SELFIES_BUCKET)
+      .createSignedUrl(storagePath, expiresIn)
+
+    if (error) {
+      return {
+        success: false,
+        signedUrl: null,
+        expiresIn: null,
+        error: error.message || STORAGE_ERRORS.URL_FAILED,
+      }
+    }
+
+    return {
+      success: true,
+      signedUrl: data.signedUrl,
+      expiresIn,
+      error: null,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : STORAGE_ERRORS.URL_FAILED
+    return {
+      success: false,
+      signedUrl: null,
+      expiresIn: null,
+      error: message,
+    }
+  }
+}
+
+/**
+ * Get signed URL from storage path (for profile photos stored in DB)
+ *
+ * @param storagePath - The storage path from profile_photos.storage_path
+ * @param expiresIn - URL expiration time in seconds (default: 1 hour)
+ * @returns Signed URL result
+ */
+export async function getSignedUrlFromPath(
+  storagePath: string,
+  expiresIn: number = DEFAULT_SIGNED_URL_EXPIRY
+): Promise<SignedUrlResult> {
+  if (!storagePath) {
+    return {
+      success: false,
+      signedUrl: null,
+      expiresIn: null,
+      error: 'Storage path is required',
+    }
+  }
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(SELFIES_BUCKET)
+      .createSignedUrl(storagePath, expiresIn)
+
+    if (error) {
+      return {
+        success: false,
+        signedUrl: null,
+        expiresIn: null,
+        error: error.message || STORAGE_ERRORS.URL_FAILED,
+      }
+    }
+
+    return {
+      success: true,
+      signedUrl: data.signedUrl,
+      expiresIn,
+      error: null,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : STORAGE_ERRORS.URL_FAILED
+    return {
+      success: false,
+      signedUrl: null,
+      expiresIn: null,
+      error: message,
+    }
+  }
+}
+
+/**
+ * Delete a profile photo from storage
+ *
+ * @param userId - The user's ID
+ * @param photoId - The photo's ID
+ * @returns Delete result
+ */
+export async function deleteProfilePhoto(
+  userId: string,
+  photoId: string
+): Promise<DeleteResult> {
+  if (!userId) {
+    return {
+      success: false,
+      error: STORAGE_ERRORS.MISSING_USER_ID,
+    }
+  }
+
+  if (!photoId) {
+    return {
+      success: false,
+      error: STORAGE_ERRORS.MISSING_PHOTO_ID,
+    }
+  }
+
+  try {
+    const storagePath = getProfilePhotoStoragePath(userId, photoId)
+
+    const { error } = await supabase.storage
+      .from(SELFIES_BUCKET)
+      .remove([storagePath])
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || STORAGE_ERRORS.PROFILE_PHOTO_DELETE_FAILED,
+      }
+    }
+
+    return {
+      success: true,
+      error: null,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : STORAGE_ERRORS.PROFILE_PHOTO_DELETE_FAILED
+    return {
+      success: false,
+      error: message,
+    }
+  }
+}
+
+/**
+ * Delete a photo from storage by its storage path
+ *
+ * @param storagePath - The storage path from profile_photos.storage_path
+ * @returns Delete result
+ */
+export async function deletePhotoByPath(storagePath: string): Promise<DeleteResult> {
+  if (!storagePath) {
+    return {
+      success: false,
+      error: 'Storage path is required',
+    }
+  }
+
+  try {
+    const { error } = await supabase.storage
+      .from(SELFIES_BUCKET)
+      .remove([storagePath])
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || STORAGE_ERRORS.PROFILE_PHOTO_DELETE_FAILED,
+      }
+    }
+
+    return {
+      success: true,
+      error: null,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : STORAGE_ERRORS.PROFILE_PHOTO_DELETE_FAILED
+    return {
+      success: false,
+      error: message,
+    }
+  }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 export default {
+  // Selfie functions (legacy)
   uploadSelfie,
   getSelfieUrl,
   deleteSelfie,
   selfieExists,
   uploadSelfieAndGetPath,
   getSelfieStoragePath,
+  // Profile photo functions
+  uploadProfilePhoto,
+  getProfilePhotoUrl,
+  getSignedUrlFromPath,
+  deleteProfilePhoto,
+  deletePhotoByPath,
+  getProfilePhotoStoragePath,
+  // Utilities
   isAllowedMimeType,
+  // Constants
   SELFIES_BUCKET,
   DEFAULT_SIGNED_URL_EXPIRY,
   MAX_SELFIE_SIZE,

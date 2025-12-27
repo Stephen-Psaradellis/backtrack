@@ -62,7 +62,6 @@ import {
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyState, ErrorState } from '../components/EmptyState'
 import { ReportMessageModal, ReportUserModal } from '../components/ReportModal'
-import { AvatarPreview } from '../components/AvatarPreview'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -72,7 +71,7 @@ import {
   getOtherUserId,
   CONVERSATION_ERRORS,
 } from '../lib/conversations'
-import { blockUser, submitReport, MODERATION_ERRORS } from '../lib/moderation'
+import { blockUser, MODERATION_ERRORS } from '../lib/moderation'
 import type { ChatRouteProp, MainStackNavigationProp } from '../navigation/types'
 import type { Message, Conversation, MessageInsert } from '../types/database'
 import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/supabase-js'
@@ -238,7 +237,7 @@ function useChatMessages(conversationId: string, userId: string | null) {
         // Trigger haptic feedback for incoming messages with debouncing
         const now = Date.now()
         if (now - lastMessageHapticRef.current > HAPTIC_DEBOUNCE_MS) {
-          notificationFeedback()
+          notificationFeedback('success')
           lastMessageHapticRef.current = now
         }
       }
@@ -331,14 +330,14 @@ function useSendMessage(conversationId: string, userId: string | null) {
 /**
  * Hook for blocking users
  */
-function useBlockUser(conversationId: string) {
+function useBlockUser() {
   const [blocking, setBlocking] = useState(false)
 
-  const handleBlockUser = useCallback(async () => {
+  const handleBlockUser = useCallback(async (blockerId: string, blockedId: string) => {
     setBlocking(true)
 
     try {
-      const result = await blockUser(conversationId)
+      const result = await blockUser(blockerId, blockedId)
 
       if (!result.success) {
         warningFeedback()
@@ -351,7 +350,7 @@ function useBlockUser(conversationId: string) {
     } finally {
       setBlocking(false)
     }
-  }, [conversationId])
+  }, [])
 
   return { blocking, handleBlockUser }
 }
@@ -363,7 +362,7 @@ function useBlockUser(conversationId: string) {
 export function ChatScreen(): JSX.Element {
   const route = useRoute<ChatRouteProp>()
   const navigation = useNavigation<MainStackNavigationProp>()
-  const { userId, profile } = useAuth()
+  const { userId } = useAuth()
 
   const { conversationId } = route.params
 
@@ -395,7 +394,6 @@ export function ChatScreen(): JSX.Element {
     hasMoreMessages,
     loadingMore,
     fetchMessages,
-    markMessagesAsRead,
   } = useChatMessages(conversationId, userId)
 
   const { sending, sendMessage } = useSendMessage(
@@ -403,7 +401,7 @@ export function ChatScreen(): JSX.Element {
     userId
   )
 
-  const { blocking, handleBlockUser: performBlockUser } = useBlockUser(conversationId)
+  const { handleBlockUser: performBlockUser } = useBlockUser()
 
   // ---------------------------------------------------------------------------
   // COMPUTED VALUES
@@ -426,7 +424,7 @@ export function ChatScreen(): JSX.Element {
       trimmedMessage.length <= MAX_MESSAGE_LENGTH &&
       !sending &&
       !messagesError &&
-      conversation?.is_active
+      conversation?.status === 'active'
     )
   }, [messageText, sending, messagesError, conversation])
 
@@ -475,7 +473,7 @@ export function ChatScreen(): JSX.Element {
       return null
     }
 
-    if (!result.conversation.is_active) {
+    if (result.conversation.status !== 'active') {
       setConversationError(CONVERSATION_ERRORS.INACTIVE)
       return null
     }
@@ -527,11 +525,12 @@ export function ChatScreen(): JSX.Element {
   }, [fetchMessages])
 
   const handleBlockUser = useCallback(async () => {
-    const success = await performBlockUser()
+    if (!userId || !otherUserId) return
+    const success = await performBlockUser(userId, otherUserId)
     if (success) {
       navigation.goBack()
     }
-  }, [performBlockUser, navigation])
+  }, [performBlockUser, navigation, userId, otherUserId])
 
   const handleReportUser = useCallback(() => {
     if (!otherUserId) return
@@ -552,73 +551,23 @@ export function ChatScreen(): JSX.Element {
     setMessageToReport(null)
   }, [])
 
-  const handleSubmitUserReport = useCallback(
-    async (reason: string, details: string) => {
-      if (!otherUserId) return
+  const handleUserReportSuccess = useCallback(() => {
+    successFeedback()
+    handleCloseUserReportModal()
+    Alert.alert(
+      'Report Submitted',
+      'Thank you for reporting this user. We will review it shortly.'
+    )
+  }, [handleCloseUserReportModal])
 
-      try {
-        const result = await submitReport({
-          reportType: 'user',
-          targetUserId: otherUserId,
-          reason,
-          details,
-        })
-
-        if (result.success) {
-          successFeedback()
-          handleCloseUserReportModal()
-          Alert.alert(
-            'Report Submitted',
-            'Thank you for reporting this user. We will review it shortly.'
-          )
-        } else {
-          errorFeedback()
-          Alert.alert(
-            'Error',
-            result.error || 'Failed to submit report. Please try again.'
-          )
-        }
-      } catch {
-        errorFeedback()
-        Alert.alert('Error', 'An unexpected error occurred.')
-      }
-    },
-    [otherUserId, handleCloseUserReportModal]
-  )
-
-  const handleSubmitMessageReport = useCallback(
-    async (reason: string, details: string) => {
-      if (!messageToReport) return
-
-      try {
-        const result = await submitReport({
-          reportType: 'message',
-          targetMessageId: messageToReport.id,
-          reason,
-          details,
-        })
-
-        if (result.success) {
-          successFeedback()
-          handleCloseReportModal()
-          Alert.alert(
-            'Report Submitted',
-            'Thank you for reporting this message. We will review it shortly.'
-          )
-        } else {
-          errorFeedback()
-          Alert.alert(
-            'Error',
-            result.error || 'Failed to submit report. Please try again.'
-          )
-        }
-      } catch {
-        errorFeedback()
-        Alert.alert('Error', 'An unexpected error occurred.')
-      }
-    },
-    [messageToReport, handleCloseReportModal]
-  )
+  const handleMessageReportSuccess = useCallback(() => {
+    successFeedback()
+    handleCloseReportModal()
+    Alert.alert(
+      'Report Submitted',
+      'Thank you for reporting this message. We will review it shortly.'
+    )
+  }, [handleCloseReportModal])
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -637,7 +586,7 @@ export function ChatScreen(): JSX.Element {
         headerRight: () => (
           <TouchableOpacity
             onPress={() => {
-              notificationFeedback()
+              notificationFeedback('success')
               Alert.alert(
                 'Chat Options',
                 'What would you like to do?',
@@ -712,14 +661,14 @@ export function ChatScreen(): JSX.Element {
           data={messageListItems}
           renderItem={({ item }) => {
             if (item.type === 'separator') {
-              return <DateSeparator date={item.data as string} />
+              return <DateSeparator timestamp={item.data as string} />
             }
 
             const message = item.data as Message
+            const messageIndex = messages.findIndex(m => m.id === message.id)
             const position = getBubblePosition(
               messages,
-              message.id,
-              message.sender_id,
+              messageIndex,
               userId || ''
             )
 
@@ -727,10 +676,9 @@ export function ChatScreen(): JSX.Element {
               <ChatBubble
                 message={message}
                 position={position}
-                isOwnMessage={message.sender_id === userId}
-                userAvatar={message.sender_id === userId ? profile?.avatar_url || null : null}
+                isOwn={message.sender_id === userId}
                 onLongPress={() => {
-                  notificationFeedback()
+                  notificationFeedback('success')
                   if (message.sender_id === userId) {
                     // Own message - can only report
                     handleReportMessage(message)
@@ -766,7 +714,7 @@ export function ChatScreen(): JSX.Element {
             messagesLoading ? (
               <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
-              <EmptyState message="No messages yet. Start the conversation!" />
+              <EmptyState title="No messages yet" message="Start the conversation!" />
             )
           }
           refreshing={refreshing}
@@ -790,7 +738,7 @@ export function ChatScreen(): JSX.Element {
             onChangeText={setMessageText}
             multiline
             maxLength={MAX_MESSAGE_LENGTH}
-            editable={!sending && conversation.is_active}
+            editable={!sending && conversation.status === 'active'}
             testID="message-input"
           />
           <TouchableOpacity
@@ -808,17 +756,23 @@ export function ChatScreen(): JSX.Element {
         </View>
       </KeyboardAvoidingView>
 
-      <ReportUserModal
-        visible={userReportModalVisible}
-        onClose={handleCloseUserReportModal}
-        onSubmit={handleSubmitUserReport}
-      />
+      {otherUserId && (
+        <ReportUserModal
+          visible={userReportModalVisible}
+          onClose={handleCloseUserReportModal}
+          reportedId={otherUserId}
+          onSuccess={handleUserReportSuccess}
+        />
+      )}
 
-      <ReportMessageModal
-        visible={reportModalVisible}
-        onClose={handleCloseReportModal}
-        onSubmit={handleSubmitMessageReport}
-      />
+      {messageToReport && (
+        <ReportMessageModal
+          visible={reportModalVisible}
+          onClose={handleCloseReportModal}
+          reportedId={messageToReport.id}
+          onSuccess={handleMessageReportSuccess}
+        />
+      )}
     </View>
   )
 }

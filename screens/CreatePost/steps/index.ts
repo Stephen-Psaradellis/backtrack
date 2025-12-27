@@ -5,7 +5,7 @@
  * Each step handles a specific part of the post creation process.
  *
  * Steps:
- * 1. SelfieStep - Capture user's selfie for verification
+ * 1. PhotoStep - Select/upload verification photo
  * 2. AvatarStep - Build avatar of the person they saw
  * 3. NoteStep - Write a personalized note
  * 4. LocationStep - Select where they saw the person
@@ -13,12 +13,12 @@
  *
  * @example
  * ```tsx
- * import { SelfieStep, AvatarStep, NoteStep, LocationStep, ReviewStep } from './steps'
+ * import { PhotoStep, AvatarStep, NoteStep, LocationStep, ReviewStep } from './steps'
  * ```
  */
 
-// Selfie capture step
-export { SelfieStep, type SelfieStepProps } from './SelfieStep'
+// Photo selection step
+export { PhotoStep, type PhotoStepProps } from './PhotoStep'
 
 // Avatar builder step
 export { AvatarStep, type AvatarStepProps } from './AvatarStep'

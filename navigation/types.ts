@@ -9,7 +9,6 @@ import type { NativeStackScreenProps, NativeStackNavigationProp } from '@react-n
 import type { BottomTabScreenProps, BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { CompositeScreenProps, CompositeNavigationProp, NavigatorScreenParams } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
-import type { AvatarConfig } from '../types/avatar'
 
 // ============================================================================
 // STACK NAVIGATOR PARAM LISTS
@@ -41,14 +40,8 @@ export type MainStackParamList = {
   PostDetail: { postId: string }
   /** Chat with a specific conversation */
   Chat: { conversationId: string }
-  /** Avatar builder screen */
-  AvatarBuilder: {
-    /** Initial avatar configuration to edit */
-    initialConfig?: AvatarConfig
-    /** Callback when avatar is completed (passed via navigation params for serialization) */
-    returnScreen?: keyof MainStackParamList
-    returnParamKey?: string
-  }
+  /** Ready Player Me avatar creator screen */
+  AvatarCreator: undefined
 }
 
 /**
@@ -92,7 +85,7 @@ export type CreatePostScreenProps = NativeStackScreenProps<MainStackParamList, '
 export type LedgerScreenProps = NativeStackScreenProps<MainStackParamList, 'Ledger'>
 export type PostDetailScreenProps = NativeStackScreenProps<MainStackParamList, 'PostDetail'>
 export type ChatScreenProps = NativeStackScreenProps<MainStackParamList, 'Chat'>
-export type AvatarBuilderScreenProps = NativeStackScreenProps<MainStackParamList, 'AvatarBuilder'>
+export type AvatarCreatorScreenProps = NativeStackScreenProps<MainStackParamList, 'AvatarCreator'>
 
 // Tab Screen Props with composite navigation (can access both tab and stack navigation)
 export type HomeTabScreenProps = CompositeScreenProps<
@@ -145,7 +138,7 @@ export type CreatePostRouteProp = RouteProp<MainStackParamList, 'CreatePost'>
 export type LedgerRouteProp = RouteProp<MainStackParamList, 'Ledger'>
 export type PostDetailRouteProp = RouteProp<MainStackParamList, 'PostDetail'>
 export type ChatRouteProp = RouteProp<MainStackParamList, 'Chat'>
-export type AvatarBuilderRouteProp = RouteProp<MainStackParamList, 'AvatarBuilder'>
+export type AvatarCreatorRouteProp = RouteProp<MainStackParamList, 'AvatarCreator'>
 
 // ============================================================================
 // NAVIGATION CONSTANTS
@@ -169,7 +162,7 @@ export const SCREENS = {
   Ledger: 'Ledger' as const,
   PostDetail: 'PostDetail' as const,
   Chat: 'Chat' as const,
-  AvatarBuilder: 'AvatarBuilder' as const,
+  AvatarCreator: 'AvatarCreator' as const,
 
   // Tabs
   HomeTab: 'HomeTab' as const,
@@ -216,7 +209,7 @@ export function isMainScreen(screenName: string): screenName is keyof MainStackP
     'Ledger',
     'PostDetail',
     'Chat',
-    'AvatarBuilder',
+    'AvatarCreator',
   ]
   return mainScreens.includes(screenName as keyof MainStackParamList)
 }

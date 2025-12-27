@@ -16,7 +16,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
 
 import { useAuth } from '../contexts/AuthContext'
-import { SmallAvatarPreview } from '../components/AvatarPreview'
+import { SmallAvatarPreview } from '../components/ReadyPlayerMe'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
 import { HomeScreen } from '../screens/HomeScreen'
@@ -25,6 +25,7 @@ import { LedgerScreen } from '../screens/LedgerScreen'
 import { PostDetailScreen } from '../screens/PostDetailScreen'
 import { ChatScreen } from '../screens/ChatScreen'
 import { ChatListScreen } from '../screens/ChatListScreen'
+import { AvatarCreatorScreen } from '../screens/AvatarCreatorScreen'
 import type {
   RootStackParamList,
   AuthStackParamList,
@@ -77,9 +78,6 @@ function ForgotPasswordScreen() {
 // PostDetailScreen is now imported from '../screens/PostDetailScreen'
 // ChatScreen is now imported from '../screens/ChatScreen'
 
-function AvatarBuilderScreen() {
-  return <PlaceholderScreen title="Avatar Builder" />
-}
 
 // ============================================================================
 // HEADER AVATAR COMPONENT
@@ -92,6 +90,8 @@ function AvatarBuilderScreen() {
 function HeaderAvatar({ onPress }: { onPress?: () => void }) {
   const { profile } = useAuth()
 
+  const hasAvatar = profile?.rpm_avatar_id
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -99,10 +99,9 @@ function HeaderAvatar({ onPress }: { onPress?: () => void }) {
       testID="header-avatar"
       activeOpacity={0.7}
     >
-      {profile?.own_avatar ? (
+      {hasAvatar ? (
         <SmallAvatarPreview
-          config={profile.own_avatar}
-          avatarStyle="Circle"
+          avatarId={profile.rpm_avatar_id!}
           testID="header-avatar-preview"
         />
       ) : (
@@ -207,7 +206,6 @@ function MainStackNavigator() {
     <MainStack.Navigator
       screenOptions={{
         headerShown: true,
-        headerBackTitleVisible: false,
         headerTintColor: '#007AFF',
       }}
     >
@@ -246,10 +244,10 @@ function MainStackNavigator() {
         }}
       />
       <MainStack.Screen
-        name={SCREENS.AvatarBuilder}
-        component={AvatarBuilderScreen}
+        name={SCREENS.AvatarCreator}
+        component={AvatarCreatorScreen}
         options={{
-          headerTitle: 'Create Avatar',
+          headerShown: false, // AvatarCreatorScreen has its own header
           presentation: 'modal',
         }}
       />

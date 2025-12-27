@@ -64,7 +64,7 @@ describe('Input', () => {
 
     it('renders without label when not provided', () => {
       renderWithProviders(<Input />)
-      expect(screen.queryByRole('textbox').previousElementSibling).toBe(null)
+      expect(screen.queryByRole('textbox')?.previousElementSibling).toBe(null)
     })
 
     it('applies correct label styles', () => {
@@ -1204,7 +1204,7 @@ describe('Input', () => {
       renderWithProviders(<Input ref={callbackRef} label="Callback Ref" />)
 
       expect(inputElement).toBeInstanceOf(HTMLInputElement)
-      expect(inputElement?.tagName).toBe('INPUT')
+      expect((inputElement as HTMLInputElement | null)?.tagName).toBe('INPUT')
     })
 
     it('ref is associated with the correct element when icons are present', () => {

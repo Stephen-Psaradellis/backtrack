@@ -5,7 +5,7 @@
  * These types mirror the Supabase PostgreSQL schema defined in migrations.
  */
 
-import type { AvatarConfig } from './avatar'
+import type { StoredAvatar } from '../components/ReadyPlayerMe'
 
 // ============================================================================
 // COMMON TYPES
@@ -38,10 +38,14 @@ export interface Profile {
   username: string | null
   /** Optional display name for the user */
   display_name: string | null
-  /** JSONB avatar configuration describing the user themselves (for matching) */
-  avatar_config: AvatarConfig | null
-  /** JSONB avatar configuration describing the user themselves (for matching against posts) */
-  own_avatar: AvatarConfig | null
+  /** @deprecated Legacy avatar configuration - no longer used */
+  avatar_config: Record<string, unknown> | null
+  /** @deprecated Legacy own avatar - no longer used */
+  own_avatar: Record<string, unknown> | null
+  /** Ready Player Me avatar data for realistic 3D avatar display */
+  rpm_avatar: StoredAvatar | null
+  /** Ready Player Me avatar ID for quick lookups */
+  rpm_avatar_id: string | null
   /** Timestamp when the profile was created */
   created_at: Timestamp
   /** Timestamp when the profile was last updated */
@@ -55,8 +59,10 @@ export interface ProfileInsert {
   id: UUID
   username?: string | null
   display_name?: string | null
-  avatar_config?: AvatarConfig | null
-  own_avatar?: AvatarConfig | null
+  avatar_config?: Record<string, unknown> | null
+  own_avatar?: Record<string, unknown> | null
+  rpm_avatar?: StoredAvatar | null
+  rpm_avatar_id?: string | null
   created_at?: Timestamp
   updated_at?: Timestamp
 }
@@ -67,8 +73,10 @@ export interface ProfileInsert {
 export interface ProfileUpdate {
   username?: string | null
   display_name?: string | null
-  avatar_config?: AvatarConfig | null
-  own_avatar?: AvatarConfig | null
+  avatar_config?: Record<string, unknown> | null
+  own_avatar?: Record<string, unknown> | null
+  rpm_avatar?: StoredAvatar | null
+  rpm_avatar_id?: string | null
   updated_at?: Timestamp
 }
 
@@ -189,10 +197,14 @@ export interface Post {
   producer_id: UUID
   /** Location where this post was created */
   location_id: UUID
-  /** Selfie URL for verification */
+  /** Selfie URL for verification (legacy, use photo_id for new posts) */
   selfie_url: string
-  /** JSONB avatar configuration describing the person of interest */
-  target_avatar: AvatarConfig
+  /** Reference to profile photo used for verification */
+  photo_id: UUID | null
+  /** @deprecated Legacy avatar configuration - no longer used */
+  target_avatar: Record<string, unknown> | null
+  /** Ready Player Me avatar for describing the person of interest */
+  target_rpm_avatar: StoredAvatar | null
   /** Additional description of the target person */
   target_description: string | null
   /** Message left by the producer */
@@ -215,7 +227,9 @@ export interface PostInsert {
   producer_id: UUID
   location_id: UUID
   selfie_url: string
-  target_avatar: AvatarConfig
+  photo_id?: UUID | null
+  target_avatar?: Record<string, unknown> | null
+  target_rpm_avatar?: StoredAvatar | null
   target_description?: string | null
   message: string
   seen_at?: Timestamp | null
@@ -229,7 +243,9 @@ export interface PostInsert {
  */
 export interface PostUpdate {
   selfie_url?: string
-  target_avatar?: AvatarConfig
+  photo_id?: UUID | null
+  target_avatar?: Record<string, unknown> | null
+  target_rpm_avatar?: StoredAvatar | null
   target_description?: string | null
   message?: string
   seen_at?: Timestamp | null
@@ -384,6 +400,86 @@ export interface NotificationInsert {
  */
 export interface NotificationUpdate {
   is_read?: boolean
+}
+
+// ============================================================================
+// PROFILE PHOTOS
+// ============================================================================
+
+/**
+ * Moderation status for profile photos
+ */
+export type ModerationStatus = 'pending' | 'approved' | 'rejected' | 'error'
+
+/**
+ * Likelihood levels from Google Cloud Vision SafeSearch API
+ */
+export type SafeSearchLikelihood =
+  | 'VERY_UNLIKELY'
+  | 'UNLIKELY'
+  | 'POSSIBLE'
+  | 'LIKELY'
+  | 'VERY_LIKELY'
+
+/**
+ * SafeSearch result from Google Cloud Vision API
+ */
+export interface SafeSearchResult {
+  /** Likelihood of adult content */
+  adult: SafeSearchLikelihood
+  /** Likelihood of spoof/meme content */
+  spoof: SafeSearchLikelihood
+  /** Likelihood of medical content */
+  medical: SafeSearchLikelihood
+  /** Likelihood of violent content */
+  violence: SafeSearchLikelihood
+  /** Likelihood of racy content */
+  racy: SafeSearchLikelihood
+}
+
+/**
+ * User verification photo with content moderation
+ *
+ * Stored in the profile_photos table. Photos are uploaded to Supabase Storage
+ * and moderated via Google Cloud Vision SafeSearch API before approval.
+ */
+export interface ProfilePhoto {
+  /** Unique identifier for the photo */
+  id: UUID
+  /** User who owns this photo */
+  user_id: UUID
+  /** Path to the photo in Supabase Storage (selfies bucket) */
+  storage_path: string
+  /** Content moderation status */
+  moderation_status: ModerationStatus
+  /** SafeSearch result from Google Cloud Vision API */
+  moderation_result: SafeSearchResult | null
+  /** Whether this is the user's primary/default photo */
+  is_primary: boolean
+  /** Timestamp when the photo was uploaded */
+  created_at: Timestamp
+}
+
+/**
+ * Fields required when inserting a new profile photo
+ */
+export interface ProfilePhotoInsert {
+  id?: UUID
+  user_id: UUID
+  storage_path: string
+  moderation_status?: ModerationStatus
+  moderation_result?: SafeSearchResult | null
+  is_primary?: boolean
+  created_at?: Timestamp
+}
+
+/**
+ * Fields that can be updated on a profile photo
+ */
+export interface ProfilePhotoUpdate {
+  moderation_status?: ModerationStatus
+  moderation_result?: SafeSearchResult | null
+  is_primary?: boolean
 }
 
 // ============================================================================
@@ -713,6 +809,11 @@ export interface Database {
         Row: Notification
         Insert: NotificationInsert
         Update: NotificationUpdate
+      }
+      profile_photos: {
+        Row: ProfilePhoto
+        Insert: ProfilePhotoInsert
+        Update: ProfilePhotoUpdate
       }
       blocks: {
         Row: Block

@@ -40,37 +40,10 @@ export type {
   ReportedType,
   ReportStatus,
   Database,
-  TableRow,
-  TableInsert,
-  TableUpdate,
 } from '../types/database'
 
-// Avatar types
-export type {
-  TopType,
-  HairColor,
-  AccessoriesType,
-  FacialHairType,
-  FacialHairColor,
-  ClotheType,
-  ClotheColor,
-  EyeType,
-  EyebrowType,
-  MouthType,
-  SkinColor,
-  AvatarStyle,
-  AvatarConfig,
-  PartialAvatarConfig,
-  AvatarAttribute,
-} from '../types/avatar'
-
-export {
-  DEFAULT_AVATAR_CONFIG,
-  AVATAR_OPTIONS,
-  AVATAR_ATTRIBUTE_LABELS,
-  PRIMARY_MATCHING_ATTRIBUTES,
-  SECONDARY_MATCHING_ATTRIBUTES,
-} from '../types/avatar'
+// Avatar types (Ready Player Me)
+export type { StoredAvatar, RPMAvatarData } from '../components/ReadyPlayerMe'
 
 // ============================================================================
 // APPLICATION-SPECIFIC TYPES
@@ -127,21 +100,6 @@ export interface MapRegion extends Coordinates {
   longitudeDelta: number
 }
 
-/**
- * Result of avatar matching
- */
-export interface MatchResult {
-  /** Match score from 0-100 */
-  score: number
-  /** Whether this is considered a "match" based on threshold */
-  isMatch: boolean
-  /** Individual attribute match details */
-  attributeMatches: {
-    attribute: string
-    matches: boolean
-    weight: number
-  }[]
-}
 
 /**
  * API response wrapper for operations
@@ -189,7 +147,7 @@ export interface AuthFormData {
  */
 export interface CreatePostFormData {
   locationId: string
-  targetAvatar: import('../types/avatar').AvatarConfig
+  targetAvatar: import('../components/ReadyPlayerMe').StoredAvatar | null
   note: string
   selfieUri: string | null
 }
@@ -219,7 +177,7 @@ export type RootStackParamList = {
   PostDetail: { postId: string }
   Chat: { conversationId: string }
   ChatList: undefined
-  AvatarBuilder: { onComplete?: (config: import('../types/avatar').AvatarConfig) => void }
+  AvatarCreator: undefined
 }
 
 /**

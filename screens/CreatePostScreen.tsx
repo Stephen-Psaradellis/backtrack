@@ -3,11 +3,10 @@
  *
  * Full producer flow screen for creating "missed connection" posts.
  * Guides users through a multi-step process:
- * 1. Selfie capture - Verify user identity
- * 2. Avatar building - Describe the person of interest
- * 3. Note writing - Write a message about the missed connection
- * 4. Location selection - Choose where the connection happened
- * 5. Review and submit
+ * 1. Avatar building - Describe the person of interest
+ * 2. Note writing - Write a message about the missed connection
+ * 3. Location selection - Choose where the connection happened
+ * 4. Review and submit
  *
  * This component orchestrates the step flow, delegating rendering
  * and state management to extracted components and hooks.
@@ -25,7 +24,7 @@ import { useNavigation, useRoute } from '@react-navigation/native'
 
 import { locationToItem } from '../components/LocationPicker'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { selectionFeedback, successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
+import { selectionFeedback, errorFeedback, warningFeedback, successFeedback } from '../lib/haptics'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../navigation/types'
 
 // CreatePost module imports
@@ -34,12 +33,13 @@ import { useCreatePostForm } from './CreatePost/useCreatePostForm'
 import { sharedStyles } from './CreatePost/styles'
 import { StepHeader, ProgressBar } from './CreatePost/components'
 import {
-  SelfieStep,
+  PhotoStep,
   AvatarStep,
   NoteStep,
   LocationStep,
   ReviewStep,
 } from './CreatePost/steps'
+import type { CreatePostStep } from './CreatePost/types'
 
 // ============================================================================
 // COMPONENT
@@ -48,7 +48,7 @@ import {
 /**
  * CreatePostScreen - Full producer flow for creating posts
  *
- * Orchestrates a 5-step wizard using extracted step components
+ * Orchestrates a 4-step wizard using extracted step components
  * and the useCreatePostForm hook for state management.
  */
 export function CreatePostScreen(): JSX.Element {
@@ -95,14 +95,6 @@ export function CreatePostScreen(): JSX.Element {
   }, [form, navigation])
 
   /**
-   * Handle selfie capture with success haptic feedback
-   */
-  const handleSelfieWithFeedback = useCallback((uri: string) => {
-    successFeedback()
-    form.handleSelfieCapture(uri)
-  }, [form])
-
-  /**
    * Handle avatar save with selection haptic feedback
    */
   const handleAvatarWithFeedback = useCallback((config: any) => {
@@ -119,6 +111,14 @@ export function CreatePostScreen(): JSX.Element {
   }, [form])
 
   /**
+   * Handle photo select with selection haptic feedback
+   */
+  const handlePhotoSelectWithFeedback = useCallback((photoId: string) => {
+    selectionFeedback()
+    form.handlePhotoSelect(photoId)
+  }, [form])
+
+  /**
    * Handle submit with success or error haptic feedback
    */
   const handleSubmitWithFeedback = useCallback(async () => {
@@ -130,14 +130,6 @@ export function CreatePostScreen(): JSX.Element {
     await form.handleSubmit()
   }, [form])
 
-  /**
-   * Handle retake selfie with selection haptic feedback
-   */
-  const handleRetakeSelfieWithFeedback = useCallback(() => {
-    selectionFeedback()
-    form.handleRetakeSelfie()
-  }, [form])
-
   // ---------------------------------------------------------------------------
   // RENDER HELPERS
   // ---------------------------------------------------------------------------
@@ -147,12 +139,11 @@ export function CreatePostScreen(): JSX.Element {
    */
   const renderStepContent = (): React.ReactNode => {
     switch (form.currentStep) {
-      case 'selfie':
+      case 'photo':
         return (
-          <SelfieStep
-            selfieUri={form.formData.selfieUri}
-            onCapture={handleSelfieWithFeedback}
-            onRetake={handleRetakeSelfieWithFeedback}
+          <PhotoStep
+            selectedPhotoId={form.formData.selectedPhotoId}
+            onPhotoSelect={handlePhotoSelectWithFeedback}
             onNext={handleNextWithFeedback}
             onBack={handleBackWithFeedback}
             testID="create-post"
@@ -162,8 +153,7 @@ export function CreatePostScreen(): JSX.Element {
       case 'avatar':
         return (
           <AvatarStep
-            avatarConfig={form.formData.targetAvatar}
-            onChange={form.handleAvatarChange}
+            avatar={form.formData.targetAvatar}
             onSave={handleAvatarWithFeedback}
             onBack={handleBackWithFeedback}
             testID="create-post"
@@ -173,7 +163,7 @@ export function CreatePostScreen(): JSX.Element {
       case 'note':
         return (
           <NoteStep
-            avatarConfig={form.formData.targetAvatar}
+            avatar={form.formData.targetAvatar}
             note={form.formData.note}
             onNoteChange={form.handleNoteChange}
             onNext={handleNextWithFeedback}
@@ -203,8 +193,8 @@ export function CreatePostScreen(): JSX.Element {
       case 'review':
         return (
           <ReviewStep
-            selfieUri={form.formData.selfieUri}
-            avatarConfig={form.formData.targetAvatar}
+            selectedPhotoId={form.formData.selectedPhotoId}
+            avatar={form.formData.targetAvatar}
             note={form.formData.note}
             location={form.formData.location}
             isSubmitting={form.isSubmitting}
@@ -212,7 +202,6 @@ export function CreatePostScreen(): JSX.Element {
             onSubmit={handleSubmitWithFeedback}
             onBack={handleBackWithFeedback}
             goToStep={form.goToStep}
-            onRetakeSelfie={handleRetakeSelfieWithFeedback}
             testID="create-post"
           />
         )
@@ -238,10 +227,8 @@ export function CreatePostScreen(): JSX.Element {
   // RENDER: MAIN
   // ---------------------------------------------------------------------------
 
-  // Full-screen steps (camera without preview and avatar builder)
-  const isFullScreenStep =
-    (form.currentStep === 'selfie' && !form.formData.selfieUri) ||
-    form.currentStep === 'avatar'
+  // Full-screen steps (photo selector and avatar builder take full screen)
+  const isFullScreenStep = form.currentStep === 'photo' || form.currentStep === 'avatar'
 
   if (isFullScreenStep) {
     return (

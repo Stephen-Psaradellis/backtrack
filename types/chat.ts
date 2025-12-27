@@ -3,8 +3,7 @@
  * Shared TypeScript interfaces for chat-related components and hooks
  */
 
-import type { Message, Profile, Conversation, ReportReason, UUID } from './database'
-import type { AvatarConfig } from './avatar'
+import type { Message, Profile, ReportReason, UUID } from './database'
 
 // ============================================================================
 // Component Props

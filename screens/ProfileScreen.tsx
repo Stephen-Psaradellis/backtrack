@@ -12,7 +12,7 @@
  * - Profile data refresh on pull
  */
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
@@ -22,18 +22,22 @@ import {
   RefreshControl,
   Alert,
   TouchableOpacity,
-  Modal,
-  SafeAreaView,
 } from 'react-native'
 
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useAuth } from '../contexts/AuthContext'
 import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { Button, DangerButton, OutlineButton } from '../components/Button'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { LargeAvatarPreview } from '../components/AvatarPreview'
-import { AvatarBuilder } from '../components/AvatarBuilder'
-import { AvatarConfig, DEFAULT_AVATAR_CONFIG } from '../types/avatar'
-import { isValidAvatarConfig } from '../components/AvatarPreview'
+import {
+  LargeAvatarPreview,
+  type StoredAvatar,
+} from '../components/ReadyPlayerMe'
+import { ProfilePhotoGallery } from '../components/ProfilePhotoGallery'
+import {
+  loadCurrentUserAvatar,
+  deleteCurrentUserAvatar,
+} from '../lib/avatarService'
 
 // ============================================================================
 // TYPES
@@ -60,6 +64,7 @@ export function ProfileScreen(): JSX.Element {
   // HOOKS
   // ---------------------------------------------------------------------------
 
+  const navigation = useNavigation<any>()
   const {
     user,
     profile,
@@ -79,8 +84,26 @@ export function ProfileScreen(): JSX.Element {
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
+  const [rpmAvatar, setRpmAvatar] = useState<StoredAvatar | null>(null)
+  const [isLoadingRpmAvatar, setIsLoadingRpmAvatar] = useState(true)
+
+  // ---------------------------------------------------------------------------
+  // EFFECTS
+  // ---------------------------------------------------------------------------
+
+  // Load RPM avatar when screen comes into focus (to catch updates from avatar creator)
+  useFocusEffect(
+    useCallback(() => {
+      async function loadRpmAvatar() {
+        setIsLoadingRpmAvatar(true)
+        const result = await loadCurrentUserAvatar()
+        setRpmAvatar(result.avatar)
+        setIsLoadingRpmAvatar(false)
+      }
+      loadRpmAvatar()
+    }, [])
+  )
 
   // ---------------------------------------------------------------------------
   // HANDLERS
@@ -194,60 +217,21 @@ export function ProfileScreen(): JSX.Element {
   }, [signOut])
 
   /**
-   * Open avatar builder modal
+   * Navigate to RPM avatar creator
    */
-  const handleOpenAvatarBuilder = useCallback(() => {
-    setIsAvatarModalVisible(true)
-  }, [])
+  const handleOpenRpmAvatarCreator = useCallback(() => {
+    navigation.navigate('AvatarCreator')
+  }, [navigation])
 
   /**
-   * Close avatar builder modal
+   * Remove RPM avatar from profile
    */
-  const handleCloseAvatarBuilder = useCallback(() => {
-    setIsAvatarModalVisible(false)
-  }, [])
-
-  /**
-   * Save avatar to profile
-   */
-  const handleSaveAvatar = useCallback(
-    async (avatarConfig: AvatarConfig) => {
-      setIsSavingAvatar(true)
-
-      try {
-        const { error } = await updateProfile({
-          own_avatar: avatarConfig,
-        })
-
-        if (error) {
-          await errorFeedback()
-          Alert.alert('Error', error.message || 'Failed to save avatar')
-        } else {
-          await successFeedback()
-          setIsAvatarModalVisible(false)
-          // Refresh profile to get updated avatar
-          await refreshProfile()
-        }
-      } catch {
-        await errorFeedback()
-        Alert.alert('Error', 'An unexpected error occurred while saving avatar')
-      } finally {
-        setIsSavingAvatar(false)
-      }
-    },
-    [updateProfile, refreshProfile]
-  )
-
-  /**
-   * Delete/remove avatar from profile
-   */
-  const handleRemoveAvatar = useCallback(async () => {
-    // Trigger warning haptic when showing destructive action confirmation
+  const handleRemoveRpmAvatar = useCallback(async () => {
     await warningFeedback()
 
     Alert.alert(
       'Remove Avatar',
-      'Are you sure you want to remove your avatar? This will affect matching.',
+      'Are you sure you want to remove your avatar?',
       [
         {
           text: 'Cancel',
@@ -258,36 +242,21 @@ export function ProfileScreen(): JSX.Element {
           style: 'destructive',
           onPress: async () => {
             setIsSavingAvatar(true)
-            try {
-              const { error } = await updateProfile({
-                own_avatar: null,
-              })
-
-              if (error) {
-                await errorFeedback()
-                Alert.alert('Error', error.message || 'Failed to remove avatar')
-              } else {
-                await successFeedback()
-                await refreshProfile()
-              }
-            } catch {
+            const result = await deleteCurrentUserAvatar()
+            if (result.success) {
+              await successFeedback()
+              setRpmAvatar(null)
+            } else {
               await errorFeedback()
-              Alert.alert('Error', 'An unexpected error occurred')
-            } finally {
-              setIsSavingAvatar(false)
+              Alert.alert('Error', result.error || 'Failed to remove avatar')
             }
+            setIsSavingAvatar(false)
           },
         },
       ],
       { cancelable: true }
     )
-  }, [updateProfile, refreshProfile])
-
-  // Get current avatar config if it exists
-  const currentAvatarConfig =
-    profile?.own_avatar && isValidAvatarConfig(profile.own_avatar)
-      ? (profile.own_avatar as AvatarConfig)
-      : null
+  }, [])
 
   // ---------------------------------------------------------------------------
   // RENDER
@@ -429,23 +398,33 @@ testID="profile-cancel-edit-button"
           Your avatar helps others recognize and match with you
         </Text>
         <View style={styles.avatarSection}>
-          {currentAvatarConfig ? (
-            <View style={styles.avatarConfigured} testID="profile-avatar-preview">
-              <LargeAvatarPreview config={currentAvatarConfig} />
+          {isLoadingRpmAvatar ? (
+            <View style={styles.avatarLoading}>
+              <LoadingSpinner message="Loading avatar..." />
+            </View>
+          ) : rpmAvatar ? (
+            <View style={styles.avatarConfigured} testID="profile-rpm-avatar-preview">
+              <LargeAvatarPreview
+                avatarId={rpmAvatar.avatarId}
+                fullBody
+              />
+              <View style={styles.rpmAvatarInfo}>
+                <Text style={styles.rpmAvatarLabel}>Ready Player Me Avatar</Text>
+              </View>
               <View style={styles.avatarActions}>
                 <Button
                   title="Edit Avatar"
-                  onPress={handleOpenAvatarBuilder}
+                  onPress={handleOpenRpmAvatarCreator}
                   size="small"
                   disabled={isSavingAvatar}
-                  testID="profile-edit-avatar-button"
+                  testID="profile-edit-rpm-avatar-button"
                 />
                 <OutlineButton
                   title="Remove"
-                  onPress={handleRemoveAvatar}
+                  onPress={handleRemoveRpmAvatar}
                   size="small"
                   disabled={isSavingAvatar}
-                  testID="profile-remove-avatar-button"
+                  testID="profile-remove-rpm-avatar-button"
                 />
               </View>
             </View>
@@ -455,17 +434,30 @@ testID="profile-cancel-edit-button"
                 <Text style={styles.avatarPlaceholderEmoji}>👤</Text>
               </View>
               <Text style={styles.avatarEmptyText}>
-                Create your avatar to help others recognize you and improve matching!
+                Create your personalized avatar using Ready Player Me.
+                Customize your face, body, hair, and clothing!
               </Text>
               <Button
                 title="Create Avatar"
-                onPress={handleOpenAvatarBuilder}
+                onPress={handleOpenRpmAvatarCreator}
                 disabled={isSavingAvatar}
                 testID="profile-create-avatar-button"
               />
             </View>
           )}
         </View>
+      </View>
+
+      {/* Verification Photos Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Verification Photos</Text>
+        <Text style={styles.avatarDescription}>
+          Photos used to verify your identity when creating posts
+        </Text>
+        <ProfilePhotoGallery
+          maxPhotos={5}
+          testID="profile-photo-gallery"
+        />
       </View>
 
       {/* Account Actions Section */}
@@ -487,38 +479,6 @@ testID="profile-cancel-edit-button"
         <Text style={styles.footerText}>Love Ledger</Text>
         <Text style={styles.footerVersion}>Version 1.0.0</Text>
       </View>
-
-      {/* Avatar Builder Modal */}
-      <Modal
-        visible={isAvatarModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={handleCloseAvatarBuilder}
-        testID="profile-avatar-modal"
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          {/* Modal Header */}
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              onPress={handleCloseAvatarBuilder}
-              style={styles.modalCloseButton}
-              disabled={isSavingAvatar}
-              testID="profile-avatar-modal-close"
-            >
-              <Text style={styles.modalCloseText}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Create Your Avatar</Text>
-            <View style={{ width: 60 }} />
-          </View>
-
-          {/* Avatar Builder */}
-          <AvatarBuilder
-            initialConfig={currentAvatarConfig || DEFAULT_AVATAR_CONFIG}
-            onSave={handleSaveAvatar}
-            testID="profile-avatar-builder"
-          />
-        </SafeAreaView>
-      </Modal>
     </ScrollView>
   )
 }
@@ -705,6 +665,20 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 12,
+  },
+  avatarLoading: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  rpmAvatarInfo: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  rpmAvatarLabel: {
+    fontSize: 12,
+    color: '#8E8E93',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   // Footer

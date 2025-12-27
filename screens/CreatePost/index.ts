@@ -56,8 +56,6 @@ export { ProgressBar, type ProgressBarProps } from './components'
 // ============================================================================
 
 export {
-  SelfieStep,
-  type SelfieStepProps,
   AvatarStep,
   type AvatarStepProps,
   NoteStep,

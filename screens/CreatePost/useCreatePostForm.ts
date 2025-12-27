@@ -44,10 +44,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../hooks/useLocation'
 import { useVisitedLocations, useNearbyLocations } from '../../hooks/useNearbyLocations'
 import { supabase } from '../../lib/supabase'
-import { uploadSelfie } from '../../lib/storage'
 import { recordLocationVisit } from '../../lib/utils/geo'
-import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar'
-import type { AvatarConfig } from '../../types/avatar'
+import type { StoredAvatar } from '../../components/ReadyPlayerMe'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../../navigation/types'
 import type { Location as LocationEntity, LocationWithVisit } from '../../lib/types'
 
@@ -136,18 +134,16 @@ export interface UseCreatePostFormResult {
   handleBack: () => void
   /** Handle next step navigation */
   handleNext: () => void
-  /** Handle selfie capture */
-  handleSelfieCapture: (uri: string) => void
   /** Handle avatar save */
-  handleAvatarSave: (config: AvatarConfig) => void
+  handleAvatarSave: (avatar: StoredAvatar) => void
   /** Handle avatar change (without advancing step) */
-  handleAvatarChange: (config: AvatarConfig) => void
+  handleAvatarChange: (avatar: StoredAvatar) => void
   /** Handle location selection */
   handleLocationSelect: (location: LocationItem) => void
   /** Handle note text change */
   handleNoteChange: (text: string) => void
-  /** Handle retake selfie */
-  handleRetakeSelfie: () => void
+  /** Handle photo selection */
+  handlePhotoSelect: (photoId: string) => void
   /** Handle form submission */
   handleSubmit: () => Promise<void>
   /** Navigate to a specific step */
@@ -162,8 +158,8 @@ export interface UseCreatePostFormResult {
  * Initial form data
  */
 const INITIAL_FORM_DATA: CreatePostFormData = {
-  selfieUri: null,
-  targetAvatar: DEFAULT_AVATAR_CONFIG,
+  selectedPhotoId: null,
+  targetAvatar: null,
   note: '',
   location: null,
 }
@@ -211,7 +207,7 @@ export function useCreatePostForm(
   // STATE
   // ---------------------------------------------------------------------------
 
-  const [currentStep, setCurrentStep] = useState<CreatePostStep>('selfie')
+  const [currentStep, setCurrentStep] = useState<CreatePostStep>('photo')
   const [formData, setFormData] = useState<CreatePostFormData>(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [preselectedLocation, setPreselectedLocation] = useState<LocationEntity | null>(null)
@@ -278,7 +274,7 @@ export function useCreatePostForm(
    */
   const isFormValid = useMemo(() => {
     return (
-      formData.selfieUri !== null &&
+      formData.selectedPhotoId !== null &&
       formData.targetAvatar !== null &&
       formData.note.trim().length >= MIN_NOTE_LENGTH &&
       formData.location !== null
@@ -290,10 +286,10 @@ export function useCreatePostForm(
    */
   const isCurrentStepValid = useMemo(() => {
     switch (currentStep) {
-      case 'selfie':
-        return formData.selfieUri !== null
+      case 'photo':
+        return formData.selectedPhotoId !== null
       case 'avatar':
-        return true // Avatar always has default value
+        return formData.targetAvatar !== null
       case 'note':
         return formData.note.trim().length >= MIN_NOTE_LENGTH
       case 'location':
@@ -468,29 +464,17 @@ export function useCreatePostForm(
   }, [currentStep])
 
   /**
-   * Handle selfie capture
-   */
-  const handleSelfieCapture = useCallback((uri: string) => {
-    setFormData((prev) => ({ ...prev, selfieUri: uri }))
-    // Advance to next step after capture
-    const currentIndex = STEPS.findIndex((s) => s.id === 'selfie')
-    if (currentIndex < STEPS.length - 1) {
-      setCurrentStep(STEPS[currentIndex + 1].id)
-    }
-  }, [])
-
-  /**
    * Handle avatar change (without advancing step)
    */
-  const handleAvatarChange = useCallback((config: AvatarConfig) => {
-    setFormData((prev) => ({ ...prev, targetAvatar: config }))
+  const handleAvatarChange = useCallback((avatar: StoredAvatar) => {
+    setFormData((prev) => ({ ...prev, targetAvatar: avatar }))
   }, [])
 
   /**
    * Handle avatar save
    */
-  const handleAvatarSave = useCallback((config: AvatarConfig) => {
-    setFormData((prev) => ({ ...prev, targetAvatar: config }))
+  const handleAvatarSave = useCallback((avatar: StoredAvatar) => {
+    setFormData((prev) => ({ ...prev, targetAvatar: avatar }))
     // Advance to next step after save
     const currentIndex = STEPS.findIndex((s) => s.id === 'avatar')
     if (currentIndex < STEPS.length - 1) {
@@ -516,11 +500,10 @@ export function useCreatePostForm(
   }, [])
 
   /**
-   * Handle retake selfie
+   * Handle photo selection
    */
-  const handleRetakeSelfie = useCallback(() => {
-    setFormData((prev) => ({ ...prev, selfieUri: null }))
-    setCurrentStep('selfie')
+  const handlePhotoSelect = useCallback((photoId: string) => {
+    setFormData((prev) => ({ ...prev, selectedPhotoId: photoId }))
   }, [])
 
   /**
@@ -562,32 +545,18 @@ export function useCreatePostForm(
         throw new Error('No location selected')
       }
 
-      // Generate a temporary post ID for the selfie upload
-      // We'll use this as the filename in storage
-      const tempPostId = crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-      // Upload selfie to Supabase Storage
-      let selfieUrl: string | null = null
-      if (formData.selfieUri) {
-        const uploadResult = await uploadSelfie(userId, tempPostId, formData.selfieUri)
-        if (!uploadResult.success) {
-          throw new Error(uploadResult.error || 'Failed to upload selfie')
-        }
-        selfieUrl = uploadResult.path
-      }
-
-      // Create the post with the uploaded selfie URL
+      // Create the post
       const { error: postError } = await supabase
         .from('posts')
         .insert({
-          id: tempPostId,
           producer_id: userId,
           location_id: locationId,
-          target_avatar: formData.targetAvatar,
-          note: formData.note.trim(),
-          selfie_url: selfieUrl,
+          photo_id: formData.selectedPhotoId,
+          target_rpm_avatar: formData.targetAvatar,
+          message: formData.note.trim(),
+          // selfie_url is required but we use photo_id for new posts
+          // Use the storage path from the profile_photo for backwards compatibility
+          selfie_url: formData.selectedPhotoId || 'photo_id_reference',
         })
 
       if (postError) {
@@ -654,12 +623,11 @@ export function useCreatePostForm(
     // Handlers
     handleBack,
     handleNext,
-    handleSelfieCapture,
+    handlePhotoSelect,
     handleAvatarSave,
     handleAvatarChange,
     handleLocationSelect,
     handleNoteChange,
-    handleRetakeSelfie,
     handleSubmit,
     goToStep,
   }
@@ -670,4 +638,3 @@ export function useCreatePostForm(
 // ============================================================================
 
 export default useCreatePostForm
-export type { UseCreatePostFormOptions, UseCreatePostFormResult }

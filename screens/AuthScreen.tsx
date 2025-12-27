@@ -470,7 +470,7 @@ export function AuthScreen(): JSX.Element {
               title={mode === 'login' ? 'Sign In' : 'Create Account'}
               onPress={handleSubmit}
               fullWidth
-              isLoading={isSubmitting}
+              loading={isSubmitting}
               disabled={isSubmitting}
               testID="auth-submit-button"
             />

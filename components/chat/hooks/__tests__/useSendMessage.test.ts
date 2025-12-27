@@ -34,6 +34,10 @@ const mockSenderProfile = {
   id: mockCurrentUserId,
   username: 'TestUser',
   avatar_config: null,
+  display_name: 'Test User',
+  own_avatar: {},
+  rpm_avatar: null,
+  rpm_avatar_id: null,
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
 }

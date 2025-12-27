@@ -555,7 +555,7 @@ describe('E2E: Complete Producer Flow', () => {
       })
 
       // Mock moderation helper
-      mockSupabase.rpc.mockResolvedValue({
+      mockSupabase.rpc!.mockResolvedValue({
         data: [],
         error: null,
       })

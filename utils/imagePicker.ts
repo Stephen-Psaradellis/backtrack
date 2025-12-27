@@ -111,7 +111,7 @@ export interface ImagePickerOptions {
    * Presentation style for picker (iOS only)
    * @default 'automatic'
    */
-  presentationStyle?: 'fullScreen' | 'pageSheet' | 'formSheet' | 'automatic'
+  presentationStyle?: ImagePicker.UIImagePickerPresentationStyle
 }
 
 // ============================================================================
@@ -127,7 +127,7 @@ export const DEFAULT_OPTIONS: Required<ImagePickerOptions> = {
   quality: 0.8,
   base64: false,
   exif: false,
-  presentationStyle: 'automatic',
+  presentationStyle: ImagePicker.UIImagePickerPresentationStyle.AUTOMATIC,
 }
 
 /**

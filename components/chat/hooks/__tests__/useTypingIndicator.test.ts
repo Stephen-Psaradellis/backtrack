@@ -29,14 +29,13 @@ const mockOtherUserId: UUID = 'test-other-user-456'
 const createMockSupabase = () => {
   let broadcastHandler: ((payload: { payload: { userId: string; isTyping: boolean } }) => void) | null = null
 
-  const mockChannel = {
-    on: jest.fn().mockImplementation((_type, _config, callback) => {
-      broadcastHandler = callback
-      return mockChannel
-    }),
-    subscribe: jest.fn().mockReturnValue(mockChannel),
-    send: jest.fn().mockResolvedValue({ status: 'ok' }),
-  }
+  const mockChannel: { on: jest.Mock; subscribe: jest.Mock; send: jest.Mock } = {} as { on: jest.Mock; subscribe: jest.Mock; send: jest.Mock }
+  mockChannel.on = jest.fn().mockImplementation((_type, _config, callback) => {
+    broadcastHandler = callback
+    return mockChannel
+  })
+  mockChannel.subscribe = jest.fn().mockReturnValue(mockChannel)
+  mockChannel.send = jest.fn().mockResolvedValue({ status: 'ok' })
 
   return {
     channel: jest.fn().mockReturnValue(mockChannel),

@@ -136,7 +136,7 @@ export function useNearbyLocations(
 
   // Refs for cleanup and debouncing
   const abortControllerRef = useRef<AbortController | null>(null)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabaseRef = useRef(createClient())
 
   // Memoize the coordinate values to prevent unnecessary effect triggers

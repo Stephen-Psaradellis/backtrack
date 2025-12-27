@@ -42,14 +42,8 @@ import { Button } from '../components/Button'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { getHiddenUserIds } from '../lib/moderation'
-import {
-  calculateBatchMatches,
-  isValidForMatching,
-  DEFAULT_MATCH_THRESHOLD,
-} from '../lib/matching'
 import type { LedgerRouteProp, MainStackNavigationProp } from '../navigation/types'
 import type { Post, PostWithDetails } from '../types/database'
-import type { AvatarConfig } from '../types/avatar'
 
 // ============================================================================
 // TYPES
@@ -98,13 +92,9 @@ export function LedgerScreen(): JSX.Element {
 
   const route = useRoute<LedgerRouteProp>()
   const navigation = useNavigation<MainStackNavigationProp>()
-  const { profile, userId } = useAuth()
+  const { userId } = useAuth()
 
   const { locationId, locationName } = route.params
-
-  // Get user's avatar for matching
-  const userAvatar = profile?.own_avatar as AvatarConfig | null
-  const hasValidAvatar = isValidForMatching(userAvatar)
 
   // ---------------------------------------------------------------------------
   // STATE
@@ -184,38 +174,6 @@ export function LedgerScreen(): JSX.Element {
   }, [fetchPosts])
 
   // ---------------------------------------------------------------------------
-  // MATCHING
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Calculate match scores for all posts based on user's avatar
-   * Returns a Map of postId -> match score for efficient lookup
-   */
-  const matchScores = useMemo<Map<string, number>>(() => {
-    // Only calculate if user has a valid avatar
-    if (!hasValidAvatar || !userAvatar || posts.length === 0) {
-      return new Map()
-    }
-
-    // Calculate batch matches for all posts
-    const matches = calculateBatchMatches(
-      userAvatar,
-      posts.map((post) => ({
-        id: post.id,
-        target_avatar: post.target_avatar as AvatarConfig,
-      })),
-      DEFAULT_MATCH_THRESHOLD
-    )
-
-    // Convert to Map for O(1) lookup
-    const scoreMap = new Map<string, number>()
-    for (const match of matches) {
-      scoreMap.set(match.postId, match.score)
-    }
-    return scoreMap
-  }, [posts, userAvatar, hasValidAvatar])
-
-  // ---------------------------------------------------------------------------
   // HANDLERS
   // ---------------------------------------------------------------------------
 
@@ -257,41 +215,28 @@ export function LedgerScreen(): JSX.Element {
   // ---------------------------------------------------------------------------
 
   /**
-   * Render individual post item with match indicator
+   * Render individual post item
    */
   const renderPost = useCallback(
-    ({ item, index }: { item: Post; index: number }) => {
-      // Get match score for this post (if user has valid avatar)
-      const matchScore = matchScores.get(item.id)
-      const isMatch = matchScore !== undefined && matchScore >= DEFAULT_MATCH_THRESHOLD
-
+    ({ item }: { item: Post }) => {
       return (
         <View style={styles.postItem}>
           <PostCard
             post={item}
             onPress={handlePostPress}
             showLocation={false}
-            matchScore={matchScore}
-            isMatch={isMatch}
             testID={`ledger-post-${item.id}`}
           />
         </View>
       )
     },
-    [handlePostPress, matchScores]
+    [handlePostPress]
   )
 
   /**
-   * Render list header with location info and match count
+   * Render list header with location info
    */
   const renderHeader = useCallback(() => {
-    // Count posts that match the user's avatar
-    const matchCount = hasValidAvatar
-      ? Array.from(matchScores.values()).filter(
-          (score) => score >= DEFAULT_MATCH_THRESHOLD
-        ).length
-      : 0
-
     // Build subtitle text
     let subtitleText: string
     if (posts.length === 0) {
@@ -302,18 +247,13 @@ export function LedgerScreen(): JSX.Element {
       subtitleText = `${posts.length} posts`
     }
 
-    // Add match count if user has valid avatar
-    if (hasValidAvatar && matchCount > 0) {
-      subtitleText += ` • ${matchCount} ${matchCount === 1 ? 'match' : 'matches'}`
-    }
-
     return (
       <View style={styles.header} testID="ledger-header">
         <Text style={styles.headerTitle}>{locationName}</Text>
         <Text style={styles.headerSubtitle}>{subtitleText}</Text>
       </View>
     )
-  }, [locationName, posts.length, hasValidAvatar, matchScores])
+  }, [locationName, posts.length])
 
   /**
    * Render empty state when no posts exist

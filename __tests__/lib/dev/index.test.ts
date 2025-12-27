@@ -53,12 +53,12 @@ function setEnv(vars: Record<string, string | undefined>): void {
  */
 beforeEach(() => {
   // Start with clean environment
-  delete process.env.NODE_ENV
-  delete process.env.NEXT_PUBLIC_SUPABASE_URL
-  delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  delete process.env.EXPO_PUBLIC_SUPABASE_URL
-  delete process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
-  delete process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  ;(process.env as Record<string, string | undefined>).NODE_ENV = undefined
+  process.env.NEXT_PUBLIC_SUPABASE_URL = undefined
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = undefined
+  process.env.EXPO_PUBLIC_SUPABASE_URL = undefined
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = undefined
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = undefined
 })
 
 afterEach(() => {
@@ -95,7 +95,7 @@ describe('isDevMode', () => {
 
   describe('when NODE_ENV is undefined', () => {
     it('returns false', () => {
-      delete process.env.NODE_ENV
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = undefined
       expect(isDevMode()).toBe(false)
     })
   })
@@ -136,7 +136,7 @@ describe('isProductionMode', () => {
 
   describe('when NODE_ENV is undefined', () => {
     it('returns false', () => {
-      delete process.env.NODE_ENV
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = undefined
       expect(isProductionMode()).toBe(false)
     })
   })
@@ -179,8 +179,8 @@ describe('isMissingSupabaseCredentials', () => {
 
   describe('when both credentials are missing', () => {
     it('returns true', () => {
-      delete process.env.NEXT_PUBLIC_SUPABASE_URL
-      delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      process.env.NEXT_PUBLIC_SUPABASE_URL = undefined
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = undefined
       expect(isMissingSupabaseCredentials()).toBe(true)
     })
   })
@@ -243,8 +243,8 @@ describe('isMissingExpoSupabaseCredentials', () => {
 
   describe('when both Expo credentials are missing', () => {
     it('returns true', () => {
-      delete process.env.EXPO_PUBLIC_SUPABASE_URL
-      delete process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+      process.env.EXPO_PUBLIC_SUPABASE_URL = undefined
+      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = undefined
       expect(isMissingExpoSupabaseCredentials()).toBe(true)
     })
   })
@@ -266,7 +266,7 @@ describe('isMissingGoogleMapsKey', () => {
 
   describe('when Google Maps API key is missing', () => {
     it('returns true', () => {
-      delete process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = undefined
       expect(isMissingGoogleMapsKey()).toBe(true)
     })
   })

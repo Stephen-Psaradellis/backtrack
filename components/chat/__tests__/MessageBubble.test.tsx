@@ -49,7 +49,11 @@ jest.mock('../utils/formatters', () => ({
 const mockSender = {
   id: 'sender-123' as UUID,
   username: 'TestUser',
+  display_name: 'Test User',
+  own_avatar: {},
   avatar_config: null,
+  rpm_avatar: null,
+  rpm_avatar_id: null,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
 }

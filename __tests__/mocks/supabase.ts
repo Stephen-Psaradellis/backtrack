@@ -7,8 +7,8 @@
 
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import type { Profile, Post, Location as LocationEntity, Conversation, Message } from '../../types/database'
-import type { AvatarConfig } from '../../types/avatar'
-import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar'
+
+// Note: Old avatar types removed - using plain objects for mock data
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -17,21 +17,27 @@ import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar'
 /**
  * Extended mock user type for testing
  */
-export interface MockUser extends Partial<User> {
+export interface MockUser {
   id: string
   email?: string
   phone?: string
   created_at?: string
   updated_at?: string
+  app_metadata?: Record<string, unknown>
+  user_metadata?: Record<string, unknown>
+  aud?: string
 }
 
 /**
  * Extended mock session type for testing
  */
-export interface MockSession extends Partial<Session> {
+export interface MockSession {
   access_token: string
   refresh_token: string
   user: MockUser
+  expires_in?: number
+  expires_at?: number
+  token_type?: string
 }
 
 /**
@@ -130,9 +136,13 @@ export const mockSession: MockSession = {
  * Mock profile for testing
  */
 export const mockProfile: Profile = {
+  username: 'testuser',
+  avatar_config: null,
   id: mockUser.id,
   display_name: 'Test User',
-  own_avatar: DEFAULT_AVATAR_CONFIG as unknown as Record<string, unknown>,
+  own_avatar: null,
+  rpm_avatar: null,
+  rpm_avatar_id: 'mock-rpm-avatar-123',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }
@@ -146,7 +156,9 @@ export const mockLocation: LocationEntity = {
   address: '123 Main St, San Francisco, CA 94102',
   latitude: 37.7749,
   longitude: -122.4194,
-  place_id: 'mock-place-id',
+  google_place_id: 'mock-place-id',
+  place_types: ['cafe'],
+  post_count: 0,
   created_at: new Date().toISOString(),
 }
 
@@ -157,9 +169,13 @@ export const mockPost: Post = {
   id: 'test-post-123',
   producer_id: mockUser.id,
   location_id: mockLocation.id,
-  target_avatar: DEFAULT_AVATAR_CONFIG as unknown as Record<string, unknown>,
-  note: 'I saw you at the coffee shop today and thought you had a wonderful smile.',
+  target_avatar: null,
+  target_rpm_avatar: { avatarId: 'mock-target-avatar-123', modelUrl: 'https://models.readyplayer.me/mock.glb', imageUrl: 'https://models.readyplayer.me/mock.png', gender: 'male', bodyType: 'fullbody', createdAt: new Date().toISOString() },
+  message: 'I saw you at the coffee shop today and thought you had a wonderful smile.',
   selfie_url: 'mock-selfie-path.jpg',
+  photo_id: null,
+  target_description: null,
+  seen_at: null,
   created_at: new Date().toISOString(),
   expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   is_active: true,
@@ -174,7 +190,7 @@ export const mockPost: Post = {
  * All methods return the builder for chaining, except terminal methods (single, maybeSingle)
  */
 export function createMockQueryBuilder<T = unknown>(
-  mockData: T | T[] = null,
+  mockData: T | T[] | null = null,
   mockError: Error | null = null
 ): MockQueryBuilder {
   const normalizedData = Array.isArray(mockData) ? mockData : (mockData !== null ? [mockData as T] : [])
@@ -465,11 +481,12 @@ export function resetSupabaseMocks(client?: MockSupabaseClient): void {
  * Configure auth to fail with a specific error
  */
 export function mockAuthError(method: 'signUp' | 'signIn' | 'signOut', message: string): void {
-  const error: AuthError = {
+  const error = new Error(message) as unknown as AuthError
+  Object.assign(error, {
     name: 'AuthError',
-    message,
     status: 400,
-  }
+    code: 'auth_error',
+  })
 
   if (method === 'signIn') {
     mockAuth.signInWithPassword.mockResolvedValue({

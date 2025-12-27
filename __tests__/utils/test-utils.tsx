@@ -15,6 +15,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event'
 
 // Re-export everything from React Testing Library
 export * from '@testing-library/react'
+export { screen, waitFor, fireEvent, within, act, cleanup } from '@testing-library/react'
 export { userEvent }
 
 /**

@@ -867,7 +867,7 @@ describe('Button', () => {
       renderWithProviders(<Button ref={callbackRef}>Callback Ref</Button>)
 
       expect(buttonElement).toBeInstanceOf(HTMLButtonElement)
-      expect(buttonElement?.tagName).toBe('BUTTON')
+      expect((buttonElement as HTMLButtonElement | null)?.tagName).toBe('BUTTON')
     })
   })
 

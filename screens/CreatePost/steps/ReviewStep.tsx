@@ -1,13 +1,12 @@
 /**
  * ReviewStep Component
  *
- * Fifth and final step in the CreatePost wizard flow. Displays a summary
- * of all the form data collected (selfie, avatar, note, location) with
+ * Fourth and final step in the CreatePost wizard flow. Displays a summary
+ * of all the form data collected (avatar, note, location) with
  * edit buttons to go back and modify each section. Includes the submit
  * action to create the missed connection post.
  *
  * Features:
- * - Selfie preview with edit/retake button
  * - Avatar preview with edit button
  * - Note preview with edit button
  * - Location preview with edit button
@@ -17,8 +16,7 @@
  * @example
  * ```tsx
  * <ReviewStep
- *   selfieUri={formData.selfieUri}
- *   avatarConfig={formData.targetAvatar}
+ *   avatar={formData.targetAvatar}
  *   note={formData.note}
  *   location={formData.location}
  *   isSubmitting={isSubmitting}
@@ -26,27 +24,28 @@
  *   onSubmit={handleSubmit}
  *   onBack={handleBack}
  *   goToStep={goToStep}
- *   onRetakeSelfie={handleRetakeSelfie}
  * />
  * ```
  */
 
-import React, { memo } from 'react'
+import React, { memo, useEffect, useState } from 'react'
 import {
   View,
   Text,
   ScrollView,
-  Image,
   TouchableOpacity,
   StyleSheet,
+  Image,
+  ActivityIndicator,
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 
-import { LargeAvatarPreview } from '../../../components/AvatarPreview'
+import { LargeAvatarPreview, type StoredAvatar } from '../../../components/ReadyPlayerMe'
 import { Button, GhostButton } from '../../../components/Button'
 import { COLORS, sharedStyles } from '../styles'
-import type { AvatarConfig } from '../../../types/avatar'
 import type { LocationItem } from '../../../components/LocationPicker'
 import type { CreatePostStep } from '../types'
+import { getPhotoById, type ProfilePhotoWithUrl } from '../../../lib/profilePhotos'
 
 // ============================================================================
 // TYPES
@@ -57,14 +56,14 @@ import type { CreatePostStep } from '../types'
  */
 export interface ReviewStepProps {
   /**
-   * URI of the captured selfie image
+   * The selected photo ID for verification
    */
-  selfieUri: string | null
+  selectedPhotoId: string | null
 
   /**
-   * Avatar configuration for the target person
+   * Avatar for the target person
    */
-  avatarConfig: AvatarConfig
+  avatar: StoredAvatar | null
 
   /**
    * The note/message written by the user
@@ -103,11 +102,6 @@ export interface ReviewStepProps {
   goToStep: (step: CreatePostStep) => void
 
   /**
-   * Callback when user wants to retake their selfie
-   */
-  onRetakeSelfie: () => void
-
-  /**
    * Test ID prefix for testing purposes
    * @default 'create-post'
    */
@@ -122,15 +116,15 @@ export interface ReviewStepProps {
  * ReviewStep - Final review step in the CreatePost wizard
  *
  * Displays:
- * 1. Selfie preview with edit button
+ * 1. Verification photo preview with edit button
  * 2. Avatar preview with edit button
  * 3. Note preview with edit button
  * 4. Location preview with edit button
  * 5. Submit and Go Back buttons
  */
 export const ReviewStep = memo(function ReviewStep({
-  selfieUri,
-  avatarConfig,
+  selectedPhotoId,
+  avatar,
   note,
   location,
   isSubmitting,
@@ -138,9 +132,41 @@ export const ReviewStep = memo(function ReviewStep({
   onSubmit,
   onBack,
   goToStep,
-  onRetakeSelfie,
   testID = 'create-post',
 }: ReviewStepProps): JSX.Element {
+  // ---------------------------------------------------------------------------
+  // STATE
+  // ---------------------------------------------------------------------------
+
+  const [photo, setPhoto] = useState<ProfilePhotoWithUrl | null>(null)
+  const [photoLoading, setPhotoLoading] = useState(false)
+
+  // ---------------------------------------------------------------------------
+  // EFFECTS
+  // ---------------------------------------------------------------------------
+
+  // Fetch photo details when selectedPhotoId changes
+  useEffect(() => {
+    if (!selectedPhotoId) {
+      setPhoto(null)
+      return
+    }
+
+    const fetchPhoto = async () => {
+      setPhotoLoading(true)
+      try {
+        const photoData = await getPhotoById(selectedPhotoId)
+        setPhoto(photoData)
+      } catch {
+        setPhoto(null)
+      } finally {
+        setPhotoLoading(false)
+      }
+    }
+
+    fetchPhoto()
+  }, [selectedPhotoId])
+
   // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
@@ -151,35 +177,43 @@ export const ReviewStep = memo(function ReviewStep({
       contentContainerStyle={styles.reviewContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* Selfie preview */}
+      {/* Verification photo preview */}
       <View style={styles.reviewSection}>
-        <Text style={styles.reviewSectionTitle}>Your Verification Selfie</Text>
-        <View style={styles.reviewSelfieContainer}>
-          {selfieUri && (
-            <Image
-              source={{ uri: selfieUri }}
-              style={styles.reviewSelfie}
-              resizeMode="cover"
-            />
-          )}
+        <View style={styles.reviewSectionHeader}>
+          <Text style={styles.reviewSectionTitle}>Your Verification Photo</Text>
           <TouchableOpacity
             style={sharedStyles.editButton}
-            onPress={onRetakeSelfie}
-            testID={`${testID}-review-edit-selfie`}
+            onPress={() => goToStep('photo')}
+            testID={`${testID}-review-edit-photo`}
           >
             <Text style={sharedStyles.editButtonText}>Edit</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.reviewSelfieNote}>
-          This is private and only used for verification.
-        </Text>
+        <View style={styles.reviewPhotoContainer}>
+          {photoLoading ? (
+            <View style={styles.photoPlaceholder}>
+              <ActivityIndicator size="small" color="#007AFF" />
+            </View>
+          ) : photo?.signedUrl ? (
+            <Image
+              source={{ uri: photo.signedUrl }}
+              style={styles.reviewPhotoImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Ionicons name="image-outline" size={32} color="#8E8E93" />
+              <Text style={styles.photoPlaceholderText}>No photo selected</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Avatar preview */}
       <View style={styles.reviewSection}>
         <Text style={styles.reviewSectionTitle}>Who You're Looking For</Text>
         <View style={styles.reviewAvatarContainer}>
-          <LargeAvatarPreview config={avatarConfig} />
+          {avatar && <LargeAvatarPreview avatarId={avatar.avatarId} />}
           <TouchableOpacity
             style={sharedStyles.editButton}
             onPress={() => goToStep('avatar')}
@@ -305,31 +339,40 @@ const styles = StyleSheet.create({
   },
 
   /**
-   * Container for selfie preview (centered)
+   * Container for verification photo preview
    */
-  reviewSelfieContainer: {
+  reviewPhotoContainer: {
     alignItems: 'center',
-    position: 'relative',
   },
 
   /**
-   * Selfie image preview (circular)
+   * Verification photo image
    */
-  reviewSelfie: {
+  reviewPhotoImage: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    marginBottom: 8,
+    borderRadius: 12,
   },
 
   /**
-   * Note about selfie privacy
+   * Photo placeholder when loading or missing
    */
-  reviewSelfieNote: {
+  photoPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: COLORS.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /**
+   * Photo placeholder text
+   */
+  photoPlaceholderText: {
+    marginTop: 8,
     fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    fontStyle: 'italic',
+    color: '#8E8E93',
   },
 
   /**

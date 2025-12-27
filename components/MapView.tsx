@@ -391,10 +391,8 @@ export function MapView({
     return (
       <View style={[styles.container, styles.centered, style]} testID={`${testID}-error`}>
         <ErrorState
-          title="Map Error"
-          message={error}
-          actionLabel={onRetry ? 'Retry' : undefined}
-          onAction={onRetry}
+          error={error}
+          onRetry={onRetry}
         />
       </View>
     )

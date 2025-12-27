@@ -29,6 +29,10 @@ const mockProfile = {
   id: mockOtherUserId,
   username: 'TestUser',
   avatar_config: null,
+  display_name: 'Test User',
+  own_avatar: {},
+  rpm_avatar: null,
+  rpm_avatar_id: null,
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
 }
@@ -37,6 +41,10 @@ const mockCurrentUserProfile = {
   id: mockCurrentUserId,
   username: 'CurrentUser',
   avatar_config: null,
+  display_name: 'Test User',
+  own_avatar: {},
+  rpm_avatar: null,
+  rpm_avatar_id: null,
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
 }
@@ -67,13 +75,12 @@ const createMockSupabase = () => {
   const mockSubscriptionCallback = jest.fn()
   let subscriptionHandler: ((payload: { new: Record<string, unknown> }) => void) | null = null
 
-  const mockChannel = {
-    on: jest.fn().mockImplementation((_event, _config, callback) => {
-      subscriptionHandler = callback
-      return mockChannel
-    }),
-    subscribe: jest.fn().mockReturnValue(mockChannel),
-  }
+  const mockChannel: { on: jest.Mock; subscribe: jest.Mock } = {} as { on: jest.Mock; subscribe: jest.Mock }
+  mockChannel.on = jest.fn().mockImplementation((_event, _config, callback) => {
+    subscriptionHandler = callback
+    return mockChannel
+  })
+  mockChannel.subscribe = jest.fn().mockReturnValue(mockChannel)
 
   const mockFrom = jest.fn().mockReturnValue({
     select: jest.fn().mockReturnValue({

@@ -29,11 +29,10 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Platform,
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
-import { SmallAvatarPreview, MediumAvatarPreview } from '../components/AvatarPreview'
+import { MediumAvatarPreview, type StoredAvatar } from '../components/ReadyPlayerMe'
 import { lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyChats, ErrorState } from '../components/EmptyState'
@@ -42,8 +41,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getUserRole } from '../lib/conversations'
 import { getHiddenUserIds } from '../lib/moderation'
 import type { MainTabNavigationProp } from '../navigation/types'
-import type { Conversation, Message, Post } from '../types/database'
-import type { AvatarConfig } from '../types/avatar'
+import type { Conversation, Message } from '../types/database'
 import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/supabase-js'
 
 // ============================================================================
@@ -54,8 +52,8 @@ import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/s
  * Conversation item with additional display information
  */
 interface ConversationItem extends Conversation {
-  /** The post's target avatar for display */
-  target_avatar: AvatarConfig | null
+  /** The post's target RPM avatar for display */
+  target_rpm_avatar: StoredAvatar | null
   /** Preview of the most recent message */
   last_message_content: string | null
   /** Timestamp of the most recent message */
@@ -218,7 +216,7 @@ export function ChatListScreen(): JSX.Element {
           *,
           posts:post_id (
             id,
-            target_avatar,
+            target_rpm_avatar,
             note,
             location_id,
             locations:location_id (
@@ -271,7 +269,7 @@ export function ChatListScreen(): JSX.Element {
           // Extract post data
           const post = conv.posts as unknown as {
             id: string
-            target_avatar: AvatarConfig
+            target_rpm_avatar: StoredAvatar | null
             note: string
             location_id: string
             locations: { name: string } | null
@@ -279,7 +277,7 @@ export function ChatListScreen(): JSX.Element {
 
           return {
             ...conv,
-            target_avatar: post?.target_avatar || null,
+            target_rpm_avatar: post?.target_rpm_avatar || null,
             last_message_content: lastMessageData?.content || null,
             last_message_at: lastMessageData?.created_at || conv.updated_at,
             last_message_sender_id: lastMessageData?.sender_id || null,
@@ -441,8 +439,8 @@ export function ChatListScreen(): JSX.Element {
         >
           {/* Avatar */}
           <View style={styles.avatarContainer}>
-            {item.target_avatar ? (
-              <MediumAvatarPreview config={item.target_avatar} />
+            {item.target_rpm_avatar?.avatarId ? (
+              <MediumAvatarPreview avatarId={item.target_rpm_avatar.avatarId} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarPlaceholderText}>?</Text>
@@ -505,7 +503,7 @@ export function ChatListScreen(): JSX.Element {
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={handleRetry} />
+    return <ErrorState error={error} onRetry={handleRetry} />
   }
 
   if (conversations.length === 0) {

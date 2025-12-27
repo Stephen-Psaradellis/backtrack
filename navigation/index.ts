@@ -35,7 +35,7 @@ export type {
   LedgerScreenProps,
   PostDetailScreenProps,
   ChatScreenProps,
-  AvatarBuilderScreenProps,
+  AvatarCreatorScreenProps,
   HomeTabScreenProps,
   ChatsTabScreenProps,
   ProfileTabScreenProps,
@@ -51,7 +51,7 @@ export type {
   LedgerRouteProp,
   PostDetailRouteProp,
   ChatRouteProp,
-  AvatarBuilderRouteProp,
+  AvatarCreatorRouteProp,
 } from './types'
 
 // Constants

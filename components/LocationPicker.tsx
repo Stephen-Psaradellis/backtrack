@@ -125,26 +125,6 @@ export function locationToItem(location: {
   }
 }
 
-/**
- * Converts a database Location entity to a LocationItem for display
- */
-export function locationToItem(location: {
-  id: string
-  name: string
-  address?: string | null
-  latitude: number
-  longitude: number
-  google_place_id?: string | null
-}): LocationItem {
-  return {
-    id: location.id,
-    name: location.name,
-    address: location.address ?? null,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    place_id: location.google_place_id ?? null,
-  }
-}
 
 /**
  * Props for the LocationPicker component
@@ -644,7 +624,7 @@ export function LocationPicker({
   const ListFooter =
     processedLocations.length === 0 && searchQuery.length > 0 ? (
       <View style={styles.stateContainer}>
-        <NoSearchResults
+        <EmptyState
           icon="🔍"
           title={emptyTitle}
           message={emptyMessage}

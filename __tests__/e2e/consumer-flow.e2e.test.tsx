@@ -47,9 +47,7 @@ import {
   mockChannel,
 } from '../mocks/supabase'
 
-// Import types
-import type { AvatarConfig } from '../../types/avatar'
-import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar'
+// Note: Old avatar types removed - using plain objects for mock data
 
 // ============================================================================
 // MOCK SETUP
@@ -269,12 +267,8 @@ const mockConsumerProfile = {
   ...mockProfile,
   id: mockConsumerUser.id,
   display_name: 'Consumer User',
-  own_avatar: {
-    ...DEFAULT_AVATAR_CONFIG,
-    skinColor: 'Light',
-    topType: 'ShortHairShortFlat',
-    hairColor: 'Brown',
-  } as unknown as Record<string, unknown>,
+  own_avatar: null,
+  rpm_avatar_id: 'mock-rpm-avatar-123',
 }
 
 /**
@@ -650,7 +644,7 @@ describe('E2E: Complete Consumer Flow', () => {
         return createMockQueryBuilder([])
       })
 
-      mockSupabase.rpc.mockResolvedValue({
+      mockSupabase.rpc!.mockResolvedValue({
         data: [],
         error: null,
       })
@@ -751,7 +745,7 @@ describe('E2E: Complete Consumer Flow', () => {
         return createMockQueryBuilder([])
       })
 
-      mockSupabase.rpc.mockResolvedValue({
+      mockSupabase.rpc!.mockResolvedValue({
         data: [],
         error: null,
       })
@@ -986,7 +980,7 @@ describe('E2E: Complete Consumer Flow', () => {
       })
 
       // Mock Supabase channel for realtime
-      mockSupabase.channel.mockReturnValue(mockChannel)
+      mockSupabase.channel!.mockReturnValue(mockChannel)
     })
 
     it('should render ChatScreen with messages', async () => {

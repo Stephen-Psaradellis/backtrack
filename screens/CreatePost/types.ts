@@ -5,7 +5,7 @@
  * Defines step configuration, form data structure, and validation constants.
  */
 
-import type { AvatarConfig } from '../../types/avatar'
+import type { StoredAvatar } from '../../components/ReadyPlayerMe'
 import type { LocationItem } from '../../components/LocationPicker'
 
 // ============================================================================
@@ -15,15 +15,19 @@ import type { LocationItem } from '../../components/LocationPicker'
 /**
  * Steps in the create post flow
  */
-export type CreatePostStep = 'selfie' | 'avatar' | 'note' | 'location' | 'review'
+export type CreatePostStep = 'photo' | 'avatar' | 'note' | 'location' | 'review'
 
 /**
  * Form data for creating a post
  */
 export interface CreatePostFormData {
-  selfieUri: string | null
-  targetAvatar: AvatarConfig
+  /** Selected profile photo ID for verification */
+  selectedPhotoId: string | null
+  /** Avatar describing the person seen */
+  targetAvatar: StoredAvatar | null
+  /** Message/note to the person */
   note: string
+  /** Location where the connection happened */
   location: LocationItem | null
 }
 
@@ -46,10 +50,10 @@ export interface StepConfig {
  */
 export const STEPS: StepConfig[] = [
   {
-    id: 'selfie',
-    title: 'Take a Selfie',
-    subtitle: 'This is private and used for verification only',
-    icon: '📷',
+    id: 'photo',
+    title: 'Verify Yourself',
+    subtitle: 'Select or take a photo to verify your identity',
+    icon: '📸',
   },
   {
     id: 'avatar',

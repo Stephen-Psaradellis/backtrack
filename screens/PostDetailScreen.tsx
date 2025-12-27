@@ -25,7 +25,7 @@
  * ```
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
@@ -37,26 +37,18 @@ import {
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 
-import { LargeAvatarPreview } from '../components/AvatarPreview'
+import { LargeAvatarPreview } from '../components/ReadyPlayerMe'
 import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { ErrorState } from '../components/EmptyState'
 import { Button, OutlineButton } from '../components/Button'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import {
-  compareAvatars,
-  isValidForMatching,
-  getMatchSummary,
-  getPrimaryMatchCount,
-  DEFAULT_MATCH_THRESHOLD,
-} from '../lib/matching'
 import { startConversation } from '../lib/conversations'
 import { blockUser, MODERATION_ERRORS } from '../lib/moderation'
-import { formatRelativeTime, getMatchColor, getMatchLabel } from '../components/PostCard'
+import { formatRelativeTime } from '../components/PostCard'
 import type { PostDetailRouteProp, MainStackNavigationProp } from '../navigation/types'
 import type { Post, Location } from '../types/database'
-import type { AvatarConfig } from '../types/avatar'
 
 // ============================================================================
 // TYPES
@@ -106,13 +98,9 @@ export function PostDetailScreen(): JSX.Element {
 
   const route = useRoute<PostDetailRouteProp>()
   const navigation = useNavigation<MainStackNavigationProp>()
-  const { profile, userId } = useAuth()
+  const { userId } = useAuth()
 
   const { postId } = route.params
-
-  // Get user's avatar for matching
-  const userAvatar = profile?.own_avatar as AvatarConfig | null
-  const hasValidAvatar = isValidForMatching(userAvatar)
 
   // ---------------------------------------------------------------------------
   // STATE
@@ -180,34 +168,6 @@ export function PostDetailScreen(): JSX.Element {
   useEffect(() => {
     fetchPost()
   }, [fetchPost])
-
-  // ---------------------------------------------------------------------------
-  // MATCHING
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Calculate match result between user's avatar and post's target avatar
-   */
-  const matchResult = useMemo(() => {
-    if (!hasValidAvatar || !userAvatar || !post?.target_avatar) {
-      return null
-    }
-
-    const targetAvatar = post.target_avatar as AvatarConfig
-    return compareAvatars(targetAvatar, userAvatar, DEFAULT_MATCH_THRESHOLD)
-  }, [post, userAvatar, hasValidAvatar])
-
-  /**
-   * Get primary match count for display
-   */
-  const primaryMatch = useMemo(() => {
-    if (!hasValidAvatar || !userAvatar || !post?.target_avatar) {
-      return null
-    }
-
-    const targetAvatar = post.target_avatar as AvatarConfig
-    return getPrimaryMatchCount(targetAvatar, userAvatar)
-  }, [post, userAvatar, hasValidAvatar])
 
   // ---------------------------------------------------------------------------
   // HANDLERS
@@ -358,7 +318,6 @@ export function PostDetailScreen(): JSX.Element {
 
   const isOwnPost = post.producer_id === userId
   const showStartChat = !isOwnPost
-  const showMatchIndicator = matchResult !== null && !isOwnPost
 
   return (
     <ScrollView
@@ -370,7 +329,7 @@ export function PostDetailScreen(): JSX.Element {
           refreshing={refreshing}
           onRefresh={handleRefresh}
           tintColor={COLORS.primary}
-colors={[COLORS.primary]}
+          colors={[COLORS.primary]}
           testID="post-detail-refresh-control"
         />
       }
@@ -378,42 +337,13 @@ colors={[COLORS.primary]}
     >
       {/* Avatar Section */}
       <View style={styles.avatarSection} testID="post-detail-avatar-section">
-        <LargeAvatarPreview
-          config={post.target_avatar as AvatarConfig}
-          testID="post-detail-avatar"
-        />
-
-        {/* Match Badge */}
-        {showMatchIndicator && matchResult && (
-          <View
-            style={[
-              styles.matchBadge,
-              { backgroundColor: getMatchColor(matchResult.score) },
-            ]}
-            testID="post-detail-match-badge"
-          >
-            <Text style={styles.matchBadgeText}>
-              {matchResult.score}% Match
-            </Text>
-          </View>
+        {post.target_rpm_avatar?.avatarId && (
+          <LargeAvatarPreview
+            avatarId={post.target_rpm_avatar.avatarId}
+            testID="post-detail-avatar"
+          />
         )}
       </View>
-
-      {/* Match Details */}
-      {showMatchIndicator && matchResult && (
-        <View style={styles.matchSection} testID="post-detail-match-section">
-          <Text
-            style={[styles.matchTitle, { color: getMatchColor(matchResult.score) }]}
-          >
-            {getMatchLabel(matchResult.score)}
-          </Text>
-          {primaryMatch && (
-            <Text style={styles.matchSubtitle}>
-              {primaryMatch.matchCount} of {primaryMatch.total} key features match
-            </Text>
-          )}
-        </View>
-      )}
 
       {/* Note Section */}
       <View style={styles.noteSection} testID="post-detail-note-section">
