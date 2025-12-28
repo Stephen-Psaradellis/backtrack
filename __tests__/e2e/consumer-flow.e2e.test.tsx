@@ -14,6 +14,7 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   render,
   screen,
@@ -54,40 +55,40 @@ import {
 // ============================================================================
 
 // Mock the Supabase client
-jest.mock('../../lib/supabase', () => ({
+vi.mock('../../lib/supabase', () => ({
   supabase: require('../mocks/supabase').mockSupabase,
   supabaseUrl: 'https://mock.supabase.co',
 }))
 
 // Mock storage module
-jest.mock('../../lib/storage', () => ({
-  uploadSelfie: jest.fn().mockResolvedValue({
+vi.mock('../../lib/storage', () => ({
+  uploadSelfie: vi.fn().mockResolvedValue({
     success: true,
     path: 'mock-user-id/mock-post-id.jpg',
     error: null,
   }),
-  getSelfieUrl: jest.fn().mockResolvedValue({
+  getSelfieUrl: vi.fn().mockResolvedValue({
     success: true,
     signedUrl: 'https://example.com/signed-selfie.jpg',
     error: null,
   }),
-  deleteSelfie: jest.fn().mockResolvedValue({
+  deleteSelfie: vi.fn().mockResolvedValue({
     success: true,
     error: null,
   }),
 }))
 
 // Mock moderation module
-jest.mock('../../lib/moderation', () => ({
-  getHiddenUserIds: jest.fn().mockResolvedValue({
+vi.mock('../../lib/moderation', () => ({
+  getHiddenUserIds: vi.fn().mockResolvedValue({
     success: true,
     hiddenUserIds: [],
   }),
-  blockUser: jest.fn().mockResolvedValue({
+  blockUser: vi.fn().mockResolvedValue({
     success: true,
     error: null,
   }),
-  submitReport: jest.fn().mockResolvedValue({
+  submitReport: vi.fn().mockResolvedValue({
     success: true,
     error: null,
   }),
@@ -97,13 +98,13 @@ jest.mock('../../lib/moderation', () => ({
 }))
 
 // Mock conversations module
-jest.mock('../../lib/conversations', () => ({
-  startConversation: jest.fn().mockResolvedValue({
+vi.mock('../../lib/conversations', () => ({
+  startConversation: vi.fn().mockResolvedValue({
     success: true,
     conversationId: 'mock-conversation-id',
     isNew: true,
   }),
-  getConversation: jest.fn().mockResolvedValue({
+  getConversation: vi.fn().mockResolvedValue({
     success: true,
     conversation: {
       id: 'mock-conversation-id',
@@ -115,9 +116,9 @@ jest.mock('../../lib/conversations', () => ({
       updated_at: new Date().toISOString(),
     },
   }),
-  getUserRole: jest.fn().mockReturnValue('consumer'),
-  isConversationParticipant: jest.fn().mockReturnValue(true),
-  getOtherUserId: jest.fn().mockReturnValue('producer-user-123'),
+  getUserRole: vi.fn().mockReturnValue('consumer'),
+  isConversationParticipant: vi.fn().mockReturnValue(true),
+  getOtherUserId: vi.fn().mockReturnValue('producer-user-123'),
   CONVERSATION_ERRORS: {
     NOT_FOUND: 'Conversation not found',
     UNAUTHORIZED: 'Unauthorized',
@@ -126,27 +127,27 @@ jest.mock('../../lib/conversations', () => ({
 }))
 
 // Mock matching module
-jest.mock('../../lib/matching', () => ({
-  compareAvatars: jest.fn().mockReturnValue({
+vi.mock('../../lib/matching', () => ({
+  compareAvatars: vi.fn().mockReturnValue({
     score: 75,
     isMatch: true,
     matchedAttributes: ['skinColor', 'topType', 'hairColor'],
     unmatchedAttributes: ['clotheType'],
   }),
-  calculateBatchMatches: jest.fn().mockReturnValue([
+  calculateBatchMatches: vi.fn().mockReturnValue([
     {
       postId: 'test-post-123',
       score: 75,
       isMatch: true,
     },
   ]),
-  isValidForMatching: jest.fn().mockReturnValue(true),
-  getMatchSummary: jest.fn().mockReturnValue({
+  isValidForMatching: vi.fn().mockReturnValue(true),
+  getMatchSummary: vi.fn().mockReturnValue({
     matchCount: 3,
     total: 4,
     percentage: 75,
   }),
-  getPrimaryMatchCount: jest.fn().mockReturnValue({
+  getPrimaryMatchCount: vi.fn().mockReturnValue({
     matchCount: 3,
     total: 4,
   }),
@@ -154,23 +155,23 @@ jest.mock('../../lib/matching', () => ({
 }))
 
 // Mock navigation
-const mockNavigate = jest.fn()
-const mockGoBack = jest.fn()
-const mockReplace = jest.fn()
-const mockSetOptions = jest.fn()
+const mockNavigate = vi.fn()
+const mockGoBack = vi.fn()
+const mockReplace = vi.fn()
+const mockSetOptions = vi.fn()
 
-jest.mock('@react-navigation/native', () => {
-  const actualNav = jest.requireActual('@react-navigation/native')
+vi.mock('@react-navigation/native', async () => {
+  const actualNav = await vi.importActual('@react-navigation/native')
   return {
     ...actualNav,
     useNavigation: () => ({
       navigate: mockNavigate,
       goBack: mockGoBack,
       replace: mockReplace,
-      reset: jest.fn(),
+      reset: vi.fn(),
       setOptions: mockSetOptions,
     }),
-    useRoute: jest.fn(() => ({
+    useRoute: vi.fn(() => ({
       params: {
         locationId: 'test-location-123',
         locationName: 'Coffee Shop on Main St',
@@ -178,7 +179,7 @@ jest.mock('@react-navigation/native', () => {
         conversationId: 'mock-conversation-id',
       },
     })),
-    useFocusEffect: jest.fn((callback) => {
+    useFocusEffect: vi.fn((callback) => {
       React.useEffect(() => {
         callback()
       }, [callback])
@@ -187,33 +188,33 @@ jest.mock('@react-navigation/native', () => {
 })
 
 // Mock expo-location
-jest.mock('../../hooks/useLocation', () => ({
+vi.mock('../../hooks/useLocation', () => ({
   useLocation: () => ({
     latitude: 37.7749,
     longitude: -122.4194,
     loading: false,
     error: null,
     permissionStatus: 'granted',
-    refresh: jest.fn(),
-    requestPermission: jest.fn().mockResolvedValue(true),
-    startWatching: jest.fn(),
-    stopWatching: jest.fn(),
+    refresh: vi.fn(),
+    requestPermission: vi.fn().mockResolvedValue(true),
+    startWatching: vi.fn(),
+    stopWatching: vi.fn(),
     isWatching: false,
     timestamp: Date.now(),
     accuracy: 10,
     altitude: null,
     heading: null,
     speed: null,
-    checkLocationServices: jest.fn(),
+    checkLocationServices: vi.fn(),
   }),
-  calculateDistance: jest.fn().mockReturnValue(100),
-  isWithinRadius: jest.fn().mockReturnValue(true),
-  formatCoordinates: jest.fn().mockReturnValue('37.7749, -122.4194'),
+  calculateDistance: vi.fn().mockReturnValue(100),
+  isWithinRadius: vi.fn().mockReturnValue(true),
+  formatCoordinates: vi.fn().mockReturnValue('37.7749, -122.4194'),
 }))
 
 // Mock MapView component
-jest.mock('../../components/MapView', () => ({
-  MapView: jest.fn(({ testID, children, onMapReady, onMapPress }) => {
+vi.mock('../../components/MapView', () => ({
+  MapView: vi.fn(({ testID, children, onMapReady, onMapPress }) => {
     const { View, TouchableOpacity, Text } = require('react-native')
     React.useEffect(() => {
       if (onMapReady) onMapReady()
@@ -230,14 +231,14 @@ jest.mock('../../components/MapView', () => ({
       </View>
     )
   }),
-  createRegion: jest.fn(),
-  createMarker: jest.fn(),
-  getCenterCoordinates: jest.fn(),
-  getRegionForCoordinates: jest.fn(),
+  createRegion: vi.fn(),
+  createMarker: vi.fn(),
+  getCenterCoordinates: vi.fn(),
+  getRegionForCoordinates: vi.fn(),
 }))
 
 // Mock Alert
-jest.spyOn(Alert, 'alert')
+vi.spyOn(Alert, 'alert')
 
 // ============================================================================
 // MOCK DATA
@@ -375,7 +376,7 @@ function TestWrapper({ children }: TestWrapperProps): JSX.Element {
 
 describe('E2E: Complete Consumer Flow', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     resetSupabaseMocks()
 
     // Configure auth as consumer user signed in
@@ -385,12 +386,12 @@ describe('E2E: Complete Consumer Flow', () => {
     })
     mockAuth.onAuthStateChange.mockImplementation((callback) => {
       callback('SIGNED_IN', mockConsumerSession)
-      return { data: { subscription: { unsubscribe: jest.fn() } } }
+      return { data: { subscription: { unsubscribe: vi.fn() } } }
     })
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   // --------------------------------------------------------------------------
@@ -406,13 +407,13 @@ describe('E2E: Complete Consumer Flow', () => {
         if (table === 'profiles') {
           return {
             ...createMockQueryBuilder([profileWithoutAvatar]),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: profileWithoutAvatar,
               error: null,
             }),
-            update: jest.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
           }
         }
         return createMockQueryBuilder([])
@@ -468,14 +469,14 @@ describe('E2E: Complete Consumer Flow', () => {
         if (table === 'profiles') {
           return {
             ...createMockQueryBuilder([mockConsumerProfile]),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockConsumerProfile,
               error: null,
             }),
-            update: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({
                 data: mockConsumerProfile,
                 error: null,
               }),
@@ -514,9 +515,9 @@ describe('E2E: Complete Consumer Flow', () => {
         if (table === 'profiles') {
           return {
             ...createMockQueryBuilder([mockConsumerProfile]),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockConsumerProfile,
               error: null,
             }),
@@ -525,20 +526,17 @@ describe('E2E: Complete Consumer Flow', () => {
         if (table === 'locations') {
           return {
             ...createMockQueryBuilder([mockLocation]),
-            select: jest.fn().mockReturnThis(),
-            gte: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            then: jest.fn().mockImplementation((resolve) => {
-              resolve({ data: [mockLocation], error: null })
-            }),
+            select: vi.fn().mockReturnThis(),
+            gte: vi.fn().mockReturnThis(),
+            lte: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
           }
         }
         return createMockQueryBuilder([])
       })
     })
 
-    it('should render HomeScreen with map', async () => {
+    it('should display HomeScreen with map', async () => {
       render(
         <TestWrapper>
           <HomeScreen />
@@ -552,7 +550,7 @@ describe('E2E: Complete Consumer Flow', () => {
       expect(screen.getByTestId('home-map')).toBeTruthy()
     })
 
-    it('should show bottom sheet when map is tapped', async () => {
+    it('should load nearby locations on map load', async () => {
       render(
         <TestWrapper>
           <HomeScreen />
@@ -560,21 +558,19 @@ describe('E2E: Complete Consumer Flow', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByTestId('home-screen')).toBeTruthy()
+        expect(screen.getByTestId('home-map')).toBeTruthy()
       })
 
-      // Tap on map
+      // Trigger map ready
       fireEvent.press(screen.getByTestId('mock-map-tap'))
 
-      // Verify bottom sheet appears
+      // Verify locations are fetched
       await waitFor(() => {
-        expect(screen.getByTestId('home-bottom-sheet')).toBeTruthy()
+        expect(mockSupabase.from).toHaveBeenCalledWith('locations')
       })
-
-      expect(screen.getByTestId('home-view-ledger-button')).toBeTruthy()
     })
 
-    it('should navigate to Ledger when View Posts is pressed', async () => {
+    it('should display location pins on map', async () => {
       render(
         <TestWrapper>
           <HomeScreen />
@@ -582,23 +578,33 @@ describe('E2E: Complete Consumer Flow', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByTestId('home-screen')).toBeTruthy()
+        expect(screen.getByTestId('home-map')).toBeTruthy()
       })
 
-      // Tap on map to select location
-      fireEvent.press(screen.getByTestId('mock-map-tap'))
+      // Verify location pin is rendered
+      await waitFor(() => {
+        expect(screen.getByTestId('location-pin-test-location-123')).toBeTruthy()
+      })
+    })
+
+    it('should navigate to LedgerScreen when location is tapped', async () => {
+      render(
+        <TestWrapper>
+          <HomeScreen />
+        </TestWrapper>
+      )
 
       await waitFor(() => {
-        expect(screen.getByTestId('home-view-ledger-button')).toBeTruthy()
+        expect(screen.getByTestId('location-pin-test-location-123')).toBeTruthy()
       })
 
-      // Press View Posts
-      fireEvent.press(screen.getByTestId('home-view-ledger-button'))
+      fireEvent.press(screen.getByTestId('location-pin-test-location-123'))
 
-      // Verify navigation was called (or insert was called for new location)
-      // The navigation happens after location insert for new locations
       await waitFor(() => {
-        expect(mockSupabase.from).toHaveBeenCalled()
+        expect(mockNavigate).toHaveBeenCalledWith('Ledger', {
+          locationId: 'test-location-123',
+          locationName: mockLocation.name,
+        })
       })
     })
   })
@@ -612,98 +618,93 @@ describe('E2E: Complete Consumer Flow', () => {
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === 'profiles') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            ...createMockQueryBuilder([mockConsumerProfile]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockConsumerProfile,
               error: null,
             }),
           }
         }
         if (table === 'posts') {
-          const queryBuilder = {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            not: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: mockMatchingPost,
-              error: null,
+          return {
+            ...createMockQueryBuilder([mockMatchingPost]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn().mockImplementation((resolve) => {
+              resolve({ data: [mockMatchingPost], error: null })
             }),
           }
-          Object.defineProperty(queryBuilder, 'then', {
-            value: (resolve: Function) => {
-              return Promise.resolve().then(() =>
-                resolve({ data: [mockMatchingPost], error: null })
-              )
-            },
-          })
-          return queryBuilder
         }
         return createMockQueryBuilder([])
       })
-
-      mockSupabase.rpc!.mockResolvedValue({
-        data: [],
-        error: null,
-      })
     })
 
-    it('should render LedgerScreen with posts', async () => {
+    it('should display LedgerScreen with posts for location', async () => {
       render(
         <TestWrapper>
           <LedgerScreen />
         </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
       )
 
       await waitFor(() => {
         expect(screen.getByTestId('ledger-screen')).toBeTruthy()
       })
+
+      // Verify location name is displayed
+      expect(screen.getByTestId('ledger-location-name')).toBeTruthy()
     })
 
-    it('should display location header', async () => {
+    it('should load posts for selected location', async () => {
       render(
         <TestWrapper>
           <LedgerScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
       await waitFor(() => {
-        expect(screen.getByTestId('ledger-header')).toBeTruthy()
+        expect(screen.getByTestId('ledger-screen')).toBeTruthy()
+      })
+
+      // Verify posts are fetched
+      await waitFor(() => {
+        expect(mockSupabase.from).toHaveBeenCalledWith('posts')
       })
     })
 
-    it('should show post list', async () => {
+    it('should display post cards in list', async () => {
       render(
         <TestWrapper>
           <LedgerScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
+      await waitFor(() => {
+        expect(screen.getByTestId('post-card-test-post-123')).toBeTruthy()
+      })
+
+      // Verify post content is shown
+      expect(screen.getByText(mockMatchingPost.note)).toBeTruthy()
+    })
+
+    it('should navigate to PostDetailScreen when post is tapped', async () => {
+      render(
+        <TestWrapper>
+          <LedgerScreen />
+        </TestWrapper>
       )
 
       await waitFor(() => {
-        expect(screen.getByTestId('ledger-post-list')).toBeTruthy()
+        expect(screen.getByTestId('post-card-test-post-123')).toBeTruthy()
+      })
+
+      fireEvent.press(screen.getByTestId('post-card-test-post-123'))
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('PostDetail', {
+          postId: 'test-post-123',
+        })
       })
     })
   })
@@ -717,83 +718,112 @@ describe('E2E: Complete Consumer Flow', () => {
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === 'profiles') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            ...createMockQueryBuilder([mockConsumerProfile]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockConsumerProfile,
               error: null,
             }),
           }
         }
         if (table === 'posts') {
-          const queryBuilder = {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            not: jest.fn().mockReturnThis(),
+          return {
+            ...createMockQueryBuilder([mockMatchingPost]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn().mockImplementation((resolve) => {
+              resolve({ data: [mockMatchingPost], error: null })
+            }),
           }
-          Object.defineProperty(queryBuilder, 'then', {
-            value: (resolve: Function) => {
-              return Promise.resolve().then(() =>
-                resolve({ data: [mockMatchingPost], error: null })
-              )
-            },
-          })
-          return queryBuilder
+        }
+        return createMockQueryBuilder([])
+      })
+    })
+
+    it('should display match indicator badge on matching post', async () => {
+      render(
+        <TestWrapper>
+          <LedgerScreen />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-match-badge-test-post-123')).toBeTruthy()
+      })
+
+      // Verify match percentage is shown
+      expect(screen.getByText('75%')).toBeTruthy()
+    })
+
+    it('should show match details on badge tap', async () => {
+      render(
+        <TestWrapper>
+          <LedgerScreen />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-match-badge-test-post-123')).toBeTruthy()
+      })
+
+      fireEvent.press(screen.getByTestId('post-match-badge-test-post-123'))
+
+      // Verify match details modal opens
+      await waitFor(() => {
+        expect(screen.getByTestId('match-details-modal')).toBeTruthy()
+      })
+
+      // Verify matched and unmatched attributes are shown
+      expect(screen.getByText('Matched Attributes')).toBeTruthy()
+      expect(screen.getByText('Unmatched Attributes')).toBeTruthy()
+    })
+
+    it('should not show match indicator for non-matching posts', async () => {
+      const nonMatchingPost = {
+        ...mockPost,
+        producer_id: 'producer-user-456',
+        target_avatar: {
+          skinColor: 'Dark',
+          topType: 'LongHairBigHair',
+          hairColor: 'Blonde',
+        } as unknown as Record<string, unknown>,
+      }
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          return {
+            ...createMockQueryBuilder([mockConsumerProfile]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: mockConsumerProfile,
+              error: null,
+            }),
+          }
+        }
+        if (table === 'posts') {
+          return {
+            ...createMockQueryBuilder([nonMatchingPost]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn().mockImplementation((resolve) => {
+              resolve({ data: [nonMatchingPost], error: null })
+            }),
+          }
         }
         return createMockQueryBuilder([])
       })
 
-      mockSupabase.rpc!.mockResolvedValue({
-        data: [],
-        error: null,
-      })
-    })
-
-    it('should calculate match scores when consumer has avatar', async () => {
-      // The matching module is mocked to return match results
-      const { calculateBatchMatches } = require('../../lib/matching')
-
       render(
         <TestWrapper>
           <LedgerScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify matching calculation was called
       await waitFor(() => {
-        expect(calculateBatchMatches).toHaveBeenCalled()
+        expect(screen.queryByTestId('post-match-badge-test-post-456')).toBeFalsy()
       })
-    })
-
-    it('should show match count in header when matches exist', async () => {
-      render(
-        <TestWrapper>
-          <LedgerScreen />
-        </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      await waitFor(() => {
-        expect(screen.getByTestId('ledger-header')).toBeTruthy()
-      })
-
-      // The header should show match count (mocked to return 1 match)
-      // The exact text depends on implementation
     })
   })
 
@@ -806,9 +836,10 @@ describe('E2E: Complete Consumer Flow', () => {
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === 'profiles') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            ...createMockQueryBuilder([mockConsumerProfile]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockConsumerProfile,
               error: null,
             }),
@@ -816,14 +847,31 @@ describe('E2E: Complete Consumer Flow', () => {
         }
         if (table === 'posts') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: {
-                ...mockMatchingPost,
-                location: mockLocation,
-              },
+            ...createMockQueryBuilder([mockMatchingPost]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: mockMatchingPost,
               error: null,
+            }),
+          }
+        }
+        if (table === 'conversations') {
+          return {
+            ...createMockQueryBuilder([mockConversation]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: mockConversation,
+              error: null,
+            }),
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: mockConversation,
+                  error: null,
+                }),
+              }),
             }),
           }
         }
@@ -831,120 +879,145 @@ describe('E2E: Complete Consumer Flow', () => {
       })
     })
 
-    it('should render PostDetailScreen', async () => {
+    it('should display PostDetailScreen with chat button', async () => {
       render(
         <TestWrapper>
           <PostDetailScreen />
         </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('post-detail-loading')).toBeNull()
-        },
-        { timeout: 5000 }
       )
 
       await waitFor(() => {
         expect(screen.getByTestId('post-detail-screen')).toBeTruthy()
       })
+
+      // Verify message button is shown
+      expect(screen.getByTestId('post-detail-message-button')).toBeTruthy()
     })
 
-    it('should show Start Chat button', async () => {
+    it('should display producer profile on post detail', async () => {
       render(
         <TestWrapper>
           <PostDetailScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('post-detail-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
       await waitFor(() => {
-        expect(screen.getByTestId('post-detail-start-chat')).toBeTruthy()
+        expect(screen.getByTestId('post-detail-screen')).toBeTruthy()
       })
+
+      // Verify producer name is shown
+      expect(screen.getByText(mockProducerProfile.display_name)).toBeTruthy()
     })
 
-    it('should show match badge on matching post', async () => {
+    it('should create or fetch conversation when message button is pressed', async () => {
       render(
         <TestWrapper>
           <PostDetailScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('post-detail-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
       await waitFor(() => {
-        expect(screen.getByTestId('post-detail-match-badge')).toBeTruthy()
+        expect(screen.getByTestId('post-detail-message-button')).toBeTruthy()
+      })
+
+      fireEvent.press(screen.getByTestId('post-detail-message-button'))
+
+      // Verify conversation is created/fetched
+      await waitFor(() => {
+        expect(mockSupabase.from).toHaveBeenCalledWith('conversations')
       })
     })
 
-    it('should navigate to Chat when Start Chat is pressed', async () => {
-      const { startConversation } = require('../../lib/conversations')
-
+    it('should navigate to ChatScreen after creating conversation', async () => {
       render(
         <TestWrapper>
           <PostDetailScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('post-detail-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
       await waitFor(() => {
-        expect(screen.getByTestId('post-detail-start-chat')).toBeTruthy()
+        expect(screen.getByTestId('post-detail-message-button')).toBeTruthy()
       })
 
-      // Press Start Chat
-      fireEvent.press(screen.getByTestId('post-detail-start-chat'))
+      fireEvent.press(screen.getByTestId('post-detail-message-button'))
 
-      // Verify startConversation was called
       await waitFor(() => {
-        expect(startConversation).toHaveBeenCalled()
-      })
-
-      // Verify navigation to Chat screen
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('Chat', expect.any(Object))
+        expect(mockNavigate).toHaveBeenCalledWith('Chat', {
+          conversationId: 'mock-conversation-id',
+        })
       })
     })
   })
 
   // --------------------------------------------------------------------------
-  // STEP 6-7: MESSAGE EXCHANGE BETWEEN USERS
+  // STEP 6: PRODUCER RECEIVES MESSAGE NOTIFICATION
   // --------------------------------------------------------------------------
 
-  describe('Steps 6-7: Message Exchange', () => {
-    beforeEach(() => {
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') {
+  describe('Step 6: Producer Receives Notification', () => {
+    it('should subscribe to conversation messages', async () => {
+      const mockSubscribe = vi.fn()
+      mockChannel.on.mockReturnValue({
+        subscribe: mockSubscribe,
+      })
+
+      render(
+        <TestWrapper>
+          <ChatScreen />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('chat-screen')).toBeTruthy()
+      })
+
+      // Verify subscription is set up
+      expect(mockChannel.on).toHaveBeenCalled()
+    })
+
+    it('should display received messages in real-time', async () => {
+      mockChannel.on.mockImplementation(
+        (event: string, callback: (payload: unknown) => void) => {
+          if (event === 'postgres_changes') {
+            setTimeout(() => {
+              callback({
+                new: {
+                  ...mockMessages[1],
+                  is_read: false,
+                },
+              })
+            }, 100)
+          }
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: mockConsumerProfile,
-              error: null,
-            }),
+            subscribe: vi.fn(),
           }
         }
+      )
+
+      render(
+        <TestWrapper>
+          <ChatScreen />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(mockMessages[1].content)).toBeTruthy()
+      })
+    })
+  })
+
+  // --------------------------------------------------------------------------
+  // STEP 7: BOTH USERS CAN EXCHANGE MESSAGES
+  // --------------------------------------------------------------------------
+
+  describe('Step 7: Users Exchange Messages', () => {
+    beforeEach(() => {
+      mockSupabase.from.mockImplementation((table: string) => {
         if (table === 'conversations') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            ...createMockQueryBuilder([mockConversation]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockConversation,
               error: null,
             }),
@@ -952,100 +1025,54 @@ describe('E2E: Complete Consumer Flow', () => {
         }
         if (table === 'messages') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            neq: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            lt: jest.fn().mockReturnThis(),
-            insert: jest.fn().mockReturnThis(),
-            update: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: {
-                id: 'new-message-id',
-                conversation_id: mockConversation.id,
-                sender_id: mockConsumerUser.id,
-                content: 'Hello!',
-                is_read: false,
-                created_at: new Date().toISOString(),
-              },
-              error: null,
-            }),
-            then: jest.fn().mockImplementation((resolve) => {
-              resolve({ data: mockMessages, error: null })
+            ...createMockQueryBuilder(mockMessages),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    ...mockMessages[0],
+                    created_at: new Date().toISOString(),
+                  },
+                  error: null,
+                }),
+              }),
             }),
           }
         }
         return createMockQueryBuilder([])
       })
-
-      // Mock Supabase channel for realtime
-      mockSupabase.channel!.mockReturnValue(mockChannel)
     })
 
-    it('should render ChatScreen with messages', async () => {
+    it('should display ChatScreen with message list', async () => {
       render(
         <TestWrapper>
           <ChatScreen />
         </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('chat-screen-loading')).toBeNull()
-        },
-        { timeout: 5000 }
       )
 
       await waitFor(() => {
         expect(screen.getByTestId('chat-screen')).toBeTruthy()
       })
+
+      // Verify messages are displayed
+      expect(screen.getByText(mockMessages[0].content)).toBeTruthy()
+      expect(screen.getByText(mockMessages[1].content)).toBeTruthy()
     })
 
-    it('should show message input when conversation is active', async () => {
+    it('should have message input field', async () => {
       render(
         <TestWrapper>
           <ChatScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('chat-screen-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
       await waitFor(() => {
-        expect(screen.getByTestId('chat-input-container')).toBeTruthy()
+        expect(screen.getByTestId('chat-message-input')).toBeTruthy()
       })
 
-      expect(screen.getByTestId('chat-input')).toBeTruthy()
-      expect(screen.getByTestId('chat-send-button')).toBeTruthy()
-    })
-
-    it('should enable send button when message is entered', async () => {
-      render(
-        <TestWrapper>
-          <ChatScreen />
-        </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('chat-screen-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      await waitFor(() => {
-        expect(screen.getByTestId('chat-input')).toBeTruthy()
-      })
-
-      // Type a message
-      fireEvent.changeText(screen.getByTestId('chat-input'), 'Hello!')
-
-      // Send button should be enabled (not checking style, just that it exists)
       expect(screen.getByTestId('chat-send-button')).toBeTruthy()
     })
 
@@ -1056,171 +1083,99 @@ describe('E2E: Complete Consumer Flow', () => {
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('chat-screen-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      await waitFor(() => {
-        expect(screen.getByTestId('chat-input')).toBeTruthy()
+      await waitFor(() =>{
+        expect(screen.getByTestId('chat-message-input')).toBeTruthy()
       })
 
-      // Type a message
-      fireEvent.changeText(screen.getByTestId('chat-input'), 'Hello from consumer!')
-
-      // Press send
+      const input = screen.getByTestId('chat-message-input')
+      fireEvent.changeText(input, 'Hello, producer!')
       fireEvent.press(screen.getByTestId('chat-send-button'))
 
-      // Verify message insert was called
+      // Verify message is inserted
       await waitFor(() => {
         expect(mockSupabase.from).toHaveBeenCalledWith('messages')
       })
     })
 
-    it('should subscribe to realtime channel for new messages', async () => {
+    it('should display sent message in chat', async () => {
       render(
         <TestWrapper>
           <ChatScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('chat-screen-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify channel subscription was set up
       await waitFor(() => {
-        expect(mockSupabase.channel).toHaveBeenCalled()
+        expect(screen.getByTestId('chat-message-input')).toBeTruthy()
       })
 
-      expect(mockChannel.on).toHaveBeenCalled()
-      expect(mockChannel.subscribe).toHaveBeenCalled()
+      const input = screen.getByTestId('chat-message-input')
+      fireEvent.changeText(input, 'Hello, producer!')
+      fireEvent.press(screen.getByTestId('chat-send-button'))
+
+      // Verify sent message is shown
+      await waitFor(() => {
+        expect(screen.getByText('Hello, producer!')).toBeTruthy()
+      })
+
+      // Verify input is cleared
+      expect(input.props.value).toBe('')
     })
 
-    it('should show message list', async () => {
+    it('should display producer message in chat', async () => {
       render(
         <TestWrapper>
           <ChatScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('chat-screen-loading')).toBeNull()
-        },
-        { timeout: 5000 }
+      await waitFor(() => {
+        expect(screen.getByText(mockMessages[1].content)).toBeTruthy()
+      })
+
+      // Verify producer message is shown with different styling
+      const producerMessage = screen.getByTestId('message-producer-user-123')
+      expect(producerMessage).toBeTruthy()
+      expect(producerMessage.props.testID).toContain('producer-user-123')
+    })
+
+    it('should mark messages as read', async () => {
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'messages') {
+          return {
+            ...createMockQueryBuilder(mockMessages),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    ...mockMessages[1],
+                    is_read: true,
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }
+        }
+        return createMockQueryBuilder([])
+      })
+
+      render(
+        <TestWrapper>
+          <ChatScreen />
+        </TestWrapper>
       )
 
       await waitFor(() => {
-        expect(screen.getByTestId('chat-message-list')).toBeTruthy()
+        expect(screen.getByTestId('chat-screen')).toBeTruthy()
       })
-    })
-  })
 
-  // --------------------------------------------------------------------------
-  // COMPLETE FLOW INTEGRATION
-  // --------------------------------------------------------------------------
-
-  describe('Complete Consumer Flow Integration', () => {
-    it('should successfully complete the entire consumer flow', async () => {
-      // This test documents the complete expected flow:
-      //
-      // 1. Consumer logs in and navigates to ProfileScreen
-      // 2. Consumer creates their own avatar using AvatarBuilder
-      // 3. Consumer navigates to HomeScreen with map
-      // 4. Consumer taps on a location marker to view nearby venues
-      // 5. Consumer presses "View Posts" to navigate to LedgerScreen
-      // 6. Consumer sees posts at that location with match indicators
-      // 7. Consumer taps a matching post to view PostDetailScreen
-      // 8. Consumer sees match badge and match details
-      // 9. Consumer presses "Start Chat" to initiate conversation
-      // 10. Consumer is navigated to ChatScreen
-      // 11. Consumer can send and receive messages in real-time
-      // 12. Producer can respond to consumer's messages
-
-      // Verify flow components exist and are properly configured
-      expect(ProfileScreen).toBeDefined()
-      expect(HomeScreen).toBeDefined()
-      expect(LedgerScreen).toBeDefined()
-      expect(PostDetailScreen).toBeDefined()
-      expect(ChatScreen).toBeDefined()
-
-      // Verify mocks are properly configured
-      const { startConversation } = require('../../lib/conversations')
-      const { calculateBatchMatches } = require('../../lib/matching')
-
-      expect(startConversation).toBeDefined()
-      expect(calculateBatchMatches).toBeDefined()
-      expect(mockSupabase.from).toBeDefined()
-      expect(mockSupabase.channel).toBeDefined()
-
-      // The actual flow is verified by the individual step tests above
-      // This test confirms all pieces are in place for the integration
-    })
-
-    it('should handle errors gracefully throughout the flow', async () => {
-      // Verify error handling is in place:
-
-      // 1. Profile update errors should show alert
-      // 2. Map loading errors should show error state
-      // 3. Ledger fetch errors should show error state
-      // 4. Post detail errors should show error state
-      // 5. Chat errors should show error state
-      // 6. Message send failures should show alert
-
-      // Error handling is verified in individual tests
-      expect(true).toBe(true)
-    })
-
-    it('should maintain proper state throughout navigation', async () => {
-      // Verify state management:
-
-      // 1. Auth state persists across screens
-      // 2. Avatar configuration is saved to profile
-      // 3. Location selection is maintained
-      // 4. Match calculations use current avatar
-      // 5. Conversation state is maintained in chat
-
-      // State management is verified in component tests
-      expect(true).toBe(true)
+      // Verify mark as read is called
+      await waitFor(() => {
+        expect(mockSupabase.from).toHaveBeenCalledWith('messages')
+      })
     })
   })
 })
-
-// ============================================================================
-// SUMMARY
-// ============================================================================
-
-/**
- * Consumer Flow E2E Test Summary:
- *
- * This test suite verifies the complete Consumer flow from browsing to chat.
- *
- * Steps Tested:
- * 1. Consumer creates own avatar - ProfileScreen with AvatarBuilder modal
- * 2. Consumer browses location - HomeScreen with MapView and location markers
- * 3. Consumer views ledger - LedgerScreen with FlatList of posts
- * 4. Consumer sees matches - Match indicator and score display
- * 5. Consumer initiates chat - PostDetailScreen with Start Chat button
- * 6. Producer notification - Realtime subscription for new conversations
- * 7. Message exchange - ChatScreen with send/receive functionality
- *
- * Mocks Used:
- * - Supabase client (auth, database, realtime channels)
- * - expo-location
- * - react-native-maps
- * - @react-navigation/native
- * - lib/matching (avatar comparison)
- * - lib/conversations (chat management)
- * - lib/moderation (blocking, reporting)
- *
- * Running the tests:
- * ```bash
- * npm run test:e2e
- * ```
- */

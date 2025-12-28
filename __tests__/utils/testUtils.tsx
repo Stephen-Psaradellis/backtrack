@@ -4,6 +4,7 @@
  * Provides test helpers and custom render functions for React Native Testing Library.
  */
 
+import { vi } from 'vitest'
 import React, { ReactElement, ReactNode } from 'react'
 import { render, RenderOptions, RenderResult } from '@testing-library/react-native'
 import { NavigationContainer } from '@react-navigation/native'
@@ -142,24 +143,24 @@ export async function waitForStateUpdate(): Promise<void> {
  */
 export function createMockNavigation() {
   return {
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-    reset: jest.fn(),
-    replace: jest.fn(),
-    push: jest.fn(),
-    pop: jest.fn(),
-    popToTop: jest.fn(),
-    setOptions: jest.fn(),
-    setParams: jest.fn(),
-    isFocused: jest.fn(() => true),
-    canGoBack: jest.fn(() => true),
-    getParent: jest.fn(),
-    getState: jest.fn(() => ({
+    navigate: vi.fn(),
+    goBack: vi.fn(),
+    reset: vi.fn(),
+    replace: vi.fn(),
+    push: vi.fn(),
+    pop: vi.fn(),
+    popToTop: vi.fn(),
+    setOptions: vi.fn(),
+    setParams: vi.fn(),
+    isFocused: vi.fn(() => true),
+    canGoBack: vi.fn(() => true),
+    getParent: vi.fn(),
+    getState: vi.fn(() => ({
       routes: [],
       index: 0,
     })),
-    addListener: jest.fn(() => jest.fn()),
-    removeListener: jest.fn(),
+    addListener: vi.fn(() => vi.fn()),
+    removeListener: vi.fn(),
   }
 }
 

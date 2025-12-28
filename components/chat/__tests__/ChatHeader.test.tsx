@@ -11,11 +11,12 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ChatHeader } from '../ChatHeader'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   header: 'header',
   backButton: 'backButton',
   headerUserInfo: 'headerUserInfo',
@@ -28,8 +29,8 @@ jest.mock('../styles/ChatScreen.module.css', () => ({
 }))
 
 // Mock UserPresenceIndicator component
-jest.mock('../UserPresenceIndicator', () => ({
-  UserPresenceIndicator: jest.fn(({ isOnline, lastSeen }) => (
+vi.mock('../UserPresenceIndicator', () => ({
+  UserPresenceIndicator: vi.fn(({ isOnline, lastSeen }) => (
     <div data-testid="presence-indicator" data-is-online={isOnline} data-last-seen={lastSeen}>
       {isOnline ? 'Online' : 'Offline'}
     </div>
@@ -41,13 +42,13 @@ const defaultProps = {
   avatarLetter: 'T',
   isOnline: false,
   lastSeen: '2024-01-15T10:00:00Z',
-  onBack: jest.fn(),
-  onActionsClick: jest.fn(),
+  onBack: vi.fn(),
+  onActionsClick: vi.fn(),
 }
 
 describe('ChatHeader', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('Basic Rendering', () => {
@@ -197,7 +198,7 @@ describe('ChatHeader', () => {
 
   describe('Back Button', () => {
     it('should call onBack when clicked', () => {
-      const onBack = jest.fn()
+      const onBack = vi.fn()
       render(<ChatHeader {...defaultProps} onBack={onBack} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Go back to conversations' }))
@@ -217,7 +218,7 @@ describe('ChatHeader', () => {
 
   describe('Actions Button', () => {
     it('should call onActionsClick when clicked', () => {
-      const onActionsClick = jest.fn()
+      const onActionsClick = vi.fn()
       render(<ChatHeader {...defaultProps} onActionsClick={onActionsClick} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Open chat actions menu' }))

@@ -65,3 +65,11 @@ export {
   type NotificationSettingsResult,
   type UseNotificationSettingsResult,
 } from './useNotificationSettings'
+
+// Tutorial state hook (onboarding tooltips)
+export {
+  useTutorialState,
+  type TutorialState,
+  type UseTutorialStateOptions,
+  type UseTutorialStateResult,
+} from './useTutorialState'

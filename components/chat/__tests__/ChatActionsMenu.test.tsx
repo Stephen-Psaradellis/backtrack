@@ -12,11 +12,12 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChatActionsMenu } from '../ChatActionsMenu'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   actionsMenuOverlay: 'actionsMenuOverlay',
   actionsMenu: 'actionsMenu',
   actionsMenuHeader: 'actionsMenuHeader',
@@ -38,14 +39,14 @@ jest.mock('../styles/ChatScreen.module.css', () => ({
 
 const defaultProps = {
   isOpen: true,
-  onClose: jest.fn(),
-  onBlockUser: jest.fn(),
-  onReportUser: jest.fn(),
+  onClose: vi.fn(),
+  onBlockUser: vi.fn(),
+  onReportUser: vi.fn(),
 }
 
 describe('ChatActionsMenu', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     document.body.style.overflow = ''
   })
 
@@ -125,8 +126,8 @@ describe('ChatActionsMenu', () => {
 
   describe('Action Callbacks', () => {
     it('should call onBlockUser and onClose when block user is clicked', () => {
-      const onBlockUser = jest.fn()
-      const onClose = jest.fn()
+      const onBlockUser = vi.fn()
+      const onClose = vi.fn()
       render(
         <ChatActionsMenu {...defaultProps} onBlockUser={onBlockUser} onClose={onClose} />
       )
@@ -138,8 +139,8 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should call onReportUser and onClose when report user is clicked', () => {
-      const onReportUser = jest.fn()
-      const onClose = jest.fn()
+      const onReportUser = vi.fn()
+      const onClose = vi.fn()
       render(
         <ChatActionsMenu {...defaultProps} onReportUser={onReportUser} onClose={onClose} />
       )
@@ -151,7 +152,7 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should call onClose when cancel button is clicked', () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       render(<ChatActionsMenu {...defaultProps} onClose={onClose} />)
 
       fireEvent.click(screen.getByRole('menuitem', { name: 'Cancel' }))
@@ -160,7 +161,7 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should call onClose when close button is clicked', () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       render(<ChatActionsMenu {...defaultProps} onClose={onClose} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Close menu' }))
@@ -174,7 +175,7 @@ describe('ChatActionsMenu', () => {
       render(
         <ChatActionsMenu
           {...defaultProps}
-          onMuteNotifications={jest.fn()}
+          onMuteNotifications={vi.fn()}
         />
       )
 
@@ -191,7 +192,7 @@ describe('ChatActionsMenu', () => {
       render(
         <ChatActionsMenu
           {...defaultProps}
-          onMuteNotifications={jest.fn()}
+          onMuteNotifications={vi.fn()}
           isMuted={true}
         />
       )
@@ -200,8 +201,8 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should call onMuteNotifications and onClose when mute is clicked', () => {
-      const onMuteNotifications = jest.fn()
-      const onClose = jest.fn()
+      const onMuteNotifications = vi.fn()
+      const onClose = vi.fn()
       render(
         <ChatActionsMenu
           {...defaultProps}
@@ -220,7 +221,7 @@ describe('ChatActionsMenu', () => {
       render(
         <ChatActionsMenu
           {...defaultProps}
-          onClearConversation={jest.fn()}
+          onClearConversation={vi.fn()}
         />
       )
 
@@ -234,8 +235,8 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should call onClearConversation and onClose when clear is clicked', () => {
-      const onClearConversation = jest.fn()
-      const onClose = jest.fn()
+      const onClearConversation = vi.fn()
+      const onClose = vi.fn()
       render(
         <ChatActionsMenu
           {...defaultProps}
@@ -256,7 +257,7 @@ describe('ChatActionsMenu', () => {
       const { container } = render(
         <ChatActionsMenu
           {...defaultProps}
-          onMuteNotifications={jest.fn()}
+          onMuteNotifications={vi.fn()}
         />
       )
 
@@ -267,7 +268,7 @@ describe('ChatActionsMenu', () => {
       render(
         <ChatActionsMenu
           {...defaultProps}
-          onMuteNotifications={jest.fn()}
+          onMuteNotifications={vi.fn()}
         />
       )
 
@@ -277,7 +278,7 @@ describe('ChatActionsMenu', () => {
 
   describe('Keyboard Handling', () => {
     it('should call onClose when Escape is pressed', () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       render(<ChatActionsMenu {...defaultProps} onClose={onClose} />)
 
       fireEvent.keyDown(document, { key: 'Escape' })
@@ -288,7 +289,7 @@ describe('ChatActionsMenu', () => {
 
   describe('Backdrop Click', () => {
     it('should call onClose when clicking on overlay', () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       render(<ChatActionsMenu {...defaultProps} onClose={onClose} />)
 
       // Get the overlay (parent of dialog)
@@ -299,7 +300,7 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should not call onClose when clicking inside menu', () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       render(<ChatActionsMenu {...defaultProps} onClose={onClose} />)
 
       fireEvent.click(screen.getByText('Chat Actions'))
@@ -363,8 +364,8 @@ describe('ChatActionsMenu', () => {
       render(
         <ChatActionsMenu
           {...defaultProps}
-          onMuteNotifications={jest.fn()}
-          onClearConversation={jest.fn()}
+          onMuteNotifications={vi.fn()}
+          onClearConversation={vi.fn()}
         />
       )
 
@@ -401,7 +402,7 @@ describe('ChatActionsMenu', () => {
       render(
         <ChatActionsMenu
           {...defaultProps}
-          onMuteNotifications={jest.fn()}
+          onMuteNotifications={vi.fn()}
         />
       )
 
@@ -424,8 +425,8 @@ describe('ChatActionsMenu', () => {
       const { container } = render(
         <ChatActionsMenu
           {...defaultProps}
-          onMuteNotifications={jest.fn()}
-          onClearConversation={jest.fn()}
+          onMuteNotifications={vi.fn()}
+          onClearConversation={vi.fn()}
         />
       )
 
@@ -457,8 +458,8 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should handle multiple callback invocations', () => {
-      const onBlockUser = jest.fn()
-      const onClose = jest.fn()
+      const onBlockUser = vi.fn()
+      const onClose = vi.fn()
       const { rerender } = render(
         <ChatActionsMenu {...defaultProps} onBlockUser={onBlockUser} onClose={onClose} />
       )

@@ -10,20 +10,21 @@
  * - Already blocked user handling
  */
 
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useBlockUser } from '../useBlockUser'
 import { createClient } from '../../../../lib/supabase/client'
 import type { UUID } from '../../../../types/database'
 
 // Mock the Supabase client
-jest.mock('../../../../lib/supabase/client', () => ({
-  createClient: jest.fn(),
+vi.mock('../../../../lib/supabase/client', () => ({
+  createClient: vi.fn(),
 }))
 
 // Mock console.warn for testing warning scenarios
 const originalWarn = console.warn
 beforeEach(() => {
-  console.warn = jest.fn()
+  console.warn = vi.fn()
 })
 afterEach(() => {
   console.warn = originalWarn
@@ -36,12 +37,12 @@ const mockConversationId: UUID = 'test-conversation-789'
 
 // Create mock Supabase functions
 const createMockSupabase = () => {
-  const mockInsert = jest.fn().mockResolvedValue({ error: null })
-  const mockUpdate = jest.fn().mockReturnValue({
-    eq: jest.fn().mockResolvedValue({ error: null }),
+  const mockInsert = vi.fn().mockResolvedValue({ error: null })
+  const mockUpdate = vi.fn().mockReturnValue({
+    eq: vi.fn().mockResolvedValue({ error: null }),
   })
 
-  const mockFrom = jest.fn().mockImplementation((table: string) => {
+  const mockFrom = vi.fn().mockImplementation((table: string) => {
     if (table === 'blocked_users') {
       return { insert: mockInsert }
     }
@@ -63,9 +64,9 @@ describe('useBlockUser', () => {
   let mockSupabase: ReturnType<typeof createMockSupabase>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockSupabase = createMockSupabase()
-    ;(createClient as jest.Mock).mockReturnValue(mockSupabase)
+    ;(createClient as Mock).mockReturnValue(mockSupabase)
   })
 
   describe('Initial state', () => {
@@ -180,7 +181,7 @@ describe('useBlockUser', () => {
     })
 
     it('should call onSuccess callback on successful block', async () => {
-      const onSuccess = jest.fn()
+      const onSuccess = vi.fn()
 
       const { result } = renderHook(() =>
         useBlockUser({
@@ -199,7 +200,7 @@ describe('useBlockUser', () => {
     })
 
     it('should call onNavigateAway callback after success', async () => {
-      const onNavigateAway = jest.fn()
+      const onNavigateAway = vi.fn()
 
       const { result } = renderHook(() =>
         useBlockUser({
@@ -256,7 +257,7 @@ describe('useBlockUser', () => {
     })
 
     it('should call onError callback on failure', async () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const errorMessage = 'Network error'
 
       mockSupabase._mockInsert.mockResolvedValue({
@@ -337,12 +338,12 @@ describe('useBlockUser', () => {
 
     it('should warn but continue if conversation update fails', async () => {
       mockSupabase._mockUpdate.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({
+        eq: vi.fn().mockResolvedValue({
           error: { message: 'Update failed' },
         }),
       })
 
-      const onSuccess = jest.fn()
+      const onSuccess = vi.fn()
 
       const { result } = renderHook(() =>
         useBlockUser({

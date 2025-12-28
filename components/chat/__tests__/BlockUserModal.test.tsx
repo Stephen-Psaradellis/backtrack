@@ -14,11 +14,12 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BlockUserModal } from '../BlockUserModal'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   modalOverlay: 'modalOverlay',
   modal: 'modal',
   modalHeader: 'modalHeader',
@@ -44,13 +45,13 @@ const defaultProps = {
   username: 'TestUser',
   isLoading: false,
   error: null,
-  onConfirm: jest.fn(),
-  onCancel: jest.fn(),
+  onConfirm: vi.fn(),
+  onCancel: vi.fn(),
 }
 
 describe('BlockUserModal', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     // Reset body overflow style
     document.body.style.overflow = ''
   })
@@ -166,7 +167,7 @@ describe('BlockUserModal', () => {
 
   describe('Button Interactions', () => {
     it('should call onCancel when cancel button is clicked', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} onCancel={onCancel} />)
 
       fireEvent.click(screen.getByText('Cancel'))
@@ -175,7 +176,7 @@ describe('BlockUserModal', () => {
     })
 
     it('should call onConfirm when confirm button is clicked', () => {
-      const onConfirm = jest.fn()
+      const onConfirm = vi.fn()
       render(<BlockUserModal {...defaultProps} onConfirm={onConfirm} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Block User' }))
@@ -184,7 +185,7 @@ describe('BlockUserModal', () => {
     })
 
     it('should not call onCancel when loading', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} isLoading={true} onCancel={onCancel} />)
 
       fireEvent.click(screen.getByText('Cancel'))
@@ -193,7 +194,7 @@ describe('BlockUserModal', () => {
     })
 
     it('should not call onConfirm when loading', () => {
-      const onConfirm = jest.fn()
+      const onConfirm = vi.fn()
       render(<BlockUserModal {...defaultProps} isLoading={true} onConfirm={onConfirm} />)
 
       fireEvent.click(screen.getByText('Blocking...').closest('button')!)
@@ -204,7 +205,7 @@ describe('BlockUserModal', () => {
 
   describe('Keyboard Handling', () => {
     it('should call onCancel when Escape is pressed', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} onCancel={onCancel} />)
 
       fireEvent.keyDown(document, { key: 'Escape' })
@@ -213,7 +214,7 @@ describe('BlockUserModal', () => {
     })
 
     it('should not call onCancel on Escape when loading', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} isLoading={true} onCancel={onCancel} />)
 
       fireEvent.keyDown(document, { key: 'Escape' })
@@ -224,7 +225,7 @@ describe('BlockUserModal', () => {
 
   describe('Backdrop Click', () => {
     it('should call onCancel when clicking on overlay', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} onCancel={onCancel} />)
 
       const overlay = screen.getByRole('dialog').parentElement
@@ -234,7 +235,7 @@ describe('BlockUserModal', () => {
     })
 
     it('should not call onCancel when clicking inside modal', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} onCancel={onCancel} />)
 
       fireEvent.click(screen.getByText('Block User'))
@@ -244,7 +245,7 @@ describe('BlockUserModal', () => {
     })
 
     it('should not close on backdrop click when loading', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} isLoading={true} onCancel={onCancel} />)
 
       const overlay = screen.getByRole('dialog').parentElement

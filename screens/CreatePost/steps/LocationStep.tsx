@@ -21,6 +21,7 @@
  *   onSelect={handleLocationSelect}
  *   userCoordinates={{ latitude: 37.78, longitude: -122.41 }}
  *   loading={loadingLocations}
+ *   isPreselected={preselectedLocation !== null}
  *   onNext={handleNext}
  *   onBack={handleBack}
  * />
@@ -28,7 +29,7 @@
  */
 
 import React, { memo } from 'react'
-import { View, StyleSheet, ViewStyle } from 'react-native'
+import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native'
 
 import { LocationPicker, type LocationItem } from '../../../components/LocationPicker'
 import { Button, OutlineButton } from '../../../components/Button'
@@ -80,6 +81,14 @@ export interface LocationStepProps {
   loading?: boolean
 
   /**
+   * Whether the selected location was pre-filled from navigation params
+   * (e.g., from favorites). When true, allows proceeding even without
+   * recently visited locations.
+   * @default false
+   */
+  isPreselected?: boolean
+
+  /**
    * Callback when user wants to proceed to next step
    */
   onNext: () => void
@@ -104,12 +113,16 @@ export interface LocationStepProps {
  * LocationStep - Location selection step in the CreatePost wizard
  *
  * Displays:
- * 1. Empty state if user has no recent visits (visited within 3 hours)
- * 2. LocationPicker with search and recently visited locations
- * 3. "Visited X ago" badges on each location
- * 4. Back/Next navigation buttons at the bottom
+ * 1. Empty state if user has no recent visits (visited within 3 hours) and no pre-selected location
+ * 2. Pre-selected location view when coming from favorites (allows proceeding without recent visits)
+ * 3. LocationPicker with search and recently visited locations
+ * 4. "Visited X ago" badges on each location
+ * 5. Back/Next navigation buttons at the bottom
  *
  * The Next button is disabled until a location is selected.
+ *
+ * When a location is pre-selected from favorites (isPreselected=true), the user
+ * can proceed even without having recently visited any locations.
  */
 export const LocationStep = memo(function LocationStep({
   locations,
@@ -117,6 +130,7 @@ export const LocationStep = memo(function LocationStep({
   onSelect,
   userCoordinates,
   loading = false,
+  isPreselected = false,
   onNext,
   onBack,
   testID = 'create-post',
@@ -126,7 +140,8 @@ export const LocationStep = memo(function LocationStep({
   // ---------------------------------------------------------------------------
 
   const isLocationSelected = selectedLocation !== null
-  const hasNoVisits = !loading && locations.length === 0
+  // Don't show empty state if a location was pre-selected from favorites
+  const hasNoVisits = !loading && locations.length === 0 && !isPreselected
 
   // ---------------------------------------------------------------------------
   // RENDER: EMPTY STATE
@@ -152,6 +167,73 @@ export const LocationStep = memo(function LocationStep({
             variant="outline"
             style={styles.locationFullWidthButton as ViewStyle}
             testID={`${testID}-location-back`}
+          />
+        </View>
+      </View>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // RENDER: PRE-SELECTED LOCATION (when no visited locations)
+  // ---------------------------------------------------------------------------
+
+  // Show pre-selected location with option to proceed when no visited locations
+  if (isPreselected && selectedLocation && locations.length === 0 && !loading) {
+    return (
+      <View style={styles.locationContainer}>
+        <View style={styles.preselectedContainer}>
+          {/* Header */}
+          <Text style={styles.preselectedHeader}>Selected Location</Text>
+          <Text style={styles.preselectedSubheader}>
+            From your favorites
+          </Text>
+
+          {/* Pre-selected location card */}
+          <TouchableOpacity
+            style={styles.preselectedCard}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Selected location: ${selectedLocation.name}`}
+            testID={`${testID}-preselected-location`}
+          >
+            <View style={styles.preselectedIconContainer}>
+              <Text style={styles.preselectedIcon}>⭐</Text>
+            </View>
+            <View style={styles.preselectedContent}>
+              <Text style={styles.preselectedName} numberOfLines={1}>
+                {selectedLocation.name}
+              </Text>
+              {selectedLocation.address && (
+                <Text style={styles.preselectedAddress} numberOfLines={2}>
+                  {selectedLocation.address}
+                </Text>
+              )}
+            </View>
+            <View style={styles.preselectedCheckmark}>
+              <Text style={styles.checkmarkText}>✓</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Info text */}
+          <Text style={styles.preselectedInfo}>
+            You can proceed with this location or go back to select a different one.
+          </Text>
+        </View>
+
+        {/* Action buttons */}
+        <View style={styles.locationActions}>
+          <OutlineButton
+            title="Back"
+            onPress={onBack}
+            style={styles.locationBackButton as ViewStyle}
+            testID={`${testID}-location-back`}
+          />
+          <Button
+            title="Next"
+            onPress={onNext}
+            disabled={!isLocationSelected}
+            style={styles.locationNextButton as ViewStyle}
+            testID={`${testID}-location-next`}
           />
         </View>
       </View>
@@ -249,6 +331,127 @@ const styles = StyleSheet.create({
    */
   locationFullWidthButton: {
     flex: 1,
+  },
+
+  /**
+   * Container for pre-selected location display
+   */
+  preselectedContainer: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+  },
+
+  /**
+   * Header text for pre-selected section
+   */
+  preselectedHeader: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  /**
+   * Subheader text for pre-selected section
+   */
+  preselectedSubheader: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+
+  /**
+   * Card displaying the pre-selected location
+   */
+  preselectedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    marginBottom: 16,
+  },
+
+  /**
+   * Container for the favorite star icon
+   */
+  preselectedIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  /**
+   * Star icon
+   */
+  preselectedIcon: {
+    fontSize: 20,
+  },
+
+  /**
+   * Content area for location name and address
+   */
+  preselectedContent: {
+    flex: 1,
+  },
+
+  /**
+   * Location name text
+   */
+  preselectedName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 2,
+  },
+
+  /**
+   * Location address text
+   */
+  preselectedAddress: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+
+  /**
+   * Checkmark container
+   */
+  preselectedCheckmark: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+
+  /**
+   * Checkmark text
+   */
+  checkmarkText: {
+    fontSize: 16,
+    color: COLORS.background,
+    fontWeight: 'bold',
+  },
+
+  /**
+   * Info text below the pre-selected card
+   */
+  preselectedInfo: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 })
 

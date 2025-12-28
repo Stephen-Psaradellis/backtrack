@@ -9,6 +9,7 @@
  * - Cleanup on unmount
  */
 
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useTypingIndicator } from '../useTypingIndicator'
 import { createClient } from '../../../../lib/supabase/client'
@@ -16,8 +17,8 @@ import { CHAT_CONSTANTS } from '../../../../types/chat'
 import type { UUID } from '../../../../types/database'
 
 // Mock the Supabase client
-jest.mock('../../../../lib/supabase/client', () => ({
-  createClient: jest.fn(),
+vi.mock('../../../../lib/supabase/client', () => ({
+  createClient: vi.fn(),
 }))
 
 // Mock data
@@ -29,17 +30,18 @@ const mockOtherUserId: UUID = 'test-other-user-456'
 const createMockSupabase = () => {
   let broadcastHandler: ((payload: { payload: { userId: string; isTyping: boolean } }) => void) | null = null
 
-  const mockChannel: { on: jest.Mock; subscribe: jest.Mock; send: jest.Mock } = {} as { on: jest.Mock; subscribe: jest.Mock; send: jest.Mock }
-  mockChannel.on = jest.fn().mockImplementation((_type, _config, callback) => {
-    broadcastHandler = callback
-    return mockChannel
-  })
-  mockChannel.subscribe = jest.fn().mockReturnValue(mockChannel)
-  mockChannel.send = jest.fn().mockResolvedValue({ status: 'ok' })
+  const mockChannel = {
+    on: vi.fn().mockImplementation((_type, _config, callback) => {
+      broadcastHandler = callback
+      return mockChannel
+    }),
+    subscribe: vi.fn().mockReturnValue(mockChannel),
+    send: vi.fn().mockResolvedValue({ status: 'ok' }),
+  }
 
   return {
-    channel: jest.fn().mockReturnValue(mockChannel),
-    removeChannel: jest.fn(),
+    channel: vi.fn().mockReturnValue(mockChannel),
+    removeChannel: vi.fn(),
     _mockChannel: mockChannel,
     _simulateTypingEvent: (userId: string, isTyping: boolean) => {
       if (broadcastHandler) {
@@ -55,14 +57,14 @@ describe('useTypingIndicator', () => {
   let mockSupabase: ReturnType<typeof createMockSupabase>
 
   beforeEach(() => {
-    jest.clearAllMocks()
-    jest.useFakeTimers()
+    vi.clearAllMocks()
+    vi.useFakeTimers()
     mockSupabase = createMockSupabase()
-    ;(createClient as jest.Mock).mockReturnValue(mockSupabase)
+    ;(createClient as Mock).mockReturnValue(mockSupabase)
   })
 
   afterEach(() => {
-    jest.useRealTimers()
+    vi.useRealTimers()
   })
 
   describe('Initial state', () => {
@@ -179,7 +181,7 @@ describe('useTypingIndicator', () => {
 
       // Advance time past debounce period
       act(() => {
-        jest.advanceTimersByTime(CHAT_CONSTANTS.TYPING_DEBOUNCE_MS + 1)
+        vi.advanceTimersByTime(CHAT_CONSTANTS.TYPING_DEBOUNCE_MS + 1)
       })
 
       act(() => {
@@ -246,7 +248,7 @@ describe('useTypingIndicator', () => {
     })
 
     it('should call onTypingChange callback when typing state changes', () => {
-      const onTypingChange = jest.fn()
+      const onTypingChange = vi.fn()
 
       renderHook(() =>
         useTypingIndicator({
@@ -288,7 +290,7 @@ describe('useTypingIndicator', () => {
 
       // Advance time past the typing timeout
       act(() => {
-        jest.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS + 1)
+        vi.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS + 1)
       })
 
       expect(result.current.isOtherUserTyping).toBe(false)
@@ -309,7 +311,7 @@ describe('useTypingIndicator', () => {
 
       // Advance time but not past timeout
       act(() => {
-        jest.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS - 500)
+        vi.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS - 500)
       })
 
       expect(result.current.isOtherUserTyping).toBe(true)
@@ -321,7 +323,7 @@ describe('useTypingIndicator', () => {
 
       // Advance time again but not past new timeout
       act(() => {
-        jest.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS - 500)
+        vi.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS - 500)
       })
 
       // Should still be typing because timeout was reset
@@ -329,7 +331,7 @@ describe('useTypingIndicator', () => {
 
       // Now advance past the full timeout
       act(() => {
-        jest.advanceTimersByTime(1000)
+        vi.advanceTimersByTime(1000)
       })
 
       expect(result.current.isOtherUserTyping).toBe(false)
@@ -357,7 +359,7 @@ describe('useTypingIndicator', () => {
 
       // Advance time past timeout - should still be false (no flicker)
       act(() => {
-        jest.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS + 1)
+        vi.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS + 1)
       })
 
       expect(result.current.isOtherUserTyping).toBe(false)
@@ -385,7 +387,7 @@ describe('useTypingIndicator', () => {
 
       // Advancing time should not cause any issues
       act(() => {
-        jest.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS + 1)
+        vi.advanceTimersByTime(CHAT_CONSTANTS.TYPING_TIMEOUT_MS + 1)
       })
 
       // No errors should occur

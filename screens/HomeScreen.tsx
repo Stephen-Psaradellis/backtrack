@@ -12,6 +12,9 @@
  * - FAB button to create new posts
  * - Selected location indicator
  * - Navigate to Ledger for selected locations
+ * - Favorites button to access saved favorite locations
+ * - Quick actions to post or browse at favorite locations
+ * - Add selected locations to favorites from the bottom sheet
  *
  * @example
  * ```tsx
@@ -29,6 +32,7 @@ import {
   Alert,
   Animated,
   Platform,
+  Modal,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 
@@ -36,7 +40,11 @@ import { MapView, createRegion, createMarker, type MapMarker } from '../componen
 import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Button, OutlineButton } from '../components/Button'
+import { FavoritesList } from '../components/favorites/FavoritesList'
+import { AddFavoriteModal } from '../components/favorites/AddFavoriteModal'
 import { useLocation } from '../hooks/useLocation'
+import { useFavoriteLocations } from '../hooks/useFavoriteLocations'
+import type { FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
 import { supabase } from '../lib/supabase'
 import type { MainTabNavigationProp } from '../navigation/types'
 import type { Coordinates, MapRegion, Location as LocationEntity } from '../lib/types'
@@ -109,9 +117,29 @@ export function HomeScreen(): JSX.Element {
   const [mapReady, setMapReady] = useState(false)
   const [nearbyLocations, setNearbyLocations] = useState<LocationEntity[]>([])
   const [loadingNearby, setLoadingNearby] = useState(false)
+  const [showFavoritesModal, setShowFavoritesModal] = useState(false)
+  const [showAddFavoriteModal, setShowAddFavoriteModal] = useState(false)
+  const [savingFavorite, setSavingFavorite] = useState(false)
+  const [saveFavoriteError, setSaveFavoriteError] = useState<string | null>(null)
 
   // Animation for bottom sheet
   const bottomSheetAnimation = useRef(new Animated.Value(0)).current
+
+  // ---------------------------------------------------------------------------
+  // FAVORITES HOOK
+  // ---------------------------------------------------------------------------
+
+  const {
+    favorites,
+    isLoading: favoritesLoading,
+    isMutating: favoritesMutating,
+    error: favoritesError,
+    refetch: refetchFavorites,
+    addFavorite,
+    isAtLimit: favoritesAtLimit,
+  } = useFavoriteLocations({
+    userCoordinates: latitude && longitude ? { latitude, longitude } : null,
+  })
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -297,6 +325,138 @@ export function HomeScreen(): JSX.Element {
     }
   }, [requestPermission, refreshLocation])
 
+  /**
+   * Open favorites modal
+   */
+  const handleOpenFavorites = useCallback(async () => {
+    await lightFeedback()
+    setShowFavoritesModal(true)
+  }, [])
+
+  /**
+   * Close favorites modal
+   */
+  const handleCloseFavorites = useCallback(() => {
+    setShowFavoritesModal(false)
+  }, [])
+
+  /**
+   * Handle "Post Here" action from favorites list
+   */
+  const handleFavoritePostHere = useCallback(
+    (favorite: FavoriteLocationWithDistance) => {
+      setShowFavoritesModal(false)
+      // Navigate to create post with the favorite's location
+      navigation.navigate('CreatePost', {
+        locationId: favorite.place_id || undefined,
+      })
+    },
+    [navigation]
+  )
+
+  /**
+   * Handle "Browse" action from favorites list
+   */
+  const handleFavoriteBrowse = useCallback(
+    (favorite: FavoriteLocationWithDistance) => {
+      setShowFavoritesModal(false)
+      // Navigate to ledger filtered by this location
+      navigation.navigate('Ledger', {
+        locationId: favorite.place_id || favorite.id,
+        locationName: favorite.custom_name,
+      })
+    },
+    [navigation]
+  )
+
+  /**
+   * Open the AddFavoriteModal for the selected location
+   *
+   * Checks if user has reached the favorites limit before opening.
+   */
+  const handleOpenAddFavorite = useCallback(async () => {
+    if (!selectedLocation) return
+    await lightFeedback()
+
+    // Check if at favorites limit before opening modal
+    if (favoritesAtLimit) {
+      Alert.alert(
+        'Favorites Limit Reached',
+        'You have reached the maximum number of favorite locations. Please remove some favorites before adding new ones.',
+        [{ text: 'OK' }]
+      )
+      return
+    }
+
+    setSaveFavoriteError(null)
+    setShowAddFavoriteModal(true)
+  }, [selectedLocation, favoritesAtLimit])
+
+  /**
+   * Close the AddFavoriteModal
+   */
+  const handleCloseAddFavorite = useCallback(() => {
+    setShowAddFavoriteModal(false)
+    setSaveFavoriteError(null)
+  }, [])
+
+  /**
+   * Save a location as a favorite using the useFavoriteLocations hook
+   *
+   * Uses the hook's addFavorite function which provides:
+   * - Authentication check
+   * - Favorites limit enforcement
+   * - Optimistic UI updates
+   * - Automatic state management
+   */
+  const handleSaveFavorite = useCallback(
+    async (customName: string) => {
+      if (!selectedLocation) return
+
+      setSavingFavorite(true)
+      setSaveFavoriteError(null)
+
+      // Check if at favorites limit before attempting
+      if (favoritesAtLimit) {
+        setSaveFavoriteError('You have reached the maximum number of favorites.')
+        setSavingFavorite(false)
+        return
+      }
+
+      // Use the hook's addFavorite function
+      const result = await addFavorite({
+        custom_name: customName,
+        place_name: selectedLocation.name,
+        latitude: selectedLocation.coordinates.latitude,
+        longitude: selectedLocation.coordinates.longitude,
+        address: selectedLocation.address,
+        place_id: selectedLocation.locationId,
+      })
+
+      setSavingFavorite(false)
+
+      if (result.success) {
+        // Success - close modal and clear selection
+        setShowAddFavoriteModal(false)
+        setSelectedLocation(null)
+        Alert.alert('Success', `"${customName}" has been added to your favorites!`)
+      } else {
+        // Handle specific error cases
+        const errorMessage = result.error || 'Failed to save favorite. Please try again.'
+
+        // Check for duplicate entry error
+        if (errorMessage.includes('already') || errorMessage.includes('duplicate')) {
+          setSaveFavoriteError('This location is already in your favorites.')
+        } else if (errorMessage.includes('logged in') || errorMessage.includes('authenticated')) {
+          setSaveFavoriteError('You must be logged in to save favorites.')
+        } else {
+          setSaveFavoriteError(errorMessage)
+        }
+      }
+    },
+    [selectedLocation, addFavorite, favoritesAtLimit]
+  )
+
   // ---------------------------------------------------------------------------
   // COMPUTED VALUES
   // ---------------------------------------------------------------------------
@@ -467,6 +627,12 @@ export function HomeScreen(): JSX.Element {
                   size="small"
                   testID="home-cancel-selection-button"
                 />
+                <OutlineButton
+                  title="⭐ Favorite"
+                  onPress={handleOpenAddFavorite}
+                  size="small"
+                  testID="home-add-favorite-button"
+                />
                 <Button
                   title="View Posts"
                   onPress={handleViewLedger}
@@ -479,6 +645,18 @@ export function HomeScreen(): JSX.Element {
         )}
       </Animated.View>
 
+      {/* Favorites Button */}
+      <TouchableOpacity
+        style={styles.favoritesButton}
+        onPress={handleOpenFavorites}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Open favorites"
+        testID="home-favorites-button"
+      >
+        <Text style={styles.favoritesIcon}>⭐</Text>
+      </TouchableOpacity>
+
       {/* Recenter Button */}
       <TouchableOpacity
         style={styles.recenterButton}
@@ -488,6 +666,67 @@ export function HomeScreen(): JSX.Element {
       >
         <Text style={styles.recenterIcon}>◎</Text>
       </TouchableOpacity>
+
+      {/* Favorites Modal */}
+      <Modal
+        visible={showFavoritesModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseFavorites}
+        testID="home-favorites-modal"
+      >
+        <View style={styles.modalContainer}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Favorites</Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={handleCloseFavorites}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Close favorites"
+              testID="home-favorites-modal-close"
+            >
+              <Text style={styles.modalCloseIcon}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Favorites List */}
+          <FavoritesList
+            favorites={favorites}
+            isLoading={favoritesLoading}
+            error={favoritesError?.message ?? null}
+            onPostHere={handleFavoritePostHere}
+            onBrowse={handleFavoriteBrowse}
+            onRetry={refetchFavorites}
+            onRefresh={refetchFavorites}
+            emptyTitle="No Favorites Yet"
+            emptyMessage="Save your favorite locations from the map to quickly post or browse connections at places you visit often."
+            testID="home-favorites-list"
+          />
+        </View>
+      </Modal>
+
+      {/* Add Favorite Modal */}
+      <AddFavoriteModal
+        visible={showAddFavoriteModal}
+        location={
+          selectedLocation
+            ? {
+                placeName: selectedLocation.name,
+                address: selectedLocation.address,
+                latitude: selectedLocation.coordinates.latitude,
+                longitude: selectedLocation.coordinates.longitude,
+                placeId: selectedLocation.locationId,
+              }
+            : null
+        }
+        onSave={handleSaveFavorite}
+        onCancel={handleCloseAddFavorite}
+        isLoading={savingFavorite}
+        error={saveFavoriteError}
+        testID="home-add-favorite-modal"
+      />
     </View>
   )
 }
@@ -688,5 +927,66 @@ const styles = StyleSheet.create({
   recenterIcon: {
     fontSize: 24,
     color: '#007AFF',
+  },
+
+  // Favorites Button
+  favoritesButton: {
+    position: 'absolute',
+    bottom: 76,
+    left: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  favoritesIcon: {
+    fontSize: 20,
+  },
+
+  // Modal
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 16 : 20,
+    paddingBottom: 12,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+  },
+
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E5E5EA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalCloseIcon: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8E8E93',
   },
 })

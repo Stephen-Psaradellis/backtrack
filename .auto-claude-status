@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "021-verified-user-badge-system",
+  "spec": "025-event-integration",
   "state": "building",
   "subtasks": {
-    "completed": 7,
-    "total": 12,
+    "completed": 24,
+    "total": 25,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Add Badge to Conversations",
+    "current": "Integration & E2E Verification",
     "id": null,
-    "total": 2
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 8,
-    "started_at": "2025-12-27T14:50:29.488200"
+    "number": 25,
+    "started_at": "2025-12-27T15:47:22.262663"
   },
-  "last_update": "2025-12-27T15:14:46.632419"
+  "last_update": "2025-12-27T17:29:22.809847"
 }

@@ -31,10 +31,14 @@ import {
   FlatList,
   RefreshControl,
   Platform,
+  TouchableOpacity,
+  StatusBar,
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
+import Tooltip from 'react-native-walkthrough-tooltip'
 
-import { PostCard } from '../components/PostCard'
+import { PostCard, createPostCardRenderer } from '../components/PostCard'
+import { useTutorialState } from '../hooks/useTutorialState'
 import { selectionFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyLedger, ErrorState } from '../components/EmptyState'
@@ -93,6 +97,9 @@ export function LedgerScreen(): JSX.Element {
   const route = useRoute<LedgerRouteProp>()
   const navigation = useNavigation<MainStackNavigationProp>()
   const { userId } = useAuth()
+
+  // Tutorial tooltip state for ledger browsing onboarding
+  const tutorial = useTutorialState('ledger_browsing')
 
   const { locationId, locationName } = route.params
 
@@ -215,6 +222,26 @@ export function LedgerScreen(): JSX.Element {
   // ---------------------------------------------------------------------------
 
   /**
+   * Render tutorial tooltip content for ledger browsing onboarding
+   */
+  const renderTutorialContent = (): React.ReactNode => (
+    <View style={tooltipStyles.container}>
+      <Text style={tooltipStyles.title}>Browse the Ledger</Text>
+      <Text style={tooltipStyles.description}>
+        View posts from other users at this location. Tap on any post to see more details
+        and start a conversation if you think it might be about you!
+      </Text>
+      <TouchableOpacity
+        style={tooltipStyles.button}
+        onPress={tutorial.markComplete}
+        testID="tutorial-dismiss-button"
+      >
+        <Text style={tooltipStyles.buttonText}>Got it</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  /**
    * Render individual post item
    */
   const renderPost = useCallback(
@@ -330,31 +357,41 @@ export function LedgerScreen(): JSX.Element {
   // ---------------------------------------------------------------------------
 
   return (
-    <View style={styles.container} testID="ledger-screen">
-      <FlatList
-        data={posts}
-        renderItem={renderPost}
-        keyExtractor={keyExtractor}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        contentContainerStyle={[
-          styles.listContent,
-          posts.length === 0 && styles.listContentEmpty,
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
-            testID="ledger-refresh-control"
-          />
-        }
-        testID="ledger-post-list"
-      />
-    </View>
+    <Tooltip
+      isVisible={tutorial.isVisible}
+      content={renderTutorialContent()}
+      placement="bottom"
+      onClose={tutorial.markComplete}
+      closeOnChildInteraction={false}
+      allowChildInteraction={true}
+      topAdjustment={Platform.OS === 'android' ? -(StatusBar.currentHeight ?? 0) : 0}
+    >
+      <View style={styles.container} testID="ledger-screen">
+        <FlatList
+          data={posts}
+          renderItem={renderPost}
+          keyExtractor={keyExtractor}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          contentContainerStyle={[
+            styles.listContent,
+            posts.length === 0 && styles.listContentEmpty,
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+              testID="ledger-refresh-control"
+            />
+          }
+          testID="ledger-post-list"
+        />
+      </View>
+    </Tooltip>
   )
 }
 
@@ -427,6 +464,40 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: 12,
     textAlign: 'center',
+  },
+})
+
+/**
+ * Styles for tutorial tooltip content
+ */
+const tooltipStyles = StyleSheet.create({
+  container: {
+    padding: 16,
+    maxWidth: 280,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: '#EC4899',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 })
 

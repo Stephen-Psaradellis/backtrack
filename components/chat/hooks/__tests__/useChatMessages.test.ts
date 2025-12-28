@@ -9,6 +9,7 @@
  * - Error handling and recovery
  */
 
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useChatMessages } from '../useChatMessages'
 import { createClient } from '../../../../lib/supabase/client'
@@ -16,8 +17,8 @@ import type { MessageWithSender } from '../../../../types/chat'
 import type { UUID } from '../../../../types/database'
 
 // Mock the Supabase client
-jest.mock('../../../../lib/supabase/client', () => ({
-  createClient: jest.fn(),
+vi.mock('../../../../lib/supabase/client', () => ({
+  createClient: vi.fn(),
 }))
 
 // Mock data
@@ -76,37 +77,38 @@ const mockMessages: MessageWithSender[] = [
 
 // Create mock Supabase functions
 const createMockSupabase = () => {
-  const mockSubscriptionCallback = jest.fn()
+  const mockSubscriptionCallback = vi.fn()
   let subscriptionHandler: ((payload: { new: Record<string, unknown> }) => void) | null = null
 
-  const mockChannel: { on: jest.Mock; subscribe: jest.Mock } = {} as { on: jest.Mock; subscribe: jest.Mock }
-  mockChannel.on = jest.fn().mockImplementation((_event, _config, callback) => {
-    subscriptionHandler = callback
-    return mockChannel
-  })
-  mockChannel.subscribe = jest.fn().mockReturnValue(mockChannel)
+  const mockChannel = {
+    on: vi.fn().mockImplementation((_event, _config, callback) => {
+      subscriptionHandler = callback
+      return mockChannel
+    }),
+    subscribe: vi.fn().mockReturnValue(mockChannel),
+  }
 
-  const mockFrom = jest.fn().mockReturnValue({
-    select: jest.fn().mockReturnValue({
-      eq: jest.fn().mockReturnValue({
-        order: jest.fn().mockReturnValue({
-          limit: jest.fn().mockResolvedValue({ data: [...mockMessages].reverse(), error: null }),
+  const mockFrom = vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        order: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue({ data: [...mockMessages].reverse(), error: null }),
         }),
-        lt: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+        lt: vi.fn().mockReturnValue({
+          order: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
         }),
-        single: jest.fn().mockResolvedValue({ data: mockMessages[2], error: null }),
-        neq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({ data: mockMessages[2], error: null }),
+        neq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
         }),
       }),
     }),
-    update: jest.fn().mockReturnValue({
-      eq: jest.fn().mockReturnValue({
-        neq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+    update: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        neq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
         }),
       }),
     }),
@@ -114,8 +116,8 @@ const createMockSupabase = () => {
 
   return {
     from: mockFrom,
-    channel: jest.fn().mockReturnValue(mockChannel),
-    removeChannel: jest.fn(),
+    channel: vi.fn().mockReturnValue(mockChannel),
+    removeChannel: vi.fn(),
     _simulateNewMessage: (payload: { new: Record<string, unknown> }) => {
       if (subscriptionHandler) {
         subscriptionHandler(payload)
@@ -130,13 +132,13 @@ describe('useChatMessages', () => {
   let mockSupabase: ReturnType<typeof createMockSupabase>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockSupabase = createMockSupabase()
-    ;(createClient as jest.Mock).mockReturnValue(mockSupabase)
+    ;(createClient as Mock).mockReturnValue(mockSupabase)
   })
 
   afterEach(() => {
-    jest.clearAllTimers()
+    vi.clearAllTimers()
   })
 
   describe('Initial fetch behavior', () => {
@@ -170,10 +172,10 @@ describe('useChatMessages', () => {
     it('should set error state when fetch fails', async () => {
       const errorMessage = 'Database connection failed'
       mockSupabase._mockFrom.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({
                 data: null,
                 error: { message: errorMessage },
               }),
@@ -254,10 +256,10 @@ describe('useChatMessages', () => {
 
     it('should not load more when messages array is empty', async () => {
       mockSupabase._mockFrom.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           }),
         }),
@@ -324,7 +326,7 @@ describe('useChatMessages', () => {
     })
 
     it('should call onNewMessage callback when receiving new message', async () => {
-      const onNewMessage = jest.fn()
+      const onNewMessage = vi.fn()
 
       const { result } = renderHook(() =>
         useChatMessages({
@@ -417,7 +419,7 @@ describe('useChatMessages', () => {
     })
 
     it('should not call API when conversationId is empty', async () => {
-      const mockFromSpy = jest.spyOn(mockSupabase, 'from')
+      const mockFromSpy = vi.spyOn(mockSupabase, 'from')
       mockFromSpy.mockClear()
 
       const { result } = renderHook(() =>
@@ -448,10 +450,10 @@ describe('useChatMessages', () => {
       // First call fails
       mockSupabase._mockFrom
         .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                limit: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue({
                   data: null,
                   error: { message: 'Network error' },
                 }),
@@ -479,10 +481,10 @@ describe('useChatMessages', () => {
 
     it('should handle non-Error thrown exceptions', async () => {
       mockSupabase._mockFrom.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockRejectedValue('String error'),
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockRejectedValue('String error'),
             }),
           }),
         }),

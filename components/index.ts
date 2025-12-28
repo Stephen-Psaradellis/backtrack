@@ -63,6 +63,30 @@ export {
   type LocationItem,
 } from './LocationPicker'
 
+// Avatar Preview
+export {
+  AvatarPreview,
+  SmallAvatarPreview,
+  MediumAvatarPreview,
+  LargeAvatarPreview,
+  XLargeAvatarPreview,
+  TransparentAvatarPreview,
+  isValidAvatarConfig,
+  createAvatarConfig,
+  areAvatarConfigsEqual,
+  DEFAULT_AVATAR_SIZE,
+  AVATAR_SIZES,
+  type AvatarPreviewProps,
+} from './AvatarPreview'
+
+// Avatar Builder
+export {
+  AvatarBuilder,
+  CompactAvatarBuilder,
+  ModalAvatarBuilder,
+  type AvatarBuilderProps,
+} from './AvatarBuilder'
+
 // Ready Player Me Avatar
 export {
   SmallAvatarPreview,
@@ -94,6 +118,7 @@ export {
   PostCardNoLocation,
   MatchablePostCard,
   PostCardListItem,
+  createPostCardRenderer,
   formatRelativeTime,
   truncateText,
   getMatchColor,
@@ -165,3 +190,6 @@ export {
   type VerificationPromptProps,
   type VerificationPromptVariant,
 } from './VerificationPrompt'
+
+// Onboarding Guard
+export { OnboardingGuard } from './OnboardingGuard'

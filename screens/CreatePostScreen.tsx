@@ -19,12 +19,14 @@
  */
 
 import React, { useCallback } from 'react'
-import { View, Alert } from 'react-native'
+import { View, Alert, Text, TouchableOpacity, Platform, StatusBar, StyleSheet } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
+import Tooltip from 'react-native-walkthrough-tooltip'
 
 import { locationToItem } from '../components/LocationPicker'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { selectionFeedback, errorFeedback, warningFeedback, successFeedback } from '../lib/haptics'
+import { useTutorialState } from '../hooks/useTutorialState'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../navigation/types'
 
 // CreatePost module imports
@@ -61,6 +63,9 @@ export function CreatePostScreen(): JSX.Element {
 
   // Form state and handlers from custom hook
   const form = useCreatePostForm({ navigation, route })
+
+  // Tutorial tooltip state for post creation onboarding
+  const tutorial = useTutorialState('post_creation')
 
   // ---------------------------------------------------------------------------
   // HAPTIC FEEDBACK HANDLERS
@@ -133,6 +138,26 @@ export function CreatePostScreen(): JSX.Element {
   // ---------------------------------------------------------------------------
   // RENDER HELPERS
   // ---------------------------------------------------------------------------
+
+  /**
+   * Render tutorial tooltip content for post creation onboarding
+   */
+  const renderTutorialContent = (): React.ReactNode => (
+    <View style={tooltipStyles.container}>
+      <Text style={tooltipStyles.title}>Create a Missed Connection</Text>
+      <Text style={tooltipStyles.description}>
+        Start by selecting a photo, then describe who you saw, write a note, and choose a location.
+        Your post will help you reconnect!
+      </Text>
+      <TouchableOpacity
+        style={tooltipStyles.button}
+        onPress={tutorial.markComplete}
+        testID="tutorial-dismiss-button"
+      >
+        <Text style={tooltipStyles.buttonText}>Got it</Text>
+      </TouchableOpacity>
+    </View>
+  )
 
   /**
    * Render current step content based on currentStep
@@ -232,36 +257,94 @@ export function CreatePostScreen(): JSX.Element {
 
   if (isFullScreenStep) {
     return (
-      <View style={sharedStyles.fullScreenContainer} testID="create-post-screen">
-        {renderStepContent()}
-      </View>
+      <Tooltip
+        isVisible={tutorial.isVisible}
+        content={renderTutorialContent()}
+        placement="bottom"
+        onClose={tutorial.markComplete}
+        closeOnChildInteraction={false}
+        allowChildInteraction={true}
+        topAdjustment={Platform.OS === 'android' ? -(StatusBar.currentHeight ?? 0) : 0}
+      >
+        <View style={sharedStyles.fullScreenContainer} testID="create-post-screen">
+          {renderStepContent()}
+        </View>
+      </Tooltip>
     )
   }
 
   return (
-    <View style={sharedStyles.container} testID="create-post-screen">
-      {/* Header with step indicator */}
-      <StepHeader
-        stepConfig={form.currentStepConfig}
-        onBack={handleBackWithFeedback}
-        testID="create-post"
-      />
+    <Tooltip
+      isVisible={tutorial.isVisible}
+      content={renderTutorialContent()}
+      placement="bottom"
+      onClose={tutorial.markComplete}
+      closeOnChildInteraction={false}
+      allowChildInteraction={true}
+      topAdjustment={Platform.OS === 'android' ? -(StatusBar.currentHeight ?? 0) : 0}
+    >
+      <View style={sharedStyles.container} testID="create-post-screen">
+        {/* Header with step indicator */}
+        <StepHeader
+          stepConfig={form.currentStepConfig}
+          onBack={handleBackWithFeedback}
+          testID="create-post"
+        />
 
-      {/* Animated progress bar */}
-      <ProgressBar
-        progressAnim={form.progressAnim}
-        currentStep={form.currentStepIndex + 1}
-        totalSteps={STEPS.length}
-        testID="create-post"
-      />
+        {/* Animated progress bar */}
+        <ProgressBar
+          progressAnim={form.progressAnim}
+          currentStep={form.currentStepIndex + 1}
+          totalSteps={STEPS.length}
+          testID="create-post"
+        />
 
-      {/* Step content */}
-      <View style={sharedStyles.content}>
-        {renderStepContent()}
+        {/* Step content */}
+        <View style={sharedStyles.content}>
+          {renderStepContent()}
+        </View>
       </View>
-    </View>
+    </Tooltip>
   )
 }
+
+// ============================================================================
+// STYLES
+// ============================================================================
+
+/**
+ * Styles for tutorial tooltip content
+ */
+const tooltipStyles = StyleSheet.create({
+  container: {
+    padding: 16,
+    maxWidth: 280,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: '#EC4899',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+})
 
 // ============================================================================
 // EXPORTS

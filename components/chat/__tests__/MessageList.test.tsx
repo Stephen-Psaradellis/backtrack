@@ -12,13 +12,14 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MessageList } from '../MessageList'
 import type { MessageWithSender } from '../../../types/chat'
 import type { UUID } from '../../../types/database'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   messageListContainer: 'messageListContainer',
   loadMoreTrigger: 'loadMoreTrigger',
   loadingMoreContainer: 'loadingMoreContainer',
@@ -36,8 +37,8 @@ jest.mock('../styles/ChatScreen.module.css', () => ({
 }))
 
 // Mock MessageBubble component
-jest.mock('../MessageBubble', () => ({
-  MessageBubble: jest.fn(({ message, isOwn }) => (
+vi.mock('../MessageBubble', () => ({
+  MessageBubble: vi.fn(({ message, isOwn }) => (
     <div data-testid={`message-${message.id}`} data-is-own={isOwn}>
       {message.content}
     </div>
@@ -45,24 +46,24 @@ jest.mock('../MessageBubble', () => ({
 }))
 
 // Mock TypingIndicator component
-jest.mock('../TypingIndicator', () => ({
-  TypingIndicator: jest.fn(({ isTyping, username }) =>
+vi.mock('../TypingIndicator', () => ({
+  TypingIndicator: vi.fn(({ isTyping, username }) =>
     isTyping ? <div data-testid="typing-indicator">{username} is typing...</div> : null
   ),
 }))
 
 // Mock formatters
-jest.mock('../utils/formatters', () => ({
-  shouldShowDateSeparator: jest.fn((current, previous) => !previous),
-  getDateSeparatorText: jest.fn(() => 'Today'),
+vi.mock('../utils/formatters', () => ({
+  shouldShowDateSeparator: vi.fn((current, previous) => !previous),
+  getDateSeparatorText: vi.fn(() => 'Today'),
 }))
 
 // Mock IntersectionObserver
-const mockIntersectionObserver = jest.fn()
+const mockIntersectionObserver = vi.fn()
 mockIntersectionObserver.mockReturnValue({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
 })
 window.IntersectionObserver = mockIntersectionObserver
 
@@ -115,14 +116,14 @@ const defaultProps = {
   hasMoreMessages: false,
   isOtherUserTyping: false,
   otherUserName: 'OtherUser',
-  onLoadMore: jest.fn(),
-  onRetryMessage: jest.fn(),
-  onDeleteMessage: jest.fn(),
+  onLoadMore: vi.fn(),
+  onRetryMessage: vi.fn(),
+  onDeleteMessage: vi.fn(),
 }
 
 describe('MessageList', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('Basic Rendering', () => {
@@ -293,7 +294,7 @@ describe('MessageList', () => {
   describe('Callback Props', () => {
     it('should pass onRetryMessage to MessageBubble', () => {
       const { MessageBubble } = require('../MessageBubble')
-      const onRetryMessage = jest.fn()
+      const onRetryMessage = vi.fn()
       const messages = createMockMessages(1)
 
       render(<MessageList {...defaultProps} messages={messages} onRetryMessage={onRetryMessage} />)
@@ -308,7 +309,7 @@ describe('MessageList', () => {
 
     it('should pass onDeleteMessage to MessageBubble', () => {
       const { MessageBubble } = require('../MessageBubble')
-      const onDeleteMessage = jest.fn()
+      const onDeleteMessage = vi.fn()
       const messages = createMockMessages(1)
 
       render(<MessageList {...defaultProps} messages={messages} onDeleteMessage={onDeleteMessage} />)

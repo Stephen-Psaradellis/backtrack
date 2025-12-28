@@ -22,10 +22,12 @@
  */
 
 import React, { memo } from 'react'
-import { View, Image, StyleSheet, Dimensions } from 'react-native'
+import { View, Image, Text, TouchableOpacity, Platform, StatusBar, StyleSheet, Dimensions } from 'react-native'
+import Tooltip from 'react-native-walkthrough-tooltip'
 
 import { SelfieCamera } from '../../../components/SelfieCamera'
 import { Button, OutlineButton } from '../../../components/Button'
+import { useTutorialState } from '../../../hooks/useTutorialState'
 
 // ============================================================================
 // TYPES
@@ -97,6 +99,37 @@ export const SelfieStep = memo(function SelfieStep({
   testID = 'create-post',
 }: SelfieStepProps): JSX.Element {
   // ---------------------------------------------------------------------------
+  // HOOKS
+  // ---------------------------------------------------------------------------
+
+  // Tutorial tooltip state for selfie verification onboarding
+  const tutorial = useTutorialState('selfie_verification')
+
+  // ---------------------------------------------------------------------------
+  // RENDER HELPERS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Render tutorial tooltip content for selfie verification onboarding
+   */
+  const renderTutorialContent = (): React.ReactNode => (
+    <View style={tooltipStyles.container}>
+      <Text style={tooltipStyles.title}>Verify It's You</Text>
+      <Text style={tooltipStyles.description}>
+        Take a quick selfie to verify you're real. This helps build trust and keeps our community safe.
+        Your selfie is only used for verification.
+      </Text>
+      <TouchableOpacity
+        style={tooltipStyles.button}
+        onPress={tutorial.markComplete}
+        testID="selfie-tutorial-dismiss-button"
+      >
+        <Text style={tooltipStyles.buttonText}>Got it</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  // ---------------------------------------------------------------------------
   // RENDER: SELFIE PREVIEW
   // ---------------------------------------------------------------------------
 
@@ -130,11 +163,23 @@ export const SelfieStep = memo(function SelfieStep({
   // ---------------------------------------------------------------------------
 
   return (
-    <SelfieCamera
-      onCapture={onCapture}
-      onCancel={onBack}
-      testID={`${testID}-camera`}
-    />
+    <Tooltip
+      isVisible={tutorial.isVisible}
+      content={renderTutorialContent()}
+      placement="bottom"
+      onClose={tutorial.markComplete}
+      closeOnChildInteraction={false}
+      allowChildInteraction={true}
+      topAdjustment={Platform.OS === 'android' ? -(StatusBar.currentHeight ?? 0) : 0}
+    >
+      <View style={styles.cameraContainer}>
+        <SelfieCamera
+          onCapture={onCapture}
+          onCancel={onBack}
+          testID={`${testID}-camera`}
+        />
+      </View>
+    </Tooltip>
   )
 })
 
@@ -143,6 +188,13 @@ export const SelfieStep = memo(function SelfieStep({
 // ============================================================================
 
 const styles = StyleSheet.create({
+  /**
+   * Container for camera view to enable tooltip wrapping
+   */
+  cameraContainer: {
+    flex: 1,
+  },
+
   /**
    * Container for selfie preview with dark background
    */
@@ -170,6 +222,40 @@ const styles = StyleSheet.create({
   selfieActions: {
     flexDirection: 'row',
     gap: 16,
+  },
+})
+
+/**
+ * Styles for tutorial tooltip content
+ */
+const tooltipStyles = StyleSheet.create({
+  container: {
+    padding: 16,
+    maxWidth: 280,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: '#EC4899',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 })
 

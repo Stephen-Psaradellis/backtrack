@@ -6,6 +6,7 @@
  */
 
 import type { StoredAvatar } from '../components/ReadyPlayerMe'
+import type { AvatarConfig } from './avatar'
 
 // ============================================================================
 // COMMON TYPES
@@ -184,6 +185,69 @@ export interface LocationVisitInsert {
   latitude: number
   longitude: number
   accuracy?: number | null
+}
+
+// ============================================================================
+// FAVORITE LOCATIONS
+// ============================================================================
+
+/**
+ * User's saved favorite location for quick access
+ *
+ * Allows users to save frequently visited venues (coffee shops, gyms, etc.)
+ * for one-tap post creation or ledger browsing.
+ * Users can give each favorite a custom name.
+ */
+export interface FavoriteLocation {
+  /** Unique identifier for the favorite location */
+  id: UUID
+  /** User who saved this favorite (references auth.users) */
+  user_id: UUID
+  /** User-defined label for this favorite (max 50 characters) */
+  custom_name: string
+  /** Actual name of the venue/place */
+  place_name: string
+  /** GPS latitude coordinate */
+  latitude: number
+  /** GPS longitude coordinate */
+  longitude: number
+  /** Full address of the location */
+  address: string | null
+  /** Google Places ID for venue identification */
+  place_id: string | null
+  /** Timestamp when the favorite was created */
+  created_at: Timestamp
+  /** Timestamp when the favorite was last updated */
+  updated_at: Timestamp
+}
+
+/**
+ * Fields required when inserting a new favorite location
+ */
+export interface FavoriteLocationInsert {
+  id?: UUID
+  user_id: UUID
+  custom_name: string
+  place_name: string
+  latitude: number
+  longitude: number
+  address?: string | null
+  place_id?: string | null
+  created_at?: Timestamp
+  updated_at?: Timestamp
+}
+
+/**
+ * Fields that can be updated on a favorite location
+ */
+export interface FavoriteLocationUpdate {
+  custom_name?: string
+  place_name?: string
+  latitude?: number
+  longitude?: number
+  address?: string | null
+  place_id?: string | null
+  updated_at?: Timestamp
 }
 
 // ============================================================================
@@ -613,228 +677,5 @@ export interface UserReport {
   reporter_id: UUID
   reported_id: UUID
   reason: ReportReason
-  details: string | null
   created_at: Timestamp
-}
-
-/**
- * Fields required when inserting a new user report
- */
-export interface UserReportInsert {
-  id?: UUID
-  reporter_id: UUID
-  reported_id: UUID
-  reason: ReportReason
-  details?: string | null
-  created_at?: Timestamp
-}
-
-// ============================================================================
-// GEOSPATIAL TYPES
-// ============================================================================
-
-/**
- * Coordinates for geospatial queries
- */
-export interface Coordinates {
-  latitude: number
-  longitude: number
-}
-
-/**
- * Parameters for the get_nearby_locations database function.
- * Uses PostGIS ST_DWithin for efficient spatial queries with GIST index.
- */
-export interface NearbyLocationParams {
-  /** User's latitude coordinate (WGS 84) */
-  user_lat: number
-  /** User's longitude coordinate (WGS 84) */
-  user_lon: number
-  /** Search radius in meters (default: 5000 = 5km) */
-  radius_meters?: number
-  /** Maximum number of results to return (default: 50) */
-  max_results?: number
-}
-
-/**
- * Parameters for the get_locations_with_active_posts database function.
- * Returns nearby locations filtered by those with active posts.
- */
-export interface LocationsWithActivePostsParams extends NearbyLocationParams {
-  /** Minimum number of active posts required (default: 1) */
-  min_post_count?: number
-}
-
-/**
- * Parameters for the get_recently_visited_locations database function.
- * Returns locations the user has visited recently.
- * Note: user_id is optional because the database function uses auth.uid() internally.
- */
-export interface RecentlyVisitedLocationsParams {
-  /** User ID to query visits for (optional - uses auth.uid() if not provided) */
-  user_id?: UUID
-  /** Time window in minutes to look back (default: 180 = 3 hours) */
-  minutes_back?: number
-  /** Maximum number of results to return (default: 50) */
-  max_results?: number
-}
-
-/** Alias for RecentlyVisitedLocationsParams (singular spelling) */
-export type RecentlyVisitedLocationParams = RecentlyVisitedLocationsParams
-
-// ============================================================================
-// COMPUTED/JOINED TYPES
-// ============================================================================
-
-/**
- * Location with computed distance from a reference point.
- * Returned by get_nearby_locations database function.
- */
-export interface LocationWithDistance extends Location {
-  /** Distance in meters from the query point */
-  distance_meters: number
-}
-
-/**
- * Location with active post information.
- * Returned by get_locations_with_active_posts database function.
- */
-export interface LocationWithActivePosts extends LocationWithDistance {
-  /** Number of currently active posts at this location */
-  active_post_count: number
-}
-
-/**
- * Location with the user's most recent visit information.
- * Returned by get_recently_visited_locations database function.
- */
-export interface LocationWithVisit extends Location {
-  /** The user's most recent visit to this location */
-  last_visit: LocationVisit | null
-  /** Time since last visit in minutes (null if never visited) */
-  minutes_since_visit: number | null
-}
-
-/**
- * Post with all related entities joined.
- * Used for displaying post details in UI.
- */
-export interface PostWithDetails extends Post {
-  /** The location where this post was created */
-  location: Location
-  /** The profile of the user who created the post */
-  producer: Profile
-}
-
-/**
- * Conversation with related entities joined.
- * Used for displaying conversation list and details.
- */
-export interface ConversationWithDetails extends Conversation {
-  /** The post that initiated this conversation */
-  post: Post
-  /** The producer's profile */
-  producer: Profile
-  /** The consumer's profile */
-  consumer: Profile
-  /** The most recent message in the conversation */
-  last_message: Message | null
-  /** Count of unread messages for the current user */
-  unread_count: number
-}
-
-/**
- * Message with sender profile joined.
- * Used for displaying messages in chat UI.
- */
-export interface MessageWithSender extends Message {
-  /** The profile of the message sender */
-  sender: Profile
-}
-
-// ============================================================================
-// SUPABASE DATABASE TYPE
-// ============================================================================
-
-/**
- * Supabase Database type definition.
- * Used for typed Supabase client operations.
- */
-export interface Database {
-  public: {
-    Tables: {
-      profiles: {
-        Row: Profile
-        Insert: ProfileInsert
-        Update: ProfileUpdate
-      }
-      locations: {
-        Row: Location
-        Insert: LocationInsert
-        Update: LocationUpdate
-      }
-      location_visits: {
-        Row: LocationVisit
-        Insert: LocationVisitInsert
-        Update: never
-      }
-      posts: {
-        Row: Post
-        Insert: PostInsert
-        Update: PostUpdate
-      }
-      conversations: {
-        Row: Conversation
-        Insert: ConversationInsert
-        Update: ConversationUpdate
-      }
-      messages: {
-        Row: Message
-        Insert: MessageInsert
-        Update: MessageUpdate
-      }
-      notifications: {
-        Row: Notification
-        Insert: NotificationInsert
-        Update: NotificationUpdate
-      }
-      profile_photos: {
-        Row: ProfilePhoto
-        Insert: ProfilePhotoInsert
-        Update: ProfilePhotoUpdate
-      }
-      blocks: {
-        Row: Block
-        Insert: BlockInsert
-        Update: never
-      }
-      reports: {
-        Row: Report
-        Insert: ReportInsert
-        Update: ReportUpdate
-      }
-    }
-    Views: Record<string, never>
-    Functions: {
-      get_nearby_locations: {
-        Args: NearbyLocationParams
-        Returns: LocationWithDistance[]
-      }
-      get_locations_with_active_posts: {
-        Args: LocationsWithActivePostsParams
-        Returns: LocationWithActivePosts[]
-      }
-      get_recently_visited_locations: {
-        Args: RecentlyVisitedLocationsParams
-        Returns: LocationWithVisit[]
-      }
-    }
-    Enums: {
-      conversation_status: ConversationStatus
-      moderation_status: ModerationStatus
-      notification_type: NotificationType
-      report_status: ReportStatus
-      reported_type: ReportedType
-    }
-  }
 }

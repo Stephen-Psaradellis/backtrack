@@ -29,6 +29,11 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useAuth } from '../contexts/AuthContext'
 import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { Button, DangerButton, OutlineButton } from '../components/Button'
+import {
+  clearTutorialCompletion,
+  TUTORIAL_FEATURE_LABELS,
+  type TutorialFeature,
+} from '../utils/tutorialStorage'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import {
   LargeAvatarPreview,
@@ -279,6 +284,51 @@ export function ProfileScreen(): JSX.Element {
     )
   }, [])
 
+  /**
+   * Handle tutorial replay - clears completion state and navigates to feature
+   *
+   * @param feature - The tutorial feature to replay
+   */
+  const handleReplayTutorial = useCallback(
+    async (feature: TutorialFeature) => {
+      try {
+        // Clear the tutorial completion state
+        const result = await clearTutorialCompletion(feature)
+
+        if (result.success) {
+          await successFeedback()
+
+          // Navigate to the appropriate screen based on feature
+          switch (feature) {
+            case 'post_creation':
+              // Navigate to CreatePost - tooltip shows on the screen
+              navigation.navigate('CreatePost')
+              break
+            case 'ledger_browsing':
+              // Navigate to HomeTab - user will tap a location to see Ledger
+              navigation.navigate('MainTabs', { screen: 'HomeTab' })
+              break
+            case 'selfie_verification':
+              // Navigate to CreatePost - selfie step is part of the flow
+              navigation.navigate('CreatePost')
+              break
+            case 'messaging':
+              // Navigate to ChatsTab - user will open a conversation
+              navigation.navigate('MainTabs', { screen: 'ChatsTab' })
+              break
+          }
+        } else {
+          await errorFeedback()
+          Alert.alert('Error', 'Failed to reset tutorial. Please try again.')
+        }
+      } catch {
+        await errorFeedback()
+        Alert.alert('Error', 'An unexpected error occurred.')
+      }
+    },
+    [navigation]
+  )
+
   // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
@@ -494,6 +544,36 @@ export function ProfileScreen(): JSX.Element {
         />
       </View>
 
+      {/* Replay Tutorial Section */}
+      <View style={styles.section} testID="profile-replay-tutorial-section">
+        <Text style={styles.sectionTitle}>Replay Tutorial</Text>
+        <Text style={styles.avatarDescription}>
+          Re-watch helpful tips for using Love Ledger features
+        </Text>
+        <View style={styles.replayButtonsContainer}>
+          <OutlineButton
+            title={TUTORIAL_FEATURE_LABELS.post_creation}
+            onPress={() => handleReplayTutorial('post_creation')}
+            testID="profile-replay-post-creation-button"
+          />
+          <OutlineButton
+            title={TUTORIAL_FEATURE_LABELS.ledger_browsing}
+            onPress={() => handleReplayTutorial('ledger_browsing')}
+            testID="profile-replay-ledger-browsing-button"
+          />
+          <OutlineButton
+            title={TUTORIAL_FEATURE_LABELS.selfie_verification}
+            onPress={() => handleReplayTutorial('selfie_verification')}
+            testID="profile-replay-selfie-verification-button"
+          />
+          <OutlineButton
+            title={TUTORIAL_FEATURE_LABELS.messaging}
+            onPress={() => handleReplayTutorial('messaging')}
+            testID="profile-replay-messaging-button"
+          />
+        </View>
+      </View>
+
       {/* Account Actions Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
@@ -694,6 +774,9 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     marginHorizontal: 16,
+  },
+  replayButtonsContainer: {
+    gap: 8,
   },
   footer: {
     paddingVertical: 24,

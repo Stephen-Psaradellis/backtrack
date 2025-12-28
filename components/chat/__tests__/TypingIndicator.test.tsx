@@ -9,11 +9,12 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TypingIndicator } from '../TypingIndicator'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   typingContainer: 'typingContainer',
   typingBubbleWrapper: 'typingBubbleWrapper',
   typingDotsContainer: 'typingDotsContainer',

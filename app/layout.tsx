@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { DevModeBanner } from "@/components/DevModeBanner";
+import { OnboardingGuard } from "@/components/OnboardingGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <OnboardingGuard>
+          {children}
+        </OnboardingGuard>
         <DevModeBanner />
       </body>
     </html>

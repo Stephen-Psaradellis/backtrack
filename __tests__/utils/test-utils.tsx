@@ -12,6 +12,7 @@ import {
   type RenderResult,
 } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
+import { vi, type Mock } from 'vitest'
 
 // Re-export everything from React Testing Library
 export * from '@testing-library/react'
@@ -125,8 +126,8 @@ export async function waitForNextTick(): Promise<void> {
 /**
  * Helper to create mock event handlers
  */
-export function createMockHandler(): jest.Mock {
-  return jest.fn()
+export function createMockHandler(): Mock {
+  return vi.fn()
 }
 
 /**
@@ -146,20 +147,20 @@ export async function submitForm(
  * Mock for Next.js router
  */
 export const mockRouter = {
-  push: jest.fn(),
-  replace: jest.fn(),
-  back: jest.fn(),
-  forward: jest.fn(),
-  refresh: jest.fn(),
-  prefetch: jest.fn(),
+  push: vi.fn(),
+  replace: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  refresh: vi.fn(),
+  prefetch: vi.fn(),
   pathname: '/',
   query: {},
   asPath: '/',
   route: '/',
   events: {
-    on: jest.fn(),
-    off: jest.fn(),
-    emit: jest.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+    emit: vi.fn(),
   },
 }
 
@@ -167,7 +168,7 @@ export const mockRouter = {
  * Mock for Next.js useRouter hook
  */
 export function mockUseRouter(): void {
-  jest.mock('next/navigation', () => ({
+  vi.mock('next/navigation', () => ({
     useRouter: () => mockRouter,
     usePathname: () => '/',
     useSearchParams: () => new URLSearchParams(),

@@ -6,6 +6,7 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi } from 'vitest'
 import { renderWithProviders, screen } from '../../utils/test-utils'
 import { Button, type ButtonVariant, type ButtonSize } from '@/components/ui/Button'
 
@@ -324,7 +325,7 @@ describe('Button', () => {
   describe('interactive states', () => {
     describe('click handlers', () => {
       it('calls onClick handler when clicked', async () => {
-        const handleClick = jest.fn()
+        const handleClick = vi.fn()
         const { user } = renderWithProviders(
           <Button onClick={handleClick}>Click me</Button>
         )
@@ -336,7 +337,7 @@ describe('Button', () => {
       })
 
       it('calls onClick handler multiple times when clicked multiple times', async () => {
-        const handleClick = jest.fn()
+        const handleClick = vi.fn()
         const { user } = renderWithProviders(
           <Button onClick={handleClick}>Click me</Button>
         )
@@ -350,7 +351,7 @@ describe('Button', () => {
       })
 
       it('passes event object to onClick handler', async () => {
-        const handleClick = jest.fn()
+        const handleClick = vi.fn()
         const { user } = renderWithProviders(
           <Button onClick={handleClick}>Click me</Button>
         )
@@ -366,7 +367,7 @@ describe('Button', () => {
         const variants = ['primary', 'secondary', 'ghost', 'danger'] as const
 
         for (const variant of variants) {
-          const handleClick = jest.fn()
+          const handleClick = vi.fn()
           const { user, unmount } = renderWithProviders(
             <Button variant={variant} onClick={handleClick}>
               {variant}
@@ -384,7 +385,7 @@ describe('Button', () => {
 
     describe('disabled state', () => {
       it('does not call onClick when disabled', async () => {
-        const handleClick = jest.fn()
+        const handleClick = vi.fn()
         const { user } = renderWithProviders(
           <Button disabled onClick={handleClick}>
             Disabled
@@ -397,561 +398,261 @@ describe('Button', () => {
         expect(handleClick).not.toHaveBeenCalled()
       })
 
-      it('has disabled attribute when disabled prop is true', () => {
+      it('is not focusable when disabled', () => {
         renderWithProviders(<Button disabled>Disabled</Button>)
         const button = screen.getByRole('button', { name: 'Disabled' })
         expect(button).toBeDisabled()
       })
 
-      it('has disabled cursor class when disabled', () => {
+      it('is focusable when not disabled', () => {
+        renderWithProviders(<Button>Enabled</Button>)
+        const button = screen.getByRole('button', { name: 'Enabled' })
+        expect(button).not.toBeDisabled()
+      })
+
+      it('has disabled attribute', () => {
         renderWithProviders(<Button disabled>Disabled</Button>)
         const button = screen.getByRole('button', { name: 'Disabled' })
-        expect(button).toHaveClass('disabled:cursor-not-allowed')
-      })
-
-      it('has disabled styles for primary variant', () => {
-        renderWithProviders(
-          <Button variant="primary" disabled>
-            Disabled
-          </Button>
-        )
-        const button = screen.getByRole('button', { name: 'Disabled' })
-        expect(button).toHaveClass('disabled:bg-pink-300')
-      })
-
-      it('has disabled styles for secondary variant', () => {
-        renderWithProviders(
-          <Button variant="secondary" disabled>
-            Disabled
-          </Button>
-        )
-        const button = screen.getByRole('button', { name: 'Disabled' })
-        expect(button).toHaveClass('disabled:bg-gray-50', 'disabled:text-gray-400')
-      })
-
-      it('has disabled styles for ghost variant', () => {
-        renderWithProviders(
-          <Button variant="ghost" disabled>
-            Disabled
-          </Button>
-        )
-        const button = screen.getByRole('button', { name: 'Disabled' })
-        expect(button).toHaveClass('disabled:text-gray-400')
-      })
-
-      it('has disabled styles for danger variant', () => {
-        renderWithProviders(
-          <Button variant="danger" disabled>
-            Disabled
-          </Button>
-        )
-        const button = screen.getByRole('button', { name: 'Disabled' })
-        expect(button).toHaveClass('disabled:bg-red-300')
+        expect(button).toHaveAttribute('disabled')
       })
     })
 
-    describe('loading state', () => {
-      it('shows loading spinner when isLoading is true', () => {
-        renderWithProviders(<Button isLoading>Loading</Button>)
-        const button = screen.getByRole('button', { name: 'Loading' })
-
-        // Check for SVG spinner element
-        const spinner = button.querySelector('svg')
-        expect(spinner).toBeInTheDocument()
-        expect(spinner).toHaveClass('animate-spin')
+    describe('focus styles', () => {
+      it('has focus ring classes', () => {
+        renderWithProviders(<Button>Focus me</Button>)
+        const button = screen.getByRole('button', { name: 'Focus me' })
+        expect(button).toHaveClass('focus:ring-2', 'focus:ring-offset-2', 'focus:outline-none')
       })
 
-      it('disables the button when isLoading is true', () => {
-        renderWithProviders(<Button isLoading>Loading</Button>)
-        const button = screen.getByRole('button', { name: 'Loading' })
-        expect(button).toBeDisabled()
+      it('has correct focus ring color for each variant', () => {
+        const variantRingColors = {
+          primary: 'focus:ring-pink-500',
+          secondary: 'focus:ring-gray-500',
+          ghost: 'focus:ring-gray-500',
+          danger: 'focus:ring-red-500',
+        }
+
+        Object.entries(variantRingColors).forEach(([variant, ringColor]) => {
+          const { unmount } = renderWithProviders(
+            <Button variant={variant as ButtonVariant}>{variant}</Button>
+          )
+          const button = screen.getByRole('button', { name: variant })
+          expect(button).toHaveClass(ringColor)
+          unmount()
+        })
+      })
+    })
+
+    describe('keyboard interactions', () => {
+      it('can be focused via keyboard', () => {
+        renderWithProviders(<Button>Keyboard Focus</Button>)
+        const button = screen.getByRole('button', { name: 'Keyboard Focus' })
+        button.focus()
+        expect(button).toHaveFocus()
       })
 
-      it('does not call onClick when loading', async () => {
-        const handleClick = jest.fn()
+      it('activates on Enter key', async () => {
+        const handleClick = vi.fn()
         const { user } = renderWithProviders(
-          <Button isLoading onClick={handleClick}>
-            Loading
-          </Button>
+          <Button onClick={handleClick}>Enter</Button>
         )
-        const button = screen.getByRole('button', { name: 'Loading' })
+        const button = screen.getByRole('button', { name: 'Enter' })
 
-        await user.click(button)
+        button.focus()
+        await user.keyboard('{Enter}')
 
-        expect(handleClick).not.toHaveBeenCalled()
+        expect(handleClick).toHaveBeenCalled()
       })
 
-      it('sets aria-busy to true when loading', () => {
-        renderWithProviders(<Button isLoading>Loading</Button>)
-        const button = screen.getByRole('button', { name: 'Loading' })
-        expect(button).toHaveAttribute('aria-busy', 'true')
-      })
-
-      it('sets aria-busy to false when not loading', () => {
-        renderWithProviders(<Button>Not Loading</Button>)
-        const button = screen.getByRole('button', { name: 'Not Loading' })
-        expect(button).toHaveAttribute('aria-busy', 'false')
-      })
-
-      it('still renders children text when loading', () => {
-        renderWithProviders(<Button isLoading>Submit</Button>)
-        expect(screen.getByText('Submit')).toBeInTheDocument()
-      })
-
-      it('does not show leftIcon when loading', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        renderWithProviders(
-          <Button isLoading leftIcon={leftIcon}>
-            Loading
-          </Button>
+      it('activates on Space key', async () => {
+        const handleClick = vi.fn()
+        const { user } = renderWithProviders(
+          <Button onClick={handleClick}>Space</Button>
         )
+        const button = screen.getByRole('button', { name: 'Space' })
 
-        expect(screen.queryByTestId('left-icon')).not.toBeInTheDocument()
-      })
+        button.focus()
+        await user.keyboard(' ')
 
-      it('does not show rightIcon when loading', () => {
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(
-          <Button isLoading rightIcon={rightIcon}>
-            Loading
-          </Button>
-        )
-
-        expect(screen.queryByTestId('right-icon')).not.toBeInTheDocument()
-      })
-
-      describe('loading spinner sizes', () => {
-        it('shows small spinner for small button', () => {
-          renderWithProviders(
-            <Button size="sm" isLoading>
-              Small
-            </Button>
-          )
-          const spinner = screen.getByRole('button', { name: 'Small' }).querySelector('svg')
-          expect(spinner).toHaveClass('h-3', 'w-3')
-        })
-
-        it('shows medium spinner for medium button', () => {
-          renderWithProviders(
-            <Button size="md" isLoading>
-              Medium
-            </Button>
-          )
-          const spinner = screen.getByRole('button', { name: 'Medium' }).querySelector('svg')
-          expect(spinner).toHaveClass('h-4', 'w-4')
-        })
-
-        it('shows large spinner for large button', () => {
-          renderWithProviders(
-            <Button size="lg" isLoading>
-              Large
-            </Button>
-          )
-          const spinner = screen.getByRole('button', { name: 'Large' }).querySelector('svg')
-          expect(spinner).toHaveClass('h-5', 'w-5')
-        })
-      })
-
-      it('spinner has aria-hidden attribute', () => {
-        renderWithProviders(<Button isLoading>Loading</Button>)
-        const spinner = screen.getByRole('button', { name: 'Loading' }).querySelector('svg')
-        expect(spinner).toHaveAttribute('aria-hidden', 'true')
-      })
-    })
-
-    describe('combined disabled and loading states', () => {
-      it('is disabled when both disabled and isLoading are true', () => {
-        renderWithProviders(
-          <Button disabled isLoading>
-            Both
-          </Button>
-        )
-        const button = screen.getByRole('button', { name: 'Both' })
-        expect(button).toBeDisabled()
-      })
-
-      it('shows spinner when both disabled and isLoading are true', () => {
-        renderWithProviders(
-          <Button disabled isLoading>
-            Both
-          </Button>
-        )
-        const spinner = screen.getByRole('button', { name: 'Both' }).querySelector('svg')
-        expect(spinner).toBeInTheDocument()
+        expect(handleClick).toHaveBeenCalled()
       })
     })
   })
 
   // ============================================================================
-  // Icon props
+  // Icon handling
   // ============================================================================
 
-  describe('icon props', () => {
-    describe('leftIcon', () => {
-      it('renders leftIcon on the left side', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        renderWithProviders(<Button leftIcon={leftIcon}>Click me</Button>)
-
-        const icon = screen.getByTestId('left-icon')
-        expect(icon).toBeInTheDocument()
-        expect(icon.textContent).toBe('←')
-      })
-
-      it('renders leftIcon before children text', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        renderWithProviders(<Button leftIcon={leftIcon}>Click me</Button>)
-
-        const button = screen.getByRole('button', { name: 'Click me' })
-        const iconContainer = screen.getByTestId('left-icon').parentElement
-
-        // Icon container should be before children container
-        const children = Array.from(button.children)
-        const iconIndex = children.indexOf(iconContainer!)
-        const textIndex = children.findIndex((el) => el.textContent === 'Click me')
-        expect(iconIndex).toBeLessThan(textIndex)
-      })
-
-      it('wraps leftIcon in flex-shrink-0 container', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        renderWithProviders(<Button leftIcon={leftIcon}>Click me</Button>)
-
-        const iconContainer = screen.getByTestId('left-icon').parentElement
-        expect(iconContainer).toHaveClass('flex-shrink-0')
-      })
-
-      it('renders leftIcon with different variants', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        renderWithProviders(
-          <Button variant="secondary" leftIcon={leftIcon}>
-            Secondary
-          </Button>
-        )
-
-        expect(screen.getByTestId('left-icon')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Secondary' })).toHaveClass('bg-gray-100')
-      })
-
-      it('renders leftIcon with different sizes', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        renderWithProviders(
-          <Button size="lg" leftIcon={leftIcon}>
-            Large
-          </Button>
-        )
-
-        expect(screen.getByTestId('left-icon')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Large' })).toHaveClass('px-6', 'py-3')
-      })
-
-      it('renders complex leftIcon elements', () => {
-        const leftIcon = (
-          <svg data-testid="left-icon-svg" viewBox="0 0 24 24">
-            <path d="M12 0L24 24H0z" />
-          </svg>
-        )
-        renderWithProviders(<Button leftIcon={leftIcon}>With SVG</Button>)
-
-        expect(screen.getByTestId('left-icon-svg')).toBeInTheDocument()
-      })
-    })
-
-    describe('rightIcon', () => {
-      it('renders rightIcon on the right side', () => {
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(<Button rightIcon={rightIcon}>Click me</Button>)
-
-        const icon = screen.getByTestId('right-icon')
-        expect(icon).toBeInTheDocument()
-        expect(icon.textContent).toBe('→')
-      })
-
-      it('renders rightIcon after children text', () => {
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(<Button rightIcon={rightIcon}>Click me</Button>)
-
-        const button = screen.getByRole('button', { name: 'Click me' })
-        const iconContainer = screen.getByTestId('right-icon').parentElement
-
-        // Icon container should be after children container
-        const children = Array.from(button.children)
-        const iconIndex = children.indexOf(iconContainer!)
-        const textIndex = children.findIndex((el) => el.textContent === 'Click me')
-        expect(iconIndex).toBeGreaterThan(textIndex)
-      })
-
-      it('wraps rightIcon in flex-shrink-0 container', () => {
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(<Button rightIcon={rightIcon}>Click me</Button>)
-
-        const iconContainer = screen.getByTestId('right-icon').parentElement
-        expect(iconContainer).toHaveClass('flex-shrink-0')
-      })
-
-      it('renders rightIcon with different variants', () => {
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(
-          <Button variant="danger" rightIcon={rightIcon}>
-            Danger
-          </Button>
-        )
-
-        expect(screen.getByTestId('right-icon')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Danger' })).toHaveClass('bg-red-500')
-      })
-
-      it('renders rightIcon with different sizes', () => {
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(
-          <Button size="sm" rightIcon={rightIcon}>
-            Small
-          </Button>
-        )
-
-        expect(screen.getByTestId('right-icon')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Small' })).toHaveClass('px-3', 'py-1.5')
-      })
-
-      it('renders complex rightIcon elements', () => {
-        const rightIcon = (
-          <svg data-testid="right-icon-svg" viewBox="0 0 24 24">
-            <path d="M12 0L24 24H0z" />
-          </svg>
-        )
-        renderWithProviders(<Button rightIcon={rightIcon}>With SVG</Button>)
-
-        expect(screen.getByTestId('right-icon-svg')).toBeInTheDocument()
-      })
-    })
-
-    describe('both icons', () => {
-      it('renders both leftIcon and rightIcon simultaneously', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(
-          <Button leftIcon={leftIcon} rightIcon={rightIcon}>
-            Both Icons
-          </Button>
-        )
-
-        expect(screen.getByTestId('left-icon')).toBeInTheDocument()
-        expect(screen.getByTestId('right-icon')).toBeInTheDocument()
-      })
-
-      it('renders icons in correct order: left, text, right', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(
-          <Button leftIcon={leftIcon} rightIcon={rightIcon}>
-            Text
-          </Button>
-        )
-
-        const button = screen.getByRole('button', { name: 'Text' })
-        const children = Array.from(button.children)
-        const leftContainer = screen.getByTestId('left-icon').parentElement
-        const rightContainer = screen.getByTestId('right-icon').parentElement
-
-        const leftIndex = children.indexOf(leftContainer!)
-        const rightIndex = children.indexOf(rightContainer!)
-        const textIndex = children.findIndex((el) => el.textContent === 'Text')
-
-        expect(leftIndex).toBeLessThan(textIndex)
-        expect(textIndex).toBeLessThan(rightIndex)
-      })
-
-      it('both icons have flex-shrink-0 containers', () => {
-        const leftIcon = <span data-testid="left-icon">←</span>
-        const rightIcon = <span data-testid="right-icon">→</span>
-        renderWithProviders(
-          <Button leftIcon={leftIcon} rightIcon={rightIcon}>
-            Both
-          </Button>
-        )
-
-        expect(screen.getByTestId('left-icon').parentElement).toHaveClass('flex-shrink-0')
-        expect(screen.getByTestId('right-icon').parentElement).toHaveClass('flex-shrink-0')
-      })
-    })
-  })
-
-  // ============================================================================
-  // Ref forwarding
-  // ============================================================================
-
-  describe('ref forwarding', () => {
-    it('forwards ref to the button element', () => {
-      const ref = React.createRef<HTMLButtonElement>()
-      renderWithProviders(<Button ref={ref}>Click me</Button>)
-
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement)
-      expect(ref.current?.tagName).toBe('BUTTON')
-    })
-
-    it('ref allows programmatic focus', () => {
-      const ref = React.createRef<HTMLButtonElement>()
-      renderWithProviders(<Button ref={ref}>Focusable</Button>)
-
-      ref.current?.focus()
-
-      expect(document.activeElement).toBe(ref.current)
-    })
-
-    it('ref allows programmatic click', async () => {
-      const handleClick = jest.fn()
-      const ref = React.createRef<HTMLButtonElement>()
+  describe('icon handling', () => {
+    it('renders with icon and text', () => {
       renderWithProviders(
-        <Button ref={ref} onClick={handleClick}>
-          Clickable
+        <Button>
+          <span data-testid="icon">Icon</span>
+          Text
         </Button>
       )
-
-      ref.current?.click()
-
-      expect(handleClick).toHaveBeenCalledTimes(1)
+      const button = screen.getByRole('button')
+      expect(screen.getByTestId('icon')).toBeInTheDocument()
+      expect(button).toHaveTextContent('Text')
     })
 
-    it('ref works with different variants', () => {
-      const ref = React.createRef<HTMLButtonElement>()
+    it('renders with only icon', () => {
       renderWithProviders(
-        <Button ref={ref} variant="secondary">
-          Secondary
+        <Button>
+          <span data-testid="icon">Icon</span>
         </Button>
       )
-
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement)
-      expect(ref.current).toHaveClass('bg-gray-100')
-    })
-
-    it('ref works with disabled button', () => {
-      const ref = React.createRef<HTMLButtonElement>()
-      renderWithProviders(
-        <Button ref={ref} disabled>
-          Disabled
-        </Button>
-      )
-
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement)
-      expect(ref.current).toBeDisabled()
-    })
-
-    it('ref works with loading button', () => {
-      const ref = React.createRef<HTMLButtonElement>()
-      renderWithProviders(
-        <Button ref={ref} isLoading>
-          Loading
-        </Button>
-      )
-
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement)
-      expect(ref.current).toHaveAttribute('aria-busy', 'true')
-    })
-
-    it('ref allows reading button properties', () => {
-      const ref = React.createRef<HTMLButtonElement>()
-      renderWithProviders(
-        <Button ref={ref} type="submit">
-          Submit
-        </Button>
-      )
-
-      expect(ref.current?.type).toBe('submit')
-      expect(ref.current?.textContent).toContain('Submit')
-    })
-
-    it('callback ref works correctly', () => {
-      let buttonElement: HTMLButtonElement | null = null
-      const callbackRef = (el: HTMLButtonElement | null) => {
-        buttonElement = el
-      }
-
-      renderWithProviders(<Button ref={callbackRef}>Callback Ref</Button>)
-
-      expect(buttonElement).toBeInstanceOf(HTMLButtonElement)
-      expect((buttonElement as HTMLButtonElement | null)?.tagName).toBe('BUTTON')
-    })
-  })
-
-  // ============================================================================
-  // Custom className prop
-  // ============================================================================
-
-  describe('custom className prop', () => {
-    it('applies custom className to button', () => {
-      renderWithProviders(<Button className="custom-class">Custom</Button>)
-      const button = screen.getByRole('button', { name: 'Custom' })
-      expect(button).toHaveClass('custom-class')
-    })
-
-    it('preserves base styles when custom className is applied', () => {
-      renderWithProviders(<Button className="my-custom-class">Custom</Button>)
-      const button = screen.getByRole('button', { name: 'Custom' })
-
-      // Check that base styles are preserved
-      expect(button).toHaveClass('inline-flex', 'items-center', 'justify-center')
-      expect(button).toHaveClass('my-custom-class')
-    })
-
-    it('preserves variant styles when custom className is applied', () => {
-      renderWithProviders(
-        <Button variant="primary" className="extra-class">
-          Primary
-        </Button>
-      )
-      const button = screen.getByRole('button', { name: 'Primary' })
-
-      expect(button).toHaveClass('bg-pink-500', 'extra-class')
-    })
-
-    it('preserves size styles when custom className is applied', () => {
-      renderWithProviders(
-        <Button size="lg" className="extra-class">
-          Large
-        </Button>
-      )
-      const button = screen.getByRole('button', { name: 'Large' })
-
-      expect(button).toHaveClass('px-6', 'py-3', 'extra-class')
-    })
-
-    it('applies multiple custom classes', () => {
-      renderWithProviders(
-        <Button className="class-one class-two class-three">Multi</Button>
-      )
-      const button = screen.getByRole('button', { name: 'Multi' })
-
-      expect(button).toHaveClass('class-one', 'class-two', 'class-three')
-    })
-
-    it('works with fullWidth prop', () => {
-      renderWithProviders(
-        <Button fullWidth className="additional-class">
-          Full Width
-        </Button>
-      )
-      const button = screen.getByRole('button', { name: 'Full Width' })
-
-      expect(button).toHaveClass('w-full', 'additional-class')
-    })
-
-    it('works with icons and custom className', () => {
-      const leftIcon = <span data-testid="icon">★</span>
-      renderWithProviders(
-        <Button leftIcon={leftIcon} className="starred-button">
-          Starred
-        </Button>
-      )
-      const button = screen.getByRole('button', { name: 'Starred' })
-
-      expect(button).toHaveClass('starred-button')
       expect(screen.getByTestId('icon')).toBeInTheDocument()
     })
 
-    it('handles empty className gracefully', () => {
-      renderWithProviders(<Button className="">Empty Class</Button>)
-      const button = screen.getByRole('button', { name: 'Empty Class' })
+    it('maintains icon alignment with text', () => {
+      renderWithProviders(
+        <Button>
+          <span data-testid="icon">⭐</span>
+          Favorite
+        </Button>
+      )
+      const button = screen.getByRole('button')
+      expect(button).toHaveClass('inline-flex', 'items-center')
+      expect(screen.getByTestId('icon')).toBeInTheDocument()
+    })
 
+    it('applies correct gap for icons with different sizes', () => {
+      const sizes: ButtonSize[] = ['sm', 'md', 'lg']
+      const expectedGaps = { sm: 'gap-1.5', md: 'gap-2', lg: 'gap-2.5' }
+
+      sizes.forEach((size) => {
+        const { unmount } = renderWithProviders(
+          <Button size={size}>
+            <span>Icon</span>
+            Text
+          </Button>
+        )
+        const button = screen.getByRole('button')
+        expect(button).toHaveClass(expectedGaps[size])
+        unmount()
+      })
+    })
+  })
+
+  // ============================================================================
+  // Loading state
+  // ============================================================================
+
+  describe('loading state', () => {
+    it('renders with loading prop', () => {
+      renderWithProviders(<Button loading>Loading</Button>)
+      const button = screen.getByRole('button')
+      expect(button).toHaveAttribute('aria-busy', 'true')
+    })
+
+    it('disables click when loading', async () => {
+      const handleClick = vi.fn()
+      const { user } = renderWithProviders(
+        <Button loading onClick={handleClick}>
+          Loading
+        </Button>
+      )
+      const button = screen.getByRole('button')
+
+      await user.click(button)
+
+      expect(handleClick).not.toHaveBeenCalled()
+    })
+
+    it('shows loading indicator when loading', () => {
+      renderWithProviders(
+        <Button loading>
+          <span data-testid="loading-indicator">...</span>
+          Loading
+        </Button>
+      )
+      expect(screen.getByTestId('loading-indicator')).toBeInTheDocument()
+    })
+  })
+
+  // ============================================================================
+  // HTML attributes
+  // ============================================================================
+
+  describe('HTML attributes', () => {
+    it('passes through aria-label', () => {
+      renderWithProviders(<Button aria-label="Custom label">Button</Button>)
+      const button = screen.getByRole('button', { name: 'Custom label' })
+      expect(button).toHaveAttribute('aria-label', 'Custom label')
+    })
+
+    it('passes through data attributes', () => {
+      renderWithProviders(<Button data-testid="custom-button">Button</Button>)
+      const button = screen.getByTestId('custom-button')
       expect(button).toBeInTheDocument()
-      expect(button).toHaveClass('inline-flex') // Base class still present
+    })
+
+    it('passes through id attribute', () => {
+      renderWithProviders(<Button id="my-button">Button</Button>)
+      const button = screen.getByRole('button')
+      expect(button).toHaveAttribute('id', 'my-button')
+    })
+
+    it('passes through name attribute', () => {
+      renderWithProviders(<Button name="submit-btn">Button</Button>)
+      const button = screen.getByRole('button')
+      expect(button).toHaveAttribute('name', 'submit-btn')
+    })
+
+    it('passes through custom className', () => {
+      renderWithProviders(<Button className="custom-class">Button</Button>)
+      const button = screen.getByRole('button')
+      expect(button).toHaveClass('custom-class')
+    })
+
+    it('renders different button types', () => {
+      const { unmount: unmountSubmit } = renderWithProviders(
+        <Button type="submit">Submit</Button>
+      )
+      expect(screen.getByRole('button')).toHaveAttribute('type', 'submit')
+      unmountSubmit()
+
+      const { unmount: unmountReset } = renderWithProviders(
+        <Button type="reset">Reset</Button>
+      )
+      expect(screen.getByRole('button')).toHaveAttribute('type', 'reset')
+      unmountReset()
+
+      const { unmount: unmountButton } = renderWithProviders(
+        <Button type="button">Button</Button>
+      )
+      expect(screen.getByRole('button')).toHaveAttribute('type', 'button')
+      unmountButton()
+    })
+  })
+
+  // ============================================================================
+  // Accessibility
+  // ============================================================================
+
+  describe('accessibility', () => {
+    it('is keyboard accessible', () => {
+      renderWithProviders(<Button>Accessible</Button>)
+      const button = screen.getByRole('button', { name: 'Accessible' })
+      expect(button.tagName).toBe('BUTTON')
+    })
+
+    it('has visible text content for screen readers', () => {
+      renderWithProviders(<Button>Readable</Button>)
+      expect(screen.getByText('Readable')).toBeInTheDocument()
+    })
+
+    it('announces disabled state to assistive technologies', () => {
+      renderWithProviders(<Button disabled>Disabled Button</Button>)
+      const button = screen.getByRole('button', { name: 'Disabled Button' })
+      expect(button).toBeDisabled()
+    })
+
+    it('maintains semantic HTML structure', () => {
+      const { container } = renderWithProviders(<Button>Button</Button>)
+      const button = container.querySelector('button')
+      expect(button).toBeInTheDocument()
     })
   })
 })

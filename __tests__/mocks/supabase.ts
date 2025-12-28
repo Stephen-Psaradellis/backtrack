@@ -5,10 +5,9 @@
  * Supports both simple default mocks and customizable factory functions.
  */
 
+import { vi, Mock } from 'vitest'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import type { Profile, Post, Location as LocationEntity, Conversation, Message } from '../../types/database'
-
-// Note: Old avatar types removed - using plain objects for mock data
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -17,7 +16,7 @@ import type { Profile, Post, Location as LocationEntity, Conversation, Message }
 /**
  * Extended mock user type for testing
  */
-export interface MockUser {
+export interface MockUser extends Partial<User> {
   id: string
   email?: string
   phone?: string
@@ -31,7 +30,7 @@ export interface MockUser {
 /**
  * Extended mock session type for testing
  */
-export interface MockSession {
+export interface MockSession extends Partial<Session> {
   access_token: string
   refresh_token: string
   user: MockUser
@@ -44,29 +43,29 @@ export interface MockSession {
  * Mock query builder interface that supports chaining
  */
 export interface MockQueryBuilder {
-  select: jest.Mock
-  insert: jest.Mock
-  update: jest.Mock
-  delete: jest.Mock
-  eq: jest.Mock
-  neq: jest.Mock
-  gt: jest.Mock
-  gte: jest.Mock
-  lt: jest.Mock
-  lte: jest.Mock
-  like: jest.Mock
-  ilike: jest.Mock
-  is?: jest.Mock
-  in: jest.Mock
-  not?: jest.Mock
-  or?: jest.Mock
-  and?: jest.Mock
-  order: jest.Mock
-  limit: jest.Mock
-  single: jest.Mock
-  maybeSingle: jest.Mock
-  range: jest.Mock
-  filter?: jest.Mock
+  select: Mock
+  insert: Mock
+  update: Mock
+  delete: Mock
+  eq: Mock
+  neq: Mock
+  gt: Mock
+  gte: Mock
+  lt: Mock
+  lte: Mock
+  like: Mock
+  ilike: Mock
+  is?: Mock
+  in: Mock
+  not?: Mock
+  or?: Mock
+  and?: Mock
+  order: Mock
+  limit: Mock
+  single: Mock
+  maybeSingle: Mock
+  range: Mock
+  filter?: Mock
   then?: (resolve: (value: any) => void) => Promise<any>
 }
 
@@ -74,27 +73,27 @@ export interface MockQueryBuilder {
  * Mock auth methods interface
  */
 export interface MockAuth {
-  getUser: jest.Mock
-  getSession: jest.Mock
-  signInWithPassword: jest.Mock
-  signUp: jest.Mock
-  signOut: jest.Mock
-  onAuthStateChange: jest.Mock
-  resetPasswordForEmail: jest.Mock
-  updateUser: jest.Mock
+  getUser: Mock
+  getSession: Mock
+  signInWithPassword: Mock
+  signUp: Mock
+  signOut: Mock
+  onAuthStateChange: Mock
+  resetPasswordForEmail: Mock
+  updateUser: Mock
 }
 
 /**
  * Mock storage methods interface
  */
 export interface MockStorage {
-  from: jest.Mock
-  upload?: jest.Mock
-  download?: jest.Mock
-  remove?: jest.Mock
-  getPublicUrl?: jest.Mock
-  createSignedUrl?: jest.Mock
-  list?: jest.Mock
+  from: Mock
+  upload?: Mock
+  download?: Mock
+  remove?: Mock
+  getPublicUrl?: Mock
+  createSignedUrl?: Mock
+  list?: Mock
 }
 
 /**
@@ -103,10 +102,10 @@ export interface MockStorage {
 export interface MockSupabaseClient {
   auth: MockAuth
   storage: MockStorage
-  from: jest.Mock
-  channel?: jest.Mock
-  removeChannel?: jest.Mock
-  rpc?: jest.Mock
+  from: Mock
+  channel?: Mock
+  removeChannel?: Mock
+  rpc?: Mock
 }
 
 // ============================================================================
@@ -196,29 +195,29 @@ export function createMockQueryBuilder<T = unknown>(
   mockError: Error | null = null
 ): MockQueryBuilder {
   const normalizedData = Array.isArray(mockData) ? mockData : (mockData !== null ? [mockData as T] : [])
-  
+
   const builder: any = {
-    select: jest.fn(),
-    insert: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    eq: jest.fn(),
-    neq: jest.fn(),
-    gt: jest.fn(),
-    gte: jest.fn(),
-    lt: jest.fn(),
-    lte: jest.fn(),
-    like: jest.fn(),
-    ilike: jest.fn(),
-    is: jest.fn(),
-    in: jest.fn(),
-    not: jest.fn(),
-    or: jest.fn(),
-    and: jest.fn(),
-    order: jest.fn(),
-    limit: jest.fn(),
-    range: jest.fn(),
-    filter: jest.fn(),
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    eq: vi.fn(),
+    neq: vi.fn(),
+    gt: vi.fn(),
+    gte: vi.fn(),
+    lt: vi.fn(),
+    lte: vi.fn(),
+    like: vi.fn(),
+    ilike: vi.fn(),
+    is: vi.fn(),
+    in: vi.fn(),
+    not: vi.fn(),
+    or: vi.fn(),
+    and: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
+    range: vi.fn(),
+    filter: vi.fn(),
   }
 
   // Make all chainable methods return the builder
@@ -247,16 +246,16 @@ export function createMockQueryBuilder<T = unknown>(
   ]
 
   chainMethods.forEach((method) => {
-    builder[method] = jest.fn().mockReturnValue(builder)
+    builder[method] = vi.fn().mockReturnValue(builder)
   })
 
   // Terminal methods return the result
   const chainableResult = { data: normalizedData, error: mockError }
-  builder.single = jest.fn().mockResolvedValue({
+  builder.single = vi.fn().mockResolvedValue({
     data: normalizedData[0] || null,
     error: mockError,
   })
-  builder.maybeSingle = jest.fn().mockResolvedValue({
+  builder.maybeSingle = vi.fn().mockResolvedValue({
     data: normalizedData[0] || null,
     error: mockError,
   })
@@ -283,18 +282,18 @@ export function createMockAuth(options?: {
   const session = options?.session ?? mockSession
 
   return {
-    getUser: jest.fn().mockResolvedValue({ data: { user }, error: null }),
-    getSession: jest
+    getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
+    getSession: vi
       .fn()
       .mockResolvedValue({ data: { session }, error: null }),
-    signInWithPassword: jest
+    signInWithPassword: vi
       .fn()
       .mockResolvedValue({ data: { user, session }, error: null }),
-    signUp: jest
+    signUp: vi
       .fn()
       .mockResolvedValue({ data: { user, session }, error: null }),
-    signOut: jest.fn().mockResolvedValue({ error: null }),
-    onAuthStateChange: jest.fn().mockImplementation((callback) => {
+    signOut: vi.fn().mockResolvedValue({ error: null }),
+    onAuthStateChange: vi.fn().mockImplementation((callback) => {
       // Immediately trigger with current session
       if (callback) {
         callback('SIGNED_IN', session)
@@ -302,13 +301,13 @@ export function createMockAuth(options?: {
       return {
         data: {
           subscription: {
-            unsubscribe: jest.fn(),
+            unsubscribe: vi.fn(),
           },
         },
       }
     }),
-    resetPasswordForEmail: jest.fn().mockResolvedValue({ data: {}, error: null }),
-    updateUser: jest.fn().mockResolvedValue({
+    resetPasswordForEmail: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    updateUser: vi.fn().mockResolvedValue({
       data: { user },
       error: null,
     }),
@@ -329,21 +328,21 @@ export const mockAuth = createMockAuth()
  */
 export function createMockStorage(): MockStorage {
   const storageMethods = {
-    upload: jest.fn().mockResolvedValue({ data: { path: 'mock-path.jpg' }, error: null }),
-    download: jest.fn().mockResolvedValue({ data: new Blob(), error: null }),
-    remove: jest.fn().mockResolvedValue({ data: {}, error: null }),
-    getPublicUrl: jest.fn().mockReturnValue({
+    upload: vi.fn().mockResolvedValue({ data: { path: 'mock-path.jpg' }, error: null }),
+    download: vi.fn().mockResolvedValue({ data: new Blob(), error: null }),
+    remove: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    getPublicUrl: vi.fn().mockReturnValue({
       data: { publicUrl: 'https://example.com/mock-image.jpg' },
     }),
-    createSignedUrl: jest.fn().mockResolvedValue({
+    createSignedUrl: vi.fn().mockResolvedValue({
       data: { signedUrl: 'https://example.com/signed-url.jpg' },
       error: null,
     }),
-    list: jest.fn().mockResolvedValue({ data: [], error: null }),
+    list: vi.fn().mockResolvedValue({ data: [], error: null }),
   }
 
   const storage: MockStorage = {
-    from: jest.fn().mockReturnValue(storageMethods),
+    from: vi.fn().mockReturnValue(storageMethods),
     ...storageMethods,
   }
 
@@ -363,9 +362,9 @@ export const mockStorage = createMockStorage()
  * Mock Supabase channel for realtime
  */
 export const mockChannel = {
-  on: jest.fn().mockReturnThis(),
-  subscribe: jest.fn().mockReturnThis(),
-  unsubscribe: jest.fn(),
+  on: vi.fn().mockReturnThis(),
+  subscribe: vi.fn().mockReturnThis(),
+  unsubscribe: vi.fn(),
 }
 
 // ============================================================================
@@ -392,7 +391,7 @@ export function createMockSupabaseClient(options?: {
       session: options?.session,
     }),
     storage: createMockStorage(),
-    from: jest.fn().mockImplementation((table: string) => {
+    from: vi.fn().mockImplementation((table: string) => {
       switch (table) {
         case 'profiles':
           return createMockQueryBuilder([mockProfile])
@@ -412,9 +411,9 @@ export function createMockSupabaseClient(options?: {
           return queryBuilder
       }
     }),
-    channel: jest.fn().mockReturnValue(mockChannel),
-    removeChannel: jest.fn(),
-    rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+    channel: vi.fn().mockReturnValue(mockChannel),
+    removeChannel: vi.fn(),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   }
 }
 
@@ -423,7 +422,7 @@ export function createMockSupabaseClient(options?: {
  */
 export function createClientMock(options?: Parameters<typeof createMockSupabaseClient>[0]) {
   const mockClient = createMockSupabaseClient(options)
-  return jest.fn().mockReturnValue(mockClient)
+  return vi.fn().mockReturnValue(mockClient)
 }
 
 /**
@@ -442,24 +441,24 @@ export const mockSupabaseClient = mockSupabase
 export function resetSupabaseMocks(client?: MockSupabaseClient): void {
   const targetClient = client ?? mockSupabase
 
-  jest.clearAllMocks()
+  vi.clearAllMocks()
 
   // Reset auth mocks
   Object.values(targetClient.auth).forEach((mock) => {
-    if (jest.isMockFunction(mock)) {
+    if (vi.isMockFunction(mock)) {
       mock.mockClear()
     }
   })
 
   // Reset storage mocks
   Object.values(targetClient.storage).forEach((mock) => {
-    if (jest.isMockFunction(mock)) {
+    if (vi.isMockFunction(mock)) {
       mock.mockClear()
     }
   })
 
   // Reset from mock
-  if (jest.isMockFunction(targetClient.from)) {
+  if (vi.isMockFunction(targetClient.from)) {
     targetClient.from.mockClear()
   }
 
@@ -483,12 +482,11 @@ export function resetSupabaseMocks(client?: MockSupabaseClient): void {
  * Configure auth to fail with a specific error
  */
 export function mockAuthError(method: 'signUp' | 'signIn' | 'signOut', message: string): void {
-  const error = new Error(message) as unknown as AuthError
-  Object.assign(error, {
+  const error: AuthError = {
     name: 'AuthError',
+    message,
     status: 400,
-    code: 'auth_error',
-  })
+  }
 
   if (method === 'signIn') {
     mockAuth.signInWithPassword.mockResolvedValue({

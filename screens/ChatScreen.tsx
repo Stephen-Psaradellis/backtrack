@@ -44,8 +44,10 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
+import Tooltip from 'react-native-walkthrough-tooltip'
 
 import {
   successFeedback,
@@ -72,6 +74,7 @@ import {
   CONVERSATION_ERRORS,
 } from '../lib/conversations'
 import { blockUser, MODERATION_ERRORS } from '../lib/moderation'
+import { useTutorialState } from '../hooks/useTutorialState'
 import type { ChatRouteProp, MainStackNavigationProp } from '../navigation/types'
 import type { Message, Conversation, MessageInsert } from '../types/database'
 import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/supabase-js'
@@ -366,6 +369,9 @@ export function ChatScreen(): JSX.Element {
 
   const { conversationId } = route.params
 
+  // Tutorial tooltip state for messaging onboarding
+  const tutorial = useTutorialState('messaging')
+
   // ---------------------------------------------------------------------------
   // REFS
   // ---------------------------------------------------------------------------
@@ -616,6 +622,30 @@ export function ChatScreen(): JSX.Element {
   }, [userRole, navigation, handleBlockUser, handleReportUser])
 
   // ---------------------------------------------------------------------------
+  // RENDER HELPERS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Render tutorial tooltip content for messaging onboarding
+   */
+  const renderTutorialContent = (): React.ReactNode => (
+    <View style={tooltipStyles.container}>
+      <Text style={tooltipStyles.title}>Start a Conversation</Text>
+      <Text style={tooltipStyles.description}>
+        Chat anonymously with your connection. Send messages using the input below.
+        Your identity remains private until you choose to reveal it.
+      </Text>
+      <TouchableOpacity
+        style={tooltipStyles.button}
+        onPress={tutorial.markComplete}
+        testID="tutorial-dismiss-button"
+      >
+        <Text style={tooltipStyles.buttonText}>Got it</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
 
@@ -650,130 +680,140 @@ export function ChatScreen(): JSX.Element {
   }
 
   return (
-    <View style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={messageListItems}
-          renderItem={({ item }) => {
-            if (item.type === 'separator') {
-              return <DateSeparator timestamp={item.data as string} />
+    <Tooltip
+      isVisible={tutorial.isVisible}
+      content={renderTutorialContent()}
+      placement="bottom"
+      onClose={tutorial.markComplete}
+      closeOnChildInteraction={false}
+      allowChildInteraction={true}
+      topAdjustment={Platform.OS === 'android' ? -(StatusBar.currentHeight ?? 0) : 0}
+    >
+      <View style={styles.container} testID="chat-screen">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={messageListItems}
+            renderItem={({ item }) => {
+              if (item.type === 'separator') {
+                return <DateSeparator timestamp={item.data as string} />
+              }
+
+              const message = item.data as Message
+              const messageIndex = messages.findIndex(m => m.id === message.id)
+              const position = getBubblePosition(
+                messages,
+                messageIndex,
+                userId || ''
+              )
+
+              return (
+                <ChatBubble
+                  message={message}
+                  position={position}
+                  isOwn={message.sender_id === userId}
+                  onLongPress={() => {
+                    notificationFeedback('success')
+                    if (message.sender_id === userId) {
+                      // Own message - can only report
+                      handleReportMessage(message)
+                    } else {
+                      // Other user's message - can report or block
+                      Alert.alert(
+                        'Message Options',
+                        'What would you like to do?',
+                        [
+                          {
+                            text: 'Report Message',
+                            style: 'destructive',
+                            onPress: () => handleReportMessage(message),
+                          },
+                          {
+                            text: 'Block User',
+                            style: 'destructive',
+                            onPress: handleBlockUser,
+                          },
+                          { text: 'Cancel', style: 'cancel' },
+                        ]
+                      )
+                    }
+                  }}
+                />
+              )
+            }}
+            keyExtractor={(item) => item.id}
+            inverted
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.1}
+            ListEmptyComponent={
+              messagesLoading ? (
+                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
+              ) : (
+                <EmptyState title="No messages yet" message="Start the conversation!" />
+              )
             }
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            scrollIndicatorInsets={{ right: 1 }}
+          />
 
-            const message = item.data as Message
-            const messageIndex = messages.findIndex(m => m.id === message.id)
-            const position = getBubblePosition(
-              messages,
-              messageIndex,
-              userId || ''
-            )
+          {messagesError && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{messagesError}</Text>
+            </View>
+          )}
 
-            return (
-              <ChatBubble
-                message={message}
-                position={position}
-                isOwn={message.sender_id === userId}
-                onLongPress={() => {
-                  notificationFeedback('success')
-                  if (message.sender_id === userId) {
-                    // Own message - can only report
-                    handleReportMessage(message)
-                  } else {
-                    // Other user's message - can report or block
-                    Alert.alert(
-                      'Message Options',
-                      'What would you like to do?',
-                      [
-                        {
-                          text: 'Report Message',
-                          style: 'destructive',
-                          onPress: () => handleReportMessage(message),
-                        },
-                        {
-                          text: 'Block User',
-                          style: 'destructive',
-                          onPress: handleBlockUser,
-                        },
-                        { text: 'Cancel', style: 'cancel' },
-                      ]
-                    )
-                  }
-                }}
-              />
-            )
-          }}
-          keyExtractor={(item) => item.id}
-          inverted
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.1}
-          ListEmptyComponent={
-            messagesLoading ? (
-              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
-            ) : (
-              <EmptyState title="No messages yet" message="Start the conversation!" />
-            )
-          }
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          scrollIndicatorInsets={{ right: 1 }}
-        />
-
-        {messagesError && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{messagesError}</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder="Type a message..."
+              placeholderTextColor={COLORS.inputPlaceholder}
+              value={messageText}
+              onChangeText={setMessageText}
+              multiline
+              maxLength={MAX_MESSAGE_LENGTH}
+              editable={!sending && conversation.status === 'active'}
+              testID="message-input"
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
+              onPress={handleSendMessage}
+              disabled={!canSend}
+              testID="send-button"
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.sendButtonText}>Send</Text>
+              )}
+            </TouchableOpacity>
           </View>
+        </KeyboardAvoidingView>
+
+        {otherUserId && (
+          <ReportUserModal
+            visible={userReportModalVisible}
+            onClose={handleCloseUserReportModal}
+            reportedId={otherUserId}
+            onSuccess={handleUserReportSuccess}
+          />
         )}
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor={COLORS.inputPlaceholder}
-            value={messageText}
-            onChangeText={setMessageText}
-            multiline
-            maxLength={MAX_MESSAGE_LENGTH}
-            editable={!sending && conversation.status === 'active'}
-            testID="message-input"
+        {messageToReport && (
+          <ReportMessageModal
+            visible={reportModalVisible}
+            onClose={handleCloseReportModal}
+            reportedId={messageToReport.id}
+            onSuccess={handleMessageReportSuccess}
           />
-          <TouchableOpacity
-            style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
-            onPress={handleSendMessage}
-            disabled={!canSend}
-            testID="send-button"
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.sendButtonText}>Send</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-
-      {otherUserId && (
-        <ReportUserModal
-          visible={userReportModalVisible}
-          onClose={handleCloseUserReportModal}
-          reportedId={otherUserId}
-          onSuccess={handleUserReportSuccess}
-        />
-      )}
-
-      {messageToReport && (
-        <ReportMessageModal
-          visible={reportModalVisible}
-          onClose={handleCloseReportModal}
-          reportedId={messageToReport.id}
-          onSuccess={handleMessageReportSuccess}
-        />
-      )}
-    </View>
+        )}
+      </View>
+    </Tooltip>
   )
 }
 
@@ -841,5 +881,39 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     textAlign: 'center',
+  },
+})
+
+/**
+ * Styles for tutorial tooltip content
+ */
+const tooltipStyles = StyleSheet.create({
+  container: {
+    padding: 16,
+    maxWidth: 280,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: '#EC4899',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 })

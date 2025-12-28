@@ -14,13 +14,14 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ReportUserModal } from '../ReportUserModal'
 import { REPORT_REASONS } from '../../../types/chat'
 import type { ReportReason } from '../../../types/database'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   modalOverlay: 'modalOverlay',
   modal: 'modal',
   modalLarge: 'modalLarge',
@@ -65,15 +66,15 @@ const defaultProps = {
   error: null,
   selectedReason: null as ReportReason | null,
   details: '',
-  onReasonChange: jest.fn(),
-  onDetailsChange: jest.fn(),
-  onSubmit: jest.fn(),
-  onCancel: jest.fn(),
+  onReasonChange: vi.fn(),
+  onDetailsChange: vi.fn(),
+  onSubmit: vi.fn(),
+  onCancel: vi.fn(),
 }
 
 describe('ReportUserModal', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     document.body.style.overflow = ''
   })
 
@@ -149,7 +150,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should call onReasonChange when reason is selected', () => {
-      const onReasonChange = jest.fn()
+      const onReasonChange = vi.fn()
       render(<ReportUserModal {...defaultProps} onReasonChange={onReasonChange} />)
 
       fireEvent.click(screen.getByText('Spam or advertising'))
@@ -165,7 +166,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should not call onReasonChange when loading', () => {
-      const onReasonChange = jest.fn()
+      const onReasonChange = vi.fn()
       render(
         <ReportUserModal {...defaultProps} isLoading={true} onReasonChange={onReasonChange} />
       )
@@ -199,7 +200,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should call onDetailsChange when typing in textarea', () => {
-      const onDetailsChange = jest.fn()
+      const onDetailsChange = vi.fn()
       render(<ReportUserModal {...defaultProps} onDetailsChange={onDetailsChange} />)
 
       fireEvent.change(screen.getByPlaceholderText(/Provide any additional information/), {
@@ -245,7 +246,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should allow submission without details (optional)', () => {
-      const onSubmit = jest.fn()
+      const onSubmit = vi.fn()
       render(
         <ReportUserModal {...defaultProps} selectedReason="spam" details="" onSubmit={onSubmit} />
       )
@@ -301,7 +302,7 @@ describe('ReportUserModal', () => {
 
   describe('Button Interactions', () => {
     it('should call onCancel when cancel button is clicked', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<ReportUserModal {...defaultProps} onCancel={onCancel} />)
 
       fireEvent.click(screen.getByText('Cancel'))
@@ -310,7 +311,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should call onSubmit when submit button is clicked', () => {
-      const onSubmit = jest.fn()
+      const onSubmit = vi.fn()
       render(<ReportUserModal {...defaultProps} selectedReason="spam" onSubmit={onSubmit} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Submit Report' }))
@@ -319,7 +320,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should not call onSubmit when form is invalid', () => {
-      const onSubmit = jest.fn()
+      const onSubmit = vi.fn()
       render(<ReportUserModal {...defaultProps} selectedReason={null} onSubmit={onSubmit} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Submit Report' }))
@@ -328,7 +329,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should not call onCancel when loading', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(
         <ReportUserModal
           {...defaultProps}
@@ -346,7 +347,7 @@ describe('ReportUserModal', () => {
 
   describe('Keyboard Handling', () => {
     it('should call onCancel when Escape is pressed', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<ReportUserModal {...defaultProps} onCancel={onCancel} />)
 
       fireEvent.keyDown(document, { key: 'Escape' })
@@ -355,7 +356,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should not call onCancel on Escape when loading', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(
         <ReportUserModal
           {...defaultProps}
@@ -373,7 +374,7 @@ describe('ReportUserModal', () => {
 
   describe('Backdrop Click', () => {
     it('should call onCancel when clicking on overlay', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<ReportUserModal {...defaultProps} onCancel={onCancel} />)
 
       const overlay = screen.getByRole('dialog').parentElement
@@ -383,7 +384,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should not call onCancel when clicking inside modal', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(<ReportUserModal {...defaultProps} selectedReason="spam" onCancel={onCancel} />)
 
       fireEvent.click(screen.getByText('Submit Report'))
@@ -392,7 +393,7 @@ describe('ReportUserModal', () => {
     })
 
     it('should not close on backdrop click when loading', () => {
-      const onCancel = jest.fn()
+      const onCancel = vi.fn()
       render(
         <ReportUserModal
           {...defaultProps}
@@ -454,7 +455,7 @@ describe('ReportUserModal', () => {
 
   describe('Edge Cases', () => {
     it('should handle all report reasons', () => {
-      const onReasonChange = jest.fn()
+      const onReasonChange = vi.fn()
       render(<ReportUserModal {...defaultProps} onReasonChange={onReasonChange} />)
 
       REPORT_REASONS.forEach((reason) => {

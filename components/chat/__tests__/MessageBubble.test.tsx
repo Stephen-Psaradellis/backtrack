@@ -12,13 +12,14 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MessageBubble } from '../MessageBubble'
 import type { MessageWithSender, OptimisticMessageDisplay } from '../../../types/chat'
 import type { UUID } from '../../../types/database'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   messageRow: 'messageRow',
   messageRowSent: 'messageRowSent',
   messageRowReceived: 'messageRowReceived',
@@ -41,8 +42,8 @@ jest.mock('../styles/ChatScreen.module.css', () => ({
 }))
 
 // Mock formatMessageTime
-jest.mock('../utils/formatters', () => ({
-  formatMessageTime: jest.fn(() => '10:30 AM'),
+vi.mock('../utils/formatters', () => ({
+  formatMessageTime: vi.fn(() => '10:30 AM'),
 }))
 
 // Test data
@@ -190,7 +191,7 @@ describe('MessageBubble', () => {
   describe('Failed Message Actions', () => {
     it('should show retry and delete buttons for failed messages', () => {
       const message = createOptimisticMessage('failed')
-      render(<MessageBubble message={message} isOwn={true} onRetry={jest.fn()} onDelete={jest.fn()} />)
+      render(<MessageBubble message={message} isOwn={true} onRetry={vi.fn()} onDelete={vi.fn()} />)
 
       expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument()
@@ -198,16 +199,16 @@ describe('MessageBubble', () => {
 
     it('should not show actions for non-failed messages', () => {
       const message = createOptimisticMessage('sending')
-      render(<MessageBubble message={message} isOwn={true} onRetry={jest.fn()} onDelete={jest.fn()} />)
+      render(<MessageBubble message={message} isOwn={true} onRetry={vi.fn()} onDelete={vi.fn()} />)
 
       expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument()
     })
 
     it('should call onRetry when retry button is clicked', () => {
-      const onRetry = jest.fn()
+      const onRetry = vi.fn()
       const message = createOptimisticMessage('failed')
-      render(<MessageBubble message={message} isOwn={true} onRetry={onRetry} onDelete={jest.fn()} />)
+      render(<MessageBubble message={message} isOwn={true} onRetry={onRetry} onDelete={vi.fn()} />)
 
       fireEvent.click(screen.getByRole('button', { name: /retry/i }))
 
@@ -215,9 +216,9 @@ describe('MessageBubble', () => {
     })
 
     it('should call onDelete when delete button is clicked', () => {
-      const onDelete = jest.fn()
+      const onDelete = vi.fn()
       const message = createOptimisticMessage('failed')
-      render(<MessageBubble message={message} isOwn={true} onRetry={jest.fn()} onDelete={onDelete} />)
+      render(<MessageBubble message={message} isOwn={true} onRetry={vi.fn()} onDelete={onDelete} />)
 
       fireEvent.click(screen.getByRole('button', { name: /delete/i }))
 
@@ -248,14 +249,14 @@ describe('MessageBubble', () => {
 
     it('should have accessible retry button label', () => {
       const message = createOptimisticMessage('failed')
-      render(<MessageBubble message={message} isOwn={true} onRetry={jest.fn()} onDelete={jest.fn()} />)
+      render(<MessageBubble message={message} isOwn={true} onRetry={vi.fn()} onDelete={vi.fn()} />)
 
       expect(screen.getByRole('button', { name: 'Retry sending message' })).toBeInTheDocument()
     })
 
     it('should have accessible delete button label', () => {
       const message = createOptimisticMessage('failed')
-      render(<MessageBubble message={message} isOwn={true} onRetry={jest.fn()} onDelete={jest.fn()} />)
+      render(<MessageBubble message={message} isOwn={true} onRetry={vi.fn()} onDelete={vi.fn()} />)
 
       expect(screen.getByRole('button', { name: 'Delete failed message' })).toBeInTheDocument()
     })

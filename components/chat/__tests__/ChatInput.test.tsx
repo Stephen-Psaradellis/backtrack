@@ -13,12 +13,13 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChatInput } from '../ChatInput'
 
 // Mock CSS module
-jest.mock('../styles/ChatScreen.module.css', () => ({
+vi.mock('../styles/ChatScreen.module.css', () => ({
   inputContainer: 'inputContainer',
   inputWrapper: 'inputWrapper',
   textInput: 'textInput',
@@ -32,13 +33,13 @@ jest.mock('../styles/ChatScreen.module.css', () => ({
 
 const defaultProps = {
   value: '',
-  onChange: jest.fn(),
-  onSend: jest.fn(),
+  onChange: vi.fn(),
+  onSend: vi.fn(),
 }
 
 describe('ChatInput', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('Basic Rendering', () => {
@@ -69,7 +70,7 @@ describe('ChatInput', () => {
 
   describe('Input Handling', () => {
     it('should call onChange when typing', () => {
-      const onChange = jest.fn()
+      const onChange = vi.fn()
       render(<ChatInput {...defaultProps} onChange={onChange} />)
 
       const textarea = screen.getByRole('textbox')
@@ -79,7 +80,7 @@ describe('ChatInput', () => {
     })
 
     it('should call onTyping when typing with content', () => {
-      const onTyping = jest.fn()
+      const onTyping = vi.fn()
       render(<ChatInput {...defaultProps} onTyping={onTyping} value="" />)
 
       const textarea = screen.getByRole('textbox')
@@ -89,7 +90,7 @@ describe('ChatInput', () => {
     })
 
     it('should not call onTyping for empty input', () => {
-      const onTyping = jest.fn()
+      const onTyping = vi.fn()
       render(<ChatInput {...defaultProps} onTyping={onTyping} value="Hello" />)
 
       const textarea = screen.getByRole('textbox')
@@ -119,7 +120,7 @@ describe('ChatInput', () => {
     })
 
     it('should call onSend when clicking send button', () => {
-      const onSend = jest.fn()
+      const onSend = vi.fn()
       render(<ChatInput {...defaultProps} value="Hello" onSend={onSend} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
@@ -128,7 +129,7 @@ describe('ChatInput', () => {
     })
 
     it('should not call onSend when button is disabled', () => {
-      const onSend = jest.fn()
+      const onSend = vi.fn()
       render(<ChatInput {...defaultProps} value="" onSend={onSend} />)
 
       fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
@@ -139,7 +140,7 @@ describe('ChatInput', () => {
 
   describe('Keyboard Shortcuts', () => {
     it('should send message on Enter key', () => {
-      const onSend = jest.fn()
+      const onSend = vi.fn()
       render(<ChatInput {...defaultProps} value="Hello" onSend={onSend} />)
 
       const textarea = screen.getByRole('textbox')
@@ -149,7 +150,7 @@ describe('ChatInput', () => {
     })
 
     it('should not send message on Enter key with empty value', () => {
-      const onSend = jest.fn()
+      const onSend = vi.fn()
       render(<ChatInput {...defaultProps} value="" onSend={onSend} />)
 
       const textarea = screen.getByRole('textbox')
@@ -159,7 +160,7 @@ describe('ChatInput', () => {
     })
 
     it('should not send message on Shift+Enter (allows newline)', () => {
-      const onSend = jest.fn()
+      const onSend = vi.fn()
       render(<ChatInput {...defaultProps} value="Hello" onSend={onSend} />)
 
       const textarea = screen.getByRole('textbox')
@@ -169,7 +170,7 @@ describe('ChatInput', () => {
     })
 
     it('should prevent default on Enter to avoid newline', () => {
-      const onSend = jest.fn()
+      const onSend = vi.fn()
       render(<ChatInput {...defaultProps} value="Hello" onSend={onSend} />)
 
       const textarea = screen.getByRole('textbox')
@@ -247,7 +248,7 @@ describe('ChatInput', () => {
     })
 
     it('should not call onSend when disabled even with Enter', () => {
-      const onSend = jest.fn()
+      const onSend = vi.fn()
       render(<ChatInput {...defaultProps} value="Hello" onSend={onSend} disabled={true} />)
 
       const textarea = screen.getByRole('textbox')

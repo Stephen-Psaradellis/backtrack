@@ -6,6 +6,7 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderWithProviders, screen, waitFor, within } from '../../utils/test-utils'
 import { Modal, type ModalSize } from '@/components/ui/Modal'
 
@@ -13,14 +14,14 @@ describe('Modal', () => {
   // Default props for testing
   const defaultProps = {
     isOpen: true,
-    onClose: jest.fn(),
+    onClose: vi.fn(),
     title: 'Test Modal',
     children: <p>Modal content</p>,
   }
 
   // Reset mocks before each test
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     // Reset body overflow style that Modal modifies
     document.body.style.overflow = ''
   })
@@ -488,7 +489,7 @@ describe('Modal', () => {
 
   describe('close button behavior', () => {
     it('calls onClose when close button is clicked', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} />
       )
@@ -533,7 +534,7 @@ describe('Modal', () => {
     })
 
     it('calls onClose only once per click', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} />
       )
@@ -560,7 +561,7 @@ describe('Modal', () => {
 
   describe('escape key behavior', () => {
     it('calls onClose when Escape key is pressed and closeOnEscape is true', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnEscape={true} />
       )
@@ -571,7 +572,7 @@ describe('Modal', () => {
     })
 
     it('calls onClose when Escape key is pressed and closeOnEscape defaults to true', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} />
       )
@@ -582,7 +583,7 @@ describe('Modal', () => {
     })
 
     it('does not call onClose when Escape key is pressed and closeOnEscape is false', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnEscape={false} />
       )
@@ -593,7 +594,7 @@ describe('Modal', () => {
     })
 
     it('calls onClose only once per Escape press', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnEscape={true} />
       )
@@ -605,7 +606,7 @@ describe('Modal', () => {
     })
 
     it('Escape key works regardless of focus position', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnEscape={true}>
           <input type="text" placeholder="Focus here" />
@@ -622,8 +623,8 @@ describe('Modal', () => {
     })
 
     it('Escape key does not trigger other handlers when closeOnEscape is true', async () => {
-      const onClose = jest.fn()
-      const onKeyDown = jest.fn()
+      const onClose = vi.fn()
+      const onKeyDown = vi.fn()
       const { user } = renderWithProviders(
         <Modal
           {...defaultProps}
@@ -641,7 +642,7 @@ describe('Modal', () => {
     })
 
     it('other keys do not trigger onClose', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnEscape={true} />
       )
@@ -660,7 +661,7 @@ describe('Modal', () => {
 
   describe('backdrop click behavior', () => {
     it('calls onClose when backdrop is clicked and closeOnBackdropClick is true', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnBackdropClick={true} />
       )
@@ -674,7 +675,7 @@ describe('Modal', () => {
     })
 
     it('calls onClose when backdrop is clicked and closeOnBackdropClick defaults to true', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} />
       )
@@ -687,7 +688,7 @@ describe('Modal', () => {
     })
 
     it('does not call onClose when backdrop is clicked and closeOnBackdropClick is false', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnBackdropClick={false} />
       )
@@ -700,7 +701,7 @@ describe('Modal', () => {
     })
 
     it('does not call onClose when clicking inside the modal content', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnBackdropClick={true}>
           <div data-testid="content">Click me</div>
@@ -715,7 +716,7 @@ describe('Modal', () => {
     })
 
     it('does not call onClose when clicking on the modal dialog itself', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal {...defaultProps} onClose={onClose} closeOnBackdropClick={true} />
       )
@@ -728,7 +729,7 @@ describe('Modal', () => {
     })
 
     it('does not call onClose when clicking on modal header', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal
           {...defaultProps}
@@ -747,7 +748,7 @@ describe('Modal', () => {
     })
 
     it('does not call onClose when clicking on modal footer', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal
           {...defaultProps}
@@ -765,7 +766,7 @@ describe('Modal', () => {
     })
 
     it('backdrop click works independently from Escape key setting', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal
           {...defaultProps}
@@ -788,7 +789,7 @@ describe('Modal', () => {
     })
 
     it('Escape key works independently from backdrop click setting', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal
           {...defaultProps}
@@ -809,7 +810,7 @@ describe('Modal', () => {
     })
 
     it('both close behaviors can be disabled simultaneously', async () => {
-      const onClose = jest.fn()
+      const onClose = vi.fn()
       const { user } = renderWithProviders(
         <Modal
           {...defaultProps}

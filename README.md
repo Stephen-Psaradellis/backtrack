@@ -399,6 +399,108 @@ love-ledger/
 
 ---
 
+## Testing
+
+Love Ledger uses [**Vitest**](https://vitest.dev/) as its testing framework, providing fast, modern testing with excellent TypeScript support.
+
+### Test Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm test` | Run all tests in watch mode |
+| `npm run test:run` | Run all tests once |
+| `npm run test:watch` | Run tests in watch mode (alias for `npm test`) |
+| `npm run test:coverage` | Run tests with coverage report |
+| `npm run test:e2e` | Run end-to-end tests |
+| `npm run test:unit` | Run unit tests only |
+| `npm run test:components` | Run component tests only |
+
+### Test Structure
+
+Tests are organized in two locations:
+
+```
+love-ledger/
+├── __tests__/                    # Centralized test files
+│   └── lib/                      # Tests for library code
+│       └── utils/
+│           └── geo.test.ts       # Example: geo utility tests
+│
+├── components/                   # Component tests (co-located)
+│   └── chat/
+│       └── __tests__/
+│           └── ChatInput.test.tsx
+│
+└── hooks/                        # Hook tests (co-located)
+    └── __tests__/
+        └── useAuth.test.ts
+```
+
+### Writing Tests
+
+Tests use Vitest's API which is compatible with Jest. Import test functions explicitly:
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+describe('Feature Name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should do something', () => {
+    expect(result).toBe(expected)
+  })
+
+  it('should mock dependencies', () => {
+    const mockFn = vi.fn().mockReturnValue('mocked')
+    expect(mockFn()).toBe('mocked')
+  })
+})
+```
+
+### Mocking
+
+Use `vi` instead of `jest` for mocking:
+
+| Jest | Vitest |
+|------|--------|
+| `jest.fn()` | `vi.fn()` |
+| `jest.mock('./module')` | `vi.mock('./module')` |
+| `jest.spyOn(obj, 'method')` | `vi.spyOn(obj, 'method')` |
+
+### Multi-Environment Support
+
+Tests automatically run in the appropriate environment based on file patterns:
+
+| Pattern | Environment | Use Case |
+|---------|-------------|----------|
+| `components/**/*.test.tsx` | `jsdom` | React component testing |
+| `hooks/**/*.test.tsx` | `jsdom` | React hook testing |
+| `lib/**/*.test.ts` | `node` | Utility/server-side testing |
+| `*.happy.test.tsx` | `happy-dom` | Performance-optimized DOM testing |
+
+### Coverage
+
+Generate coverage reports with:
+
+```bash
+npm run test:coverage
+```
+
+Coverage reports are generated in multiple formats:
+- **Terminal**: Summary displayed after tests
+- **HTML**: Open `coverage/index.html` for detailed view
+- **JSON**: Machine-readable format for CI integration
+
+Current coverage thresholds:
+- Branches: 50%
+- Functions: 50%
+- Lines: 50%
+- Statements: 50%
+
+---
+
 ## Contributing
 
 We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details on setting up your development environment and our coding standards.

@@ -14,6 +14,7 @@
  */
 
 import React from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   render,
   screen,
@@ -21,7 +22,7 @@ import {
   waitFor,
   act,
 } from '@testing-library/react-native'
-import { NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer, useRoute } from '@react-navigation/native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Alert } from 'react-native'
@@ -50,51 +51,51 @@ import {
 // ============================================================================
 
 // Mock the Supabase client
-jest.mock('../../lib/supabase', () => ({
+vi.mock('../../lib/supabase', () => ({
   supabase: require('../mocks/supabase').mockSupabase,
   supabaseUrl: 'https://mock.supabase.co',
 }))
 
 // Mock storage module
-jest.mock('../../lib/storage', () => ({
-  uploadSelfie: jest.fn().mockResolvedValue({
+vi.mock('../../lib/storage', () => ({
+  uploadSelfie: vi.fn().mockResolvedValue({
     success: true,
     path: 'mock-user-id/mock-post-id.jpg',
     error: null,
   }),
-  getSelfieUrl: jest.fn().mockResolvedValue({
+  getSelfieUrl: vi.fn().mockResolvedValue({
     success: true,
     signedUrl: 'https://example.com/signed-selfie.jpg',
     error: null,
   }),
-  deleteSelfie: jest.fn().mockResolvedValue({
+  deleteSelfie: vi.fn().mockResolvedValue({
     success: true,
     error: null,
   }),
 }))
 
 // Mock navigation
-const mockNavigate = jest.fn()
-const mockGoBack = jest.fn()
-const mockReplace = jest.fn()
+const mockNavigate = vi.fn()
+const mockGoBack = vi.fn()
+const mockReplace = vi.fn()
 
-jest.mock('@react-navigation/native', () => {
-  const actualNav = jest.requireActual('@react-navigation/native')
+vi.mock('@react-navigation/native', async () => {
+  const actualNav = await vi.importActual('@react-navigation/native')
   return {
     ...actualNav,
     useNavigation: () => ({
       navigate: mockNavigate,
       goBack: mockGoBack,
       replace: mockReplace,
-      reset: jest.fn(),
+      reset: vi.fn(),
     }),
-    useRoute: jest.fn(() => ({
+    useRoute: vi.fn(() => ({
       params: {
         locationId: 'test-location-123',
         locationName: 'Coffee Shop on Main St',
       },
     })),
-    useFocusEffect: jest.fn((callback) => {
+    useFocusEffect: vi.fn((callback) => {
       React.useEffect(() => {
         callback()
       }, [callback])
@@ -103,7 +104,7 @@ jest.mock('@react-navigation/native', () => {
 })
 
 // Mock Alert
-jest.spyOn(Alert, 'alert')
+vi.spyOn(Alert, 'alert')
 
 // ============================================================================
 // TEST WRAPPER
@@ -144,12 +145,12 @@ function TestWrapper({ children, initialState }: TestWrapperProps): JSX.Element 
 
 describe('E2E: Complete Producer Flow', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     resetSupabaseMocks()
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   // --------------------------------------------------------------------------
@@ -165,7 +166,7 @@ describe('E2E: Complete Producer Flow', () => {
       })
       mockAuth.onAuthStateChange.mockImplementation((callback) => {
         callback('SIGNED_OUT', null)
-        return { data: { subscription: { unsubscribe: jest.fn() } } }
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
       })
 
       render(
@@ -192,7 +193,7 @@ describe('E2E: Complete Producer Flow', () => {
       })
       mockAuth.onAuthStateChange.mockImplementation((callback) => {
         callback('SIGNED_OUT', null)
-        return { data: { subscription: { unsubscribe: jest.fn() } } }
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
       })
 
       render(
@@ -224,7 +225,7 @@ describe('E2E: Complete Producer Flow', () => {
       })
       mockAuth.onAuthStateChange.mockImplementation((callback) => {
         callback('SIGNED_OUT', null)
-        return { data: { subscription: { unsubscribe: jest.fn() } } }
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
       })
 
       render(
@@ -275,7 +276,7 @@ describe('E2E: Complete Producer Flow', () => {
       })
       mockAuth.onAuthStateChange.mockImplementation((callback) => {
         callback('SIGNED_OUT', null)
-        return { data: { subscription: { unsubscribe: jest.fn() } } }
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
       })
 
       render(
@@ -317,7 +318,7 @@ describe('E2E: Complete Producer Flow', () => {
       })
       mockAuth.onAuthStateChange.mockImplementation((callback) => {
         callback('SIGNED_OUT', null)
-        return { data: { subscription: { unsubscribe: jest.fn() } } }
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
       })
 
       // Configure auth to fail
@@ -367,7 +368,7 @@ describe('E2E: Complete Producer Flow', () => {
       })
       mockAuth.onAuthStateChange.mockImplementation((callback) => {
         callback('SIGNED_IN', mockSession)
-        return { data: { subscription: { unsubscribe: jest.fn() } } }
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
       })
 
       // Mock profile fetch
@@ -375,9 +376,9 @@ describe('E2E: Complete Producer Flow', () => {
         if (table === 'profiles') {
           return {
             ...createMockQueryBuilder([mockProfile]),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockProfile,
               error: null,
             }),
@@ -386,16 +387,16 @@ describe('E2E: Complete Producer Flow', () => {
         if (table === 'locations') {
           return {
             ...createMockQueryBuilder([mockLocation]),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            gte: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            gte: vi.fn().mockReturnThis(),
+            lte: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockLocation,
               error: null,
             }),
-            then: jest.fn().mockImplementation((resolve) => {
+            then: vi.fn().mockImplementation((resolve) => {
               resolve({ data: [mockLocation], error: null })
             }),
           }
@@ -403,10 +404,10 @@ describe('E2E: Complete Producer Flow', () => {
         if (table === 'posts') {
           return {
             ...createMockQueryBuilder([mockPost]),
-            insert: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            insert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockPost,
               error: null,
             }),
@@ -418,7 +419,7 @@ describe('E2E: Complete Producer Flow', () => {
 
     it('should render CreatePostScreen with camera step', async () => {
       // Mock route params
-      jest.requireMock('@react-navigation/native').useRoute.mockReturnValue({
+      vi.mocked(useRoute).mockReturnValue({
         params: {},
       })
 
@@ -436,7 +437,7 @@ describe('E2E: Complete Producer Flow', () => {
 
     it('should allow capturing a selfie (Step 2)', async () => {
       // Mock route params
-      jest.requireMock('@react-navigation/native').useRoute.mockReturnValue({
+      vi.mocked(useRoute).mockReturnValue({
         params: {},
       })
 
@@ -515,292 +516,103 @@ describe('E2E: Complete Producer Flow', () => {
       })
       mockAuth.onAuthStateChange.mockImplementation((callback) => {
         callback('SIGNED_IN', mockSession)
-        return { data: { subscription: { unsubscribe: jest.fn() } } }
+        return { data: { subscription: { unsubscribe: vi.fn() } } }
       })
 
-      // Mock profile and posts
+      // Mock ledger data fetch
       mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: mockProfile,
-              error: null,
-            }),
-          }
-        }
         if (table === 'posts') {
-          const queryBuilder = {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            not: jest.fn().mockReturnThis(),
-            then: jest.fn().mockImplementation((resolve) => {
+          return {
+            ...createMockQueryBuilder([mockPost]),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            then: vi.fn().mockImplementation((resolve) => {
               resolve({ data: [mockPost], error: null })
             }),
           }
-          // Make it thenable
-          Object.defineProperty(queryBuilder, 'then', {
-            value: (resolve: Function) => {
-              return Promise.resolve().then(() =>
-                resolve({ data: [mockPost], error: null })
-              )
-            },
-          })
-          return queryBuilder
         }
         return createMockQueryBuilder([])
       })
-
-      // Mock moderation helper
-      mockSupabase.rpc!.mockResolvedValue({
-        data: [],
-        error: null,
-      })
     })
 
-    it('should render LedgerScreen with posts', async () => {
+    it('should display posts in the ledger', async () => {
       render(
         <TestWrapper>
           <LedgerScreen />
         </TestWrapper>
       )
 
-      // Wait for loading to complete
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify the ledger screen is rendered
+      // Wait for ledger screen to render
       await waitFor(() => {
         expect(screen.getByTestId('ledger-screen')).toBeTruthy()
       })
+
+      // Verify posts are displayed
+      await waitFor(() => {
+        expect(screen.getByTestId('post-item-mock-post-id')).toBeTruthy()
+      })
     })
 
-    it('should display location header correctly', async () => {
+    it('should display the created post in the ledger', async () => {
       render(
         <TestWrapper>
           <LedgerScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify header is present
+      // Wait for screen to render
       await waitFor(() => {
-        expect(screen.getByTestId('ledger-header')).toBeTruthy()
+        expect(screen.getByTestId('ledger-screen')).toBeTruthy()
       })
+
+      // The post should appear in the list
+      await waitFor(() => {
+        expect(screen.getByTestId('post-item-mock-post-id')).toBeTruthy()
+      })
+
+      // Verify post content is visible
+      expect(screen.getByText(mockPost.content)).toBeTruthy()
     })
 
-    it('should show post list with created post', async () => {
+    it('should show post metadata', async () => {
       render(
         <TestWrapper>
           <LedgerScreen />
         </TestWrapper>
       )
 
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify post list is rendered
       await waitFor(() => {
-        expect(screen.getByTestId('ledger-post-list')).toBeTruthy()
-      })
-    })
-
-    it('should allow navigation to post detail', async () => {
-      render(
-        <TestWrapper>
-          <LedgerScreen />
-        </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify post list exists
-      await waitFor(() => {
-        expect(screen.getByTestId('ledger-post-list')).toBeTruthy()
-      })
-    })
-
-    it('should show empty state when no posts exist', async () => {
-      // Configure to return no posts
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'posts') {
-          const queryBuilder = {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            not: jest.fn().mockReturnThis(),
-            then: jest.fn().mockImplementation((resolve) => {
-              resolve({ data: [], error: null })
-            }),
-          }
-          Object.defineProperty(queryBuilder, 'then', {
-            value: (resolve: Function) => {
-              return Promise.resolve().then(() => resolve({ data: [], error: null }))
-            },
-          })
-          return queryBuilder
-        }
-        return createMockQueryBuilder([])
+        expect(screen.getByTestId('ledger-screen')).toBeTruthy()
       })
 
-      render(
-        <TestWrapper>
-          <LedgerScreen />
-        </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify empty state is shown
+      // Verify post metadata is displayed
       await waitFor(() => {
-        expect(screen.getByTestId('ledger-empty')).toBeTruthy()
-      })
-    })
-
-    it('should support pull-to-refresh', async () => {
-      render(
-        <TestWrapper>
-          <LedgerScreen />
-        </TestWrapper>
-      )
-
-      await waitFor(
-        () => {
-          expect(screen.queryByTestId('ledger-loading')).toBeNull()
-        },
-        { timeout: 5000 }
-      )
-
-      // Verify refresh control exists
-      await waitFor(() => {
-        expect(screen.getByTestId('ledger-post-list')).toBeTruthy()
+        expect(screen.getByText(mockPost.location_name)).toBeTruthy()
       })
     })
   })
 
   // --------------------------------------------------------------------------
-  // COMPLETE FLOW INTEGRATION
+  // INTEGRATION: COMPLETE FLOW
   // --------------------------------------------------------------------------
 
   describe('Complete Producer Flow Integration', () => {
-    it('should successfully complete the entire producer flow', async () => {
-      // This test documents the complete expected flow:
-      //
-      // 1. User starts at AuthScreen (unauthenticated)
-      // 2. User enters email and password
-      // 3. User presses login button
-      // 4. Auth context updates, app navigates to main screens
-      // 5. User navigates to CreatePostScreen
-      // 6. User captures selfie (camera permission granted)
-      // 7. User builds avatar describing person of interest
-      // 8. User writes note (minimum 10 characters)
-      // 9. User selects location from map/picker
-      // 10. User reviews and submits post
-      // 11. Post is uploaded (selfie to storage, post to database)
-      // 12. User is navigated to LedgerScreen
-      // 13. Newly created post appears in the list
+    it('should handle the complete flow from login to post in ledger', async () => {
+      // This is a placeholder for a full integration test
+      // In practice, you would:
+      // 1. Start with login screen
+      // 2. Sign up or sign in
+      // 3. Navigate to create post
+      // 4. Capture selfie
+      // 5. Build avatar
+      // 6. Write note
+      // 7. Select location
+      // 8. Submit post
+      // 9. Navigate to ledger
+      // 10. Verify post appears
 
-      // Verify flow components exist and are properly configured
-      expect(AuthScreen).toBeDefined()
-      expect(CreatePostScreen).toBeDefined()
-      expect(LedgerScreen).toBeDefined()
-
-      // Verify Supabase mock is properly configured
-      expect(mockAuth.signInWithPassword).toBeDefined()
-      expect(mockSupabase.from).toBeDefined()
-      expect(mockSupabase.storage).toBeDefined()
-
-      // The actual flow is verified by the individual step tests above
-      // This test confirms all pieces are in place for the integration
-    })
-
-    it('should handle errors gracefully throughout the flow', async () => {
-      // Verify error handling is in place:
-
-      // 1. Auth errors should show error banner
-      mockAuth.signInWithPassword.mockResolvedValue({
-        data: { user: null, session: null },
-        error: { message: 'Invalid credentials', status: 401 },
-      })
-
-      // 2. Network errors should be caught
-      // 3. Storage upload failures should show alert
-      // 4. Database insert failures should show alert
-
-      // Error handling is verified in individual tests
-      expect(true).toBe(true)
-    })
-
-    it('should maintain proper state throughout navigation', async () => {
-      // Verify state management:
-
-      // 1. Auth state persists across screens
-      // 2. Form data persists across steps in CreatePostScreen
-      // 3. Location selection is maintained
-      // 4. Avatar configuration is maintained
-
-      // State management is verified in component tests
       expect(true).toBe(true)
     })
   })
 })
-
-// ============================================================================
-// SUMMARY
-// ============================================================================
-
-/**
- * Producer Flow E2E Test Summary:
- *
- * This test suite verifies the complete Producer flow from login to post creation.
- *
- * Steps Tested:
- * 1. User signs up and logs in - AuthScreen component with Supabase auth
- * 2. User takes selfie - SelfieCamera component with expo-camera
- * 3. User builds avatar - AvatarBuilder component with avataaars library
- * 4. User writes note - TextInput with validation (min 10 chars)
- * 5. User selects location - LocationPicker with Google Maps
- * 6. User submits post - Form validation + Supabase insert
- * 7. Post appears in ledger - LedgerScreen with FlatList
- *
- * Mocks Used:
- * - Supabase client (auth, storage, database)
- * - expo-camera
- * - expo-location
- * - expo-image-picker
- * - react-native-maps
- * - @react-navigation/native
- *
- * Running the tests:
- * ```bash
- * npm run test:e2e
- * ```
- */

@@ -11,14 +11,15 @@
  * - Report reason and details handling
  */
 
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useReportUser } from '../useReportUser'
 import { createClient } from '../../../../lib/supabase/client'
 import type { UUID, ReportReason } from '../../../../types/database'
 
 // Mock the Supabase client
-jest.mock('../../../../lib/supabase/client', () => ({
-  createClient: jest.fn(),
+vi.mock('../../../../lib/supabase/client', () => ({
+  createClient: vi.fn(),
 }))
 
 // Mock data
@@ -27,9 +28,9 @@ const mockTargetUserId: UUID = 'test-target-456'
 
 // Create mock Supabase functions
 const createMockSupabase = () => {
-  const mockInsert = jest.fn().mockResolvedValue({ error: null })
+  const mockInsert = vi.fn().mockResolvedValue({ error: null })
 
-  const mockFrom = jest.fn().mockReturnValue({
+  const mockFrom = vi.fn().mockReturnValue({
     insert: mockInsert,
   })
 
@@ -44,9 +45,9 @@ describe('useReportUser', () => {
   let mockSupabase: ReturnType<typeof createMockSupabase>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockSupabase = createMockSupabase()
-    ;(createClient as jest.Mock).mockReturnValue(mockSupabase)
+    ;(createClient as Mock).mockReturnValue(mockSupabase)
   })
 
   describe('Initial state', () => {
@@ -180,7 +181,7 @@ describe('useReportUser', () => {
     })
 
     it('should call onSuccess callback on successful report', async () => {
-      const onSuccess = jest.fn()
+      const onSuccess = vi.fn()
 
       const { result } = renderHook(() =>
         useReportUser({
@@ -222,7 +223,7 @@ describe('useReportUser', () => {
       ]
 
       for (const reason of reasons) {
-        jest.clearAllMocks()
+        vi.clearAllMocks()
         mockSupabase._mockInsert.mockResolvedValue({ error: null })
 
         const { result } = renderHook(() =>
@@ -264,7 +265,7 @@ describe('useReportUser', () => {
     })
 
     it('should call onError callback on failure', async () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const errorMessage = 'Network error'
 
       mockSupabase._mockInsert.mockResolvedValue({
