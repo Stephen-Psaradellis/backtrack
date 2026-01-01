@@ -1,159 +1,145 @@
 /**
- * Backtrack
- *
- * Location-Based Anonymous Matchmaking Mobile App
- *
- * This is the root component that sets up:
- * - Gesture Handler (required by React Navigation)
- * - Safe Area Context (for proper screen layout)
- * - Error Boundary (for catching and handling errors gracefully)
- * - Authentication Provider (for global auth state)
- * - Push Notification Handler (for receiving notifications)
- * - Navigation Container with app navigator
+ * Backtrack - Diagnostic Version
+ * This minimal version helps identify what's causing the black screen
  */
 
 // IMPORTANT: gesture-handler must be imported at the very top
 import 'react-native-gesture-handler'
 
-import React, { useEffect, useRef } from 'react'
-import { StatusBar } from 'expo-status-bar'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
+import React, { useState, useEffect } from 'react'
+import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { StyleSheet } from 'react-native'
-import * as Notifications from 'expo-notifications'
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { AppNavigator } from './navigation/AppNavigator'
-import { ErrorBoundary } from './components/ErrorBoundary'
-import { registerForPushNotifications } from './services/notifications'
+// Diagnostic component that shows environment and loading status
+function DiagnosticScreen() {
+  const [status, setStatus] = useState<string[]>(['App started...'])
+  const [error, setError] = useState<string | null>(null)
 
-// ============================================================================
-// NOTIFICATION HANDLER SETUP (Must be called at module level, outside component)
-// ============================================================================
-
-/**
- * Configure how notifications are handled when the app is in the foreground.
- * This determines whether to show alerts, play sounds, and update badges.
- */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-})
-
-// ============================================================================
-// HELPER COMPONENTS
-// ============================================================================
-
-/**
- * Global error handler for logging errors caught by ErrorBoundary
- * In production, this could send errors to a monitoring service
- */
-function handleGlobalError(error: Error, errorInfo: React.ErrorInfo): void {
-  // In production, you would send this to an error monitoring service
-  // For now, we'll just log in development
-  if (__DEV__) {
-    // Error details are shown in the ErrorBoundary UI when showDetails is true
-  }
-}
-
-/**
- * NotificationRegistration Component
- *
- * Handles push notification registration when user is authenticated.
- * Must be rendered inside AuthProvider to access auth context.
- *
- * This component:
- * 1. Registers for push notifications when user logs in
- * 2. Sets up listeners for notification responses (for deep-linking)
- * 3. Cleans up listeners on unmount
- */
-function NotificationRegistration({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const { userId, isAuthenticated } = useAuth()
-  const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null)
-
-  // Register for push notifications when user is authenticated
   useEffect(() => {
-    if (isAuthenticated && userId) {
-      // Register for push notifications
-      // Note: This will request permissions and register token
-      // Per spec, we don't request on first app launch - only when authenticated
-      registerForPushNotifications(userId)
-    }
-  }, [isAuthenticated, userId])
+    const runDiagnostics = async () => {
+      try {
+        // Check environment variables
+        const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        const mapsKey = process.env.EXPO_PUBLIC_GCP_MAPS_API_KEY
 
-  // Set up notification response listener for deep-linking
-  useEffect(() => {
-    // Listen for when user taps on a notification
-    notificationResponseListener.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        // The notification data contains the deep-link URL
-        // Deep-linking navigation is handled by React Navigation's linking config
-        // which will be set up in AppNavigator (subtask-5-1)
-        const data = response.notification.request.content.data
+        setStatus(prev => [...prev, `SUPABASE_URL: ${supabaseUrl ? 'SET' : 'MISSING'}`])
+        setStatus(prev => [...prev, `SUPABASE_KEY: ${supabaseKey ? 'SET' : 'MISSING'}`])
+        setStatus(prev => [...prev, `MAPS_KEY: ${mapsKey ? 'SET' : 'MISSING'}`])
+        setStatus(prev => [...prev, `__DEV__: ${__DEV__}`])
 
-        // Navigation will be handled automatically by linking config
-        // when the app receives the notification URL
-        if (__DEV__ && data) {
-          // Debug logging in development only
-        }
-      }
-    )
+        // Try importing Supabase
+        setStatus(prev => [...prev, 'Importing Supabase...'])
+        const { supabase } = await import('./lib/supabase')
+        setStatus(prev => [...prev, 'Supabase imported successfully'])
 
-    // Cleanup listener on unmount
-    return () => {
-      if (notificationResponseListener.current) {
-        notificationResponseListener.current.remove()
+        // Try importing AuthContext
+        setStatus(prev => [...prev, 'Importing AuthContext...'])
+        await import('./contexts/AuthContext')
+        setStatus(prev => [...prev, 'AuthContext imported successfully'])
+
+        // Try importing AppNavigator
+        setStatus(prev => [...prev, 'Importing AppNavigator...'])
+        await import('./navigation/AppNavigator')
+        setStatus(prev => [...prev, 'AppNavigator imported successfully'])
+
+        setStatus(prev => [...prev, '✅ All imports successful!'])
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        setError(errorMessage)
+        setStatus(prev => [...prev, `❌ ERROR: ${errorMessage}`])
       }
     }
+
+    runDiagnostics()
   }, [])
 
-  return <>{children}</>
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.title}>Backtrack Diagnostics</Text>
+        
+        {error && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>Error Detected:</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        <View style={styles.statusBox}>
+          <Text style={styles.statusTitle}>Status Log:</Text>
+          {status.map((msg, i) => (
+            <Text key={i} style={styles.statusText}>{msg}</Text>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  )
 }
 
-// ============================================================================
-// ROOT COMPONENT
-// ============================================================================
-
-/**
- * Root App Component
- *
- * Sets up the provider hierarchy and navigation structure:
- * 1. GestureHandlerRootView - Required for React Navigation gestures
- * 2. SafeAreaProvider - Provides safe area insets for notched devices
- * 3. ErrorBoundary - Catches and handles errors gracefully
- * 4. AuthProvider - Global authentication state
- * 5. NotificationRegistration - Push notification setup (inside AuthProvider)
- * 6. AppNavigator - Navigation structure with auth-based routing
- */
 export default function App() {
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <ErrorBoundary
-          onError={handleGlobalError}
-          showDetails={__DEV__}
-          testID="app-error-boundary"
-        >
-          <AuthProvider>
-            <NotificationRegistration>
-              <AppNavigator />
-              <StatusBar style="auto" />
-            </NotificationRegistration>
-          </AuthProvider>
-        </ErrorBoundary>
+        <DiagnosticScreen />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#FAFAF9',
+  },
   container: {
     flex: 1,
     backgroundColor: '#FAFAF9',
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#1C1917',
+  },
+  errorBox: {
+    backgroundColor: '#FEE2E2',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#DC2626',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#DC2626',
+  },
+  statusBox: {
+    backgroundColor: '#F3F4F6',
+    padding: 16,
+    borderRadius: 8,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#4B5563',
+    marginBottom: 4,
+    fontFamily: 'monospace',
   },
 })
