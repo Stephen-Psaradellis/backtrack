@@ -14,7 +14,7 @@ export default ({ config }) => {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+    newArchEnabled: false,
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -36,6 +36,7 @@ export default ({ config }) => {
           'Backtrack needs camera access for selfie verification when posting missed connections.',
         NSPhotoLibraryUsageDescription:
           'Backtrack needs photo library access to select photos for your profile.',
+        UIBackgroundModes: ['remote-notification'],
       },
     },
     android: {
@@ -95,6 +96,13 @@ export default ({ config }) => {
             'Backtrack needs photo library access to select photos for your profile.',
           cameraPermission:
             'Backtrack needs camera access for selfie verification when posting missed connections.',
+        },
+      ],
+      [
+        'expo-notifications',
+        {
+          color: '#FF6B6B',
+          defaultChannel: 'default',
         },
       ],
     ],
