@@ -3,15 +3,26 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+// Path to empty mock module for iOS
+const emptyMapsModulePath = path.resolve(__dirname, 'lib/empty-maps-module.js');
+
 // Block react-native-maps from iOS bundle since it's excluded from autolinking
 // This prevents Metro from including the JS that would try to access the missing native module
 config.resolver = {
   ...config.resolver,
   resolveRequest: (context, moduleName, platform) => {
-    // On iOS, replace react-native-maps with an empty mock
+    // On iOS, redirect react-native-maps to our empty mock module
     if (moduleName === 'react-native-maps' && platform === 'ios') {
       return {
-        type: 'empty',
+        filePath: emptyMapsModulePath,
+        type: 'sourceFile',
+      };
+    }
+    // Also handle subpath imports like 'react-native-maps/lib/components/MapView'
+    if (moduleName.startsWith('react-native-maps/') && platform === 'ios') {
+      return {
+        filePath: emptyMapsModulePath,
+        type: 'sourceFile',
       };
     }
     // Use default resolution for everything else
