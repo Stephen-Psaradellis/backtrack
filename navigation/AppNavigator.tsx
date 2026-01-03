@@ -65,42 +65,6 @@ function LinkingFallback() {
 
 
 // ============================================================================
-// PLACEHOLDER SCREENS
-// These will be replaced with actual screen implementations in later phases
-// ============================================================================
-
-/**
- * Placeholder screen component for screens not yet implemented
- */
-function PlaceholderScreen({ title }: { title: string }) {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderTitle}>{title}</Text>
-      <Text style={styles.placeholderSubtitle}>Coming soon...</Text>
-    </View>
-  )
-}
-
-// Auth Screens (Phase 4)
-// LoginScreen is now imported from '../screens/AuthScreen'
-
-function ForgotPasswordScreen() {
-  return <PlaceholderScreen title="Forgot Password" />
-}
-
-// Tab Screens (Phases 5, 9, 11)
-// HomeScreen is now imported from '../screens/HomeScreen'
-// ChatListScreen is now imported from '../screens/ChatListScreen'
-// ProfileScreen is now imported from '../screens/ProfileScreen'
-
-// Stack Screens (Phases 7, 8, 9)
-// CreatePostScreen is now imported from '../screens/CreatePostScreen'
-// LedgerScreen is now imported from '../screens/LedgerScreen'
-// PostDetailScreen is now imported from '../screens/PostDetailScreen'
-// ChatScreen is now imported from '../screens/ChatScreen'
-
-
-// ============================================================================
 // HEADER AVATAR COMPONENT
 // ============================================================================
 
@@ -198,15 +162,6 @@ function AuthStackNavigator() {
       }}
     >
       <AuthStack.Screen name={SCREENS.Login} component={AuthScreen} />
-      <AuthStack.Screen
-        name={SCREENS.ForgotPassword}
-        component={ForgotPasswordScreen}
-        options={{
-          headerShown: true,
-          headerTitle: 'Reset Password',
-          presentation: 'modal',
-        }}
-      />
     </AuthStack.Navigator>
   )
 }
@@ -400,22 +355,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#78716C',
-  },
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F4',
-  },
-  placeholderTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1C1917',
-    marginBottom: 8,
-  },
-  placeholderSubtitle: {
     fontSize: 16,
     color: '#78716C',
   },

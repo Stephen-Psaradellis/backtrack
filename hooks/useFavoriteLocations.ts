@@ -1,7 +1,7 @@
 /**
  * useFavoriteLocations Hook
  *
- * Custom hook for managing user's favorite locations in the Love Ledger app.
+ * Custom hook for managing user's favorite locations in the Backtrack app.
  * Provides CRUD operations with optimistic UI updates and error handling.
  *
  * Features:
@@ -48,12 +48,10 @@
  * ```
  */
 
-'use client'
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 import { useNetworkStatus } from './useNetworkStatus'
 import {
   addFavorite as addFavoriteApi,
@@ -64,12 +62,12 @@ import {
   FAVORITES_ERRORS,
   MAX_FAVORITES_PER_USER,
   type AddFavoriteData,
-} from '@/lib/favorites'
+} from '../lib/favorites'
 import type {
   FavoriteLocation,
   FavoriteLocationUpdate,
   Coordinates,
-} from '@/types/database'
+} from '../types/database'
 
 // ============================================================================
 // Constants
@@ -79,7 +77,7 @@ import type {
 const AUTH_ERROR_MESSAGE = 'You must be logged in to manage favorites.'
 
 /** Cache key prefix for AsyncStorage */
-const CACHE_KEY_PREFIX = '@love_ledger/favorites'
+const CACHE_KEY_PREFIX = '@backtrack/favorites'
 
 /** Cache key for user's favorites list */
 const getCacheKey = (userId: string) => `${CACHE_KEY_PREFIX}/${userId}`
@@ -339,8 +337,9 @@ async function loadFromCache(userId: string): Promise<FavoriteLocation[] | null>
     }
 
     return parsed.favorites
-  } catch {
-    // Error reading cache, return null
+  } catch (error) {
+    // Log cache read errors for debugging
+    console.warn('[useFavoriteLocations] Failed to load from cache:', error)
     return null
   }
 }
@@ -359,8 +358,9 @@ async function saveToCache(userId: string, favorites: FavoriteLocation[]): Promi
       cachedAt: Date.now(),
     }
     await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData))
-  } catch {
-    // Silently fail - caching is best-effort
+  } catch (error) {
+    // Log cache write errors for debugging (non-blocking)
+    console.warn('[useFavoriteLocations] Failed to save to cache:', error)
   }
 }
 
@@ -384,8 +384,9 @@ async function updateCacheItem(
       f.id === favoriteId ? { ...f, ...updates } : f
     )
     await saveToCache(userId, updatedFavorites)
-  } catch {
-    // Silently fail
+  } catch (error) {
+    // Log cache update errors for debugging (non-blocking)
+    console.warn('[useFavoriteLocations] Failed to update cache item:', error)
   }
 }
 
@@ -402,8 +403,9 @@ async function removeCacheItem(userId: string, favoriteId: string): Promise<void
 
     const filteredFavorites = cached.filter((f) => f.id !== favoriteId)
     await saveToCache(userId, filteredFavorites)
-  } catch {
-    // Silently fail
+  } catch (error) {
+    // Log cache remove errors for debugging (non-blocking)
+    console.warn('[useFavoriteLocations] Failed to remove cache item:', error)
   }
 }
 
@@ -418,8 +420,9 @@ async function addCacheItem(userId: string, favorite: FavoriteLocation): Promise
     const cached = await loadFromCache(userId) || []
     const updatedFavorites = [favorite, ...cached]
     await saveToCache(userId, updatedFavorites)
-  } catch {
-    // Silently fail
+  } catch (error) {
+    // Log cache add errors for debugging (non-blocking)
+    console.warn('[useFavoriteLocations] Failed to add cache item:', error)
   }
 }
 
@@ -432,8 +435,9 @@ async function clearCache(userId: string): Promise<void> {
   try {
     const cacheKey = getCacheKey(userId)
     await AsyncStorage.removeItem(cacheKey)
-  } catch {
-    // Silently fail
+  } catch (error) {
+    // Log cache clear errors for debugging (non-blocking)
+    console.warn('[useFavoriteLocations] Failed to clear cache:', error)
   }
 }
 
@@ -471,7 +475,9 @@ async function loadQueue(userId: string): Promise<QueuedOperation[]> {
     }
 
     return JSON.parse(queueData)
-  } catch {
+  } catch (error) {
+    // Log queue load errors for debugging
+    console.warn('[useFavoriteLocations] Failed to load offline queue:', error)
     return []
   }
 }
@@ -486,8 +492,9 @@ async function saveQueue(userId: string, queue: QueuedOperation[]): Promise<void
   try {
     const queueKey = getQueueKey(userId)
     await AsyncStorage.setItem(queueKey, JSON.stringify(queue))
-  } catch {
-    // Silently fail - we'll retry on next operation
+  } catch (error) {
+    // Log queue save errors for debugging (non-blocking, will retry on next operation)
+    console.warn('[useFavoriteLocations] Failed to save offline queue:', error)
   }
 }
 
@@ -527,8 +534,9 @@ async function clearQueue(userId: string): Promise<void> {
   try {
     const queueKey = getQueueKey(userId)
     await AsyncStorage.removeItem(queueKey)
-  } catch {
-    // Silently fail
+  } catch (error) {
+    // Log queue clear errors for debugging (non-blocking)
+    console.warn('[useFavoriteLocations] Failed to clear offline queue:', error)
   }
 }
 
@@ -764,7 +772,7 @@ export function useFavoriteLocations(
   // ---------------------------------------------------------------------------
 
   const abortControllerRef = useRef<AbortController | null>(null)
-  const supabaseRef = useRef(createClient())
+  const supabaseRef = useRef(supabase)
   /** Track previous network state to detect reconnection */
   const wasOfflineRef = useRef(isOffline)
   /** Prevent concurrent queue processing */
