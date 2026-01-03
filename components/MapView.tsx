@@ -56,18 +56,12 @@ import { ErrorState } from './EmptyState'
 import { Button } from './Button'
 import type { Coordinates, MapRegion } from '../lib/types'
 
-// react-native-maps is excluded from iOS autolinking (see app.json)
-// Only import on Android to prevent iOS crash
-let RNMapView: any = null
-let Marker: any = null
-let PROVIDER_GOOGLE: any = null
-
-if (Platform.OS === 'android') {
-  const maps = require('react-native-maps')
-  RNMapView = maps.default
-  Marker = maps.Marker
-  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE
-}
+// Import react-native-maps for both platforms
+// iOS uses Apple Maps (PROVIDER_DEFAULT), Android uses Google Maps (PROVIDER_GOOGLE)
+const maps = require('react-native-maps')
+const RNMapView = maps.default
+const Marker = maps.Marker
+const PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE
 
 // Define types inline to avoid importing from react-native-maps on iOS
 // (Metro bundler may try to load the module even for type-only imports)
@@ -432,19 +426,8 @@ export function MapView({
   }
 
   // ---------------------------------------------------------------------------
-  // RENDER: iOS FALLBACK (react-native-maps not linked on iOS)
-  // ---------------------------------------------------------------------------
-
-  if (Platform.OS === 'ios' || !RNMapView) {
-    return (
-      <View style={[styles.container, styles.centered, style]} testID={testID}>
-        <Text style={styles.fallbackText}>Map not available on this platform</Text>
-      </View>
-    )
-  }
-
-  // ---------------------------------------------------------------------------
-  // RENDER: MAP (Android only)
+  // RENDER: MAP
+  // iOS uses Apple Maps (no provider specified), Android uses Google Maps
   // ---------------------------------------------------------------------------
 
   return (
@@ -452,7 +435,7 @@ export function MapView({
       <RNMapView
         ref={mapRef}
         style={[styles.map, mapStyle]}
-        provider={PROVIDER_GOOGLE}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={region || initialRegion}
         region={region}
         showsUserLocation={showsUserLocation}
@@ -654,11 +637,6 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
-  },
-  fallbackText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
   },
 })
 

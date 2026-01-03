@@ -82,15 +82,6 @@ export default ({ config }) => {
     },
     plugins: [
       [
-        'expo-build-properties',
-        {
-          ios: {
-            // Exclude react-native-maps from iOS autolinking since we only use it on Android
-            excludedPackages: ['react-native-maps'],
-          },
-        },
-      ],
-      [
         'expo-updates',
         {
           enabled: true,
