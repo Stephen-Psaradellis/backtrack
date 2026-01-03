@@ -1,6 +1,6 @@
 === AUTO-BUILD PROGRESS ===
 
-Project: Love Ledger - Enable Development Mode Without API Keys
+Project: Backtrack - Enable Development Mode Without API Keys
 Workspace: managed by orchestrator
 Started: 2024-12-23
 Updated: 2024-12-23 (Session 1 - Planning Complete)

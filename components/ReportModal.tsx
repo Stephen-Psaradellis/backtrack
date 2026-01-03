@@ -105,7 +105,7 @@ export interface ReportModalProps {
  * Colors used in the ReportModal component
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#FFFFFF',
   overlay: 'rgba(0, 0, 0, 0.5)',
   border: '#E5E5EA',
@@ -114,8 +114,8 @@ const COLORS = {
   textPlaceholder: '#C7C7CC',
   error: '#FF3B30',
   success: '#34C759',
-  selectedBackground: '#E3F2FD',
-  selectedBorder: '#007AFF',
+  selectedBackground: '#FFE8E3',
+  selectedBorder: '#FF6B47',
 } as const
 
 /**

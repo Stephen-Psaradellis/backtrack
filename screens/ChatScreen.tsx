@@ -120,14 +120,14 @@ interface SharePhotoModalProps {
 // ============================================================================
 
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#F2F2F7',
   inputBackground: '#FFFFFF',
   inputBorder: '#E5E5EA',
   inputText: '#000000',
   inputPlaceholder: '#8E8E93',
-  sendButtonActive: '#007AFF',
-  sendButtonDisabled: '#C7C7CC',
+  sendButtonActive: '#FF6B47',
+  sendButtonDisabled: '#FFD0C2',
   textSecondary: '#8E8E93',
   error: '#FF3B30',
 } as const
@@ -239,7 +239,15 @@ function useChatMessages(conversationId: string, userId: string | null) {
     }
   }, [conversationId, messages, userId])
 
+  // Ref to store markMessagesAsRead to avoid recreating subscription
+  const markMessagesAsReadRef = useRef(markMessagesAsRead)
+  useEffect(() => {
+    markMessagesAsReadRef.current = markMessagesAsRead
+  }, [markMessagesAsRead])
+
   // Subscribe to realtime updates
+  // IMPORTANT: Only depends on conversationId and userId to prevent memory leak
+  // from constant subscription recreation when messages change
   useEffect(() => {
     if (!conversationId || !userId) {
       return
@@ -258,7 +266,8 @@ function useChatMessages(conversationId: string, userId: string | null) {
           if (messageExists) return prev
           return [newMessage, ...prev]
         })
-        markMessagesAsRead()
+        // Use ref to call latest markMessagesAsRead without adding it as dependency
+        markMessagesAsReadRef.current()
 
         // Trigger haptic feedback for incoming messages with debouncing
         const now = Date.now()
@@ -293,9 +302,10 @@ function useChatMessages(conversationId: string, userId: string | null) {
     return () => {
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current)
+        realtimeChannelRef.current = null
       }
     }
-  }, [conversationId, userId, markMessagesAsRead])
+  }, [conversationId, userId])
 
   return {
     messages,
@@ -500,7 +510,7 @@ function SharePhotoModal({
                         activeOpacity={0.7}
                       >
                         <Image
-                          source={{ uri: photo.url }}
+                          source={{ uri: photo.signedUrl || '' }}
                           style={sharePhotoStyles.photoImage}
                           testID={`photo-image-${photo.id}`}
                         />
@@ -527,7 +537,7 @@ function SharePhotoModal({
                         testID={`shared-photo-tile-${photo.id}`}
                       >
                         <Image
-                          source={{ uri: photo.url }}
+                          source={{ uri: photo.signedUrl || '' }}
                           style={sharePhotoStyles.photoImage}
                           testID={`shared-photo-image-${photo.id}`}
                         />
@@ -551,7 +561,7 @@ function SharePhotoModal({
 // COMPONENT
 // ============================================================================
 
-export function ChatScreen(): JSX.Element {
+export function ChatScreen(): React.ReactNode {
   const route = useRoute<ChatRouteProp>()
   const navigation = useNavigation<MainStackNavigationProp>()
   const { userId } = useAuth()
@@ -600,17 +610,21 @@ export function ChatScreen(): JSX.Element {
   const { handleBlockUser: performBlockUser } = useBlockUser()
 
   const {
-    sharedPhotos,
+    mySharedPhotos,
+    sharedWithMe,
     sharing: sharingPhoto,
     sharePhoto,
-    loadSharedPhotos,
-  } = usePhotoSharing(conversationId, userId || '')
+    refresh: loadSharedPhotos,
+    isPhotoShared,
+    hasSharedPhotos,
+    hasSharedAnyPhotos,
+  } = usePhotoSharing(conversationId)
 
   const {
-    photos: approvedPhotos,
+    approvedPhotos,
     loading: photosLoading,
-    loadProfilePhotos,
-  } = useProfilePhotos(userId || '')
+    refresh: refreshProfilePhotos,
+  } = useProfilePhotos()
 
   // ---------------------------------------------------------------------------
   // COMPUTED VALUES
@@ -699,11 +713,11 @@ export function ChatScreen(): JSX.Element {
     if (conv) {
       await fetchMessages()
       await loadSharedPhotos()
-      await loadProfilePhotos()
+      await refreshProfilePhotos()
     } else {
       setConversationLoading(false)
     }
-  }, [fetchConversation, fetchMessages, loadSharedPhotos, loadProfilePhotos])
+  }, [fetchConversation, fetchMessages, loadSharedPhotos, refreshProfilePhotos])
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -764,17 +778,18 @@ export function ChatScreen(): JSX.Element {
 
   const handleSharePhoto = useCallback(async (photoId: string) => {
     try {
-      await sharePhoto(otherUserId || '', photoId)
-      successFeedback()
+      const success = await sharePhoto(photoId)
+      if (success) {
+        successFeedback()
+      } else {
+        errorFeedback()
+        Alert.alert('Error', 'Failed to share photo. Please try again.')
+      }
     } catch (error) {
       errorFeedback()
       Alert.alert('Error', 'Failed to share photo. Please try again.')
     }
-  }, [otherUserId, sharePhoto])
-
-  const isPhotoShared = useCallback((photoId: string) => {
-    return sharedPhotos.some(sp => sp.photo_id === photoId)
-  }, [sharedPhotos])
+  }, [sharePhoto])
 
   // ---------------------------------------------------------------------------
   // RENDER HELPERS

@@ -1,7 +1,7 @@
 /**
  * Application Types
  *
- * Central type definitions and re-exports for the Love Ledger app.
+ * Central type definitions and re-exports for the Backtrack app.
  * Import from this file for convenience in application code.
  */
 

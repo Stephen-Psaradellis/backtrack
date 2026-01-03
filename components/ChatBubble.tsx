@@ -109,8 +109,8 @@ export interface ChatBubbleProps {
  * Colors used in the ChatBubble component
  */
 const COLORS = {
-  /** Primary color for own messages (iOS blue) */
-  ownBubble: '#007AFF',
+  /** Primary color for own messages (coral) */
+  ownBubble: '#FF6B47',
   /** Text color for own messages */
   ownText: '#FFFFFF',
   /** Background color for received messages */

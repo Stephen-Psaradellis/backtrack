@@ -1,4 +1,8 @@
 /**
+ * @vitest-environment jsdom
+ */
+
+/**
  * Edge Case Tests for Favorites Feature
  *
  * This file contains comprehensive edge case tests covering:
@@ -398,8 +402,12 @@ describe('Edge Case: Custom Name Validation', () => {
 describe('Edge Case: Offline Mode', () => {
   describe('network errors during operations', () => {
     it('handles network timeout during add', async () => {
-      // Simulate network timeout
-      mockSelect.mockRejectedValue(new Error('Network request failed'))
+      // Simulate network timeout - mock the final .eq() to reject
+      // so the chain completes but the await throws
+      mockSelect.mockReturnValue({
+        ...mockQueryBuilder,
+        eq: vi.fn().mockRejectedValue(new Error('Network request failed')),
+      })
 
       const result = await addFavorite(testUserId, createValidAddData())
 

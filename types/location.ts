@@ -2,7 +2,7 @@
  * Location Search & Discovery Type Definitions
  *
  * TypeScript interfaces for Google Places API responses, venue data,
- * and location search functionality in the Love Ledger app.
+ * and location search functionality in the Backtrack app.
  */
 
 import type { Location, UUID } from './database'

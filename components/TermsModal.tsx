@@ -79,15 +79,15 @@ export interface TermsModalProps {
  * Colors used in the TermsModal component
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#FFFFFF',
   overlay: 'rgba(0, 0, 0, 0.5)',
   border: '#E5E5EA',
   textPrimary: '#000000',
   textSecondary: '#8E8E93',
-  textLink: '#007AFF',
+  textLink: '#FF6B47',
   error: '#FF3B30',
-  checkboxActive: '#007AFF',
+  checkboxActive: '#FF6B47',
   checkboxInactive: '#C7C7CC',
   termsBackground: '#F9F9F9',
 } as const
@@ -101,8 +101,8 @@ const MINIMUM_AGE = 18
  * Privacy policy and terms URLs - update with actual URLs
  */
 const LEGAL_URLS = {
-  termsOfService: 'https://loveledger.app/terms',
-  privacyPolicy: 'https://loveledger.app/privacy',
+  termsOfService: 'https://backtrack.social/terms',
+  privacyPolicy: 'https://backtrack.social/privacy',
 } as const
 
 // ============================================================================
@@ -274,15 +274,18 @@ export const TermsModal = memo(function TermsModal({
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <TouchableOpacity
+        <View
           style={styles.overlayTouchable}
-          activeOpacity={1}
-          onPress={onDecline}
+          pointerEvents="box-none"
         >
           <TouchableOpacity
-            style={styles.modalContainer}
+            style={styles.overlayBackground}
             activeOpacity={1}
-            onPress={() => {}} // Prevent closing when tapping inside
+            onPress={onDecline}
+          />
+          <View
+            style={styles.modalContainer}
+            onStartShouldSetResponder={() => true}
           >
             {/* Header */}
             <View style={styles.header}>
@@ -305,6 +308,11 @@ export const TermsModal = memo(function TermsModal({
               style={styles.content}
               contentContainerStyle={styles.contentContainer}
               showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+              bounces={true}
+              scrollEventThrottle={16}
+              keyboardShouldPersistTaps="handled"
+              overScrollMode="always"
             >
               {/* Introduction */}
               <Text style={styles.introText} testID={`${testID}-intro`}>
@@ -313,14 +321,6 @@ export const TermsModal = memo(function TermsModal({
 
               {/* Age Verification Section */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Age Verification</Text>
-                <View style={styles.ageNotice}>
-                  <Text style={styles.ageNoticeIcon}>⚠️</Text>
-                  <Text style={styles.ageNoticeText}>
-                    Love Ledger is intended for users who are {MINIMUM_AGE} years of age or older.
-                    By proceeding, you confirm that you meet this age requirement.
-                  </Text>
-                </View>
                 <Checkbox
                   checked={isAgeConfirmed}
                   onToggle={handleAgeToggle}
@@ -329,33 +329,14 @@ export const TermsModal = memo(function TermsModal({
                     <Text style={styles.checkboxLabel}>
                       I confirm that I am at least{' '}
                       <Text style={styles.highlight}>{MINIMUM_AGE} years old</Text>
+                      {' '}(required for Backtrack)
                     </Text>
                   }
                 />
               </View>
 
-              {/* Terms Summary */}
+              {/* Terms of Service */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Terms of Service</Text>
-                <View style={styles.termsSummary}>
-                  <Text style={styles.termsSummaryText}>
-                    By using Love Ledger, you agree to:
-                  </Text>
-                  <View style={styles.termsList}>
-                    <Text style={styles.termsListItem}>• Use the app respectfully and lawfully</Text>
-                    <Text style={styles.termsListItem}>• Not post harmful or inappropriate content</Text>
-                    <Text style={styles.termsListItem}>• Respect other users' privacy and boundaries</Text>
-                    <Text style={styles.termsListItem}>• Accept that we may remove content or accounts that violate our policies</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={handleOpenTerms}
-                    testID={`${testID}-terms-link`}
-                    accessibilityLabel="Read full Terms of Service"
-                    accessibilityRole="link"
-                  >
-                    <Text style={styles.linkText}>Read full Terms of Service →</Text>
-                  </TouchableOpacity>
-                </View>
                 <Checkbox
                   checked={isTermsAccepted}
                   onToggle={handleTermsToggle}
@@ -363,34 +344,16 @@ export const TermsModal = memo(function TermsModal({
                   label={
                     <Text style={styles.checkboxLabel}>
                       I have read and agree to the{' '}
-                      <Text style={styles.linkInline}>Terms of Service</Text>
+                      <TouchableOpacity onPress={handleOpenTerms}>
+                        <Text style={styles.linkInline}>Terms of Service</Text>
+                      </TouchableOpacity>
                     </Text>
                   }
                 />
               </View>
 
-              {/* Privacy Policy Summary */}
+              {/* Privacy Policy */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Privacy Policy</Text>
-                <View style={styles.termsSummary}>
-                  <Text style={styles.termsSummaryText}>
-We respect your privacy. Here's how we handle your data:
-                  </Text>
-                  <View style={styles.termsList}>
-                    <Text style={styles.termsListItem}>• We collect location data only when you create posts</Text>
-                    <Text style={styles.termsListItem}>• Your selfies are stored privately for verification only</Text>
-                    <Text style={styles.termsListItem}>• Anonymous chats do not reveal your identity</Text>
-                    <Text style={styles.termsListItem}>• You can delete your account and data at any time</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={handleOpenPrivacy}
-                    testID={`${testID}-privacy-link`}
-                    accessibilityLabel="Read full Privacy Policy"
-                    accessibilityRole="link"
-                  >
-                    <Text style={styles.linkText}>Read full Privacy Policy →</Text>
-                  </TouchableOpacity>
-                </View>
                 <Checkbox
                   checked={isPrivacyAccepted}
                   onToggle={handlePrivacyToggle}
@@ -398,14 +361,16 @@ We respect your privacy. Here's how we handle your data:
                   label={
                     <Text style={styles.checkboxLabel}>
                       I have read and agree to the{' '}
-                      <Text style={styles.linkInline}>Privacy Policy</Text>
+                      <TouchableOpacity onPress={handleOpenPrivacy}>
+                        <Text style={styles.linkInline}>Privacy Policy</Text>
+                      </TouchableOpacity>
                     </Text>
                   }
                 />
               </View>
             </ScrollView>
 
-            {/* Footer */}
+            {/* Footer - fixed at bottom outside ScrollView */}
             <View style={styles.footer}>
               <TouchableOpacity
                 style={styles.declineButton}
@@ -439,8 +404,8 @@ We respect your privacy. Here's how we handle your data:
                 </Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   )
@@ -479,12 +444,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  overlayBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+  },
   modalContainer: {
-    maxHeight: '90%',
+    maxHeight: '60%',
+    minHeight: 420,
     backgroundColor: COLORS.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -515,16 +486,16 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
   introText: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: 24,
+    marginBottom: 12,
     lineHeight: 20,
   },
   section: {
-    marginBottom: 28,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 16,
@@ -536,8 +507,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFF3CD',
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    padding: 8,
+    marginBottom: 8,
   },
   ageNoticeIcon: {
     fontSize: 20,
@@ -552,8 +523,8 @@ const styles = StyleSheet.create({
   termsSummary: {
     backgroundColor: COLORS.termsBackground,
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    padding: 8,
+    marginBottom: 8,
   },
   termsSummaryText: {
     fontSize: 13,
@@ -624,10 +595,11 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     gap: 12,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
   declineButton: {
     flex: 1,

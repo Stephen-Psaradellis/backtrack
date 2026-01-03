@@ -3,23 +3,77 @@
  *
  * This file initializes the Supabase client with proper React Native settings:
  * - URL polyfill for Supabase compatibility
- * - AsyncStorage for persistent session storage
+ * - SecureStore for secure session storage (auth tokens encrypted at rest)
  * - detectSessionInUrl: false (CRITICAL for React Native)
+ *
+ * SECURITY: Auth tokens are stored in expo-secure-store which provides:
+ * - Encrypted storage at rest
+ * - Protection on rooted/jailbroken devices
+ * - Keychain (iOS) / Keystore (Android) integration
  *
  * In development mode with missing credentials, returns a mock client
  * that allows the app to run without a real Supabase connection.
  */
 
 import 'react-native-url-polyfill/auto'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as SecureStore from 'expo-secure-store'
 import { createClient } from '@supabase/supabase-js'
 import { shouldUseMockExpoSupabase } from './dev'
-import { createTypedDevSupabaseClient } from './dev/mock-supabase'
+import { getSharedMockClient } from './dev/shared-mock-client'
+
+// ============================================================================
+// SECURE STORAGE ADAPTER
+// ============================================================================
+
+/**
+ * SecureStore adapter for Supabase auth storage
+ *
+ * Provides encrypted storage for auth tokens using the device's secure enclave.
+ * Falls back gracefully if SecureStore is not available (e.g., web environment).
+ */
+const SecureStoreAdapter = {
+  /**
+   * Retrieve an item from SecureStore
+   */
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      return await SecureStore.getItemAsync(key)
+    } catch (error) {
+      // SecureStore may not be available in all environments (e.g., web)
+      console.warn('SecureStore getItem failed:', error)
+      return null
+    }
+  },
+
+  /**
+   * Store an item in SecureStore
+   */
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      await SecureStore.setItemAsync(key, value)
+    } catch (error) {
+      // SecureStore may not be available in all environments (e.g., web)
+      console.warn('SecureStore setItem failed:', error)
+    }
+  },
+
+  /**
+   * Remove an item from SecureStore
+   */
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      await SecureStore.deleteItemAsync(key)
+    } catch (error) {
+      // SecureStore may not be available in all environments (e.g., web)
+      console.warn('SecureStore removeItem failed:', error)
+    }
+  },
+}
 
 // Environment variables for Supabase configuration
 // These must be set in .env file with EXPO_PUBLIC_ prefix for Expo to expose them
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 /**
  * Mock Supabase URL for development mode
@@ -34,16 +88,19 @@ const MOCK_SUPABASE_URL = 'https://mock.supabase.co'
  * that allows the app to run without a real Supabase connection.
  *
  * Configuration notes for real client:
- * - storage: AsyncStorage - Required for session persistence in React Native
+ * - storage: SecureStoreAdapter - SECURE encrypted storage using device keychain/keystore
  * - autoRefreshToken: true - Automatically refresh auth tokens before expiry
- * - persistSession: true - Persist session to AsyncStorage
+ * - persistSession: true - Persist session to SecureStore (encrypted)
  * - detectSessionInUrl: false - CRITICAL: Must be false for React Native
  *   (prevents attempts to parse URL for OAuth callbacks which doesn't work in RN)
+ *
+ * SECURITY: Tokens are now stored encrypted in the device's secure enclave,
+ * protecting against extraction on rooted/jailbroken devices.
  */
 function createSupabaseClient() {
   // Use mock client in development when credentials are missing
   if (shouldUseMockExpoSupabase()) {
-    return createTypedDevSupabaseClient()
+    return getSharedMockClient()
   }
 
   // Validate environment variables for real client
@@ -56,15 +113,16 @@ function createSupabaseClient() {
 
   if (!supabaseAnonKey) {
     throw new Error(
-      'Missing EXPO_PUBLIC_SUPABASE_ANON_KEY environment variable. ' +
+      'Missing EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variable. ' +
       'Please ensure it is set in your .env file.'
     )
   }
 
   // Use real Supabase client when credentials are available
+  // SECURITY: Using SecureStore for encrypted token storage
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      storage: AsyncStorage,
+      storage: SecureStoreAdapter,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,

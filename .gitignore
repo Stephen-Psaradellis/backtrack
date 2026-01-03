@@ -1,4 +1,4 @@
-# Love Ledger - Git Ignore Configuration
+# Backtrack - Git Ignore Configuration
 
 # Auto Claude data directory
 .auto-claude/

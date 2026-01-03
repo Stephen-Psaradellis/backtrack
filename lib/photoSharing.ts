@@ -72,6 +72,8 @@ export const PHOTO_SHARING_ERRORS = {
   NOT_AUTHENTICATED: 'You must be signed in to share photos.',
   PHOTO_NOT_FOUND: 'Photo not found.',
   PHOTO_NOT_APPROVED: 'Only approved photos can be shared.',
+  PHOTO_PENDING_MODERATION: 'This photo is still being reviewed. Please wait for approval before sharing.',
+  PHOTO_REJECTED: 'This photo was rejected during review and cannot be shared.',
   PHOTO_NOT_OWNED: 'You can only share your own photos.',
   CONVERSATION_NOT_FOUND: 'Conversation not found.',
   NOT_IN_CONVERSATION: 'You are not a participant in this conversation.',
@@ -140,17 +142,17 @@ export async function sharePhotoWithMatch(
   photoId: string,
   conversationId: string
 ): Promise<SharePhotoResult> {
-  // Get current user
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return {
-      success: false,
-      share: null,
-      error: PHOTO_SHARING_ERRORS.NOT_AUTHENTICATED,
-    }
-  }
-
   try {
+    // Get current user
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return {
+        success: false,
+        share: null,
+        error: PHOTO_SHARING_ERRORS.NOT_AUTHENTICATED,
+      }
+    }
+
     // Validate photo ownership and approval status
     const { data: photo, error: photoError } = await supabase
       .from('profile_photos')
@@ -167,7 +169,26 @@ export async function sharePhotoWithMatch(
       }
     }
 
+    // SECURITY: Prevent sharing photos before moderation completes (race condition fix)
+    // Must explicitly check for 'approved' status to prevent sharing during moderation
+    if (photo.moderation_status === 'pending') {
+      return {
+        success: false,
+        share: null,
+        error: PHOTO_SHARING_ERRORS.PHOTO_PENDING_MODERATION,
+      }
+    }
+
+    if (photo.moderation_status === 'rejected') {
+      return {
+        success: false,
+        share: null,
+        error: PHOTO_SHARING_ERRORS.PHOTO_REJECTED,
+      }
+    }
+
     if (photo.moderation_status !== 'approved') {
+      // Catch-all for any other status (error, etc.)
       return {
         success: false,
         share: null,
@@ -254,16 +275,16 @@ export async function unsharePhotoFromMatch(
   photoId: string,
   conversationId: string
 ): Promise<UnsharePhotoResult> {
-  // Get current user
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return {
-      success: false,
-      error: PHOTO_SHARING_ERRORS.NOT_AUTHENTICATED,
-    }
-  }
-
   try {
+    // Get current user
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return {
+        success: false,
+        error: PHOTO_SHARING_ERRORS.NOT_AUTHENTICATED,
+      }
+    }
+
     // Delete the share record
     // RLS policies ensure only the owner can delete their shares
     const { error: deleteError } = await supabase

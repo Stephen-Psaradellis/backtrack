@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document verifies that Love Ledger meets all App Store (iOS) and Play Store (Android) compliance requirements for user safety, privacy, and content moderation.
+This document verifies that Backtrack meets all App Store (iOS) and Play Store (Android) compliance requirements for user safety, privacy, and content moderation.
 
 ---
 
@@ -19,7 +19,7 @@ This document verifies that Love Ledger meets all App Store (iOS) and Play Store
 **Status:** Verified
 
 **Implementation:**
-- Privacy policy link available at `https://loveledger.app/privacy`
+- Privacy policy link available at `https://backtrack.social/privacy`
 - Accessible during signup via TermsModal component
 - Opens via React Native Linking API
 - Users must explicitly accept the privacy policy before creating an account
@@ -99,7 +99,7 @@ This document verifies that Love Ledger meets all App Store (iOS) and Play Store
 - Cannot proceed with signup without confirming age
 
 **User Experience:**
-- Clear warning banner: "Love Ledger is intended for users who are 18 years of age or older"
+- Clear warning banner: "Backtrack is intended for users who are 18 years of age or older"
 - Checkbox confirmation: "I confirm that I am at least 18 years old"
 - All three checkboxes (age, terms, privacy) must be checked before signup
 
@@ -114,10 +114,10 @@ This document verifies that Love Ledger meets all App Store (iOS) and Play Store
 **Status:** Verified
 
 **iOS (Info.plist via app.json):**
-- `NSLocationWhenInUseUsageDescription`: "Love Ledger needs your location to show nearby venues where you can post or browse missed connections."
-- `NSLocationAlwaysAndWhenInUseUsageDescription`: "Love Ledger uses your location to discover nearby venues and help you find missed connections."
-- `NSCameraUsageDescription`: "Love Ledger needs camera access for selfie verification when posting missed connections."
-- `NSPhotoLibraryUsageDescription`: "Love Ledger needs photo library access to select photos for your profile."
+- `NSLocationWhenInUseUsageDescription`: "Backtrack needs your location to show nearby venues where you can post or browse missed connections."
+- `NSLocationAlwaysAndWhenInUseUsageDescription`: "Backtrack uses your location to discover nearby venues and help you find missed connections."
+- `NSCameraUsageDescription`: "Backtrack needs camera access for selfie verification when posting missed connections."
+- `NSPhotoLibraryUsageDescription`: "Backtrack needs photo library access to select photos for your profile."
 
 **Android (via Expo plugins in app.json):**
 - expo-location: Same descriptive strings as iOS
@@ -189,7 +189,7 @@ The following items should be verified during QA testing:
 
 ## Conclusion
 
-Love Ledger implements all required app store compliance features:
+Backtrack implements all required app store compliance features:
 - Privacy policy accessible during signup
 - Content reporting system for posts, messages, and users
 - User blocking with conversation deactivation

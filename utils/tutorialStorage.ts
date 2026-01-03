@@ -87,7 +87,7 @@ export interface TutorialCompletionResult {
  * Prefix for all tutorial-related storage keys
  * Follows app namespacing convention to prevent collisions
  */
-export const TUTORIAL_KEY_PREFIX = '@LoveLedger_tutorial_completed_'
+export const TUTORIAL_KEY_PREFIX = '@Backtrack_tutorial_completed_'
 
 /**
  * All valid tutorial feature names

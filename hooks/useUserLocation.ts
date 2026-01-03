@@ -8,12 +8,10 @@
  * @module hooks/useUserLocation
  */
 
-'use client'
-
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { recordLocationVisit, GeoError } from '@/lib/utils/geo'
-import type { Coordinates, LocationVisit } from '@/types/database'
+import { supabase } from '../lib/supabase'
+import { recordLocationVisit, GeoError } from '../lib/utils/geo'
+import type { Coordinates, LocationVisit } from '../types/database'
 
 // ============================================================================
 // Constants
@@ -509,7 +507,7 @@ export function useRecordVisit(
   const [error, setError] = useState<GeoError | null>(null)
 
   // Refs
-  const supabaseRef = useRef(createClient())
+  const supabaseRef = useRef(supabase)
   const isMountedRef = useRef(true)
 
   /**

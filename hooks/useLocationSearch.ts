@@ -8,18 +8,16 @@
  * @module hooks/useLocationSearch
  */
 
-'use client'
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import * as Location from 'expo-location'
 import NetInfo from '@react-native-community/netinfo'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '../lib/supabase'
 import {
   searchVenues,
   LOCATION_SERVICE_ERRORS,
-} from '@/services/locationService'
-import type { Venue, VenueCategory, GoogleLatLng } from '@/types/location'
-import { LOCATION_CONSTANTS, VENUE_TYPE_FILTERS } from '@/types/location'
+} from '../services/locationService'
+import type { Venue, VenueCategory, GoogleLatLng } from '../types/location'
+import { LOCATION_CONSTANTS, VENUE_TYPE_FILTERS } from '../types/location'
 
 // ============================================================================
 // Constants
@@ -280,7 +278,7 @@ export function useLocationSearch(
   // Refs for cleanup and debouncing
   const abortControllerRef = useRef<AbortController | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const supabaseRef = useRef(createClient())
+  const supabaseRef = useRef(supabase)
   const isMountedRef = useRef(true)
 
   // Memoize effective location: prefer userLocation prop, fall back to GPS

@@ -2,7 +2,7 @@
  * Push Notification Service
  *
  * Handles push notification permissions, token registration, and token management
- * for the Love Ledger app. Uses Expo Notifications API for token acquisition
+ * for the Backtrack app. Uses Expo Notifications API for token acquisition
  * and Supabase for persistent token storage.
  *
  * KEY CONCEPTS:

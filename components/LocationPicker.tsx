@@ -1,7 +1,7 @@
 /**
  * LocationPicker Component
  *
- * A comprehensive venue search and selection component for the Love Ledger app.
+ * A comprehensive venue search and selection component for the Backtrack app.
  * Allows users to search for locations, view nearby venues, and select from a list.
  *
  * Features:
@@ -194,14 +194,14 @@ interface LocationListItemProps {
  * iOS-style colors
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   secondary: '#8E8E93',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
   border: '#E5E5EA',
   text: '#000000',
   textSecondary: '#8E8E93',
-  selectedBackground: '#E3F2FF',
+  selectedBackground: '#FFE8E3',
   danger: '#FF3B30',
 } as const
 

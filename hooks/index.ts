@@ -1,7 +1,7 @@
 /**
  * Hooks Module
  *
- * Custom React hooks for the Love Ledger app.
+ * Custom React hooks for the Backtrack app.
  * Import all hooks from this file for convenience.
  *
  * @example
@@ -79,3 +79,65 @@ export {
   usePhotoSharing,
   type UsePhotoSharingResult,
 } from './usePhotoSharing'
+// Location streaks hook
+export {
+  useLocationStreaks,
+  useLocationStreak,
+  type UseLocationStreaksOptions,
+  type UseLocationStreaksResult,
+} from './useLocationStreaks'
+
+// Event attendance hook
+export {
+  useEventAttendance,
+  useUserEvents,
+  type AttendanceStatus,
+  type EventAttendee,
+  type EventWithStats,
+  type UseEventAttendanceOptions,
+  type UseEventAttendanceResult,
+  type UseUserEventsOptions,
+} from './useEventAttendance'
+
+// Spark notification settings hook
+export {
+  useSparkNotificationSettings,
+  type SparkSettingsResult,
+  type UseSparkNotificationSettingsResult,
+} from './useSparkNotificationSettings'
+
+// Regulars mode hooks
+export {
+  useRegularsMode,
+  useFellowRegulars,
+  useLocationRegulars,
+  type RegularsVisibility,
+  type FellowRegular,
+  type LocationRegular,
+  type RegularsError,
+  type UseRegularsModeOptions,
+  type UseRegularsModeResult,
+  type UseFellowRegularsOptions,
+  type UseFellowRegularsResult,
+  type UseLocationRegularsOptions,
+  type UseLocationRegularsResult,
+} from './useRegulars'
+
+// Check-in hook (tiered matching)
+export {
+  useCheckin,
+  type CheckinResult,
+  type CheckoutResult,
+  type UseCheckinResult,
+} from './useCheckin'
+
+// Tiered posts hook
+export {
+  useTieredPosts,
+  useVerifiedPosts,
+  useFavoriteSpotPosts,
+  type TieredPost,
+  type TieredPostsResult,
+  type UseTieredPostsOptions,
+  type UseTieredPostsResult,
+} from './useTieredPosts'

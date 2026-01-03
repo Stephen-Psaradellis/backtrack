@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
-import { createClient } from '../../../lib/supabase/client'
+import { supabase } from '../../../lib/supabase'
 import type { UUID, ReportReason } from '../../../types/database'
 import type { UseReportUserReturn } from '../../../types/chat'
 
@@ -70,7 +70,7 @@ export function useReportUser({
   onSuccess,
   onError,
 }: UseReportUserOptions): UseReportUserReturn {
-  const supabase = createClient()
+  // supabase imported from lib/supabase
 
   // ============================================================================
   // State

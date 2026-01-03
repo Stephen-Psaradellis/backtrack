@@ -127,16 +127,31 @@ CREATE TRIGGER on_message_created
 -- ============================================================================
 
 -- Ensure message content is not empty
-ALTER TABLE messages ADD CONSTRAINT messages_content_not_empty
-    CHECK (LENGTH(TRIM(content)) > 0);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'messages_content_not_empty') THEN
+        ALTER TABLE messages ADD CONSTRAINT messages_content_not_empty
+            CHECK (LENGTH(TRIM(content)) > 0);
+    END IF;
+END $$;
 
 -- Ensure message content is not excessively long (10,000 characters max)
-ALTER TABLE messages ADD CONSTRAINT messages_content_max_length
-    CHECK (LENGTH(content) <= 10000);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'messages_content_max_length') THEN
+        ALTER TABLE messages ADD CONSTRAINT messages_content_max_length
+            CHECK (LENGTH(content) <= 10000);
+    END IF;
+END $$;
 
 -- Ensure producer and consumer are different users
-ALTER TABLE conversations ADD CONSTRAINT conversations_different_users
-    CHECK (producer_id != consumer_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'conversations_different_users') THEN
+        ALTER TABLE conversations ADD CONSTRAINT conversations_different_users
+            CHECK (producer_id != consumer_id);
+    END IF;
+END $$;
 
 -- ============================================================================
 -- FUNCTIONS FOR MESSAGING

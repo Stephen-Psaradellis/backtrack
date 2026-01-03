@@ -1,6 +1,6 @@
 # Component Architecture
 
-This document describes the UI component architecture used in Love Ledger, including the component hierarchy, reusable primitives, and design patterns.
+This document describes the UI component architecture used in Backtrack, including the component hierarchy, reusable primitives, and design patterns.
 
 ## Table of Contents
 
@@ -24,7 +24,7 @@ This document describes the UI component architecture used in Love Ledger, inclu
 
 ## Component Organization
 
-Love Ledger's React components are organized into two categories:
+Backtrack's React components are organized into two categories:
 
 ```
 components/
@@ -521,7 +521,7 @@ import { Modal, type ModalSize } from '@/components/ui/Modal';
 
 ## Avatar Components
 
-Love Ledger uses the **Avataaars** library for avatar representation. Avatar configuration is managed through TypeScript types defined in `types/avatar.ts`.
+Backtrack uses the **Avataaars** library for avatar representation. Avatar configuration is managed through TypeScript types defined in `types/avatar.ts`.
 
 ### Avatar Configuration
 

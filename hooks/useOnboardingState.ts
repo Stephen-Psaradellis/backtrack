@@ -1,7 +1,7 @@
 /**
  * useOnboardingState Hook
  *
- * Custom hook for managing onboarding state in the Love Ledger app.
+ * Custom hook for managing onboarding state in the Backtrack app.
  * Handles step navigation, completion tracking, avatar configuration,
  * location permission status, and localStorage persistence.
  *
@@ -56,7 +56,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { AvatarConfig, DEFAULT_AVATAR_CONFIG } from '@/types/avatar'
+import { AvatarConfig, DEFAULT_AVATAR_CONFIG } from '../types/avatar'
 
 // ============================================================================
 // TYPES
@@ -88,7 +88,7 @@ export interface UseOnboardingStateOptions {
 
   /**
    * Key used for localStorage persistence
-   * @default 'love_ledger_onboarding'
+   * @default 'backtrack_onboarding'
    */
   storageKey?: string
 
@@ -163,7 +163,7 @@ export interface UseOnboardingStateResult {
 /**
  * Default storage key for onboarding state
  */
-export const ONBOARDING_STORAGE_KEY = 'love_ledger_onboarding'
+export const ONBOARDING_STORAGE_KEY = 'backtrack_onboarding'
 
 /**
  * Default number of onboarding steps

@@ -5,26 +5,19 @@ import { forwardRef, type InputHTMLAttributes, useId } from 'react';
 export type InputSize = 'sm' | 'md' | 'lg';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
-  /** Label text displayed above the input */
   label?: string;
-  /** Error message to display below the input */
   error?: string;
-  /** Helper text displayed below the input when there's no error */
   helperText?: string;
-  /** The size of the input */
   size?: InputSize;
-  /** Whether the input should take full width of its container */
   fullWidth?: boolean;
-  /** Content to display on the left side of the input */
   leftIcon?: React.ReactNode;
-  /** Content to display on the right side of the input */
   rightIcon?: React.ReactNode;
 }
 
 const sizeStyles: Record<InputSize, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-4 py-3 text-lg',
+  sm: 'px-3.5 py-2 text-sm',
+  md: 'px-4 py-3 text-base',
+  lg: 'px-5 py-4 text-lg',
 };
 
 const iconSizeStyles: Record<InputSize, string> = {
@@ -39,30 +32,6 @@ const labelSizeStyles: Record<InputSize, string> = {
   lg: 'text-base',
 };
 
-/**
- * A reusable input component with label, error states, and accessibility.
- *
- * @example
- * ```tsx
- * <Input
- *   label="Email"
- *   type="email"
- *   placeholder="Enter your email"
- * />
- *
- * <Input
- *   label="Password"
- *   type="password"
- *   error="Password must be at least 8 characters"
- * />
- *
- * <Input
- *   label="Search"
- *   leftIcon={<SearchIcon />}
- *   placeholder="Search..."
- * />
- * ```
- */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
     {
@@ -102,20 +71,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       .join(' ');
 
     const inputStyles = [
-      'block rounded-lg',
-      'border transition-colors duration-200',
-      'placeholder:text-gray-400 dark:placeholder:text-gray-500',
+      'block rounded-[12px]',
+      'border-[1.5px] transition-all duration-200',
+      'placeholder:text-neutral-400 dark:placeholder:text-neutral-500',
       'focus:outline-none focus:ring-2 focus:ring-offset-0',
-      'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
-      'dark:disabled:bg-gray-900 dark:disabled:text-gray-500',
+      'disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500',
+      'dark:disabled:bg-neutral-900 dark:disabled:text-neutral-500',
       hasError
-        ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500'
-        : 'border-gray-300 focus:border-pink-500 focus:ring-pink-500 dark:border-gray-600 dark:focus:border-pink-500',
-      'bg-white dark:bg-gray-800',
-      'text-gray-900 dark:text-gray-100',
+        ? 'border-error focus:border-error focus:ring-error/20 dark:border-error'
+        : 'border-neutral-300 focus:border-primary-500 focus:ring-primary-500/20 dark:border-neutral-600 dark:focus:border-primary-400',
+      'bg-white dark:bg-neutral-800',
+      'text-neutral-900 dark:text-neutral-100',
       sizeStyles[size],
-      leftIcon ? 'pl-10' : '',
-      rightIcon ? 'pr-10' : '',
+      leftIcon ? 'pl-11' : '',
+      rightIcon ? 'pr-11' : '',
       fullWidth ? 'w-full' : '',
       className,
     ]
@@ -123,8 +92,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       .join(' ');
 
     const labelStyles = [
-      'block font-medium mb-1.5',
-      'text-gray-700 dark:text-gray-300',
+      'block font-medium mb-2',
+      'text-neutral-700 dark:text-neutral-300',
       labelSizeStyles[size],
     ]
       .filter(Boolean)
@@ -132,7 +101,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     const iconBaseStyles = [
       'absolute top-1/2 -translate-y-1/2',
-      'text-gray-400 dark:text-gray-500',
+      'text-neutral-400 dark:text-neutral-500',
       'pointer-events-none',
       iconSizeStyles[size],
     ]
@@ -148,7 +117,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className={inputWrapperStyles}>
           {leftIcon && (
-            <span className={`${iconBaseStyles} left-3`} aria-hidden="true">
+            <span className={`${iconBaseStyles} left-4`} aria-hidden="true">
               {leftIcon}
             </span>
           )}
@@ -164,18 +133,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightIcon && (
-            <span className={`${iconBaseStyles} right-3`} aria-hidden="true">
+            <span className={`${iconBaseStyles} right-4`} aria-hidden="true">
               {rightIcon}
             </span>
           )}
         </div>
         {hasError && (
-          <p id={errorId} className="mt-1.5 text-sm text-red-500" role="alert">
+          <p id={errorId} className="mt-2 text-sm text-error flex items-center gap-1.5" role="alert">
+            <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
             {error}
           </p>
         )}
         {!hasError && helperText && (
-          <p id={helperId} className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+          <p id={helperId} className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
             {helperText}
           </p>
         )}

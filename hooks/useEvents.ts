@@ -8,10 +8,8 @@
  * @module hooks/useEvents
  */
 
-'use client'
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import type { Coordinates } from '@/types/database'
+import type { Coordinates } from '../types/database'
 
 // ============================================================================
 // Constants

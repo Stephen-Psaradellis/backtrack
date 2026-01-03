@@ -145,17 +145,17 @@ const MIN_CUSTOM_NAME_LENGTH = 1
  * Colors used in the AddFavoriteModal component
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#FFFFFF',
   overlay: 'rgba(0, 0, 0, 0.5)',
   border: '#E5E5EA',
   textPrimary: '#000000',
   textSecondary: '#8E8E93',
   textTertiary: '#C7C7CC',
-  textLink: '#007AFF',
+  textLink: '#FF6B47',
   error: '#FF3B30',
   inputBackground: '#F9F9F9',
-  buttonDisabled: '#C7C7CC',
+  buttonDisabled: '#FFD0C2',
   locationBackground: '#F2F2F7',
   locationIcon: '#FF2D55',
 } as const

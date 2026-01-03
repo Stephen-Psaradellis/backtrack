@@ -30,14 +30,23 @@ const mockOtherUserId: UUID = 'test-other-user-456'
 const createMockSupabase = () => {
   let broadcastHandler: ((payload: { payload: { userId: string; isTyping: boolean } }) => void) | null = null
 
-  const mockChannel = {
-    on: vi.fn().mockImplementation((_type, _config, callback) => {
-      broadcastHandler = callback
-      return mockChannel
-    }),
-    subscribe: vi.fn().mockReturnValue(mockChannel),
-    send: vi.fn().mockResolvedValue({ status: 'ok' }),
+  // Create mockChannel with self-references properly
+  const mockChannel: {
+    on: ReturnType<typeof vi.fn>
+    subscribe: ReturnType<typeof vi.fn>
+    send: ReturnType<typeof vi.fn>
+  } = {
+    on: vi.fn(),
+    subscribe: vi.fn(),
+    send: vi.fn(),
   }
+  // Set up self-referential returns after object creation
+  mockChannel.on.mockImplementation((_type: unknown, _config: unknown, callback: (payload: { payload: { userId: string; isTyping: boolean } }) => void) => {
+    broadcastHandler = callback
+    return mockChannel
+  })
+  mockChannel.subscribe.mockReturnValue(mockChannel)
+  mockChannel.send.mockResolvedValue({ status: 'ok' })
 
   return {
     channel: vi.fn().mockReturnValue(mockChannel),

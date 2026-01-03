@@ -1,7 +1,7 @@
 /**
  * TimeSelector Component
  *
- * A comprehensive time selection component for the Love Ledger app.
+ * A comprehensive time selection component for the Backtrack app.
  * Allows users to select a date and time for when they saw someone.
  *
  * Features:

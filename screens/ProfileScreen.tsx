@@ -1,7 +1,7 @@
 /**
  * ProfileScreen
  *
- * User profile management screen for the Love Ledger app.
+ * User profile management screen for the Backtrack app.
  * Displays user information and provides account management options.
  *
  * Features:
@@ -44,8 +44,19 @@ import {
   loadCurrentUserAvatar,
   deleteCurrentUserAvatar,
 } from '../lib/avatarService'
+import {
+  deleteAccountAndSignOut,
+  getDeletionStatus,
+  cancelAccountDeletion,
+  type DeletionStatus,
+} from '../lib/accountDeletion'
 import { VerifiedBadge } from '../components/VerifiedBadge'
 import { VerificationPrompt } from '../components/VerificationPrompt'
+import { StreakCard } from '../components/streaks/StreakCard'
+import { useLocationStreaks } from '../hooks/useLocationStreaks'
+import { RegularsModeToggle } from '../components/regulars/RegularsModeToggle'
+import { FellowRegularsList } from '../components/regulars/RegularsList'
+import { NotificationSettings } from '../components/settings/NotificationSettings'
 
 // ============================================================================
 // TYPES
@@ -67,7 +78,7 @@ interface ProfileFormErrors {
  * // Used in tab navigation
  * <Tab.Screen name="ProfileTab" component={ProfileScreen} />
  */
-export function ProfileScreen(): JSX.Element {
+export function ProfileScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // HOOKS
   // ---------------------------------------------------------------------------
@@ -95,6 +106,11 @@ export function ProfileScreen(): JSX.Element {
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
   const [rpmAvatar, setRpmAvatar] = useState<StoredAvatar | null>(null)
   const [isLoadingRpmAvatar, setIsLoadingRpmAvatar] = useState(true)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
+
+  // Location streaks data
+  const { topStreaks, isLoading: isLoadingStreaks } = useLocationStreaks({ limit: 5 })
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -110,6 +126,17 @@ export function ProfileScreen(): JSX.Element {
         setIsLoadingRpmAvatar(false)
       }
       loadRpmAvatar()
+    }, [])
+  )
+
+  // Check for scheduled account deletion
+  useFocusEffect(
+    useCallback(() => {
+      async function checkDeletionStatus() {
+        const status = await getDeletionStatus()
+        setDeletionStatus(status)
+      }
+      checkDeletionStatus()
     }, [])
   )
 
@@ -225,10 +252,89 @@ export function ProfileScreen(): JSX.Element {
   }, [signOut])
 
   /**
+   * Handle account deletion with multiple confirmations
+   */
+  const handleDeleteAccount = useCallback(async () => {
+    await warningFeedback()
+
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data including:\n\n' +
+        '• Your profile and avatar\n' +
+        '• All your posts\n' +
+        '• All your conversations and messages\n' +
+        '• Your photos and favorites\n\n' +
+        'This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Are you absolutely sure?',
+              'Type "DELETE" to confirm you want to permanently delete your account.',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Yes, Delete Everything',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (!user?.id) return
+
+                    setIsDeletingAccount(true)
+                    try {
+                      const result = await deleteAccountAndSignOut(user.id)
+                      if (!result.success) {
+                        await errorFeedback()
+                        Alert.alert('Error', result.message || 'Failed to delete account')
+                        setIsDeletingAccount(false)
+                      }
+                      // If successful, navigation will be handled by auth state change
+                    } catch {
+                      await errorFeedback()
+                      Alert.alert('Error', 'An unexpected error occurred')
+                      setIsDeletingAccount(false)
+                    }
+                  },
+                },
+              ],
+              { cancelable: true }
+            )
+          },
+        },
+      ],
+      { cancelable: true }
+    )
+  }, [user?.id])
+
+  /**
+   * Handle cancelling scheduled account deletion
+   */
+  const handleCancelDeletion = useCallback(async () => {
+    const result = await cancelAccountDeletion()
+    if (result.success) {
+      await successFeedback()
+      setDeletionStatus({ scheduled: false })
+      Alert.alert('Success', 'Account deletion cancelled')
+    } else {
+      await errorFeedback()
+      Alert.alert('Error', result.message || 'Failed to cancel deletion')
+    }
+  }, [])
+
+  /**
    * Navigate to RPM avatar creator
    */
   const handleOpenRpmAvatarCreator = useCallback(() => {
-    navigation.navigate('AvatarCreator')
+    navigation.navigate('AvatarBuilder')
   }, [navigation])
 
   /**
@@ -361,7 +467,7 @@ export function ProfileScreen(): JSX.Element {
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
-          tintColor="#007AFF"
+          tintColor="#FF6B47"
           testID="profile-refresh-control"
         />
       }
@@ -532,6 +638,7 @@ export function ProfileScreen(): JSX.Element {
         </View>
       </View>
 
+      {/* Replay Tutorial Section */}
       {/* Verification Photos Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Verification Photos</Text>
@@ -544,11 +651,56 @@ export function ProfileScreen(): JSX.Element {
         />
       </View>
 
+      {/* My Location Streaks Section */}
+      <View style={styles.section} testID="profile-streaks-section">
+        <Text style={styles.sectionTitle}>My Location Streaks</Text>
+        <Text style={styles.avatarDescription}>
+          Track your visits to favorite locations
+        </Text>
+        {isLoadingStreaks ? (
+          <View style={styles.loadingContainer}>
+            <LoadingSpinner size="small" />
+          </View>
+        ) : topStreaks && topStreaks.length > 0 ? (
+          <View style={styles.streaksList}>
+            {topStreaks.map((streak, index) => (
+              <StreakCard
+                key={streak.id || `${streak.location_id}-${streak.streak_type}`}
+                streak={streak}
+                compact
+                testID={`profile-streak-${index}`}
+              />
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyText}>No streaks yet. Visit locations regularly!</Text>
+        )}
+      </View>
+
+      {/* Regulars Mode Section */}
+      <View style={styles.section} testID="profile-regulars-section">
+        <RegularsModeToggle />
+      </View>
+
+      {/* Fellow Regulars Section */}
+      <View style={styles.section} testID="profile-fellow-regulars-section">
+        <Text style={styles.sectionTitle}>Fellow Regulars</Text>
+        <Text style={styles.avatarDescription}>
+          People who visit the same spots as you
+        </Text>
+        <FellowRegularsList showLocations limit={5} />
+      </View>
+
+      {/* Notification Settings Section */}
+      <View style={styles.section} testID="profile-notification-settings-section">
+        <NotificationSettings />
+      </View>
+
       {/* Replay Tutorial Section */}
       <View style={styles.section} testID="profile-replay-tutorial-section">
         <Text style={styles.sectionTitle}>Replay Tutorial</Text>
         <Text style={styles.avatarDescription}>
-          Re-watch helpful tips for using Love Ledger features
+          Re-watch helpful tips for using Backtrack features
         </Text>
         <View style={styles.replayButtonsContainer}>
           <OutlineButton
@@ -574,23 +726,80 @@ export function ProfileScreen(): JSX.Element {
         </View>
       </View>
 
+      {/* Legal Section */}
+      <View style={styles.section} testID="profile-legal-section">
+        <Text style={styles.sectionTitle}>Legal</Text>
+        <TouchableOpacity
+          style={styles.legalLink}
+          onPress={() => navigation.navigate('Legal', { type: 'privacy' })}
+          testID="profile-privacy-policy-link"
+        >
+          <Text style={styles.legalLinkText}>Privacy Policy</Text>
+          <Text style={styles.legalLinkArrow}>→</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.legalLink}
+          onPress={() => navigation.navigate('Legal', { type: 'terms' })}
+          testID="profile-terms-link"
+        >
+          <Text style={styles.legalLinkText}>Terms of Service</Text>
+          <Text style={styles.legalLinkArrow}>→</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Account Actions Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
+
+        {/* Scheduled Deletion Warning */}
+        {deletionStatus?.scheduled && (
+          <View style={styles.deletionWarning}>
+            <Text style={styles.deletionWarningTitle}>
+              Account Scheduled for Deletion
+            </Text>
+            <Text style={styles.deletionWarningText}>
+              Your account will be deleted in {deletionStatus.daysRemaining} days.
+            </Text>
+            <TouchableOpacity
+              style={styles.cancelDeletionButton}
+              onPress={handleCancelDeletion}
+            >
+              <Text style={styles.cancelDeletionText}>Cancel Deletion</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <DangerButton
           title="Sign Out"
           onPress={handleSignOut}
           loading={isSigningOut}
-          disabled={isSigningOut}
+          disabled={isSigningOut || isDeletingAccount}
           fullWidth
           testID="profile-sign-out-button"
         />
+
+        <View style={styles.deleteAccountContainer}>
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            onPress={handleDeleteAccount}
+            disabled={isDeletingAccount || isSigningOut}
+            testID="profile-delete-account-button"
+          >
+            {isDeletingAccount ? (
+              <Text style={styles.deleteAccountText}>Deleting...</Text>
+            ) : (
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.deleteAccountHint}>
+            Permanently delete your account and all data
+          </Text>
+        </View>
       </View>
 
       {/* App Info Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Love Ledger</Text>
+        <Text style={styles.footerText}>Backtrack</Text>
         <Text style={styles.footerVersion}>Version 1.0.0</Text>
       </View>
     </ScrollView>
@@ -624,7 +833,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B47',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -683,7 +892,7 @@ const styles = StyleSheet.create({
   },
   editLinkText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#FF6B47',
     fontWeight: '600',
   },
   editContainer: {
@@ -789,9 +998,84 @@ const styles = StyleSheet.create({
     color: '#333333',
     fontWeight: '600',
   },
+  streaksList: {
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    paddingVertical: 16,
+  },
   footerVersion: {
     fontSize: 12,
     color: '#8E8E93',
     marginTop: 4,
+  },
+  deletionWarning: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFECB5',
+  },
+  deletionWarningTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#856404',
+    marginBottom: 8,
+  },
+  deletionWarningText: {
+    fontSize: 14,
+    color: '#856404',
+    marginBottom: 12,
+  },
+  cancelDeletionButton: {
+    backgroundColor: '#856404',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+  },
+  cancelDeletionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deleteAccountContainer: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  deleteAccountButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  deleteAccountText: {
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '500',
+  },
+  deleteAccountHint: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  legalLink: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  legalLinkText: {
+    fontSize: 16,
+    color: '#333333',
+  },
+  legalLinkArrow: {
+    fontSize: 16,
+    color: '#8E8E93',
   },
 })

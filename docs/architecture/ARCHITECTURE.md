@@ -1,10 +1,10 @@
-# Love Ledger Architecture Overview
+# Backtrack Architecture Overview
 
-This document provides a high-level overview of the Love Ledger application architecture, including its core concepts, technology stack, and project structure.
+This document provides a high-level overview of the Backtrack application architecture, including its core concepts, technology stack, and project structure.
 
 ## Table of Contents
 
-- [What is Love Ledger?](#what-is-love-ledger)
+- [What is Backtrack?](#what-is-backtrack)
 - [Core Concepts](#core-concepts)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
@@ -13,17 +13,17 @@ This document provides a high-level overview of the Love Ledger application arch
 
 ---
 
-## What is Love Ledger?
+## What is Backtrack?
 
-Love Ledger is a location-based "missed connections" dating application. Unlike traditional dating apps where users swipe through profiles, Love Ledger enables users to leave digital notes at physical locations for specific people they've encountered in real life.
+Backtrack is a location-based "missed connections" dating application. Unlike traditional dating apps where users swipe through profiles, Backtrack enables users to leave digital notes at physical locations for specific people they've encountered in real life.
 
 ### The Core Idea
 
-Imagine you're at a coffee shop and notice someone interesting, but the moment passes before you can introduce yourself. With Love Ledger, you can leave a digital "note" at that location describing the person you saw. If that person later visits the same location in the app and recognizes themselves in your description, they can respond and start a conversation.
+Imagine you're at a coffee shop and notice someone interesting, but the moment passes before you can introduce yourself. With Backtrack, you can leave a digital "note" at that location describing the person you saw. If that person later visits the same location in the app and recognizes themselves in your description, they can respond and start a conversation.
 
 ### Privacy-First Design
 
-Love Ledger uses **avatar-based anonymity** to protect user privacy. Instead of sharing real photos publicly, users:
+Backtrack uses **avatar-based anonymity** to protect user privacy. Instead of sharing real photos publicly, users:
 1. Upload a private selfie (visible only to matched users)
 2. Describe the person they're looking for using customizable cartoon avatars
 3. Create their own avatar representation for their profile
@@ -36,7 +36,7 @@ This approach allows meaningful connections while maintaining privacy until both
 
 ### Producer/Consumer Model
 
-Love Ledger operates on a **Producer/Consumer model** that defines two distinct user roles:
+Backtrack operates on a **Producer/Consumer model** that defines two distinct user roles:
 
 #### Producer
 A user who creates a post at a location. Producers:
@@ -120,7 +120,7 @@ Avatars serve two purposes:
 ## Project Structure
 
 ```
-love-ledger/
+backtrack/
 ├── app/                      # Next.js App Router
 │   ├── layout.tsx           # Root layout with providers
 │   ├── page.tsx             # Landing page
@@ -214,7 +214,7 @@ Supabase-specific configuration and migrations:
 
 ## Related Documentation
 
-This is the first document in the Love Ledger architecture documentation series:
+This is the first document in the Backtrack architecture documentation series:
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** (this document) - System overview
 - [USER_FLOWS.md](./USER_FLOWS.md) - Producer and Consumer user journeys

@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { createClient } from '../../../lib/supabase/client'
+import { supabase } from '../../../lib/supabase'
 import type { UUID } from '../../../types/database'
 import type { UseTypingIndicatorReturn } from '../../../types/chat'
 import { CHAT_CONSTANTS } from '../../../types/chat'
@@ -67,7 +67,7 @@ export function useTypingIndicator({
   currentUserId,
   onTypingChange,
 }: UseTypingIndicatorOptions): UseTypingIndicatorReturn {
-  const supabase = createClient()
+  // supabase imported from lib/supabase
 
   // ============================================================================
   // State

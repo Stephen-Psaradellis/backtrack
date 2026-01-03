@@ -40,9 +40,11 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native'
 import Tooltip from 'react-native-walkthrough-tooltip'
 
-import { PostCard, createPostCardRenderer } from '../components/PostCard'
+import { PostCard } from '../components/PostCard'
 import { PostFilters } from '../components/PostFilters'
+import { CheckinButton } from '../components/CheckinButton'
 import { useTutorialState } from '../hooks/useTutorialState'
+import { useCheckin } from '../hooks/useCheckin'
 import { selectionFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyLedger, ErrorState } from '../components/EmptyState'
@@ -76,7 +78,7 @@ const PAGE_SIZE = 20
  * Colors used in the LedgerScreen
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
   textPrimary: '#000000',
@@ -94,7 +96,7 @@ const COLORS = {
  * Fetches and displays posts filtered by the given location,
  * sorted by creation date (most recent first).
  */
-export function LedgerScreen(): JSX.Element {
+export function LedgerScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // HOOKS
   // ---------------------------------------------------------------------------
@@ -105,6 +107,9 @@ export function LedgerScreen(): JSX.Element {
 
   // Tutorial tooltip state for ledger browsing onboarding
   const tutorial = useTutorialState('ledger_browsing')
+
+  // Check-in state for tiered matching
+  const { activeCheckin, isCheckedInAt } = useCheckin()
 
   const { locationId, locationName } = route.params
 
@@ -257,7 +262,7 @@ export function LedgerScreen(): JSX.Element {
   /**
    * Render tutorial tooltip content for ledger browsing onboarding
    */
-  const renderTutorialContent = (): React.ReactNode => (
+  const renderTutorialContent = (): React.ReactElement => (
     <View style={tooltipStyles.container}>
       <Text style={tooltipStyles.title}>Browse the Ledger</Text>
       <Text style={tooltipStyles.description}>
@@ -294,7 +299,7 @@ export function LedgerScreen(): JSX.Element {
   )
 
   /**
-   * Render list header with location info and time filter
+   * Render list header with location info, check-in button, and time filter
    */
   const renderHeader = useCallback(() => {
     // Build subtitle text
@@ -307,11 +312,27 @@ export function LedgerScreen(): JSX.Element {
       subtitleText = `${posts.length} posts`
     }
 
+    // Show check-in status in subtitle if checked in here
+    const isCheckedInHere = isCheckedInAt(locationId)
+    if (isCheckedInHere && activeCheckin?.verified) {
+      subtitleText += ' • You\'re checked in'
+    }
+
     return (
       <View testID="ledger-header">
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{locationName}</Text>
-          <Text style={styles.headerSubtitle}>{subtitleText}</Text>
+          <View style={styles.headerTitleRow}>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>{locationName}</Text>
+              <Text style={styles.headerSubtitle}>{subtitleText}</Text>
+            </View>
+            <CheckinButton
+              locationId={locationId}
+              locationName={locationName}
+              size="small"
+              testID="ledger-checkin-button"
+            />
+          </View>
         </View>
         <PostFilters
           selectedTimeFilter={timeFilter}
@@ -321,7 +342,7 @@ export function LedgerScreen(): JSX.Element {
         />
       </View>
     )
-  }, [locationName, posts.length, timeFilter, handleTimeFilterChange, loading])
+  }, [locationId, locationName, posts.length, timeFilter, handleTimeFilterChange, loading, isCheckedInAt, activeCheckin])
 
   /**
    * Render empty state when no posts exist
@@ -467,6 +488,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     marginBottom: 8,
   },
+  headerTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  headerTitleContainer: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
@@ -529,10 +559,10 @@ const tooltipStyles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#EC4899',
+    backgroundColor: '#FF6B47',
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   buttonText: {

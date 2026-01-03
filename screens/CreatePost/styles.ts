@@ -27,7 +27,11 @@ export const SCREEN_WIDTH = Dimensions.get('window').width
  */
 export const COLORS = {
   /** Primary brand color */
-  primary: '#007AFF',
+  primary: '#FF6B47',
+  /** Primary color for disabled states */
+  primaryDisabled: '#FFD0C2',
+  /** Primary color darker shade */
+  primaryDark: '#F04E2A',
   /** Background color for screens */
   background: '#FFFFFF',
   /** Secondary background (cards, inputs) */

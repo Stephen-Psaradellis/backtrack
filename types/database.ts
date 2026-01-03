@@ -1,7 +1,7 @@
 /**
  * Database Entity Types
  *
- * TypeScript type definitions for all database tables in the Love Ledger app.
+ * TypeScript type definitions for all database tables in the Backtrack app.
  * These types mirror the Supabase PostgreSQL schema defined in migrations.
  */
 
@@ -21,6 +21,22 @@ export type UUID = string
  * ISO 8601 timestamp string (from Supabase)
  */
 export type Timestamp = string
+
+/**
+ * Time granularity for events/posts
+ */
+export type TimeGranularity = 'specific' | 'morning' | 'afternoon' | 'evening' | 'exact' | 'hour' | 'day' | 'week'
+
+/**
+ * Verification tier for post responses
+ * Indicates how a user's presence at a location was verified
+ */
+export type VerificationTier = 'verified_checkin' | 'regular_spot' | 'unverified_claim'
+
+/**
+ * Response status for post responses
+ */
+export type ResponseStatus = 'pending' | 'accepted' | 'rejected'
 
 // ============================================================================
 // PROFILES
@@ -51,6 +67,8 @@ export interface Profile {
   is_verified: boolean
   /** Timestamp when the user was verified (null if not verified) */
   verified_at: Timestamp | null
+  /** Timestamp when user accepted terms of service, privacy policy, and confirmed age (18+) */
+  terms_accepted_at: Timestamp | null
   /** Timestamp when the profile was created */
   created_at: Timestamp
   /** Timestamp when the profile was last updated */
@@ -70,6 +88,7 @@ export interface ProfileInsert {
   rpm_avatar_id?: string | null
   is_verified?: boolean
   verified_at?: Timestamp | null
+  terms_accepted_at?: Timestamp | null
   created_at?: Timestamp
   updated_at?: Timestamp
 }
@@ -84,6 +103,7 @@ export interface ProfileUpdate {
   own_avatar?: Record<string, unknown> | null
   rpm_avatar?: StoredAvatar | null
   rpm_avatar_id?: string | null
+  terms_accepted_at?: Timestamp | null
   updated_at?: Timestamp
 }
 
@@ -188,6 +208,126 @@ export interface LocationVisitInsert {
 }
 
 // ============================================================================
+// USER CHECK-INS
+// ============================================================================
+
+/**
+ * Record of a user's explicit check-in at a location
+ *
+ * Unlike location_visits (ephemeral, auto-cleanup), check-ins persist and
+ * support explicit check-out for tiered matching verification.
+ */
+export interface UserCheckin {
+  /** Unique identifier for the check-in record */
+  id: UUID
+  /** User who checked in */
+  user_id: UUID
+  /** Location where user checked in */
+  location_id: UUID
+  /** Timestamp when user checked in */
+  checked_in_at: Timestamp
+  /** Timestamp when user checked out (null if still checked in) */
+  checked_out_at: Timestamp | null
+  /** Whether check-in was GPS-verified (within 200m) */
+  verified: boolean
+  /** GPS latitude at time of check-in */
+  verification_lat: number
+  /** GPS longitude at time of check-in */
+  verification_lon: number
+  /** GPS accuracy in meters at time of check-in */
+  verification_accuracy: number | null
+  /** Timestamp when record was created */
+  created_at: Timestamp
+}
+
+/**
+ * Fields required when inserting a new user check-in
+ */
+export interface UserCheckinInsert {
+  id?: UUID
+  user_id: UUID
+  location_id: UUID
+  checked_in_at?: Timestamp
+  checked_out_at?: Timestamp | null
+  verified?: boolean
+  verification_lat: number
+  verification_lon: number
+  verification_accuracy?: number | null
+  created_at?: Timestamp
+}
+
+/**
+ * Fields that can be updated on a user check-in
+ */
+export interface UserCheckinUpdate {
+  checked_out_at?: Timestamp | null
+}
+
+/**
+ * Active check-in with location details (from get_active_checkin RPC)
+ */
+export interface ActiveCheckin {
+  id: UUID
+  location_id: UUID
+  location_name: string
+  checked_in_at: Timestamp
+  verified: boolean
+}
+
+// ============================================================================
+// POST RESPONSES
+// ============================================================================
+
+/**
+ * Response to a post with verification tier
+ *
+ * Tracks how users respond to posts and their verification level.
+ */
+export interface PostResponse {
+  /** Unique identifier for the response */
+  id: UUID
+  /** Post being responded to */
+  post_id: UUID
+  /** User responding to the post (consumer) */
+  responder_id: UUID
+  /** Level of verification for this response */
+  verification_tier: VerificationTier
+  /** Reference to check-in record (for Tier 1 verified responses) */
+  checkin_id: UUID | null
+  /** Optional message from responder */
+  message: string | null
+  /** Response status: pending, accepted, or rejected */
+  status: ResponseStatus
+  /** When the response was created */
+  created_at: Timestamp
+  /** When the producer responded to this response */
+  responded_at: Timestamp | null
+}
+
+/**
+ * Fields required when inserting a new post response
+ */
+export interface PostResponseInsert {
+  id?: UUID
+  post_id: UUID
+  responder_id: UUID
+  verification_tier: VerificationTier
+  checkin_id?: UUID | null
+  message?: string | null
+  status?: ResponseStatus
+  created_at?: Timestamp
+  responded_at?: Timestamp | null
+}
+
+/**
+ * Fields that can be updated on a post response
+ */
+export interface PostResponseUpdate {
+  status?: ResponseStatus
+  responded_at?: Timestamp | null
+}
+
+// ============================================================================
 // FAVORITE LOCATIONS
 // ============================================================================
 
@@ -279,6 +419,12 @@ export interface Post {
   target_description: string | null
   /** Message left by the producer */
   message: string
+  /** Additional note for the post */
+  note: string | null
+  /** Date when the sighting occurred */
+  sighting_date: Timestamp | null
+  /** Time granularity for the sighting (exact, hour, day, week) */
+  time_granularity: TimeGranularity | null
   /** Timestamp when the post was seen */
   seen_at: Timestamp | null
   /** Whether the post is currently active and visible */
@@ -302,6 +448,9 @@ export interface PostInsert {
   target_rpm_avatar?: StoredAvatar | null
   target_description?: string | null
   message: string
+  note?: string | null
+  sighting_date?: Timestamp | null
+  time_granularity?: TimeGranularity | null
   seen_at?: Timestamp | null
   is_active?: boolean
   created_at?: Timestamp
@@ -318,6 +467,9 @@ export interface PostUpdate {
   target_rpm_avatar?: StoredAvatar | null
   target_description?: string | null
   message?: string
+  note?: string | null
+  sighting_date?: Timestamp | null
+  time_granularity?: TimeGranularity | null
   seen_at?: Timestamp | null
   is_active?: boolean
   expires_at?: Timestamp
@@ -351,6 +503,12 @@ export interface Conversation {
   status: ConversationStatus
   /** Whether the producer has accepted the conversation */
   producer_accepted: boolean
+  /** Verification tier of the consumer when they responded (null for legacy conversations) */
+  verification_tier: VerificationTier | null
+  /** Reference to the post response that initiated this conversation */
+  response_id: UUID | null
+  /** Whether the conversation is currently active */
+  is_active: boolean
   /** Timestamp when the conversation was started */
   created_at: Timestamp
   /** Timestamp of the last activity in the conversation */
@@ -367,6 +525,9 @@ export interface ConversationInsert {
   consumer_id: UUID
   status?: ConversationStatus
   producer_accepted?: boolean
+  verification_tier?: VerificationTier | null
+  response_id?: UUID | null
+  is_active?: boolean
   created_at?: Timestamp
   updated_at?: Timestamp
 }
@@ -377,6 +538,9 @@ export interface ConversationInsert {
 export interface ConversationUpdate {
   status?: ConversationStatus
   producer_accepted?: boolean
+  verification_tier?: VerificationTier | null
+  response_id?: UUID | null
+  is_active?: boolean
   updated_at?: Timestamp
 }
 
@@ -676,4 +840,284 @@ export interface ReportUpdate {
   status?: ReportStatus
   moderator_notes?: string | null
   updated_at?: Timestamp
+}
+// ============================================================================
+// DERIVED TYPES AND UTILITY TYPES
+// ============================================================================
+
+/**
+ * Geographic coordinates
+ */
+export interface Coordinates {
+  latitude: number
+  longitude: number
+}
+
+/**
+ * Post with author profile included
+ */
+export interface PostWithAuthor extends Post {
+  producer?: Profile
+  location?: Location
+}
+
+/**
+ * Post with detailed relationships
+ */
+export interface PostWithDetails extends Post {
+  producer?: Profile
+  location?: Location
+}
+
+/**
+ * Message with sender profile
+ */
+export interface MessageWithSender extends Message {
+  sender?: Profile
+}
+
+/**
+ * Location with distance from user
+ */
+export interface LocationWithDistance extends Location {
+  distance?: number
+}
+
+/**
+ * Location with active post count
+ */
+export interface LocationWithActivePosts extends Location {
+  active_post_count?: number
+}
+
+/**
+ * Favorite location with distance from user
+ */
+export interface FavoriteLocationWithDistance extends FavoriteLocation {
+  distance?: number
+  google_place_id?: string // For compatibility
+}
+
+/**
+ * Photo with signed URL
+ */
+export interface ProfilePhotoWithUrl extends ProfilePhoto {
+  signedUrl: string
+}
+
+/**
+ * Shared photo with URL
+ */
+export interface SharedPhotoWithUrl {
+  id: UUID
+  photo_id: UUID
+  share_id: UUID
+  shared_with_user_id: UUID
+  shared_by_user_id: UUID
+  created_at: Timestamp
+  expires_at: Timestamp | null
+  signedUrl: string
+}
+
+/**
+ * Shared photo from my perspective
+ */
+export interface MySharedPhotoWithUrl {
+  id: UUID
+  photo_id: UUID
+  share_id: UUID
+  shared_with_user_id: UUID
+  shared_by_user_id: UUID
+  created_at: Timestamp
+  expires_at: Timestamp | null
+  signedUrl: string
+}
+
+// ============================================================================
+// PHOTO SHARING TYPES
+// ============================================================================
+
+/**
+ * Photo share record for conversation photo sharing
+ */
+export interface PhotoShare {
+  id: UUID
+  photo_id: UUID
+  conversation_id: UUID
+  owner_id: UUID
+  shared_with_user_id: UUID
+  status: PhotoShareStatus
+  created_at: Timestamp
+  expires_at: Timestamp | null
+}
+
+/**
+ * Photo share insert type
+ */
+export interface PhotoShareInsert {
+  id?: UUID
+  photo_id: UUID
+  conversation_id: UUID
+  owner_id: UUID
+  shared_with_user_id: UUID
+  status?: PhotoShareStatus
+  created_at?: Timestamp
+  expires_at?: Timestamp | null
+}
+
+/**
+ * Photo share status
+ */
+export type PhotoShareStatus = 'pending' | 'active' | 'revoked' | 'expired'
+
+/**
+ * Shared photo for conversation view
+ */
+export interface SharedPhotoForConversation extends PhotoShare {
+  signedUrl?: string
+}
+
+/**
+ * My shared photo for conversation view
+ */
+export interface MySharedPhotoForConversation extends PhotoShare {
+  signedUrl?: string
+}
+
+// ============================================================================
+// LOCATION UTILITY TYPES
+// ============================================================================
+
+/**
+ * Location with visit data
+ */
+export interface LocationWithVisit extends Location {
+  last_visited_at?: Timestamp
+  visit_count?: number
+}
+
+/**
+ * Parameters for nearby location queries
+ */
+export interface NearbyLocationParams {
+  latitude: number
+  longitude: number
+  radius_meters?: number
+  limit?: number
+}
+
+/**
+ * Parameters for locations with active posts query
+ */
+export interface LocationsWithActivePostsParams {
+  latitude: number
+  longitude: number
+  radius_meters?: number
+  limit?: number
+}
+
+/**
+ * Parameters for recently visited locations query
+ */
+export interface RecentlyVisitedLocationParams {
+  user_id: UUID
+  limit?: number
+}
+
+// ============================================================================
+// CONVERSATION UTILITY TYPES
+// ============================================================================
+
+/**
+ * Conversation with related details
+ */
+export interface ConversationWithDetails extends Conversation {
+  post?: Post
+  producer?: Profile
+  consumer?: Profile
+  messages?: Message[]
+  last_message?: Message
+  unread_count?: number
+}
+
+// ============================================================================
+// SUPABASE DATABASE TYPE
+// ============================================================================
+
+/**
+ * Database schema type for Supabase client
+ */
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: Profile
+        Insert: ProfileInsert
+        Update: ProfileUpdate
+      }
+      locations: {
+        Row: Location
+        Insert: LocationInsert
+        Update: LocationUpdate
+      }
+      location_visits: {
+        Row: LocationVisit
+        Insert: LocationVisitInsert
+        Update: never
+      }
+      user_checkins: {
+        Row: UserCheckin
+        Insert: UserCheckinInsert
+        Update: UserCheckinUpdate
+      }
+      post_responses: {
+        Row: PostResponse
+        Insert: PostResponseInsert
+        Update: PostResponseUpdate
+      }
+      favorite_locations: {
+        Row: FavoriteLocation
+        Insert: FavoriteLocationInsert
+        Update: FavoriteLocationUpdate
+      }
+      posts: {
+        Row: Post
+        Insert: PostInsert
+        Update: PostUpdate
+      }
+      conversations: {
+        Row: Conversation
+        Insert: ConversationInsert
+        Update: ConversationUpdate
+      }
+      messages: {
+        Row: Message
+        Insert: MessageInsert
+        Update: MessageUpdate
+      }
+      notifications: {
+        Row: Notification
+        Insert: NotificationInsert
+        Update: NotificationUpdate
+      }
+      profile_photos: {
+        Row: ProfilePhoto
+        Insert: ProfilePhotoInsert
+        Update: ProfilePhotoUpdate
+      }
+      blocks: {
+        Row: Block
+        Insert: BlockInsert
+        Update: never
+      }
+      reports: {
+        Row: Report
+        Insert: ReportInsert
+        Update: ReportUpdate
+      }
+    }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+  }
 }

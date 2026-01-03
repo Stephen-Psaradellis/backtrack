@@ -1,4 +1,4 @@
-# Love Ledger
+# Backtrack
 
 > **A location-based anonymous matchmaking app for "missed connections"**
 
@@ -12,9 +12,9 @@
 
 ## Overview
 
-Love Ledger is a cross-platform mobile application for **iOS and Android** that enables anonymous "missed connection" style matchmaking tied to physical locations.
+Backtrack is a cross-platform mobile application for **iOS and Android** that enables anonymous "missed connection" style matchmaking tied to physical locations.
 
-Have you ever noticed someone interesting at a coffee shop, gym, or bookstore but didn't have the chance to say hello? Love Ledger creates a digital ledger for each location where you can leave an anonymous note describing that person - and if they're on the app, they might just find your message.
+Have you ever noticed someone interesting at a coffee shop, gym, or bookstore but didn't have the chance to say hello? Backtrack creates a digital ledger for each location where you can leave an anonymous note describing that person - and if they're on the app, they might just find your message.
 
 ### How It Works
 
@@ -75,7 +75,7 @@ Have you ever noticed someone interesting at a coffee shop, gym, or bookstore bu
 
 ## Tech Stack & Architecture
 
-Love Ledger is built with modern, production-ready technologies designed for cross-platform mobile development.
+Backtrack is built with modern, production-ready technologies designed for cross-platform mobile development.
 
 ### Frontend / Mobile
 
@@ -205,8 +205,8 @@ Get up and running in minutes with these essential steps:
 1. Clone the repository
 
 ```bash
-git clone https://github.com/shortforge/love-ledger.git
-cd love-ledger
+git clone https://github.com/shortforge/backtrack.git
+cd backtrack
 ```
 
 2. Install dependencies
@@ -318,7 +318,7 @@ For detailed setup instructions and guides, see:
 The project follows an Expo Router file-based routing pattern with organized folders for components, hooks, and utilities.
 
 ```
-love-ledger/
+backtrack/
 ├── app/                       # 📱 Expo Router app directory (screens/routes)
 │   ├── (auth)/               # Authentication routes (login, signup)
 │   │   ├── login.tsx
@@ -401,7 +401,7 @@ love-ledger/
 
 ## Testing
 
-Love Ledger uses [**Vitest**](https://vitest.dev/) as its testing framework, providing fast, modern testing with excellent TypeScript support.
+Backtrack uses [**Vitest**](https://vitest.dev/) as its testing framework, providing fast, modern testing with excellent TypeScript support.
 
 ### Test Commands
 
@@ -420,7 +420,7 @@ Love Ledger uses [**Vitest**](https://vitest.dev/) as its testing framework, pro
 Tests are organized in two locations:
 
 ```
-love-ledger/
+backtrack/
 ├── __tests__/                    # Centralized test files
 │   └── lib/                      # Tests for library code
 │       └── utils/

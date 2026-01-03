@@ -1,6 +1,6 @@
 # Data Flow Architecture
 
-This document describes how data moves through the Love Ledger application, from UI interactions to Supabase backend and back. Understanding these patterns is essential for maintaining and extending the application.
+This document describes how data moves through the Backtrack application, from UI interactions to Supabase backend and back. Understanding these patterns is essential for maintaining and extending the application.
 
 ## Table of Contents
 
@@ -29,11 +29,11 @@ This document describes how data moves through the Love Ledger application, from
 
 ## Overview
 
-Love Ledger follows a **server-first** data architecture leveraging Next.js 15 App Router and Supabase:
+Backtrack follows a **server-first** data architecture leveraging Next.js 15 App Router and Supabase:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                        LOVE LEDGER DATA FLOW ARCHITECTURE                        │
+│                        BACKTRACK DATA FLOW ARCHITECTURE                        │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │   ┌────────────────────────────────────────────────────────────────────────┐    │
@@ -86,7 +86,7 @@ Love Ledger follows a **server-first** data architecture leveraging Next.js 15 A
 
 ### Next.js App Router Data Flow
 
-Love Ledger uses Next.js 15 App Router patterns for data management:
+Backtrack uses Next.js 15 App Router patterns for data management:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -572,7 +572,7 @@ const { count } = await supabase
 
 ### Server State vs Client State
 
-Love Ledger uses a minimal state management approach:
+Backtrack uses a minimal state management approach:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -704,7 +704,7 @@ function MessageInput({ conversationId }: { conversationId: string }) {
 
 ### Subscription Patterns
 
-Love Ledger uses Supabase Realtime for live data synchronization:
+Backtrack uses Supabase Realtime for live data synchronization:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -826,7 +826,7 @@ export function useRealtimeMessages(
 
 ### End-to-End Type Flow
 
-Love Ledger maintains type safety from database to UI:
+Backtrack maintains type safety from database to UI:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -917,7 +917,7 @@ npx supabase gen types typescript --project-id your-project-id > types/supabase.
 
 #### Manual Type Definitions
 
-For more control, Love Ledger uses manually maintained types:
+For more control, Backtrack uses manually maintained types:
 
 ```typescript
 // types/database.ts

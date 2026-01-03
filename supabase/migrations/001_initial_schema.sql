@@ -1,7 +1,7 @@
 -- ============================================================================
--- Love Ledger Initial Schema Migration
+-- Backtrack Initial Schema Migration
 -- ============================================================================
--- This migration creates the core tables for the Love Ledger app:
+-- This migration creates the core tables for the Backtrack app:
 -- - profiles: User profiles extending Supabase auth.users
 -- - locations: Physical venues/locations where posts can be created
 -- - posts: "Missed connection" posts with avatar descriptions

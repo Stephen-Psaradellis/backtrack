@@ -64,11 +64,11 @@ fi
 if [ "$NOTIFICATION_TYPE" = "match" ]; then
     TITLE="Test Match Notification"
     BODY="This is a test match notification. Someone is interested in connecting with you!"
-    URL="loveledger://conversation/test-match-id"
+    URL="backtrack://conversation/test-match-id"
 else
     TITLE="Test Message Notification"
     BODY="Your match: Hello! This is a test message to verify notifications are working."
-    URL="loveledger://conversation/test-message-id"
+    URL="backtrack://conversation/test-message-id"
 fi
 
 EDGE_FUNCTION_URL="${SUPABASE_URL}/functions/v1/send-notification"

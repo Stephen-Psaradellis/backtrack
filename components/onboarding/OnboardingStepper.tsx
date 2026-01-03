@@ -1,5 +1,3 @@
-'use client'
-
 import { memo, useMemo } from 'react'
 import {
   ONBOARDING_STEPS,
@@ -7,7 +5,7 @@ import {
   calculateProgress,
   formatEstimatedTime,
   calculateRemainingTime,
-} from '@/lib/onboarding/onboardingConfig'
+} from '../../lib/onboarding/onboardingConfig'
 
 // ============================================================================
 // Types
@@ -63,19 +61,19 @@ const StepDot = memo(function StepDot({
       'flex items-center justify-center',
       // Keyboard focus styles - visible ring for accessibility
       'focus:outline-none',
-      'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-pink-500',
+      'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500',
     ]
 
     if (isCurrent) {
       baseClasses.push(
-        'bg-pink-500',
-        'ring-4 ring-pink-500/20',
+        'bg-primary-500',
+        'ring-4 ring-primary-500/20',
         'scale-110'
       )
     } else if (isCompleted) {
       baseClasses.push(
-        'bg-pink-500',
-        'hover:bg-pink-600'
+        'bg-primary-500',
+        'hover:bg-primary-600'
       )
     } else {
       baseClasses.push(
@@ -125,7 +123,7 @@ const StepDot = memo(function StepDot({
       {/* Pulsing dot for current step */}
       {isCurrent && (
         <span
-          className="absolute inset-0 rounded-full bg-pink-500 animate-ping opacity-30"
+          className="absolute inset-0 rounded-full bg-primary-500 animate-ping opacity-30"
           aria-hidden="true"
         />
       )}
@@ -159,7 +157,7 @@ const ConnectorLine = memo(function ConnectorLine({
     ]
 
     if (isCompleted) {
-      baseClasses.push('bg-pink-500')
+      baseClasses.push('bg-primary-500')
     } else {
       baseClasses.push('bg-gray-200', 'dark:bg-gray-700')
     }
@@ -193,7 +191,7 @@ const ProgressBar = memo(function ProgressBar({ progress }: ProgressBarProps) {
       aria-label={`Onboarding progress: ${progress}%`}
     >
       <div
-        className="h-full bg-gradient-to-r from-pink-500 to-pink-400 transition-all duration-700 ease-out rounded-full shadow-sm"
+        className="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-700 ease-out rounded-full shadow-sm"
         style={{ width: `${progress}%` }}
       />
     </div>

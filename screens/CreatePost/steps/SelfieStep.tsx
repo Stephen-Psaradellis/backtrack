@@ -246,10 +246,10 @@ const tooltipStyles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#EC4899',
+    backgroundColor: '#FF6B47',
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   buttonText: {

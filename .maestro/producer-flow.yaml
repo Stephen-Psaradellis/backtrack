@@ -1,0 +1,123 @@
+# Producer Flow
+# Tests creating a new post (missed connection)
+
+appId: com.loveledger.app
+name: "Producer - Create Post Flow"
+tags:
+  - full
+  - producer
+
+---
+
+# Launch and login first
+- launchApp
+
+# Login if needed (reuse auth flow or check if already logged in)
+- runFlow:
+    when:
+      visible: "Welcome Back"
+    file: auth-login.yaml
+
+# Navigate to create post
+- tapOn:
+    id: "create-post-button"
+    optional: true
+- tapOn:
+    text: "Create Post"
+    optional: true
+
+# Wait for create post screen
+- extendedWaitUntil:
+    visible:
+      id: "create-post-screen"
+    timeout: 5000
+
+- takeScreenshot: create_post_screen
+
+# Step 1: Location selection (if shown first)
+- runFlow:
+    when:
+      visible:
+        id: "location-step"
+    commands:
+      - tapOn:
+          text: "Search locations"
+          optional: true
+      - inputText: "Coffee"
+      - hideKeyboard
+      - tapOn:
+          textContains: "Coffee"
+          index: 0
+      - takeScreenshot: location_selected
+
+# Step 2: Time selection (optional step)
+- runFlow:
+    when:
+      visible:
+        id: "time-step"
+    commands:
+      - tapOn:
+          id: "next-button"
+      - takeScreenshot: time_step
+
+# Step 3: Selfie capture
+- runFlow:
+    when:
+      visible:
+        id: "selfie-step"
+    commands:
+      # In CI, we might need to mock camera or use a placeholder
+      - tapOn:
+          id: "capture-selfie-button"
+          optional: true
+      - tapOn:
+          id: "skip-selfie-button"
+          optional: true
+      - takeScreenshot: selfie_step
+
+# Step 4: Avatar creation
+- runFlow:
+    when:
+      visible:
+        id: "avatar-step"
+    commands:
+      # Select some avatar options
+      - tapOn:
+          id: "hair-color-option"
+          optional: true
+      - tapOn:
+          id: "next-button"
+      - takeScreenshot: avatar_step
+
+# Step 5: Note writing
+- runFlow:
+    when:
+      visible:
+        id: "note-step"
+    commands:
+      - tapOn:
+          id: "note-input"
+      - inputText: "I saw you at the coffee shop and thought you had a wonderful smile. Would love to meet again!"
+      - hideKeyboard
+      - tapOn:
+          id: "next-button"
+      - takeScreenshot: note_step
+
+# Step 6: Review and submit
+- runFlow:
+    when:
+      visible:
+        id: "review-step"
+    commands:
+      - takeScreenshot: review_step
+      - tapOn:
+          id: "submit-post-button"
+
+# Verify post was created
+- extendedWaitUntil:
+    visible:
+      text: "Post created"
+    timeout: 10000
+    optional: true
+
+- takeScreenshot: post_created

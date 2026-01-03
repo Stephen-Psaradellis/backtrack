@@ -1,10 +1,12 @@
-'use client'
-
 import { memo, useCallback } from 'react'
-import { Button } from '@/components/ui/Button'
-import { getStepById } from '@/lib/onboarding/onboardingConfig'
-import { createAvatarDataUri } from '@/lib/avatar/dicebear'
-import type { AvatarConfig } from '@/types/avatar'
+import { Button } from '../ui/Button'
+import { getStepById } from '../../lib/onboarding/onboardingConfig'
+import type { AvatarConfig } from '../../types/avatar'
+
+// Placeholder for legacy DiceBear avatar - this component needs to be migrated to RPM
+const createAvatarDataUri = (_config: AvatarConfig, _size: number): string => {
+  return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23f0f0f0"/><circle cx="50" cy="40" r="20" fill="%23ccc"/><ellipse cx="50" cy="80" rx="30" ry="20" fill="%23ccc"/></svg>'
+}
 
 // ============================================================================
 // Types
@@ -71,13 +73,13 @@ const DEMO_TIME_AGO = 'Just now'
 const ProducerIcon = memo(function ProducerIcon() {
   return (
     <div
-      className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/40 dark:to-purple-800/30 flex items-center justify-center shadow-lg shadow-pink-500/10 animate-fade-in-scale"
+      className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-primary-100 to-purple-100 dark:from-primary-900/40 dark:to-purple-800/30 flex items-center justify-center shadow-lg shadow-primary-500/10 animate-fade-in-scale"
       aria-hidden="true"
     >
       <div className="relative">
         {/* Pencil/write icon */}
         <svg
-          className="w-10 h-10 sm:w-12 sm:h-12 text-pink-500 transition-transform duration-300 hover:scale-110"
+          className="w-10 h-10 sm:w-12 sm:h-12 text-primary-500 transition-transform duration-300 hover:scale-110"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -131,7 +133,7 @@ const MockPostCard = memo(function MockPostCard({
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl border border-gray-100 dark:border-gray-700 p-4 transition-shadow duration-300">
       {/* Header with "Your post" badge */}
       <div className="flex items-center justify-between mb-3">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 text-xs font-medium rounded-full">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-medium rounded-full">
           <svg
             className="w-3.5 h-3.5"
             fill="none"
@@ -220,7 +222,7 @@ const HowItWorksStep = memo(function HowItWorksStep({
 }: HowItWorksStepProps) {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400 flex items-center justify-center text-xs sm:text-sm font-semibold">
+      <div className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs sm:text-sm font-semibold">
         {step}
       </div>
       <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
@@ -386,7 +388,7 @@ function ProducerDemoScreenComponent({
             type="button"
             onClick={handleSkip}
             disabled={isLoading}
-            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Skip onboarding and go directly to the app"
           >
             Skip for now
@@ -399,7 +401,7 @@ function ProducerDemoScreenComponent({
             type="button"
             onClick={handleBack}
             disabled={isLoading}
-            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Go back to the previous step"
           >
             Go back

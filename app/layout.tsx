@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Love Ledger",
+  title: "Backtrack",
   description: "Location-based anonymous matchmaking application",
 };
 

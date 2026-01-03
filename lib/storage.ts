@@ -2,7 +2,7 @@
  * Supabase Storage Utilities
  *
  * Handles file uploads and downloads to Supabase Storage with proper
- * error handling and privacy controls for the Love Ledger app.
+ * error handling and privacy controls for the Backtrack app.
  *
  * PRIVACY PRINCIPLES:
  * 1. Selfies are stored in a private bucket (not publicly accessible)

@@ -38,7 +38,7 @@ type ViewMode = 'preview' | 'creator'
 // Component
 // ============================================================================
 
-export function AvatarCreatorScreen(): JSX.Element {
+export function AvatarCreatorScreen(): React.ReactNode {
   const navigation = useNavigation()
   const [viewMode, setViewMode] = useState<ViewMode>('preview')
   const [avatar, setAvatar] = useState<StoredAvatar | null>(null)
@@ -115,7 +115,7 @@ export function AvatarCreatorScreen(): JSX.Element {
         onAvatarCreated={handleAvatarCreated}
         onClose={handleClose}
         config={{
-          subdomain: 'demo', // TODO: Replace with your subdomain
+          subdomain: process.env.EXPO_PUBLIC_RPM_SUBDOMAIN || 'backtrack',
           bodyType: 'fullbody',
           quickStart: true,
         }}
@@ -128,7 +128,7 @@ export function AvatarCreatorScreen(): JSX.Element {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#FF6B47" />
           <Text style={styles.loadingText}>Loading your avatar...</Text>
         </View>
       </SafeAreaView>
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#FF6B47',
   },
   title: {
     fontSize: 18,
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   createButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B47',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,

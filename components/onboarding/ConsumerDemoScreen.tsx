@@ -1,10 +1,12 @@
-'use client'
-
 import { memo, useCallback } from 'react'
-import { Button } from '@/components/ui/Button'
-import { getStepById } from '@/lib/onboarding/onboardingConfig'
-import { createAvatarDataUri } from '@/lib/avatar/dicebear'
-import type { AvatarConfig } from '@/types/avatar'
+import { Button } from '../ui/Button'
+import { getStepById } from '../../lib/onboarding/onboardingConfig'
+import type { AvatarConfig } from '../../types/avatar'
+
+// Placeholder for legacy DiceBear avatar - this component needs to be migrated to RPM
+const createAvatarDataUri = (_config: AvatarConfig, _size: number): string => {
+  return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23f0f0f0"/><circle cx="50" cy="40" r="20" fill="%23ccc"/><ellipse cx="50" cy="80" rx="30" ry="20" fill="%23ccc"/></svg>'
+}
 
 // ============================================================================
 // Types
@@ -422,7 +424,7 @@ function ConsumerDemoScreenComponent({
             type="button"
             onClick={handleSkip}
             disabled={isLoading}
-            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Skip onboarding and go directly to the app"
           >
             Skip for now
@@ -435,7 +437,7 @@ function ConsumerDemoScreenComponent({
             type="button"
             onClick={handleBack}
             disabled={isLoading}
-            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Go back to the previous step"
           >
             Go back

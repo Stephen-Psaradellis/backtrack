@@ -2,7 +2,7 @@
  * useTutorialState Hook
  *
  * Custom hook for managing tutorial tooltip visibility and completion state
- * in the Love Ledger app. Handles first-use detection, persistent dismissal,
+ * in the Backtrack app. Handles first-use detection, persistent dismissal,
  * and replay functionality.
  *
  * Features:
@@ -280,9 +280,15 @@ export function useTutorialState(
   // ---------------------------------------------------------------------------
 
   /**
-   * Load completion state on mount
+   * Load completion state on mount and when featureName changes
    */
   useEffect(() => {
+    // Reset mounted ref when effect runs (for re-runs after feature name change)
+    mountedRef.current = true
+
+    // Reset to loading state when feature changes
+    setState(INITIAL_STATE)
+
     const loadCompletionState = async () => {
       try {
         const completed = await isTutorialCompleted(featureName)

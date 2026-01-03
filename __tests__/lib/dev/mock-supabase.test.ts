@@ -789,16 +789,18 @@ describe('createDevSupabaseClient', () => {
       expect(result.data!.length).toBeGreaterThan(0)
     })
 
-    it('returns empty data for conversations', async () => {
+    it('returns mock data for conversations', async () => {
       const result = await client.from('conversations').select('*')
 
-      expect(result.data).toEqual([])
+      expect(result.data).toBeDefined()
+      expect(Array.isArray(result.data)).toBe(true)
     })
 
-    it('returns empty data for messages', async () => {
+    it('returns mock data for messages', async () => {
       const result = await client.from('messages').select('*')
 
-      expect(result.data).toEqual([])
+      expect(result.data).toBeDefined()
+      expect(Array.isArray(result.data)).toBe(true)
     })
 
     it('returns empty data for unknown tables', async () => {

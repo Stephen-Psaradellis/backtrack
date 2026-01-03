@@ -174,14 +174,14 @@ interface FavoriteListItemProps {
  * iOS-style colors (matching LocationPicker)
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   secondary: '#8E8E93',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
   border: '#E5E5EA',
   text: '#000000',
   textSecondary: '#8E8E93',
-  selectedBackground: '#E3F2FF',
+  selectedBackground: '#FFE8E3',
   danger: '#FF3B30',
   heart: '#FF2D55',
 } as const

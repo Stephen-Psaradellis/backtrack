@@ -1,7 +1,7 @@
 /**
  * EventSearch Component
  *
- * A comprehensive event search and discovery component for the Love Ledger app.
+ * A comprehensive event search and discovery component for the Backtrack app.
  * Allows users to search for events by location, category, date, and text query.
  *
  * Features:
@@ -39,14 +39,12 @@
  * ```
  */
 
-'use client'
-
 import { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react'
-import { useEvents, type Event, type EventSearchParams, type EventPlatform } from '@/hooks/useEvents'
-import { useUserLocation } from '@/hooks/useUserLocation'
+import { useEvents, type Event, type EventSearchParams, type EventPlatform } from '../../hooks/useEvents'
+import { useUserLocation } from '../../hooks/useUserLocation'
 import { EventCard, CompactEventCard } from './EventCard'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
 
 // ============================================================================
 // Types
@@ -246,9 +244,9 @@ function FilterChip({
       className={[
         'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium',
         'transition-colors duration-200',
-        'focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2',
+        'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
         selected
-          ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700',
       ]
         .filter(Boolean)
@@ -284,7 +282,7 @@ function LocationButton({
       className={[
         'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
         'transition-colors duration-200',
-        'focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2',
+        'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
         'disabled:cursor-not-allowed disabled:opacity-50',
         hasLocation
           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
@@ -429,7 +427,7 @@ function RadiusSelector({
           'border border-gray-300 dark:border-gray-600',
           'bg-white dark:bg-gray-800',
           'text-gray-900 dark:text-gray-100',
-          'focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500',
+          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
         ].join(' ')}
       >
         {options.map((option) => (
@@ -774,7 +772,7 @@ export const EventSearch = memo(function EventSearch({
             <button
               type="button"
               onClick={() => setShowPlatformFilters((prev) => !prev)}
-              className="text-sm text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 font-medium"
+              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
               data-testid={`${testID}-platform-toggle`}
             >
               {showPlatformFilters ? 'Hide platforms' : 'Filter by platform'}
@@ -839,7 +837,7 @@ export const EventSearch = memo(function EventSearch({
             className="flex items-center justify-center py-12"
             data-testid={`${testID}-loading`}
           >
-            <LoadingSpinner className="text-pink-500" />
+            <LoadingSpinner className="text-primary-500" />
             <span className="ml-3 text-gray-500 dark:text-gray-400">
               {isLocationLoading ? 'Getting your location...' : 'Searching events...'}
             </span>
@@ -928,7 +926,7 @@ export const EventSearch = memo(function EventSearch({
             {/* Loading more indicator */}
             {isEventsLoading && events.length > 0 && (
               <div className="flex items-center justify-center py-4">
-                <LoadingSpinner className="text-pink-500" />
+                <LoadingSpinner className="text-primary-500" />
                 <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                   Loading more...
                 </span>

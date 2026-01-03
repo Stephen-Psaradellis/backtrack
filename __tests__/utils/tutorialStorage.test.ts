@@ -6,7 +6,7 @@
  * Unit tests for tutorialStorage utility
  *
  * Tests the tutorial storage utility including:
- * - Key naming convention verification (@LoveLedger_tutorial_completed_<feature>)
+ * - Key naming convention verification (@Backtrack_tutorial_completed_<feature>)
  * - Storage value format verification ({ completed: boolean, timestamp: number })
  * - Save/load operations
  * - Clear operations (single and all)
@@ -20,18 +20,26 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 // Mock Setup
 // ============================================================================
 
-// Mock AsyncStorage
-const mockAsyncStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  multiGet: vi.fn(),
-  multiRemove: vi.fn(),
-}
-
+// Mock AsyncStorage - must be defined inline with vi.mock due to hoisting
 vi.mock('@react-native-async-storage/async-storage', () => ({
-  default: mockAsyncStorage,
+  default: {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    multiGet: vi.fn(),
+    multiRemove: vi.fn(),
+  },
 }))
+
+// Get reference to mocked module for test assertions
+import AsyncStorage from '@react-native-async-storage/async-storage'
+const mockAsyncStorage = AsyncStorage as unknown as {
+  getItem: ReturnType<typeof vi.fn>
+  setItem: ReturnType<typeof vi.fn>
+  removeItem: ReturnType<typeof vi.fn>
+  multiGet: ReturnType<typeof vi.fn>
+  multiRemove: ReturnType<typeof vi.fn>
+}
 
 // Import after mocking
 import {
@@ -55,7 +63,7 @@ import {
 // Test Constants
 // ============================================================================
 
-const EXPECTED_KEY_PREFIX = '@LoveLedger_tutorial_completed_'
+const EXPECTED_KEY_PREFIX = '@Backtrack_tutorial_completed_'
 
 const ALL_FEATURES: TutorialFeature[] = [
   'post_creation',
@@ -89,28 +97,28 @@ describe('tutorialStorage', () => {
   // ============================================================================
 
   describe('key naming convention', () => {
-    it('TUTORIAL_KEY_PREFIX matches spec: @LoveLedger_tutorial_completed_', () => {
+    it('TUTORIAL_KEY_PREFIX matches spec: @Backtrack_tutorial_completed_', () => {
       expect(TUTORIAL_KEY_PREFIX).toBe(EXPECTED_KEY_PREFIX)
     })
 
     it('getTutorialStorageKey generates correct key for post_creation', () => {
       const key = getTutorialStorageKey('post_creation')
-      expect(key).toBe('@LoveLedger_tutorial_completed_post_creation')
+      expect(key).toBe('@Backtrack_tutorial_completed_post_creation')
     })
 
     it('getTutorialStorageKey generates correct key for ledger_browsing', () => {
       const key = getTutorialStorageKey('ledger_browsing')
-      expect(key).toBe('@LoveLedger_tutorial_completed_ledger_browsing')
+      expect(key).toBe('@Backtrack_tutorial_completed_ledger_browsing')
     })
 
     it('getTutorialStorageKey generates correct key for selfie_verification', () => {
       const key = getTutorialStorageKey('selfie_verification')
-      expect(key).toBe('@LoveLedger_tutorial_completed_selfie_verification')
+      expect(key).toBe('@Backtrack_tutorial_completed_selfie_verification')
     })
 
     it('getTutorialStorageKey generates correct key for messaging', () => {
       const key = getTutorialStorageKey('messaging')
-      expect(key).toBe('@LoveLedger_tutorial_completed_messaging')
+      expect(key).toBe('@Backtrack_tutorial_completed_messaging')
     })
 
     it('all feature keys follow the naming pattern', () => {
@@ -164,7 +172,7 @@ describe('tutorialStorage', () => {
       await saveTutorialCompletion('post_creation')
 
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        '@LoveLedger_tutorial_completed_post_creation',
+        '@Backtrack_tutorial_completed_post_creation',
         expect.any(String)
       )
     })
@@ -247,7 +255,7 @@ describe('tutorialStorage', () => {
       await getTutorialCompletion('ledger_browsing')
 
       expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(
-        '@LoveLedger_tutorial_completed_ledger_browsing'
+        '@Backtrack_tutorial_completed_ledger_browsing'
       )
     })
 
@@ -322,7 +330,7 @@ describe('tutorialStorage', () => {
       await clearTutorialCompletion('post_creation')
 
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(
-        '@LoveLedger_tutorial_completed_post_creation'
+        '@Backtrack_tutorial_completed_post_creation'
       )
     })
 
@@ -365,10 +373,10 @@ describe('tutorialStorage', () => {
       await clearAllTutorialCompletions()
 
       expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
-        '@LoveLedger_tutorial_completed_post_creation',
-        '@LoveLedger_tutorial_completed_ledger_browsing',
-        '@LoveLedger_tutorial_completed_selfie_verification',
-        '@LoveLedger_tutorial_completed_messaging',
+        '@Backtrack_tutorial_completed_post_creation',
+        '@Backtrack_tutorial_completed_ledger_browsing',
+        '@Backtrack_tutorial_completed_selfie_verification',
+        '@Backtrack_tutorial_completed_messaging',
       ])
     })
 
@@ -396,10 +404,10 @@ describe('tutorialStorage', () => {
   describe('getAllTutorialCompletions', () => {
     it('returns all features as false when no data exists', async () => {
       mockAsyncStorage.multiGet.mockResolvedValue([
-        ['@LoveLedger_tutorial_completed_post_creation', null],
-        ['@LoveLedger_tutorial_completed_ledger_browsing', null],
-        ['@LoveLedger_tutorial_completed_selfie_verification', null],
-        ['@LoveLedger_tutorial_completed_messaging', null],
+        ['@Backtrack_tutorial_completed_post_creation', null],
+        ['@Backtrack_tutorial_completed_ledger_browsing', null],
+        ['@Backtrack_tutorial_completed_selfie_verification', null],
+        ['@Backtrack_tutorial_completed_messaging', null],
       ])
 
       const result = await getAllTutorialCompletions()
@@ -415,15 +423,15 @@ describe('tutorialStorage', () => {
     it('returns correct completion status for each feature', async () => {
       mockAsyncStorage.multiGet.mockResolvedValue([
         [
-          '@LoveLedger_tutorial_completed_post_creation',
+          '@Backtrack_tutorial_completed_post_creation',
           JSON.stringify({ completed: true, timestamp: 123 }),
         ],
-        ['@LoveLedger_tutorial_completed_ledger_browsing', null],
+        ['@Backtrack_tutorial_completed_ledger_browsing', null],
         [
-          '@LoveLedger_tutorial_completed_selfie_verification',
+          '@Backtrack_tutorial_completed_selfie_verification',
           JSON.stringify({ completed: true, timestamp: 456 }),
         ],
-        ['@LoveLedger_tutorial_completed_messaging', null],
+        ['@Backtrack_tutorial_completed_messaging', null],
       ])
 
       const result = await getAllTutorialCompletions()
@@ -451,13 +459,13 @@ describe('tutorialStorage', () => {
 
     it('handles parse errors for individual items gracefully', async () => {
       mockAsyncStorage.multiGet.mockResolvedValue([
-        ['@LoveLedger_tutorial_completed_post_creation', 'invalid json'],
+        ['@Backtrack_tutorial_completed_post_creation', 'invalid json'],
         [
-          '@LoveLedger_tutorial_completed_ledger_browsing',
+          '@Backtrack_tutorial_completed_ledger_browsing',
           JSON.stringify({ completed: true, timestamp: 123 }),
         ],
-        ['@LoveLedger_tutorial_completed_selfie_verification', null],
-        ['@LoveLedger_tutorial_completed_messaging', null],
+        ['@Backtrack_tutorial_completed_selfie_verification', null],
+        ['@Backtrack_tutorial_completed_messaging', null],
       ])
 
       const result = await getAllTutorialCompletions()
@@ -521,10 +529,10 @@ describe('tutorialStorage', () => {
       await saveTutorialCompletion('messaging')
 
       // Verify each has its own key
-      expect(storage['@LoveLedger_tutorial_completed_post_creation']).toBeDefined()
-      expect(storage['@LoveLedger_tutorial_completed_messaging']).toBeDefined()
-      expect(storage['@LoveLedger_tutorial_completed_ledger_browsing']).toBeUndefined()
-      expect(storage['@LoveLedger_tutorial_completed_selfie_verification']).toBeUndefined()
+      expect(storage['@Backtrack_tutorial_completed_post_creation']).toBeDefined()
+      expect(storage['@Backtrack_tutorial_completed_messaging']).toBeDefined()
+      expect(storage['@Backtrack_tutorial_completed_ledger_browsing']).toBeUndefined()
+      expect(storage['@Backtrack_tutorial_completed_selfie_verification']).toBeUndefined()
 
       // Verify independent retrieval
       const postResult = await isTutorialCompleted('post_creation')

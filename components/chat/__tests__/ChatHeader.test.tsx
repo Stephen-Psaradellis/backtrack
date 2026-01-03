@@ -15,26 +15,31 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ChatHeader } from '../ChatHeader'
 
-// Mock CSS module
+// Mock CSS module - must have default export
 vi.mock('../styles/ChatScreen.module.css', () => ({
-  header: 'header',
-  backButton: 'backButton',
-  headerUserInfo: 'headerUserInfo',
-  avatarContainer: 'avatarContainer',
-  avatar: 'avatar',
-  onlineIndicator: 'onlineIndicator',
-  userDetails: 'userDetails',
-  username: 'username',
-  actionsButton: 'actionsButton',
+  default: {
+    header: 'header',
+    backButton: 'backButton',
+    headerUserInfo: 'headerUserInfo',
+    avatarContainer: 'avatarContainer',
+    avatar: 'avatar',
+    onlineIndicator: 'onlineIndicator',
+    userDetails: 'userDetails',
+    username: 'username',
+    actionsButton: 'actionsButton',
+  },
 }))
 
 // Mock UserPresenceIndicator component
+const mockUserPresenceIndicator = vi.fn(({ isOnline, lastSeen }) => (
+  <div data-testid="presence-indicator" data-is-online={isOnline} data-last-seen={lastSeen ?? ''}>
+    {isOnline ? 'Online' : 'Offline'}
+  </div>
+))
+
 vi.mock('../UserPresenceIndicator', () => ({
-  UserPresenceIndicator: vi.fn(({ isOnline, lastSeen }) => (
-    <div data-testid="presence-indicator" data-is-online={isOnline} data-last-seen={lastSeen}>
-      {isOnline ? 'Online' : 'Offline'}
-    </div>
-  )),
+  UserPresenceIndicator: (props: { isOnline: boolean; lastSeen?: string | null }) =>
+    mockUserPresenceIndicator(props),
 }))
 
 const defaultProps = {
@@ -148,29 +153,23 @@ describe('ChatHeader', () => {
 
   describe('Presence Indicator', () => {
     it('should render UserPresenceIndicator with correct props', () => {
-      const { UserPresenceIndicator } = require('../UserPresenceIndicator')
-
       render(<ChatHeader {...defaultProps} isOnline={true} lastSeen="2024-01-15T12:00:00Z" />)
 
-      expect(UserPresenceIndicator).toHaveBeenCalledWith(
+      expect(mockUserPresenceIndicator).toHaveBeenCalledWith(
         expect.objectContaining({
           isOnline: true,
           lastSeen: '2024-01-15T12:00:00Z',
-        }),
-        expect.anything()
+        })
       )
     })
 
     it('should pass isOnline=false when offline', () => {
-      const { UserPresenceIndicator } = require('../UserPresenceIndicator')
-
       render(<ChatHeader {...defaultProps} isOnline={false} />)
 
-      expect(UserPresenceIndicator).toHaveBeenCalledWith(
+      expect(mockUserPresenceIndicator).toHaveBeenCalledWith(
         expect.objectContaining({
           isOnline: false,
-        }),
-        expect.anything()
+        })
       )
     })
   })

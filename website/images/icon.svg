@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B47;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#E91E8C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9C27B0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded rectangle background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="180" ry="180" fill="url(#bgGradient)"/>
+  <!-- Chevron/Arrow pointing right (representing "track back" or forward movement) -->
+  <path d="M380 250 L650 512 L380 774"
+        fill="none"
+        stroke="white"
+        stroke-width="100"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

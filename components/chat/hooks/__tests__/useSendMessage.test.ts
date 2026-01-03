@@ -84,7 +84,8 @@ describe('useSendMessage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
+    // Note: Don't use fake timers globally - they break waitFor
+    // Use vi.useFakeTimers() only in specific tests that need debounce testing
     mockSupabase = createMockSupabase()
     ;(createClient as Mock).mockReturnValue(mockSupabase)
   })
@@ -151,12 +152,13 @@ describe('useSendMessage', () => {
     })
 
     it('should add optimistic message with sending status', async () => {
-      // Make insert hang to observe optimistic state
+      // Use a delayed promise to observe optimistic state before completion
+      let resolveInsert: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(
-              () => new Promise(() => {}) // Never resolves
+              () => new Promise((resolve) => { resolveInsert = resolve })
             ),
           }),
         }),
@@ -169,18 +171,24 @@ describe('useSendMessage', () => {
         })
       )
 
+      // Start sending message (don't await)
       act(() => {
         result.current.sendMessage('Hello world')
       })
 
-      // Check optimistic message was added
+      // Check optimistic message was added immediately
       await waitFor(() => {
         expect(result.current.optimisticMessages).toHaveLength(1)
-      })
+      }, { timeout: 1000 })
 
       expect(result.current.optimisticMessages[0].content).toBe('Hello world')
       expect(result.current.optimisticMessages[0].status).toBe('sending')
       expect(result.current.isSending).toBe(true)
+
+      // Clean up: resolve the promise
+      if (resolveInsert) {
+        resolveInsert({ data: createMockSentMessage('Hello world'), error: null })
+      }
     })
 
     it('should trim message content', async () => {
@@ -442,12 +450,13 @@ describe('useSendMessage', () => {
     })
 
     it('should not retry a message that is not failed', async () => {
-      // Make send hang to keep message in "sending" state
+      // Use controllable promise to keep message in "sending" state
+      let resolveInsert: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(
-              () => new Promise(() => {}) // Never resolves
+              () => new Promise((resolve) => { resolveInsert = resolve })
             ),
           }),
         }),
@@ -466,7 +475,7 @@ describe('useSendMessage', () => {
 
       await waitFor(() => {
         expect(result.current.optimisticMessages).toHaveLength(1)
-      })
+      }, { timeout: 1000 })
 
       const sendingMessageId = result.current.optimisticMessages[0].id
 
@@ -477,6 +486,11 @@ describe('useSendMessage', () => {
 
       // Message should still be in sending state
       expect(result.current.optimisticMessages[0].status).toBe('sending')
+
+      // Clean up
+      if (resolveInsert) {
+        resolveInsert({ data: createMockSentMessage('Test message'), error: null })
+      }
     })
 
     it('should set status to sending during retry', async () => {
@@ -503,12 +517,13 @@ describe('useSendMessage', () => {
         await result.current.sendMessage('Test message')
       })
 
-      // Hang on retry to observe status change
+      // Use controllable promise to observe status change during retry
+      let resolveRetry: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(
-              () => new Promise(() => {}) // Never resolves
+              () => new Promise((resolve) => { resolveRetry = resolve })
             ),
           }),
         }),
@@ -522,7 +537,12 @@ describe('useSendMessage', () => {
 
       await waitFor(() => {
         expect(result.current.optimisticMessages[0].status).toBe('sending')
-      })
+      }, { timeout: 1000 })
+
+      // Clean up
+      if (resolveRetry) {
+        resolveRetry({ data: createMockSentMessage('Test message'), error: null })
+      }
     })
   })
 
@@ -578,12 +598,13 @@ describe('useSendMessage', () => {
     })
 
     it('should not delete a message that is still sending', async () => {
-      // Make send hang to keep message in "sending" state
+      // Use controllable promise to keep message in "sending" state
+      let resolveInsert: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(
-              () => new Promise(() => {}) // Never resolves
+              () => new Promise((resolve) => { resolveInsert = resolve })
             ),
           }),
         }),
@@ -602,7 +623,7 @@ describe('useSendMessage', () => {
 
       await waitFor(() => {
         expect(result.current.optimisticMessages).toHaveLength(1)
-      })
+      }, { timeout: 1000 })
 
       const sendingMessageId = result.current.optimisticMessages[0].id
 
@@ -612,6 +633,11 @@ describe('useSendMessage', () => {
 
       // Message should still exist since it's not failed
       expect(result.current.optimisticMessages).toHaveLength(1)
+
+      // Clean up
+      if (resolveInsert) {
+        resolveInsert({ data: createMockSentMessage('Test message'), error: null })
+      }
     })
   })
 })

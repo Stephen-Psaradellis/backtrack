@@ -1,8 +1,6 @@
-'use client'
-
 import { memo, useCallback } from 'react'
-import { Button } from '@/components/ui/Button'
-import { getStepById } from '@/lib/onboarding/onboardingConfig'
+import { Button } from '../ui/Button'
+import { getStepById } from '../../lib/onboarding/onboardingConfig'
 
 // ============================================================================
 // Types
@@ -29,7 +27,7 @@ export interface OnboardingCompleteProps {
 const CelebrationIcon = memo(function CelebrationIcon() {
   return (
     <div
-      className="mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/40 dark:to-purple-800/30 flex items-center justify-center shadow-lg shadow-pink-500/10 animate-fade-in-scale"
+      className="mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-primary-100 to-purple-100 dark:from-primary-900/40 dark:to-purple-800/30 flex items-center justify-center shadow-lg shadow-primary-500/10 animate-fade-in-scale"
       aria-hidden="true"
     >
       {/* Party popper with subtle bounce animation */}
@@ -80,7 +78,7 @@ const ActionItem = memo(function ActionItem({
     <div className="flex items-start gap-3 group">
       {/* Action icon with hover effect */}
       <div
-        className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
+        className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
         aria-hidden="true"
       >
         <span className="text-lg sm:text-xl">{icon}</span>
@@ -154,7 +152,7 @@ function OnboardingCompleteComponent({
 }: OnboardingCompleteProps) {
   // Get step config for button label
   const stepConfig = getStepById('complete')
-  const primaryButtonLabel = stepConfig?.primaryButtonLabel ?? 'Enter Love Ledger'
+  const primaryButtonLabel = stepConfig?.primaryButtonLabel ?? 'Enter Backtrack'
 
   // Memoized handlers
   const handleComplete = useCallback(() => {
@@ -187,7 +185,7 @@ function OnboardingCompleteComponent({
         </h2>
 
         <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-xs sm:max-w-sm mx-auto leading-relaxed animate-fade-in-up animation-delay-200">
-          Welcome to Love Ledger. Your journey to meaningful connections starts now.
+          Welcome to Backtrack. Your journey to meaningful connections starts now.
         </p>
       </header>
 
@@ -266,7 +264,7 @@ function OnboardingCompleteComponent({
           <button
             type="button"
             onClick={handleBack}
-            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-pink-500 rounded-lg"
+            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 rounded-lg"
             aria-label="Go back to the previous step"
           >
             Go back

@@ -1,5 +1,5 @@
 /**
- * Geospatial Utility Functions for Love Ledger
+ * Geospatial Utility Functions for Backtrack
  *
  * This module provides helper functions for geospatial calculations and
  * Supabase RPC calls to PostGIS-powered database functions.
@@ -38,8 +38,8 @@
  * ## Usage Example
  *
  * ```typescript
- * import { createClient } from '@/lib/supabase/client'
- * import { fetchNearbyLocations, fetchLocationsWithActivePosts } from '@/lib/utils/geo'
+ * import { createClient } from '../supabase/client'
+ * import { fetchNearbyLocations, fetchLocationsWithActivePosts } from './geo'
  *
  * const supabase = createClient()
  *
@@ -76,7 +76,7 @@ import type {
   NearbyLocationParams,
   LocationsWithActivePostsParams,
   RecentlyVisitedLocationParams,
-} from '@/types/database'
+} from '../../types/database'
 
 // ============================================================================
 // Constants
@@ -396,8 +396,8 @@ function assertValidRadius(radius: number): void {
  *
  * @example
  * ```typescript
- * import { createClient } from '@/lib/supabase/client'
- * import { fetchNearbyLocations } from '@/lib/utils/geo'
+ * import { createClient } from '../supabase/client'
+ * import { fetchNearbyLocations } from './geo'
  *
  * const supabase = createClient()
  *
@@ -499,8 +499,8 @@ export async function fetchNearbyLocations(
  *
  * @example
  * ```typescript
- * import { createClient } from '@/lib/supabase/client'
- * import { fetchLocationsWithActivePosts, formatDistance } from '@/lib/utils/geo'
+ * import { createClient } from '../supabase/client'
+ * import { fetchLocationsWithActivePosts, formatDistance } from './geo'
  *
  * const supabase = createClient()
  *
@@ -629,8 +629,8 @@ export interface RecordLocationVisitParams {
  *
  * @example
  * ```typescript
- * import { createClient } from '@/lib/supabase/client'
- * import { recordLocationVisit } from '@/lib/utils/geo'
+ * import { createClient } from '../supabase/client'
+ * import { recordLocationVisit } from './geo'
  *
  * const supabase = createClient()
  *
@@ -716,8 +716,8 @@ export async function recordLocationVisit(
  *
  * @example
  * ```typescript
- * import { createClient } from '@/lib/supabase/client'
- * import { fetchRecentlyVisitedLocations } from '@/lib/utils/geo'
+ * import { createClient } from '../supabase/client'
+ * import { fetchRecentlyVisitedLocations } from './geo'
  *
  * const supabase = createClient()
  *
@@ -775,7 +775,7 @@ export async function fetchRecentlyVisitedLocations(
  *
  * @example
  * ```typescript
- * import { fetchNearbyLocations, kmToMeters } from '@/lib/utils/geo'
+ * import { fetchNearbyLocations, kmToMeters } from './geo'
  *
  * // User wants 10km radius
  * const userRadiusKm = 10
@@ -821,7 +821,7 @@ export function metersToKm(meters: number): number {
  *
  * @example
  * ```typescript
- * import { formatDistance } from '@/lib/utils/geo'
+ * import { formatDistance } from './geo'
  *
  * // In a React component
  * function LocationCard({ location }: { location: LocationWithDistance }) {
@@ -880,7 +880,7 @@ export function formatDistance(meters: number): string {
  *
  * @example
  * ```typescript
- * import { calculateDistance } from '@/lib/utils/geo'
+ * import { calculateDistance } from './geo'
  *
  * const userLocation = { latitude: 37.7749, longitude: -122.4194 }
  * const poiLocation = { latitude: 37.7750, longitude: -122.4195 }
@@ -925,7 +925,7 @@ export function calculateDistance(point1: Coordinates, point2: Coordinates): num
  * ## Defaults
  *
  * The default radius is {@link PROXIMITY_RADIUS_METERS} (50 meters), which is
- * the standard threshold for "being at" a venue in the Love Ledger app.
+ * the standard threshold for "being at" a venue in the Backtrack app.
  *
  * @param userLocation - User's current GPS coordinates
  * @param poiLocation - POI (Point of Interest) coordinates
@@ -936,7 +936,7 @@ export function calculateDistance(point1: Coordinates, point2: Coordinates): num
  *
  * @example
  * ```typescript
- * import { isWithinRadius, PROXIMITY_RADIUS_METERS } from '@/lib/utils/geo'
+ * import { isWithinRadius, PROXIMITY_RADIUS_METERS } from './geo'
  *
  * const userLocation = { latitude: 37.7749, longitude: -122.4194 }
  * const cafeLocation = { latitude: 37.7750, longitude: -122.4195 }
@@ -988,7 +988,7 @@ export function isWithinRadius(
  *
  * @example
  * ```typescript
- * import { formatVisitedAgo } from '@/lib/utils/geo'
+ * import { formatVisitedAgo } from './geo'
  *
  * // In a React component
  * function LocationCard({ location }: { location: LocationWithVisit }) {

@@ -61,7 +61,7 @@ const GOOGLE_PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchTex
  * Error messages for location service operations
  */
 export const LOCATION_SERVICE_ERRORS = {
-  API_KEY_MISSING: 'Google Places API key is not configured. Please add GOOGLE_PLACES_API_KEY to environment variables.',
+  API_KEY_MISSING: 'Google Places API key is not configured. Please add NEXT_PUBLIC_GCP_MAPS_API_KEY to environment variables.',
   INVALID_QUERY: 'Search query must be at least 2 characters.',
   INVALID_COORDINATES: 'Latitude and longitude must be valid numbers within range.',
   API_REQUEST_FAILED: 'Failed to fetch venues from Google Places API.',
@@ -132,13 +132,13 @@ export interface PopularVenuesResult {
  */
 function getGooglePlacesApiKey(): string | null {
   // Check for server-side API key first (for Places API calls)
-  const serverKey = process.env.GOOGLE_PLACES_API_KEY
+  const serverKey = process.env.NEXT_PUBLIC_GCP_MAPS_API_KEY
   if (serverKey) {
     return serverKey
   }
 
   // Fall back to the public Google Maps key (may have Places API enabled)
-  const publicKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+  const publicKey = process.env.EXPO_PUBLIC_GCP_MAPS_API_KEY
   if (publicKey) {
     return publicKey
   }
@@ -247,7 +247,7 @@ function getErrorType(error: unknown, status?: number): LocationErrorType {
  *
  * ## API Requirements
  *
- * - Requires GOOGLE_PLACES_API_KEY environment variable
+ * - Requires NEXT_PUBLIC_GCP_MAPS_API_KEY environment variable
  * - "Places API (New)" must be enabled in Google Cloud Console
  * - X-Goog-FieldMask header is REQUIRED
  *
@@ -907,8 +907,8 @@ function googlePlaceToVenue(
  *
  * @example
  * ```typescript
- * import { createClient } from '@/lib/supabase/client'
- * import { searchVenues } from '@/services/locationService'
+ * import { createClient } from '../lib/supabase/client'
+ * import { searchVenues } from './locationService'
  *
  * const supabase = createClient()
  *
@@ -1109,8 +1109,8 @@ export const DEFAULT_MIN_POST_COUNT = 1
  *
  * @example
  * ```typescript
- * import { createClient } from '@/lib/supabase/client'
- * import { fetchPopularVenues } from '@/services/locationService'
+ * import { createClient } from '../lib/supabase/client'
+ * import { fetchPopularVenues } from './locationService'
  *
  * const supabase = createClient()
  *

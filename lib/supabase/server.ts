@@ -19,7 +19,7 @@ export async function createClient() {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
   // Enforce credentials in production
   if (isProductionMode()) {
@@ -31,7 +31,7 @@ export async function createClient() {
     }
     if (!supabaseAnonKey) {
       throw new Error(
-        'Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable. ' +
+        'Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variable. ' +
         'This is required in production. Please set it in your environment.'
       )
     }

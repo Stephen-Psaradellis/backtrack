@@ -1,7 +1,7 @@
 /**
  * Moderation Utilities
  *
- * Handles user blocking and moderation functionality for the Love Ledger app.
+ * Handles user blocking and moderation functionality for the Backtrack app.
  * This module provides functions to block/unblock users and check block status.
  *
  * BLOCKING BEHAVIOR:

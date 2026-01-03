@@ -18,26 +18,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BlockUserModal } from '../BlockUserModal'
 
-// Mock CSS module
+// Mock CSS module - must have default export
 vi.mock('../styles/ChatScreen.module.css', () => ({
-  modalOverlay: 'modalOverlay',
-  modal: 'modal',
-  modalHeader: 'modalHeader',
-  iconContainer: 'iconContainer',
-  iconContainerDanger: 'iconContainerDanger',
-  modalTitle: 'modalTitle',
-  modalText: 'modalText',
-  usernameHighlight: 'usernameHighlight',
-  modalDescription: 'modalDescription',
-  modalList: 'modalList',
-  listItem: 'listItem',
-  modalError: 'modalError',
-  errorIconBadge: 'errorIconBadge',
-  modalActions: 'modalActions',
-  modalCancelButton: 'modalCancelButton',
-  modalConfirmButton: 'modalConfirmButton',
-  modalConfirmButtonLoading: 'modalConfirmButtonLoading',
-  spinnerSmall: 'spinnerSmall',
+  default: {
+    modalOverlay: 'modalOverlay',
+    modal: 'modal',
+    modalHeader: 'modalHeader',
+    iconContainer: 'iconContainer',
+    iconContainerDanger: 'iconContainerDanger',
+    modalTitle: 'modalTitle',
+    modalText: 'modalText',
+    usernameHighlight: 'usernameHighlight',
+    modalDescription: 'modalDescription',
+    modalList: 'modalList',
+    listItem: 'listItem',
+    modalError: 'modalError',
+    errorIconBadge: 'errorIconBadge',
+    modalActions: 'modalActions',
+    modalCancelButton: 'modalCancelButton',
+    modalConfirmButton: 'modalConfirmButton',
+    modalConfirmButtonLoading: 'modalConfirmButtonLoading',
+    spinnerSmall: 'spinnerSmall',
+  },
 }))
 
 const defaultProps = {
@@ -228,8 +230,9 @@ describe('BlockUserModal', () => {
       const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} onCancel={onCancel} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      fireEvent.click(overlay!)
+      // The overlay IS the dialog element - click directly on it
+      const overlay = screen.getByRole('dialog')
+      fireEvent.click(overlay)
 
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
@@ -238,7 +241,8 @@ describe('BlockUserModal', () => {
       const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} onCancel={onCancel} />)
 
-      fireEvent.click(screen.getByText('Block User'))
+      // Click on the button (not the heading) - use getByRole to be specific
+      fireEvent.click(screen.getByRole('button', { name: 'Block User' }))
 
       // Only onConfirm should be called, not onCancel from backdrop
       expect(onCancel).not.toHaveBeenCalled()
@@ -248,8 +252,9 @@ describe('BlockUserModal', () => {
       const onCancel = vi.fn()
       render(<BlockUserModal {...defaultProps} isLoading={true} onCancel={onCancel} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      fireEvent.click(overlay!)
+      // The overlay IS the dialog element
+      const overlay = screen.getByRole('dialog')
+      fireEvent.click(overlay)
 
       expect(onCancel).not.toHaveBeenCalled()
     })
@@ -281,14 +286,16 @@ describe('BlockUserModal', () => {
     it('should have aria-modal="true"', () => {
       render(<BlockUserModal {...defaultProps} />)
 
-      expect(screen.getByRole('dialog').parentElement).toHaveAttribute('aria-modal', 'true')
+      // The overlay div IS the dialog element with aria-modal
+      expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true')
     })
 
     it('should have aria-labelledby pointing to title', () => {
       render(<BlockUserModal {...defaultProps} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      expect(overlay).toHaveAttribute('aria-labelledby', 'block-modal-title')
+      // The overlay div IS the dialog element with aria-labelledby
+      const dialog = screen.getByRole('dialog')
+      expect(dialog).toHaveAttribute('aria-labelledby', 'block-modal-title')
 
       const title = document.getElementById('block-modal-title')
       expect(title).toHaveTextContent('Block User')
@@ -297,8 +304,9 @@ describe('BlockUserModal', () => {
     it('should have aria-describedby pointing to description', () => {
       render(<BlockUserModal {...defaultProps} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      expect(overlay).toHaveAttribute('aria-describedby', 'block-modal-description')
+      // The overlay div IS the dialog element with aria-describedby
+      const dialog = screen.getByRole('dialog')
+      expect(dialog).toHaveAttribute('aria-describedby', 'block-modal-description')
 
       const description = document.getElementById('block-modal-description')
       expect(description).toBeInTheDocument()
@@ -350,7 +358,10 @@ describe('BlockUserModal', () => {
       const longError = 'Error: '.repeat(50)
       render(<BlockUserModal {...defaultProps} error={longError} />)
 
-      expect(screen.getByText(longError)).toBeInTheDocument()
+      // The error text is in a span element, use a function matcher
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === longError
+      })).toBeInTheDocument()
     })
   })
 })

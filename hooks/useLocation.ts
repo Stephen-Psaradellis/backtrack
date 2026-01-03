@@ -1,7 +1,7 @@
 /**
  * useLocation Hook
  *
- * Custom hook for managing device location services in the Love Ledger app.
+ * Custom hook for managing device location services in the Backtrack app.
  * Handles permission requests, location fetching, and error states.
  *
  * Features:

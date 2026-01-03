@@ -137,7 +137,7 @@ const PhotoTile = memo(function PhotoTile({
       {/* Selection indicator */}
       {isSelected && (
         <View style={styles.selectedBadge}>
-          <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+          <Ionicons name="checkmark-circle" size={24} color="#FF6B47" />
         </View>
       )}
 
@@ -183,7 +183,7 @@ const AddPhotoTile = memo(function AddPhotoTile({
       <Ionicons
         name="add"
         size={32}
-        color={disabled ? '#C7C7CC' : '#007AFF'}
+        color={disabled ? '#FFD0C2' : '#FF6B47'}
       />
       <Text style={[styles.addText, disabled && styles.addTextDisabled]}>
         Add Photo
@@ -315,7 +315,7 @@ export const PhotoStep = memo(function PhotoStep({
       <SafeAreaView style={styles.safeArea} testID={`${testID}-photo-loading`}>
         <View style={styles.container}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color="#FF6B47" />
             <Text style={styles.loadingText}>Loading your photos...</Text>
           </View>
         </View>
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   },
   photoTileSelected: {
     borderWidth: 3,
-    borderColor: '#007AFF',
+    borderColor: '#FF6B47',
   },
   photoTileDisabled: {
     opacity: 0.7,
@@ -584,30 +584,30 @@ const styles = StyleSheet.create({
     height: TILE_SIZE,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#FF6B47',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8F8FF',
+    backgroundColor: '#FFF8F6',
   },
   addTileDisabled: {
-    borderColor: '#C7C7CC',
+    borderColor: '#FFD0C2',
     backgroundColor: '#F2F2F7',
   },
   addText: {
     marginTop: 4,
     fontSize: 12,
-    color: '#007AFF',
+    color: '#FF6B47',
     fontWeight: '500',
   },
   addTextDisabled: {
-    color: '#C7C7CC',
+    color: '#FFD0C2',
   },
   uploadingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B47',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,

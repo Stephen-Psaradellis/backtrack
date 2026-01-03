@@ -1,6 +1,6 @@
-# Love Ledger Database Documentation
+# Backtrack Database Documentation
 
-Comprehensive documentation and setup guide for the Love Ledger Supabase database schema, including tables, relationships, Row Level Security (RLS) policies, triggers, and TypeScript integration.
+Comprehensive documentation and setup guide for the Backtrack Supabase database schema, including tables, relationships, Row Level Security (RLS) policies, triggers, and TypeScript integration.
 
 ---
 
@@ -19,7 +19,7 @@ Comprehensive documentation and setup guide for the Love Ledger Supabase databas
   - [messages](#messages)
   - [notifications](#notifications)
 - [Row Level Security (RLS)](#row-level-security-rls)
-  - [Security Model](#love-ledger-security-model)
+  - [Security Model](#backtrack-security-model)
   - [Authentication Context](#authentication-context-authuid)
   - [Policy Types](#policy-types-and-clauses)
   - [profiles Policies](#profiles-rls-policies)
@@ -47,7 +47,7 @@ Comprehensive documentation and setup guide for the Love Ledger Supabase databas
 
 ## Database Overview
 
-Love Ledger is a location-based anonymous matchmaking application that allows users to create "missed connection" style posts at physical locations. The database is hosted on **Supabase** (PostgreSQL) and leverages:
+Backtrack is a location-based anonymous matchmaking application that allows users to create "missed connection" style posts at physical locations. The database is hosted on **Supabase** (PostgreSQL) and leverages:
 
 - **PostGIS** for geospatial queries (proximity searches)
 - **Row Level Security (RLS)** for fine-grained access control
@@ -55,7 +55,7 @@ Love Ledger is a location-based anonymous matchmaking application that allows us
 - **JSONB** fields for flexible avatar configuration storage
 - **Real-time subscriptions** for live data updates
 
-Love Ledger uses Supabase's hosted PostgreSQL database with the following features:
+Backtrack uses Supabase's hosted PostgreSQL database with the following features:
 
 | Feature | Description |
 |---------|-------------|
@@ -80,7 +80,7 @@ Love Ledger uses Supabase's hosted PostgreSQL database with the following featur
 
 ## Architecture
 
-The Love Ledger database follows a **user-centric** design with the following key characteristics:
+The Backtrack database follows a **user-centric** design with the following key characteristics:
 
 1. **Authentication Integration**: User profiles are linked to Supabase `auth.users` via foreign key
 2. **Geospatial Indexing**: Locations use PostGIS for efficient proximity queries
@@ -91,7 +91,7 @@ The Love Ledger database follows a **user-centric** design with the following ke
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Love Ledger App                          │
+│                     Backtrack App                          │
 │  ┌─────────────────┐    ┌─────────────────────────────────┐ │
 │  │  Next.js Client  │    │  Next.js Server Components     │ │
 │  │  (Browser)       │    │  (API Routes, Server Actions)   │ │
@@ -158,13 +158,13 @@ User Signs Up
 
 ## Schema Overview
 
-Love Ledger's database consists of 6 main tables. Here's a detailed breakdown of each table and their relationships.
+Backtrack's database consists of 6 main tables. Here's a detailed breakdown of each table and their relationships.
 
 ---
 
 ## Extensions
 
-Love Ledger uses two PostgreSQL extensions:
+Backtrack uses two PostgreSQL extensions:
 
 ### PostGIS
 
@@ -174,7 +174,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 **Purpose**: Enables geospatial data types and functions for location-based queries.
 
-**Usage in Love Ledger**:
+**Usage in Backtrack**:
 - Store location coordinates as `DOUBLE PRECISION` latitude/longitude
 - Create spatial indexes using `ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)`
 - Perform proximity queries to find nearby posts and locations
@@ -189,7 +189,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 **Purpose**: Provides functions to generate universally unique identifiers (UUIDs).
 
-**Usage in Love Ledger**:
+**Usage in Backtrack**:
 - Primary keys for all tables (except `profiles` which uses `auth.users.id`)
 - Generated via `gen_random_uuid()` (PostgreSQL 13+ native function)
 
@@ -201,7 +201,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              LOVE LEDGER ERD                                 │
+│                              BACKTRACK ERD                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 
     ┌─────────────────┐
@@ -774,9 +774,9 @@ CREATE TABLE public.notifications (
 
 ## Row Level Security (RLS)
 
-Row Level Security (RLS) is a PostgreSQL feature that restricts database access at the row level based on policies. Love Ledger uses RLS to ensure users can only access their own data and data they have permission to view.
+Row Level Security (RLS) is a PostgreSQL feature that restricts database access at the row level based on policies. Backtrack uses RLS to ensure users can only access their own data and data they have permission to view.
 
-### Love Ledger Security Model
+### Backtrack Security Model
 
 The security model is based on three key principles:
 
@@ -812,7 +812,7 @@ Functions and triggers maintain data integrity and consistency:
 
 ## PostGIS Extension Setup
 
-Love Ledger uses the PostGIS extension for geospatial features like finding nearby locations and calculating distances.
+Backtrack uses the PostGIS extension for geospatial features like finding nearby locations and calculating distances.
 
 ### Why PostGIS?
 
@@ -949,7 +949,7 @@ supabase db push
 
 ## Database Best Practices
 
-Follow these best practices when working with Love Ledger database:
+Follow these best practices when working with Backtrack database:
 
 ### 1. Always Use Prepared Statements
 
@@ -1173,7 +1173,7 @@ supabase start
 
 ## TypeScript Integration
 
-Love Ledger uses TypeScript types generated from the Supabase schema:
+Backtrack uses TypeScript types generated from the Supabase schema:
 
 ```typescript
 import { Database } from '@/lib/database.types';

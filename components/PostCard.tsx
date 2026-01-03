@@ -69,11 +69,10 @@ import {
   Alert,
 } from 'react-native'
 import { ReportPostModal } from './ReportModal'
-import { MediumAvatarPreview } from './AvatarPreview'
+import { MediumAvatarPreview } from './ReadyPlayerMe'
 import { VerifiedBadge } from './VerifiedBadge'
 import { formatSightingTime, parseDate } from '../utils/dateTime'
 import type { Post, PostWithDetails, Location, Profile } from '../types/database'
-import type { AvatarConfig } from '../types/avatar'
 
 // ============================================================================
 // TYPES
@@ -169,7 +168,7 @@ export interface PostCardProps {
  * Colors used in the PostCard component
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   textPrimary: '#000000',
   textSecondary: '#8E8E93',
   textTertiary: '#C7C7CC',
@@ -177,7 +176,7 @@ const COLORS = {
   border: '#E5E5EA',
   matchExcellent: '#34C759', // Green - excellent match
   matchStrong: '#5AC8FA', // Light blue - strong match
-  matchGood: '#007AFF', // Blue - good match
+  matchGood: '#FF6B47', // Coral - good match
   matchPartial: '#FF9500', // Orange - partial match
   matchLow: '#8E8E93', // Gray - low match
 } as const
@@ -442,7 +441,7 @@ export const PostCard = memo(function PostCard({
       {/* Avatar Section */}
       <View style={styles.avatarContainer} testID={`${testID}-avatar`}>
         <MediumAvatarPreview
-          config={post.target_avatar as AvatarConfig}
+          avatarId={post.target_rpm_avatar?.avatarId || ''}
           testID={`${testID}-avatar-preview`}
         />
         {/* Match Badge */}

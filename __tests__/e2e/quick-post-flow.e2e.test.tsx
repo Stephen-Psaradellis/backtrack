@@ -332,7 +332,7 @@ interface TestWrapperProps {
   children: React.ReactNode
 }
 
-function TestWrapper({ children }: TestWrapperProps): JSX.Element {
+function TestWrapper({ children }: TestWrapperProps): React.ReactNode {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider
@@ -1179,7 +1179,7 @@ describe('E2E: Quick Post Flow from Favorites', () => {
  * Quick Post Flow E2E Test Summary:
  *
  * This test suite verifies the complete flow for creating a post directly
- * from a favorite location in the Love Ledger app.
+ * from a favorite location in the Backtrack app.
  *
  * Steps Tested:
  * 1. Open favorites list - HomeScreen favorites button opens modal

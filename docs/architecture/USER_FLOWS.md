@@ -1,6 +1,6 @@
-# Love Ledger User Flows
+# Backtrack User Flows
 
-This document details the user journeys for both Producers and Consumers in the Love Ledger application. Understanding these flows is essential for developing and maintaining features that support the core matchmaking experience.
+This document details the user journeys for both Producers and Consumers in the Backtrack application. Understanding these flows is essential for developing and maintaining features that support the core matchmaking experience.
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@ This document details the user journeys for both Producers and Consumers in the 
 
 ## Overview
 
-Love Ledger operates on a **Producer/Consumer model** where:
+Backtrack operates on a **Producer/Consumer model** where:
 
 - **Producers** create "missed connection" posts at physical locations
 - **Consumers** browse locations and respond to posts that match their appearance

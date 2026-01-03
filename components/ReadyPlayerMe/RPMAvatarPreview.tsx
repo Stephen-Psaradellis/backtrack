@@ -144,7 +144,7 @@ function RPMAvatarPreviewComponent({
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size={size > 60 ? 'large' : 'small'}
-            color="#007AFF"
+            color="#FF6B47"
           />
         </View>
       )}

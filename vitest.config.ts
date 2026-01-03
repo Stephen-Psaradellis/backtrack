@@ -24,9 +24,11 @@ export default defineConfig({
       '.worktrees/**',
       '**/.next/**',
       '**/dist/**',
-      '**/e2e/**',
-      '**/__tests__/utils/**',
+      // Note: e2e tests are excluded from unit test runs, run separately with test:e2e
+      '**/__tests__/e2e/**',
+      // Test utilities/helpers that are not actual test files
       '**/__tests__/mocks/**',
+      '**/__tests__/utils/test-utils.ts',
     ],
 
     // Multi-environment support: assign different environments based on file patterns
@@ -36,9 +38,15 @@ export default defineConfig({
     environmentMatchGlobs: [
       // Component tests use jsdom for React DOM testing
       ['**/components/**/*.test.{ts,tsx}', 'jsdom'],
-      // Hook tests with React use jsdom
-      ['**/hooks/**/*.test.tsx', 'jsdom'],
-      // Utility/library tests use node environment
+      ['**/__tests__/components/**/*.test.{ts,tsx}', 'jsdom'],
+      // Hook tests with React use jsdom (both .ts and .tsx)
+      ['**/hooks/**/*.test.{ts,tsx}', 'jsdom'],
+      ['**/__tests__/hooks/**/*.test.{ts,tsx}', 'jsdom'],
+      // Utils that need browser APIs (localStorage, etc.) use jsdom
+      ['**/__tests__/utils/**/*.test.{ts,tsx}', 'jsdom'],
+      // Services that need browser APIs use jsdom
+      ['**/__tests__/services/**/*.test.{ts,tsx}', 'jsdom'],
+      // Utility/library tests use node environment (for pure logic)
       ['**/lib/**/*.test.ts', 'node'],
       ['**/__tests__/lib/**/*.test.ts', 'node'],
       // Server-side tests use node
@@ -71,7 +79,7 @@ export default defineConfig({
         '**/__tests__/**',
         '**/coverage/**',
         '**/*.config.{js,ts}',
-        '**/vitest.setup.ts',
+        '**/vitest.setup.tsx',
       ],
       // Coverage thresholds (aligned with Jest config baseline)
       thresholds: {

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Onboarding page for new Love Ledger users.
+ * Onboarding page for new Backtrack users.
  *
  * This page provides a guided onboarding experience that:
  * - Educates users about the missed connections concept
@@ -214,7 +214,7 @@ export default function OnboardingPage() {
       {/* Header section with branding */}
       <header className="flex-shrink-0 text-center pt-4 pb-6 sm:pt-8 sm:pb-10">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          Love Ledger
+          Backtrack
         </h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Discover your missed connections

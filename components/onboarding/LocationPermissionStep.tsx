@@ -1,9 +1,7 @@
-'use client'
-
 import { memo, useCallback, useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { getStepById } from '@/lib/onboarding/onboardingConfig'
-import { useLocation, type LocationPermissionStatus } from '@/hooks/useLocation'
+import { Button } from '../ui/Button'
+import { getStepById } from '../../lib/onboarding/onboardingConfig'
+import { useLocation, type LocationPermissionStatus } from '../../hooks/useLocation'
 
 // ============================================================================
 // Types
@@ -37,13 +35,13 @@ type PermissionUIState = 'initial' | 'requesting' | 'granted' | 'denied'
 const LocationIcon = memo(function LocationIcon() {
   return (
     <div
-      className="mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-pink-100 to-blue-100 dark:from-pink-900/40 dark:to-blue-800/30 flex items-center justify-center shadow-lg shadow-pink-500/10 animate-fade-in-scale"
+      className="mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-primary-100 to-blue-100 dark:from-primary-900/40 dark:to-blue-800/30 flex items-center justify-center shadow-lg shadow-primary-500/10 animate-fade-in-scale"
       aria-hidden="true"
     >
       <div className="relative">
         {/* Location pin icon */}
         <svg
-          className="w-12 h-12 sm:w-14 sm:h-14 text-pink-500 transition-transform duration-300 hover:scale-110"
+          className="w-12 h-12 sm:w-14 sm:h-14 text-primary-500 transition-transform duration-300 hover:scale-110"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -138,7 +136,7 @@ const FeatureItem = memo(function FeatureItem({
     <div className="flex items-start gap-3 group">
       {/* Feature icon with hover effect */}
       <div
-        className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center text-pink-500 transition-transform duration-200 group-hover:scale-105"
+        className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-500 transition-transform duration-200 group-hover:scale-105"
         aria-hidden="true"
       >
         {icon}
@@ -350,7 +348,7 @@ function LocationPermissionStepComponent({
           </h2>
 
           <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-xs sm:max-w-sm mx-auto leading-relaxed">
-            You can still use Love Ledger without location access.
+            You can still use Backtrack without location access.
           </p>
         </div>
 
@@ -426,7 +424,7 @@ function LocationPermissionStepComponent({
             <button
               type="button"
               onClick={handleBack}
-              className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg"
+              className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg"
               aria-label="Go back to the previous step"
             >
               Go back
@@ -532,7 +530,7 @@ function LocationPermissionStepComponent({
           type="button"
           onClick={handleSkip}
           disabled={isProcessing}
-          className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Skip location permission and continue onboarding"
         >
           Skip for now
@@ -544,7 +542,7 @@ function LocationPermissionStepComponent({
             type="button"
             onClick={handleBack}
             disabled={isProcessing}
-            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Go back to the previous step"
           >
             Go back

@@ -2,7 +2,7 @@
  * Onboarding Library Module
  *
  * This module provides configuration, utilities, and mock data for the
- * Love Ledger onboarding flow. It includes:
+ * Backtrack onboarding flow. It includes:
  * - Step configuration and metadata
  * - Progress calculation utilities
  * - Navigation helpers
@@ -18,11 +18,11 @@
  *   calculateProgress,
  *   PRODUCER_DEMO_POST,
  *   CONSUMER_DEMO_POSTS,
- * } from '@/lib/onboarding'
+ * } from './'
  *
  * // Get step config
  * const welcomeStep = getStepById('welcome')
- * console.log(welcomeStep?.title) // "Welcome to Love Ledger"
+ * console.log(welcomeStep?.title) // "Welcome to Backtrack"
  *
  * // Calculate progress
  * const progress = calculateProgress(2) // 50%

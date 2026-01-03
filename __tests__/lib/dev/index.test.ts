@@ -31,9 +31,10 @@ import {
 // ============================================================================
 
 /**
- * Store original environment variables to restore after tests
+ * Store original environment variables and globals to restore after tests
  */
 const originalEnv = { ...process.env }
+const originalDev = globalThis.__DEV__
 
 /**
  * Helper to set environment variables for testing
@@ -46,24 +47,31 @@ function setEnv(vars: Record<string, string | undefined>): void {
       process.env[key] = value
     }
   }
+  // Update __DEV__ based on NODE_ENV to match real behavior
+  if ('NODE_ENV' in vars) {
+    globalThis.__DEV__ = vars.NODE_ENV === 'development'
+  }
 }
 
 /**
  * Reset environment to original state after each test
  */
 beforeEach(() => {
-  // Start with clean environment
+  // Start with clean environment - set __DEV__ to undefined to test NODE_ENV fallback
+  // We delete __DEV__ so the isDevMode function will use NODE_ENV instead
+  delete (globalThis as Record<string, unknown>).__DEV__
   ;(process.env as Record<string, string | undefined>).NODE_ENV = undefined
   process.env.NEXT_PUBLIC_SUPABASE_URL = undefined
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = undefined
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = undefined
   process.env.EXPO_PUBLIC_SUPABASE_URL = undefined
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = undefined
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = undefined
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = undefined
+  process.env.NEXT_PUBLIC_GCP_MAPS_API_KEY = undefined
 })
 
 afterEach(() => {
   // Restore original environment
   process.env = { ...originalEnv }
+  globalThis.__DEV__ = originalDev
   vi.restoreAllMocks()
 })
 
@@ -151,7 +159,7 @@ describe('isMissingSupabaseCredentials', () => {
     it('returns false', () => {
       setEnv({
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(isMissingSupabaseCredentials()).toBe(false)
     })
@@ -161,7 +169,7 @@ describe('isMissingSupabaseCredentials', () => {
     it('returns true', () => {
       setEnv({
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(isMissingSupabaseCredentials()).toBe(true)
     })
@@ -171,7 +179,7 @@ describe('isMissingSupabaseCredentials', () => {
     it('returns true', () => {
       setEnv({
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(isMissingSupabaseCredentials()).toBe(true)
     })
@@ -180,7 +188,7 @@ describe('isMissingSupabaseCredentials', () => {
   describe('when both credentials are missing', () => {
     it('returns true', () => {
       process.env.NEXT_PUBLIC_SUPABASE_URL = undefined
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = undefined
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = undefined
       expect(isMissingSupabaseCredentials()).toBe(true)
     })
   })
@@ -189,7 +197,7 @@ describe('isMissingSupabaseCredentials', () => {
     it('returns true', () => {
       setEnv({
         NEXT_PUBLIC_SUPABASE_URL: '',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(isMissingSupabaseCredentials()).toBe(true)
     })
@@ -199,7 +207,7 @@ describe('isMissingSupabaseCredentials', () => {
     it('returns true', () => {
       setEnv({
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '',
       })
       expect(isMissingSupabaseCredentials()).toBe(true)
     })
@@ -215,7 +223,7 @@ describe('isMissingExpoSupabaseCredentials', () => {
     it('returns false', () => {
       setEnv({
         EXPO_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(isMissingExpoSupabaseCredentials()).toBe(false)
     })
@@ -225,7 +233,7 @@ describe('isMissingExpoSupabaseCredentials', () => {
     it('returns true', () => {
       setEnv({
         EXPO_PUBLIC_SUPABASE_URL: undefined,
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(isMissingExpoSupabaseCredentials()).toBe(true)
     })
@@ -235,7 +243,7 @@ describe('isMissingExpoSupabaseCredentials', () => {
     it('returns true', () => {
       setEnv({
         EXPO_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(isMissingExpoSupabaseCredentials()).toBe(true)
     })
@@ -244,7 +252,7 @@ describe('isMissingExpoSupabaseCredentials', () => {
   describe('when both Expo credentials are missing', () => {
     it('returns true', () => {
       process.env.EXPO_PUBLIC_SUPABASE_URL = undefined
-      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = undefined
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = undefined
       expect(isMissingExpoSupabaseCredentials()).toBe(true)
     })
   })
@@ -258,7 +266,7 @@ describe('isMissingGoogleMapsKey', () => {
   describe('when Google Maps API key is present', () => {
     it('returns false', () => {
       setEnv({
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-api-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-api-key',
       })
       expect(isMissingGoogleMapsKey()).toBe(false)
     })
@@ -266,7 +274,7 @@ describe('isMissingGoogleMapsKey', () => {
 
   describe('when Google Maps API key is missing', () => {
     it('returns true', () => {
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = undefined
+      process.env.NEXT_PUBLIC_GCP_MAPS_API_KEY = undefined
       expect(isMissingGoogleMapsKey()).toBe(true)
     })
   })
@@ -274,7 +282,7 @@ describe('isMissingGoogleMapsKey', () => {
   describe('when Google Maps API key is empty string', () => {
     it('returns true', () => {
       setEnv({
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: '',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: '',
       })
       expect(isMissingGoogleMapsKey()).toBe(true)
     })
@@ -291,7 +299,7 @@ describe('shouldUseMockSupabase', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(shouldUseMockSupabase()).toBe(true)
     })
@@ -300,7 +308,7 @@ describe('shouldUseMockSupabase', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-key',
       })
       expect(shouldUseMockSupabase()).toBe(true)
     })
@@ -309,7 +317,7 @@ describe('shouldUseMockSupabase', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(shouldUseMockSupabase()).toBe(true)
     })
@@ -320,7 +328,7 @@ describe('shouldUseMockSupabase', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(shouldUseMockSupabase()).toBe(false)
     })
@@ -331,7 +339,7 @@ describe('shouldUseMockSupabase', () => {
       setEnv({
         NODE_ENV: 'production',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(shouldUseMockSupabase()).toBe(false)
     })
@@ -340,7 +348,7 @@ describe('shouldUseMockSupabase', () => {
       setEnv({
         NODE_ENV: 'production',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(shouldUseMockSupabase()).toBe(false)
     })
@@ -351,7 +359,7 @@ describe('shouldUseMockSupabase', () => {
       setEnv({
         NODE_ENV: 'test',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(shouldUseMockSupabase()).toBe(false)
     })
@@ -368,7 +376,7 @@ describe('shouldUseMockExpoSupabase', () => {
       setEnv({
         NODE_ENV: 'development',
         EXPO_PUBLIC_SUPABASE_URL: undefined,
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(shouldUseMockExpoSupabase()).toBe(true)
     })
@@ -379,7 +387,7 @@ describe('shouldUseMockExpoSupabase', () => {
       setEnv({
         NODE_ENV: 'development',
         EXPO_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       })
       expect(shouldUseMockExpoSupabase()).toBe(false)
     })
@@ -390,7 +398,7 @@ describe('shouldUseMockExpoSupabase', () => {
       setEnv({
         NODE_ENV: 'production',
         EXPO_PUBLIC_SUPABASE_URL: undefined,
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
       expect(shouldUseMockExpoSupabase()).toBe(false)
     })
@@ -406,7 +414,7 @@ describe('shouldUseMockGoogleMaps', () => {
     it('returns true', () => {
       setEnv({
         NODE_ENV: 'development',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
       expect(shouldUseMockGoogleMaps()).toBe(true)
     })
@@ -416,7 +424,7 @@ describe('shouldUseMockGoogleMaps', () => {
     it('returns false', () => {
       setEnv({
         NODE_ENV: 'development',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
       expect(shouldUseMockGoogleMaps()).toBe(false)
     })
@@ -426,7 +434,7 @@ describe('shouldUseMockGoogleMaps', () => {
     it('returns false even with missing API key', () => {
       setEnv({
         NODE_ENV: 'production',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
       expect(shouldUseMockGoogleMaps()).toBe(false)
     })
@@ -434,7 +442,7 @@ describe('shouldUseMockGoogleMaps', () => {
     it('returns false with API key present', () => {
       setEnv({
         NODE_ENV: 'production',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
       expect(shouldUseMockGoogleMaps()).toBe(false)
     })
@@ -444,7 +452,7 @@ describe('shouldUseMockGoogleMaps', () => {
     it('returns false even with missing API key', () => {
       setEnv({
         NODE_ENV: 'test',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
       expect(shouldUseMockGoogleMaps()).toBe(false)
     })
@@ -461,8 +469,8 @@ describe('isUsingMockServices', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
       expect(isUsingMockServices()).toBe(true)
     })
@@ -471,8 +479,8 @@ describe('isUsingMockServices', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
       expect(isUsingMockServices()).toBe(true)
     })
@@ -481,8 +489,8 @@ describe('isUsingMockServices', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
       expect(isUsingMockServices()).toBe(true)
     })
@@ -491,8 +499,8 @@ describe('isUsingMockServices', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
       expect(isUsingMockServices()).toBe(false)
     })
@@ -503,8 +511,8 @@ describe('isUsingMockServices', () => {
       setEnv({
         NODE_ENV: 'production',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
       expect(isUsingMockServices()).toBe(false)
     })
@@ -521,8 +529,8 @@ describe('getMockServicesSummary', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
 
       const summary = getMockServicesSummary()
@@ -540,8 +548,8 @@ describe('getMockServicesSummary', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
 
       const summary = getMockServicesSummary()
@@ -559,8 +567,8 @@ describe('getMockServicesSummary', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
 
       const summary = getMockServicesSummary()
@@ -576,8 +584,8 @@ describe('getMockServicesSummary', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
 
       const summary = getMockServicesSummary()
@@ -595,8 +603,8 @@ describe('getMockServicesSummary', () => {
       setEnv({
         NODE_ENV: 'production',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
 
       const summary = getMockServicesSummary()
@@ -635,8 +643,8 @@ describe('logDevModeStatus', () => {
       setEnv({
         NODE_ENV: 'production',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
 
       logDevModeStatus()
@@ -652,8 +660,8 @@ describe('logDevModeStatus', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
 
       logDevModeStatus()
@@ -669,8 +677,8 @@ describe('logDevModeStatus', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
 
       logDevModeStatus()
@@ -689,8 +697,8 @@ describe('logDevModeStatus', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
 
       logDevModeStatus()
@@ -709,8 +717,8 @@ describe('logDevModeStatus', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
 
       logDevModeStatus()
@@ -756,7 +764,7 @@ describe('Edge Cases', () => {
     it('handles whitespace-only credentials as truthy', () => {
       setEnv({
         NEXT_PUBLIC_SUPABASE_URL: '   ',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: '   ',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '   ',
       })
       // Whitespace strings are truthy in JavaScript
       expect(isMissingSupabaseCredentials()).toBe(false)
@@ -768,7 +776,7 @@ describe('Edge Cases', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
 
       expect(shouldUseMockSupabase()).toBe(
@@ -778,7 +786,7 @@ describe('Edge Cases', () => {
       setEnv({
         NODE_ENV: 'production',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
       })
 
       expect(shouldUseMockSupabase()).toBe(
@@ -788,7 +796,7 @@ describe('Edge Cases', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-key',
       })
 
       expect(shouldUseMockSupabase()).toBe(
@@ -800,8 +808,8 @@ describe('Edge Cases', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: undefined,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: undefined,
       })
 
       expect(isUsingMockServices()).toBe(
@@ -811,8 +819,8 @@ describe('Edge Cases', () => {
       setEnv({
         NODE_ENV: 'development',
         NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-key',
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-key',
+        NEXT_PUBLIC_GCP_MAPS_API_KEY: 'test-maps-key',
       })
 
       expect(isUsingMockServices()).toBe(

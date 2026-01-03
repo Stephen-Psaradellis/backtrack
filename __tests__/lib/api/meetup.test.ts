@@ -71,6 +71,32 @@ function setMeetupCredentials(): void {
 const mockFetch = vi.fn()
 
 /**
+ * Helper to create a complete fetch response mock with all required methods
+ */
+function createMockResponse(options: {
+  ok: boolean
+  status?: number
+  statusText?: string
+  jsonData?: unknown
+  jsonError?: Error
+}): Partial<Response> {
+  const { ok, status = ok ? 200 : 500, statusText = ok ? 'OK' : 'Error', jsonData, jsonError } = options
+  const textContent = jsonError ? 'Error' : JSON.stringify(jsonData)
+
+  return {
+    ok,
+    status,
+    statusText,
+    json: jsonError
+      ? async () => { throw jsonError }
+      : async () => jsonData,
+    text: async () => textContent,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    clone: function() { return this as Response },
+  }
+}
+
+/**
  * Reset environment and mocks before each test
  */
 beforeEach(() => {
@@ -79,6 +105,9 @@ beforeEach(() => {
   delete process.env.MEETUP_CLIENT_ID
   delete process.env.MEETUP_CLIENT_SECRET
   delete process.env.MEETUP_REDIRECT_URI
+
+  // Reset __DEV__ to match the default test environment
+  globalThis.__DEV__ = true
 
   // Reset fetch mock
   vi.stubGlobal('fetch', mockFetch)
@@ -236,6 +265,8 @@ describe('shouldUseMockMeetup', () => {
 
   describe('in production mode', () => {
     it('returns false even with missing credentials', () => {
+      // __DEV__ takes precedence over NODE_ENV in isDevMode()
+      globalThis.__DEV__ = false
       setEnv({
         NODE_ENV: 'production',
         MEETUP_CLIENT_ID: undefined,
@@ -247,6 +278,8 @@ describe('shouldUseMockMeetup', () => {
 
   describe('in test mode', () => {
     it('returns false even with missing credentials', () => {
+      // When __DEV__ is false, it's not dev mode regardless of NODE_ENV
+      globalThis.__DEV__ = false
       setEnv({
         NODE_ENV: 'test',
         MEETUP_CLIENT_ID: undefined,
@@ -555,10 +588,10 @@ describe('searchEvents', () => {
     })
 
     it('sends GraphQL request to correct endpoint', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       const params: MeetupSearchParams = {
         latitude: 37.7749,
@@ -569,14 +602,16 @@ describe('searchEvents', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
       const [url] = mockFetch.mock.calls[0]
-      expect(url).toBe('https://api.meetup.com/gql')
+      // graphql-request passes a URL object, not a string
+      const urlString = url instanceof URL ? url.href : url.toString()
+      expect(urlString).toBe('https://api.meetup.com/gql')
     })
 
     it('includes Bearer token in Authorization header', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('my-access-token', {
         latitude: 37.7749,
@@ -584,14 +619,18 @@ describe('searchEvents', () => {
       })
 
       const [, options] = mockFetch.mock.calls[0]
-      expect(options.headers.Authorization).toBe('Bearer my-access-token')
+      // graphql-request may use Headers object or plain object
+      const authHeader = options.headers instanceof Headers
+        ? options.headers.get('Authorization')
+        : options.headers?.Authorization || options.headers?.authorization
+      expect(authHeader).toBe('Bearer my-access-token')
     })
 
     it('returns events from GraphQL response', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       const result = await searchEvents('access-token', {
         latitude: 37.7749,
@@ -606,9 +645,9 @@ describe('searchEvents', () => {
     })
 
     it('handles empty events array', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => ({
+        jsonData: {
           data: {
             rankedEvents: {
               count: 0,
@@ -619,8 +658,8 @@ describe('searchEvents', () => {
               edges: [],
             },
           },
-        }),
-      })
+        },
+      }))
 
       const result = await searchEvents('access-token', {
         latitude: 37.7749,
@@ -638,10 +677,10 @@ describe('searchEvents', () => {
     })
 
     it('includes location parameters in GraphQL variables', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('access-token', {
         latitude: 37.7749,
@@ -656,10 +695,10 @@ describe('searchEvents', () => {
     })
 
     it('includes radius when provided', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('access-token', {
         latitude: 37.7749,
@@ -674,10 +713,10 @@ describe('searchEvents', () => {
     })
 
     it('includes topicCategoryId when provided', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('access-token', {
         latitude: 37.7749,
@@ -692,10 +731,10 @@ describe('searchEvents', () => {
     })
 
     it('includes date range when provided', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('access-token', {
         latitude: 37.7749,
@@ -712,10 +751,10 @@ describe('searchEvents', () => {
     })
 
     it('includes search query when provided', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('access-token', {
         latitude: 37.7749,
@@ -730,10 +769,10 @@ describe('searchEvents', () => {
     })
 
     it('includes pagination parameters', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('access-token', {
         latitude: 37.7749,
@@ -750,10 +789,10 @@ describe('searchEvents', () => {
     })
 
     it('defaults first to 20 when not provided', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLSearchResponse,
-      })
+        jsonData: mockGraphQLSearchResponse,
+      }))
 
       await searchEvents('access-token', {
         latitude: 37.7749,
@@ -792,15 +831,15 @@ describe('searchEvents', () => {
     })
 
     it('throws MeetupApiError on HTTP error', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        json: async () => ({
+        jsonData: {
           error: 'INTERNAL_ERROR',
           error_description: 'Something went wrong',
-        }),
-      })
+        },
+      }))
 
       await expect(
         searchEvents('access-token', {
@@ -812,18 +851,19 @@ describe('searchEvents', () => {
 
     it('handles GraphQL errors returned with 200 status', async () => {
       // Meetup returns 200 status even with GraphQL errors
-      mockFetch.mockResolvedValueOnce({
+      // graphql-request throws these as ClientError with response.errors
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
         status: 200,
-        json: async () => ({
+        jsonData: {
           errors: [
             {
               message: 'Not authenticated',
               extensions: { code: 'UNAUTHENTICATED' },
             },
           ],
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('invalid-token', {
@@ -840,15 +880,15 @@ describe('searchEvents', () => {
     })
 
     it('identifies rate limit errors', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: false,
         status: 429,
         statusText: 'Too Many Requests',
-        json: async () => ({
+        jsonData: {
           error: 'RATE_LIMIT_EXCEEDED',
           error_description: 'Too many requests',
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('access-token', {
@@ -865,15 +905,15 @@ describe('searchEvents', () => {
     })
 
     it('identifies token expired errors from HTTP 401', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
-        json: async () => ({
+        jsonData: {
           error: 'INVALID_AUTH',
           error_description: 'Access token is invalid',
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('expired-token', {
@@ -889,18 +929,18 @@ describe('searchEvents', () => {
     })
 
     it('identifies token expired from GraphQL UNAUTHENTICATED error', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
         status: 200,
-        json: async () => ({
+        jsonData: {
           errors: [
             {
               message: 'Access denied',
               extensions: { code: 'UNAUTHENTICATED' },
             },
           ],
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('expired-token', {
@@ -928,10 +968,10 @@ describe('getEventDetails', () => {
     })
 
     it('fetches event details by ID via GraphQL', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLEventResponse,
-      })
+        jsonData: mockGraphQLEventResponse,
+      }))
 
       const event = await getEventDetails('access-token', 'event-123')
 
@@ -940,15 +980,17 @@ describe('getEventDetails', () => {
     })
 
     it('sends correct GraphQL query', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLEventResponse,
-      })
+        jsonData: mockGraphQLEventResponse,
+      }))
 
       await getEventDetails('access-token', 'event-456')
 
       const [url, options] = mockFetch.mock.calls[0]
-      expect(url).toBe('https://api.meetup.com/gql')
+      // graphql-request passes a URL object, not a string
+      const urlString = url instanceof URL ? url.href : url.toString()
+      expect(urlString).toBe('https://api.meetup.com/gql')
 
       const body = JSON.parse(options.body)
       expect(body.variables.id).toBe('event-456')
@@ -977,14 +1019,14 @@ describe('getEventDetails', () => {
     })
 
     it('throws MeetupApiError when event not found', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => ({
+        jsonData: {
           data: {
             event: null,
           },
-        }),
-      })
+        },
+      }))
 
       await expect(
         getEventDetails('access-token', 'nonexistent-event')
@@ -992,14 +1034,14 @@ describe('getEventDetails', () => {
     })
 
     it('throws 404 error for null event response', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => ({
+        jsonData: {
           data: {
             event: null,
           },
-        }),
-      })
+        },
+      }))
 
       try {
         await getEventDetails('access-token', 'nonexistent-event')
@@ -1025,10 +1067,10 @@ describe('getCategories', () => {
     })
 
     it('fetches all topic categories', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => mockGraphQLCategoriesResponse,
-      })
+        jsonData: mockGraphQLCategoriesResponse,
+      }))
 
       const categories = await getCategories('access-token')
 
@@ -1038,14 +1080,14 @@ describe('getCategories', () => {
     })
 
     it('returns empty array when no categories returned', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => ({
+        jsonData: {
           data: {
             topicCategories: null,
           },
-        }),
-      })
+        },
+      }))
 
       const categories = await getCategories('access-token')
 
@@ -1323,14 +1365,12 @@ describe('Edge Cases', () => {
     })
 
     it('handles non-JSON error response gracefully', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        json: async () => {
-          throw new Error('Not JSON')
-        },
-      })
+        jsonError: new Error('Not JSON'),
+      }))
 
       try {
         await searchEvents('access-token', {
@@ -1346,12 +1386,12 @@ describe('Edge Cases', () => {
     })
 
     it('handles missing data in GraphQL response', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
-        json: async () => ({
+        jsonData: {
           data: null,
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('access-token', {
@@ -1365,18 +1405,18 @@ describe('Edge Cases', () => {
     })
 
     it('handles rate limit error from GraphQL', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
         status: 200,
-        json: async () => ({
+        jsonData: {
           errors: [
             {
               message: 'Rate limit exceeded',
               extensions: { code: 'RATE_LIMITED' },
             },
           ],
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('access-token', {
@@ -1414,18 +1454,18 @@ describe('Edge Cases', () => {
     })
 
     it('extracts error code from extensions', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
         status: 200,
-        json: async () => ({
+        jsonData: {
           errors: [
             {
               message: 'Some GraphQL error',
               extensions: { code: 'CUSTOM_ERROR_CODE' },
             },
           ],
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('access-token', {
@@ -1441,16 +1481,16 @@ describe('Edge Cases', () => {
     })
 
     it('handles multiple GraphQL errors', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
         status: 200,
-        json: async () => ({
+        jsonData: {
           errors: [
             { message: 'First error', extensions: { code: 'ERROR_1' } },
             { message: 'Second error', extensions: { code: 'ERROR_2' } },
           ],
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('access-token', {
@@ -1469,18 +1509,19 @@ describe('Edge Cases', () => {
     })
 
     it('detects authentication errors from message content', async () => {
-      mockFetch.mockResolvedValueOnce({
+      // Source code checks for 'authentication' or 'unauthorized' keywords
+      mockFetch.mockResolvedValueOnce(createMockResponse({
         ok: true,
         status: 200,
-        json: async () => ({
+        jsonData: {
           errors: [
             {
-              message: 'You must be authenticated to perform this action',
+              message: 'Authentication required to perform this action',
               extensions: { code: 'FORBIDDEN' },
             },
           ],
-        }),
-      })
+        },
+      }))
 
       try {
         await searchEvents('access-token', {

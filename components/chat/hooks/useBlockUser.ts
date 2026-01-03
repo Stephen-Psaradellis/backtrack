@@ -14,7 +14,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
-import { createClient } from '../../../lib/supabase/client'
+import { supabase } from '../../../lib/supabase'
 import type { UUID } from '../../../types/database'
 import type { UseBlockUserReturn } from '../../../types/chat'
 
@@ -71,7 +71,7 @@ export function useBlockUser({
   onNavigateAway,
   onError,
 }: UseBlockUserOptions): UseBlockUserReturn {
-  const supabase = createClient()
+  // supabase imported from lib/supabase
 
   // ============================================================================
   // State

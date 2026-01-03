@@ -20,43 +20,45 @@ import { ReportUserModal } from '../ReportUserModal'
 import { REPORT_REASONS } from '../../../types/chat'
 import type { ReportReason } from '../../../types/database'
 
-// Mock CSS module
+// Mock CSS module - must have default export
 vi.mock('../styles/ChatScreen.module.css', () => ({
-  modalOverlay: 'modalOverlay',
-  modal: 'modal',
-  modalLarge: 'modalLarge',
-  modalHeader: 'modalHeader',
-  iconContainer: 'iconContainer',
-  iconContainerWarning: 'iconContainerWarning',
-  modalTitle: 'modalTitle',
-  modalText: 'modalText',
-  usernameHighlight: 'usernameHighlight',
-  fieldset: 'fieldset',
-  legend: 'legend',
-  reasonList: 'reasonList',
-  reasonOption: 'reasonOption',
-  reasonOptionSelected: 'reasonOptionSelected',
-  reasonOptionDisabled: 'reasonOptionDisabled',
-  radioInput: 'radioInput',
-  customRadio: 'customRadio',
-  customRadioChecked: 'customRadioChecked',
-  radioInner: 'radioInner',
-  reasonLabel: 'reasonLabel',
-  detailsSection: 'detailsSection',
-  detailsLabel: 'detailsLabel',
-  optionalText: 'optionalText',
-  detailsTextarea: 'detailsTextarea',
-  textareaDisabled: 'textareaDisabled',
-  characterCount: 'characterCount',
-  privacyNote: 'privacyNote',
-  modalError: 'modalError',
-  errorIconBadge: 'errorIconBadge',
-  modalActions: 'modalActions',
-  modalCancelButton: 'modalCancelButton',
-  modalSubmitButton: 'modalSubmitButton',
-  modalSubmitButtonDisabled: 'modalSubmitButtonDisabled',
-  modalSubmitButtonLoading: 'modalSubmitButtonLoading',
-  spinnerSmall: 'spinnerSmall',
+  default: {
+    modalOverlay: 'modalOverlay',
+    modal: 'modal',
+    modalLarge: 'modalLarge',
+    modalHeader: 'modalHeader',
+    iconContainer: 'iconContainer',
+    iconContainerWarning: 'iconContainerWarning',
+    modalTitle: 'modalTitle',
+    modalText: 'modalText',
+    usernameHighlight: 'usernameHighlight',
+    fieldset: 'fieldset',
+    legend: 'legend',
+    reasonList: 'reasonList',
+    reasonOption: 'reasonOption',
+    reasonOptionSelected: 'reasonOptionSelected',
+    reasonOptionDisabled: 'reasonOptionDisabled',
+    radioInput: 'radioInput',
+    customRadio: 'customRadio',
+    customRadioChecked: 'customRadioChecked',
+    radioInner: 'radioInner',
+    reasonLabel: 'reasonLabel',
+    detailsSection: 'detailsSection',
+    detailsLabel: 'detailsLabel',
+    optionalText: 'optionalText',
+    detailsTextarea: 'detailsTextarea',
+    textareaDisabled: 'textareaDisabled',
+    characterCount: 'characterCount',
+    privacyNote: 'privacyNote',
+    modalError: 'modalError',
+    errorIconBadge: 'errorIconBadge',
+    modalActions: 'modalActions',
+    modalCancelButton: 'modalCancelButton',
+    modalSubmitButton: 'modalSubmitButton',
+    modalSubmitButtonDisabled: 'modalSubmitButtonDisabled',
+    modalSubmitButtonLoading: 'modalSubmitButtonLoading',
+    spinnerSmall: 'spinnerSmall',
+  },
 }))
 
 const defaultProps = {
@@ -377,8 +379,9 @@ describe('ReportUserModal', () => {
       const onCancel = vi.fn()
       render(<ReportUserModal {...defaultProps} onCancel={onCancel} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      fireEvent.click(overlay!)
+      // The overlay IS the dialog element - click directly on it
+      const overlay = screen.getByRole('dialog')
+      fireEvent.click(overlay)
 
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
@@ -403,8 +406,9 @@ describe('ReportUserModal', () => {
         />
       )
 
-      const overlay = screen.getByRole('dialog').parentElement
-      fireEvent.click(overlay!)
+      // The overlay IS the dialog element
+      const overlay = screen.getByRole('dialog')
+      fireEvent.click(overlay)
 
       expect(onCancel).not.toHaveBeenCalled()
     })
@@ -420,21 +424,24 @@ describe('ReportUserModal', () => {
     it('should have aria-modal="true"', () => {
       render(<ReportUserModal {...defaultProps} />)
 
-      expect(screen.getByRole('dialog').parentElement).toHaveAttribute('aria-modal', 'true')
+      // The overlay div IS the dialog element with aria-modal
+      expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true')
     })
 
     it('should have aria-labelledby pointing to title', () => {
       render(<ReportUserModal {...defaultProps} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      expect(overlay).toHaveAttribute('aria-labelledby', 'report-modal-title')
+      // The overlay div IS the dialog element with aria-labelledby
+      const dialog = screen.getByRole('dialog')
+      expect(dialog).toHaveAttribute('aria-labelledby', 'report-modal-title')
     })
 
     it('should have aria-describedby pointing to description', () => {
       render(<ReportUserModal {...defaultProps} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      expect(overlay).toHaveAttribute('aria-describedby', 'report-modal-description')
+      // The overlay div IS the dialog element with aria-describedby
+      const dialog = screen.getByRole('dialog')
+      expect(dialog).toHaveAttribute('aria-describedby', 'report-modal-description')
     })
 
     it('should have htmlFor on details label', () => {

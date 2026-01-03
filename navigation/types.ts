@@ -1,7 +1,7 @@
 /**
  * Navigation Types
  *
- * Type definitions for React Navigation in the Love Ledger app.
+ * Type definitions for React Navigation in the Backtrack app.
  * Provides typed navigation hooks and screen props for type-safe navigation.
  */
 
@@ -39,12 +39,12 @@ export type MainStackParamList = {
   Ledger: { locationId: string; locationName: string }
   /**
    * View details of a specific post
-   * Deep-linked from match notifications: loveledger://match/:postId
+   * Deep-linked from match notifications: backtrack://match/:postId
    */
   PostDetail: { postId: string }
   /**
    * Chat with a specific conversation
-   * Deep-linked from message notifications: loveledger://conversation/:conversationId
+   * Deep-linked from message notifications: backtrack://conversation/:conversationId
    */
   Chat: { conversationId: string }
   /** Avatar builder screen */
@@ -54,6 +54,11 @@ export type MainStackParamList = {
     /** Callback when avatar is completed (passed via navigation params for serialization) */
     returnScreen?: keyof MainStackParamList
     returnParamKey?: string
+  }
+  /** Legal documents screen (privacy policy, terms of service) */
+  Legal: {
+    /** Type of legal document to display */
+    type: 'privacy' | 'terms'
   }
 }
 
@@ -181,6 +186,7 @@ export const SCREENS = {
   PostDetail: 'PostDetail' as const,
   Chat: 'Chat' as const,
   AvatarBuilder: 'AvatarBuilder' as const,
+  Legal: 'Legal' as const,
 
   // Tabs
   HomeTab: 'HomeTab' as const,
@@ -235,9 +241,9 @@ export type NotificationNavParams<T extends NotificationType> = NotificationDeep
  * Used by AppNavigator linking configuration
  */
 export const NOTIFICATION_DEEP_LINK_PATHS = {
-  /** Match notification deep-link: loveledger://match/:postId */
+  /** Match notification deep-link: backtrack://match/:postId */
   match: 'match/:postId',
-  /** Message notification deep-link: loveledger://conversation/:conversationId */
+  /** Message notification deep-link: backtrack://conversation/:conversationId */
   message: 'conversation/:conversationId',
 } as const
 

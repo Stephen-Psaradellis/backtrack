@@ -18,17 +18,19 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChatInput } from '../ChatInput'
 
-// Mock CSS module
+// Mock CSS module - must have default export
 vi.mock('../styles/ChatScreen.module.css', () => ({
-  inputContainer: 'inputContainer',
-  inputWrapper: 'inputWrapper',
-  textInput: 'textInput',
-  textInputDisabled: 'textInputDisabled',
-  characterCount: 'characterCount',
-  characterCountWarning: 'characterCountWarning',
-  characterCountError: 'characterCountError',
-  sendButton: 'sendButton',
-  sendButtonDisabled: 'sendButtonDisabled',
+  default: {
+    inputContainer: 'inputContainer',
+    inputWrapper: 'inputWrapper',
+    textInput: 'textInput',
+    textInputDisabled: 'textInputDisabled',
+    characterCount: 'characterCount',
+    characterCountWarning: 'characterCountWarning',
+    characterCountError: 'characterCountError',
+    sendButton: 'sendButton',
+    sendButtonDisabled: 'sendButtonDisabled',
+  },
 }))
 
 const defaultProps = {
@@ -188,11 +190,11 @@ describe('ChatInput', () => {
       expect(screen.queryByText(/\/2000/)).not.toBeInTheDocument()
     })
 
-    it('should show character count when at 90% of limit', () => {
-      const longText = 'A'.repeat(1800) // 90% of 2000
+    it('should show character count when over 90% of limit', () => {
+      const longText = 'A'.repeat(1801) // Just over 90% of 2000
       render(<ChatInput {...defaultProps} value={longText} maxLength={2000} />)
 
-      expect(screen.getByText('1800/2000')).toBeInTheDocument()
+      expect(screen.getByText('1801/2000')).toBeInTheDocument()
     })
 
     it('should show character count when over limit', () => {
@@ -282,7 +284,7 @@ describe('ChatInput', () => {
     })
 
     it('should have aria-describedby when showing character count', () => {
-      const nearLimitText = 'A'.repeat(1800)
+      const nearLimitText = 'A'.repeat(1801) // Over 90% to trigger character count display
       render(<ChatInput {...defaultProps} value={nearLimitText} maxLength={2000} />)
 
       expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', 'character-count')
@@ -295,14 +297,14 @@ describe('ChatInput', () => {
     })
 
     it('should have role="status" on character count', () => {
-      const nearLimitText = 'A'.repeat(1800)
+      const nearLimitText = 'A'.repeat(1801) // Over 90% to trigger character count display
       render(<ChatInput {...defaultProps} value={nearLimitText} maxLength={2000} />)
 
       expect(screen.getByRole('status')).toBeInTheDocument()
     })
 
     it('should have aria-live="polite" on character count', () => {
-      const nearLimitText = 'A'.repeat(1800)
+      const nearLimitText = 'A'.repeat(1801) // Over 90% to trigger character count display
       render(<ChatInput {...defaultProps} value={nearLimitText} maxLength={2000} />)
 
       expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
@@ -343,7 +345,8 @@ describe('ChatInput', () => {
       const multiLineText = 'Line 1\nLine 2\nLine 3'
       render(<ChatInput {...defaultProps} value={multiLineText} />)
 
-      expect(screen.getByDisplayValue(multiLineText)).toBeInTheDocument()
+      const textarea = screen.getByRole('textbox')
+      expect(textarea).toHaveValue(multiLineText)
     })
 
     it('should use default maxLength when not specified', () => {

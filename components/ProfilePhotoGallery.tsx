@@ -246,7 +246,7 @@ function AddPhotoTile({
       <Ionicons
         name="add"
         size={32}
-        color={disabled ? '#C7C7CC' : '#007AFF'}
+        color={disabled ? '#C7C7CC' : '#FF6B47'}
       />
       <Text style={[styles.addText, disabled && styles.addTextDisabled]}>
         Add Photo
@@ -395,7 +395,7 @@ export function ProfilePhotoGallery({
   if (loading) {
     return (
       <View style={styles.loadingContainer} testID={`${testID}-loading`}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#FF6B47" />
         <Text style={styles.loadingText}>Loading photos...</Text>
       </View>
     )
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     marginTop: 20,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B47',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 10,
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B47',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -627,11 +627,11 @@ const styles = StyleSheet.create({
     height: TILE_SIZE,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#FF6B47',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8F8FF',
+    backgroundColor: '#FFF8F6',
   },
   addTileDisabled: {
     borderColor: '#C7C7CC',
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   addText: {
     marginTop: 4,
     fontSize: 12,
-    color: '#007AFF',
+    color: '#FF6B47',
     fontWeight: '500',
   },
   addTextDisabled: {
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B47',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,

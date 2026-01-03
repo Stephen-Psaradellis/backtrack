@@ -20,9 +20,15 @@ export default ({ config }) => {
       resizeMode: 'contain',
       backgroundColor: '#ffffff',
     },
+    updates: {
+      url: `https://u.expo.dev/${easProjectId}`,
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'app.backtrack.social',
+      runtimeVersion: {
+        policy: 'appVersion',
+      },
       associatedDomains: ['applinks:backtrack.social', 'webcredentials:backtrack.social'],
       config: {
         googleMapsApiKey,
@@ -45,6 +51,7 @@ export default ({ config }) => {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
       },
+      runtimeVersion: '1.0.0',
       package: 'app.backtrack.social',
       intentFilters: [
         {
@@ -74,6 +81,12 @@ export default ({ config }) => {
       bundler: 'metro',
     },
     plugins: [
+      [
+        'expo-updates',
+        {
+          enabled: true,
+        },
+      ],
       [
         'expo-location',
         {

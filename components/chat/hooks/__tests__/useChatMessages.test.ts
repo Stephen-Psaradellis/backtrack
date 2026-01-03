@@ -80,13 +80,20 @@ const createMockSupabase = () => {
   const mockSubscriptionCallback = vi.fn()
   let subscriptionHandler: ((payload: { new: Record<string, unknown> }) => void) | null = null
 
-  const mockChannel = {
-    on: vi.fn().mockImplementation((_event, _config, callback) => {
-      subscriptionHandler = callback
-      return mockChannel
-    }),
-    subscribe: vi.fn().mockReturnValue(mockChannel),
+  // Create mockChannel with self-references properly
+  const mockChannel: {
+    on: ReturnType<typeof vi.fn>
+    subscribe: ReturnType<typeof vi.fn>
+  } = {
+    on: vi.fn(),
+    subscribe: vi.fn(),
   }
+  // Set up self-referential returns after object creation
+  mockChannel.on.mockImplementation((_event: unknown, _config: unknown, callback: (payload: { new: Record<string, unknown> }) => void) => {
+    subscriptionHandler = callback
+    return mockChannel
+  })
+  mockChannel.subscribe.mockReturnValue(mockChannel)
 
   const mockFrom = vi.fn().mockReturnValue({
     select: vi.fn().mockReturnValue({

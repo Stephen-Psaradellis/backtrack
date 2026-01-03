@@ -1,0 +1,54 @@
+# Auth Login Flow
+# Tests user authentication
+
+appId: com.loveledger.app
+name: "Auth - Login Flow"
+tags:
+  - smoke
+  - auth
+
+---
+
+# Wait for app to load
+- launchApp
+
+# Wait for auth screen
+- assertVisible:
+    text: "Welcome Back"
+    optional: false
+
+# Enter email
+- tapOn:
+    id: "auth-email-input"
+- inputText: ${TEST_USER_EMAIL}
+
+# Enter password
+- tapOn:
+    id: "auth-password-input"
+- inputText: ${TEST_USER_PASSWORD}
+
+# Hide keyboard
+- hideKeyboard
+
+# Take screenshot before login
+- takeScreenshot: before_login
+
+# Tap login button
+- tapOn:
+    id: "auth-login-button"
+
+# Wait for navigation to home screen
+- assertVisible:
+    text: "Home"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 10000
+
+# Take screenshot after login
+- takeScreenshot: after_login
+
+# Verify we're logged in - look for bottom navigation or home content
+- assertVisible:
+    id: "home-screen"

@@ -1,992 +1,309 @@
 /**
- * HomeScreen
- *
- * Main home screen for the Love Ledger app featuring a map view for
- * location-based venue discovery. Users can explore nearby locations,
- * tap on the map to select venues, and view/create posts at those locations.
- *
- * Features:
- * - Full-screen map with user location
- * - Location permission handling
- * - Tap-to-select location functionality
- * - FAB button to create new posts
- * - Selected location indicator
- * - Navigate to Ledger for selected locations
- * - Favorites button to access saved favorite locations
- * - Quick actions to post or browse at favorite locations
- * - Add selected locations to favorites from the bottom sheet
- *
- * @example
- * ```tsx
- * // Used in tab navigation
- * <Tab.Screen name="HomeTab" component={HomeScreen} />
- * ```
+ * HomeScreen - Main home screen with map and favorites
  */
+import React, { useState, useCallback } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
-import React, { useState, useCallback, useRef, useEffect } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Animated,
-  Platform,
-  Modal,
-} from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-
+import { useLocation } from '../hooks/useLocation'
+import { useFavoriteLocations, type FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
 import { MapView, createRegion, createMarker, type MapMarker } from '../components/MapView'
 import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Button, OutlineButton } from '../components/Button'
 import { FavoritesList } from '../components/favorites/FavoritesList'
-import { AddFavoriteModal } from '../components/favorites/AddFavoriteModal'
-import { useLocation } from '../hooks/useLocation'
-import { useFavoriteLocations } from '../hooks/useFavoriteLocations'
-import type { FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
-import { supabase } from '../lib/supabase'
+import { AddFavoriteModal, type AddFavoriteLocationData } from '../components/favorites/AddFavoriteModal'
 import type { MainTabNavigationProp } from '../navigation/types'
-import type { Coordinates, MapRegion, Location as LocationEntity } from '../lib/types'
 
 // ============================================================================
-// TYPES
+// HomeScreen Component
 // ============================================================================
 
-/**
- * Selected location state
- */
-interface SelectedLocation {
-  coordinates: Coordinates
-  name: string
-  address?: string
-  locationId?: string
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/**
- * Default zoom level for map
- */
-const DEFAULT_ZOOM = 'medium' as const
-
-/**
- * Zoom level when viewing selected location
- */
-const SELECTED_ZOOM = 'close' as const
-
-/**
- * Placeholder location name when tapping on map
- */
-const DEFAULT_LOCATION_NAME = 'Selected Location'
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
-/**
- * HomeScreen - Main map-based exploration screen
- *
- * @example
- * // Used in tab navigation
- * <Tab.Screen name="HomeTab" component={HomeScreen} />
- */
-export function HomeScreen(): JSX.Element {
-  // ---------------------------------------------------------------------------
-  // HOOKS
-  // ---------------------------------------------------------------------------
-
+export function HomeScreen(): React.ReactNode {
   const navigation = useNavigation<MainTabNavigationProp>()
-  const {
-    latitude,
-    longitude,
-    loading: locationLoading,
-    error: locationError,
-    permissionStatus,
-    refresh: refreshLocation,
-    requestPermission,
-  } = useLocation()
+  const { latitude, longitude, loading: locationLoading, error: locationError, refresh: refreshLocation } = useLocation()
 
-  // ---------------------------------------------------------------------------
-  // STATE
-  // ---------------------------------------------------------------------------
-
-  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null)
-  const [mapReady, setMapReady] = useState(false)
-  const [nearbyLocations, setNearbyLocations] = useState<LocationEntity[]>([])
-  const [loadingNearby, setLoadingNearby] = useState(false)
-  const [showFavoritesModal, setShowFavoritesModal] = useState(false)
-  const [showAddFavoriteModal, setShowAddFavoriteModal] = useState(false)
-  const [savingFavorite, setSavingFavorite] = useState(false)
-  const [saveFavoriteError, setSaveFavoriteError] = useState<string | null>(null)
-
-  // Animation for bottom sheet
-  const bottomSheetAnimation = useRef(new Animated.Value(0)).current
-
-  // ---------------------------------------------------------------------------
-  // FAVORITES HOOK
-  // ---------------------------------------------------------------------------
+  const userCoordinates = latitude && longitude ? { latitude, longitude } : null
 
   const {
     favorites,
     isLoading: favoritesLoading,
-    isMutating: favoritesMutating,
     error: favoritesError,
-    refetch: refetchFavorites,
     addFavorite,
-    isAtLimit: favoritesAtLimit,
-  } = useFavoriteLocations({
-    userCoordinates: latitude && longitude ? { latitude, longitude } : null,
-  })
+    removeFavorite,
+    updateFavorite,
+    refetch: refetchFavorites,
+  } = useFavoriteLocations({ userCoordinates })
 
   // ---------------------------------------------------------------------------
-  // EFFECTS
+  // State
   // ---------------------------------------------------------------------------
 
-  /**
-   * Animate bottom sheet when location is selected/deselected
-   */
-  useEffect(() => {
-    Animated.spring(bottomSheetAnimation, {
-      toValue: selectedLocation ? 1 : 0,
-      useNativeDriver: true,
-      tension: 65,
-      friction: 11,
-    }).start()
-  }, [selectedLocation, bottomSheetAnimation])
-
-  /**
-   * Fetch nearby locations when user location changes
-   */
-  useEffect(() => {
-    if (latitude && longitude && mapReady) {
-      fetchNearbyLocations()
-    }
-    // Only fetch when map is ready and we have coordinates
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady])
+  const [selectedFavorite, setSelectedFavorite] = useState<FavoriteLocationWithDistance | null>(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addModalLocation, setAddModalLocation] = useState<AddFavoriteLocationData | null>(null)
+  const [isAddingFavorite, setIsAddingFavorite] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
 
   // ---------------------------------------------------------------------------
-  // DATA FETCHING
+  // Map Configuration
   // ---------------------------------------------------------------------------
 
-  /**
-   * Fetch locations near the user's current position
-   */
-  const fetchNearbyLocations = useCallback(async () => {
-    if (!latitude || !longitude) return
+  const initialRegion = userCoordinates
+    ? createRegion(userCoordinates, 'medium')
+    : undefined
 
-    setLoadingNearby(true)
-    try {
-      // Fetch locations within a reasonable radius (using basic bounding box)
-      // A more sophisticated implementation would use PostGIS or similar
-      const latDelta = 0.05 // Approximately 5km
-      const lngDelta = 0.05
-
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .gte('latitude', latitude - latDelta)
-        .lte('latitude', latitude + latDelta)
-        .gte('longitude', longitude - lngDelta)
-        .lte('longitude', longitude + lngDelta)
-        .limit(50)
-
-      if (error) {
-        // Silently fail for nearby locations - not critical
-        return
-      }
-
-      setNearbyLocations(data || [])
-    } finally {
-      setLoadingNearby(false)
-    }
-  }, [latitude, longitude])
-
-  // ---------------------------------------------------------------------------
-  // HANDLERS
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Handle map press to select a location
-   */
-  const handleMapPress = useCallback(async (coordinates: Coordinates) => {
-    await selectionFeedback()
-    setSelectedLocation({
-      coordinates,
-      name: DEFAULT_LOCATION_NAME,
-      address: `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`,
-    })
-  }, [])
-
-  /**
-   * Handle marker press (existing location)
-   */
-  const handleMarkerPress = useCallback(async (marker: MapMarker) => {
-    const location = nearbyLocations.find((loc) => loc.id === marker.id)
-    if (location) {
-      await selectionFeedback()
-      setSelectedLocation({
-        coordinates: {
-          latitude: Number(location.latitude),
-          longitude: Number(location.longitude),
-        },
-        name: location.name,
-        address: location.address || undefined,
-        locationId: location.id,
-      })
-    }
-  }, [nearbyLocations])
-
-  /**
-   * Clear selected location
-   */
-  const handleClearSelection = useCallback(() => {
-    setSelectedLocation(null)
-  }, [])
-
-  /**
-   * Navigate to ledger for selected location
-   */
-  const handleViewLedger = useCallback(async () => {
-    if (!selectedLocation) return
-
-    // If we have an existing location ID, use it
-    if (selectedLocation.locationId) {
-      navigation.navigate('Ledger', {
-        locationId: selectedLocation.locationId,
-        locationName: selectedLocation.name,
-      })
-      return
-    }
-
-    // Otherwise, create a new location entry
-    try {
-      const { data, error } = await supabase
-        .from('locations')
-        .insert({
-          name: selectedLocation.name,
-          address: selectedLocation.address,
-          latitude: selectedLocation.coordinates.latitude,
-          longitude: selectedLocation.coordinates.longitude,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        Alert.alert('Error', 'Failed to save location. Please try again.')
-        return
-      }
-
-      // Update local state with new location
-      setNearbyLocations((prev) => [...prev, data])
-
-      navigation.navigate('Ledger', {
-        locationId: data.id,
-        locationName: data.name,
-      })
-    } catch {
-      Alert.alert('Error', 'An unexpected error occurred.')
-    }
-  }, [selectedLocation, navigation])
-
-  /**
-   * Navigate to create post screen
-   */
-  const handleCreatePost = useCallback(() => {
-    navigation.navigate('CreatePost', {
-      locationId: selectedLocation?.locationId,
-    })
-  }, [navigation, selectedLocation?.locationId])
-
-  /**
-   * Handle map ready
-   */
-  const handleMapReady = useCallback(() => {
-    setMapReady(true)
-  }, [])
-
-  /**
-   * Handle region change complete (could be used for dynamic loading)
-   */
-  const handleRegionChangeComplete = useCallback((_region: MapRegion) => {
-    // Could implement dynamic location loading here based on new region
-  }, [])
-
-  /**
-   * Request location permission
-   */
-  const handleRequestPermission = useCallback(async () => {
-    const granted = await requestPermission()
-    if (granted) {
-      await refreshLocation()
-    }
-  }, [requestPermission, refreshLocation])
-
-  /**
-   * Open favorites modal
-   */
-  const handleOpenFavorites = useCallback(async () => {
-    await lightFeedback()
-    setShowFavoritesModal(true)
-  }, [])
-
-  /**
-   * Close favorites modal
-   */
-  const handleCloseFavorites = useCallback(() => {
-    setShowFavoritesModal(false)
-  }, [])
-
-  /**
-   * Handle "Post Here" action from favorites list
-   */
-  const handleFavoritePostHere = useCallback(
-    (favorite: FavoriteLocationWithDistance) => {
-      setShowFavoritesModal(false)
-      // Navigate to create post with the favorite's location
-      navigation.navigate('CreatePost', {
-        locationId: favorite.place_id || undefined,
-      })
-    },
-    [navigation]
-  )
-
-  /**
-   * Handle "Browse" action from favorites list
-   */
-  const handleFavoriteBrowse = useCallback(
-    (favorite: FavoriteLocationWithDistance) => {
-      setShowFavoritesModal(false)
-      // Navigate to ledger filtered by this location
-      navigation.navigate('Ledger', {
-        locationId: favorite.place_id || favorite.id,
-        locationName: favorite.custom_name,
-      })
-    },
-    [navigation]
-  )
-
-  /**
-   * Open the AddFavoriteModal for the selected location
-   *
-   * Checks if user has reached the favorites limit before opening.
-   */
-  const handleOpenAddFavorite = useCallback(async () => {
-    if (!selectedLocation) return
-    await lightFeedback()
-
-    // Check if at favorites limit before opening modal
-    if (favoritesAtLimit) {
-      Alert.alert(
-        'Favorites Limit Reached',
-        'You have reached the maximum number of favorite locations. Please remove some favorites before adding new ones.',
-        [{ text: 'OK' }]
-      )
-      return
-    }
-
-    setSaveFavoriteError(null)
-    setShowAddFavoriteModal(true)
-  }, [selectedLocation, favoritesAtLimit])
-
-  /**
-   * Close the AddFavoriteModal
-   */
-  const handleCloseAddFavorite = useCallback(() => {
-    setShowAddFavoriteModal(false)
-    setSaveFavoriteError(null)
-  }, [])
-
-  /**
-   * Save a location as a favorite using the useFavoriteLocations hook
-   *
-   * Uses the hook's addFavorite function which provides:
-   * - Authentication check
-   * - Favorites limit enforcement
-   * - Optimistic UI updates
-   * - Automatic state management
-   */
-  const handleSaveFavorite = useCallback(
-    async (customName: string) => {
-      if (!selectedLocation) return
-
-      setSavingFavorite(true)
-      setSaveFavoriteError(null)
-
-      // Check if at favorites limit before attempting
-      if (favoritesAtLimit) {
-        setSaveFavoriteError('You have reached the maximum number of favorites.')
-        setSavingFavorite(false)
-        return
-      }
-
-      // Use the hook's addFavorite function
-      const result = await addFavorite({
-        custom_name: customName,
-        place_name: selectedLocation.name,
-        latitude: selectedLocation.coordinates.latitude,
-        longitude: selectedLocation.coordinates.longitude,
-        address: selectedLocation.address,
-        place_id: selectedLocation.locationId,
-      })
-
-      setSavingFavorite(false)
-
-      if (result.success) {
-        // Success - close modal and clear selection
-        setShowAddFavoriteModal(false)
-        setSelectedLocation(null)
-        Alert.alert('Success', `"${customName}" has been added to your favorites!`)
-      } else {
-        // Handle specific error cases
-        const errorMessage = result.error || 'Failed to save favorite. Please try again.'
-
-        // Check for duplicate entry error
-        if (errorMessage.includes('already') || errorMessage.includes('duplicate')) {
-          setSaveFavoriteError('This location is already in your favorites.')
-        } else if (errorMessage.includes('logged in') || errorMessage.includes('authenticated')) {
-          setSaveFavoriteError('You must be logged in to save favorites.')
-        } else {
-          setSaveFavoriteError(errorMessage)
-        }
-      }
-    },
-    [selectedLocation, addFavorite, favoritesAtLimit]
-  )
-
-  // ---------------------------------------------------------------------------
-  // COMPUTED VALUES
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Convert nearby locations to map markers
-   */
-  const markers: MapMarker[] = nearbyLocations.map((location) =>
-    createMarker(location.id, {
-      latitude: Number(location.latitude),
-      longitude: Number(location.longitude),
-    }, {
-      title: location.name,
-      description: location.address || undefined,
-      pinColor: selectedLocation?.locationId === location.id ? '#007AFF' : '#FF3B30',
-    })
-  )
-
-  /**
-   * Initial map region based on user location
-   */
-  const initialRegion: MapRegion | undefined =
-    latitude && longitude
-      ? createRegion({ latitude, longitude }, DEFAULT_ZOOM)
-      : undefined
-
-  // ---------------------------------------------------------------------------
-  // RENDER: PERMISSION DENIED
-  // ---------------------------------------------------------------------------
-
-  if (permissionStatus === 'denied' || permissionStatus === 'restricted') {
-    return (
-      <View style={styles.centeredContainer} testID="home-permission-denied">
-        <View style={styles.permissionContent}>
-          <Text style={styles.permissionIcon}>📍</Text>
-          <Text style={styles.permissionTitle}>Location Access Required</Text>
-          <Text style={styles.permissionMessage}>
-            Love Ledger needs access to your location to show you nearby venues
-            and help you discover missed connections.
-          </Text>
-          {permissionStatus === 'denied' && (
-            <Button
-              title="Enable Location"
-              onPress={handleRequestPermission}
-              testID="home-enable-location-button"
-            />
-          )}
-          {permissionStatus === 'restricted' && (
-            <Text style={styles.permissionHint}>
-              Please enable location services in your device settings.
-            </Text>
-          )}
-        </View>
-      </View>
+  // Create markers for favorites
+  const favoriteMarkers: MapMarker[] = favorites.map((fav) =>
+    createMarker(
+      fav.id,
+      { latitude: fav.latitude, longitude: fav.longitude },
+      { title: fav.custom_name }
     )
-  }
+  )
 
   // ---------------------------------------------------------------------------
-  // RENDER: LOADING
+  // Handlers
   // ---------------------------------------------------------------------------
 
-  if (locationLoading && !latitude && !longitude) {
+  const handleSelectFavorite = useCallback((favorite: FavoriteLocationWithDistance) => {
+    selectionFeedback()
+    setSelectedFavorite(favorite)
+  }, [])
+
+  const handlePostHere = useCallback((favorite: FavoriteLocationWithDistance) => {
+    selectionFeedback()
+    // Navigate to create post with this location
+    // navigation.navigate('CreatePost', { location: favorite })
+  }, [])
+
+  const handleBrowse = useCallback((favorite: FavoriteLocationWithDistance) => {
+    selectionFeedback()
+    // Navigate to ledger filtered by this location
+    // navigation.navigate('Ledger', { locationId: favorite.place_id })
+  }, [])
+
+  const handleUpdateFavorite = useCallback(async (favoriteId: string, customName: string) => {
+    const result = await updateFavorite(favoriteId, { custom_name: customName })
+    return {
+      success: result.success,
+      error: result.error ?? undefined,
+    }
+  }, [updateFavorite])
+
+  const handleRemoveFavorite = useCallback(async (favoriteId: string) => {
+    const result = await removeFavorite(favoriteId)
+    return {
+      success: result.success,
+      error: result.error ?? undefined,
+    }
+  }, [removeFavorite])
+
+  const handleAddFavoriteFromMap = useCallback(() => {
+    if (!userCoordinates) return
+
+    // For now, use current location as the location to add
+    setAddModalLocation({
+      placeName: 'Current Location',
+      address: null,
+      latitude: userCoordinates.latitude,
+      longitude: userCoordinates.longitude,
+    })
+    setShowAddModal(true)
+  }, [userCoordinates])
+
+  const handleSaveNewFavorite = useCallback(async (customName: string) => {
+    if (!addModalLocation) return
+
+    setIsAddingFavorite(true)
+    setAddError(null)
+
+    const result = await addFavorite({
+      custom_name: customName,
+      place_name: addModalLocation.placeName,
+      latitude: addModalLocation.latitude,
+      longitude: addModalLocation.longitude,
+      address: addModalLocation.address,
+      place_id: addModalLocation.placeId,
+    })
+
+    setIsAddingFavorite(false)
+
+    if (result.success) {
+      setShowAddModal(false)
+      setAddModalLocation(null)
+    } else {
+      setAddError(result.error ?? 'Failed to add favorite')
+    }
+  }, [addModalLocation, addFavorite])
+
+  const handleCancelAddFavorite = useCallback(() => {
+    setShowAddModal(false)
+    setAddModalLocation(null)
+    setAddError(null)
+  }, [])
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetchFavorites()
+    }, [refetchFavorites])
+  )
+
+  // ---------------------------------------------------------------------------
+  // Loading State
+  // ---------------------------------------------------------------------------
+
+  if (locationLoading) {
     return (
-      <View style={styles.centeredContainer} testID="home-loading">
+      <SafeAreaView style={styles.centered}>
         <LoadingSpinner message="Getting your location..." />
-      </View>
+      </SafeAreaView>
     )
   }
 
   // ---------------------------------------------------------------------------
-  // RENDER: ERROR
+  // Render
   // ---------------------------------------------------------------------------
-
-  if (locationError && !latitude && !longitude) {
-    return (
-      <View style={styles.centeredContainer} testID="home-error">
-        <View style={styles.errorContent}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Location Error</Text>
-          <Text style={styles.errorMessage}>{locationError}</Text>
-          <Button
-            title="Try Again"
-            onPress={refreshLocation}
-            testID="home-retry-button"
-          />
-        </View>
-      </View>
-    )
-  }
-
-  // ---------------------------------------------------------------------------
-  // RENDER: MAP
-  // ---------------------------------------------------------------------------
-
-  // Bottom sheet transform
-  const bottomSheetTranslateY = bottomSheetAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [200, 0],
-  })
 
   return (
-    <View style={styles.container} testID="home-screen">
-      {/* Map View */}
-      <MapView
-        showsUserLocation
-        followsUserLocation={false}
-        initialRegion={initialRegion}
-        markers={markers}
-        onMapPress={handleMapPress}
-        onMarkerPress={handleMarkerPress}
-        onMapReady={handleMapReady}
-        onRegionChangeComplete={handleRegionChangeComplete}
-        showsMyLocationButton
-        showsCompass
-        testID="home-map"
-      />
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      {/* Map Section */}
+      <View style={styles.mapContainer}>
+        <MapView
+          showsUserLocation
+          initialRegion={initialRegion}
+          markers={favoriteMarkers}
+          onMapReady={() => lightFeedback()}
+          onMarkerPress={(marker) => {
+            const fav = favorites.find(f => f.id === marker.id)
+            if (fav) handleSelectFavorite(fav)
+          }}
+        />
 
-      {/* Loading indicator for nearby locations */}
-      {loadingNearby && (
-        <View style={styles.loadingBadge} testID="home-loading-nearby">
-          <Text style={styles.loadingBadgeText}>Loading venues...</Text>
+        {/* Map Overlay with Add Button */}
+        <View style={styles.mapOverlay}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddFavoriteFromMap}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.addButtonText}>+ Add Favorite</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
 
-      {/* FAB Button - Create Post */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleCreatePost}
-        activeOpacity={0.8}
-        testID="home-create-post-fab"
-      >
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
-
-      {/* Selected Location Bottom Sheet */}
-      <Animated.View
-        style={[
-          styles.bottomSheet,
-          {
-            transform: [{ translateY: bottomSheetTranslateY }],
-            opacity: bottomSheetAnimation,
-          },
-        ]}
-        testID="home-bottom-sheet"
-        pointerEvents={selectedLocation ? 'auto' : 'none'}
-      >
-        {selectedLocation && (
-          <>
-            <View style={styles.bottomSheetHandle} />
-            <View style={styles.bottomSheetContent}>
-              {/* Location Info */}
-              <View style={styles.locationInfo}>
-                <Text style={styles.locationName} numberOfLines={1}>
-                  {selectedLocation.name}
-                </Text>
-                {selectedLocation.address && (
-                  <Text style={styles.locationAddress} numberOfLines={1}>
-                    {selectedLocation.address}
-                  </Text>
-                )}
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <OutlineButton
-                  title="Cancel"
-                  onPress={handleClearSelection}
-                  size="small"
-                  testID="home-cancel-selection-button"
-                />
-                <OutlineButton
-                  title="⭐ Favorite"
-                  onPress={handleOpenAddFavorite}
-                  size="small"
-                  testID="home-add-favorite-button"
-                />
-                <Button
-                  title="View Posts"
-                  onPress={handleViewLedger}
-                  size="small"
-                  testID="home-view-ledger-button"
-                />
-              </View>
-            </View>
-          </>
-        )}
-      </Animated.View>
-
-      {/* Favorites Button */}
-      <TouchableOpacity
-        style={styles.favoritesButton}
-        onPress={handleOpenFavorites}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Open favorites"
-        testID="home-favorites-button"
-      >
-        <Text style={styles.favoritesIcon}>⭐</Text>
-      </TouchableOpacity>
-
-      {/* Recenter Button */}
-      <TouchableOpacity
-        style={styles.recenterButton}
-        onPress={refreshLocation}
-        activeOpacity={0.8}
-        testID="home-recenter-button"
-      >
-        <Text style={styles.recenterIcon}>◎</Text>
-      </TouchableOpacity>
-
-      {/* Favorites Modal */}
-      <Modal
-        visible={showFavoritesModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={handleCloseFavorites}
-        testID="home-favorites-modal"
-      >
-        <View style={styles.modalContainer}>
-          {/* Modal Header */}
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Favorites</Text>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={handleCloseFavorites}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Close favorites"
-              testID="home-favorites-modal-close"
-            >
-              <Text style={styles.modalCloseIcon}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Favorites List */}
-          <FavoritesList
-            favorites={favorites}
-            isLoading={favoritesLoading}
-            error={favoritesError?.message ?? null}
-            onPostHere={handleFavoritePostHere}
-            onBrowse={handleFavoriteBrowse}
-            onRetry={refetchFavorites}
-            onRefresh={refetchFavorites}
-            emptyTitle="No Favorites Yet"
-            emptyMessage="Save your favorite locations from the map to quickly post or browse connections at places you visit often."
-            testID="home-favorites-list"
-          />
+      {/* Favorites Section */}
+      <View style={styles.favoritesContainer}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Your Favorites</Text>
+          {favorites.length > 0 && (
+            <Text style={styles.sectionCount}>{favorites.length}</Text>
+          )}
         </View>
-      </Modal>
+
+        <FavoritesList
+          favorites={favorites}
+          isLoading={favoritesLoading}
+          error={favoritesError?.message}
+          selectedFavoriteId={selectedFavorite?.id}
+          onSelect={handleSelectFavorite}
+          onPostHere={handlePostHere}
+          onBrowse={handleBrowse}
+          onUpdateFavorite={handleUpdateFavorite}
+          onRemoveFavorite={handleRemoveFavorite}
+          onRefresh={refetchFavorites}
+          onAddFavorite={handleAddFavoriteFromMap}
+          emptyTitle="No Favorites Yet"
+          emptyMessage="Add your favorite spots for quick access to posting and browsing missed connections."
+          style={styles.favoritesList}
+        />
+      </View>
 
       {/* Add Favorite Modal */}
       <AddFavoriteModal
-        visible={showAddFavoriteModal}
-        location={
-          selectedLocation
-            ? {
-                placeName: selectedLocation.name,
-                address: selectedLocation.address,
-                latitude: selectedLocation.coordinates.latitude,
-                longitude: selectedLocation.coordinates.longitude,
-                placeId: selectedLocation.locationId,
-              }
-            : null
-        }
-        onSave={handleSaveFavorite}
-        onCancel={handleCloseAddFavorite}
-        isLoading={savingFavorite}
-        error={saveFavoriteError}
-        testID="home-add-favorite-modal"
+        visible={showAddModal}
+        location={addModalLocation}
+        onSave={handleSaveNewFavorite}
+        onCancel={handleCancelAddFavorite}
+        isLoading={isAddingFavorite}
+        error={addError}
       />
-    </View>
+    </SafeAreaView>
   )
 }
 
 // ============================================================================
-// STYLES
+// Styles
 // ============================================================================
 
 const styles = StyleSheet.create({
-  // Container
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FAFAF9',
   },
-
-  centeredContainer: {
+  centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    backgroundColor: '#FAFAF9',
   },
-
-  // Permission States
-  permissionContent: {
-    alignItems: 'center',
-    gap: 12,
+  mapContainer: {
+    height: 250,
+    position: 'relative',
   },
-
-  permissionIcon: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-
-  permissionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
-  },
-
-  permissionMessage: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-
-  permissionHint: {
-    fontSize: 12,
-    color: '#999999',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-
-  // Error States
-  errorContent: {
-    alignItems: 'center',
-    gap: 12,
-  },
-
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
-  },
-
-  errorMessage: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-
-  // Loading Badge
-  loadingBadge: {
+  mapOverlay: {
     position: 'absolute',
-    top: 16,
-    left: 16,
+    bottom: 16,
     right: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
   },
-
-  loadingBadgeText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-
-  // FAB Button
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-
-  fabIcon: {
-    fontSize: 32,
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-
-  // Bottom Sheet
-  bottomSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-
-  bottomSheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#CCCCCC',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 16,
-  },
-
-  bottomSheetContent: {
+  addButton: {
+    backgroundColor: '#FF6B47',
     paddingHorizontal: 16,
-    gap: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-
-  // Location Info
-  locationInfo: {
-    gap: 4,
-  },
-
-  locationName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-  },
-
-  locationAddress: {
+  addButtonText: {
+    color: '#FFFFFF',
     fontSize: 14,
-    color: '#666666',
+    fontWeight: '600',
   },
-
-  // Action Buttons
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  // Recenter Button
-  recenterButton: {
-    position: 'absolute',
-    bottom: 24,
-    left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  recenterIcon: {
-    fontSize: 24,
-    color: '#007AFF',
-  },
-
-  // Favorites Button
-  favoritesButton: {
-    position: 'absolute',
-    bottom: 76,
-    left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  favoritesIcon: {
-    fontSize: 20,
-  },
-
-  // Modal
-  modalContainer: {
+  favoritesContainer: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
   },
-
-  modalHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 16 : 20,
-    paddingBottom: 12,
-    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
-
-  modalTitle: {
-    fontSize: 17,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
+    color: '#1C1917',
   },
-
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E5E5EA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  modalCloseIcon: {
+  sectionCount: {
     fontSize: 14,
-    fontWeight: '600',
     color: '#8E8E93',
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  favoritesList: {
+    flex: 1,
   },
 })
+
+export default HomeScreen

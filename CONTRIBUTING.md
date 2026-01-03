@@ -1,6 +1,6 @@
-# Contributing to Love Ledger
+# Contributing to Backtrack
 
-Welcome! This guide will help you set up your local development environment for Love Ledger.
+Welcome! This guide will help you set up your local development environment for Backtrack.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ Before you begin, ensure you have the following software installed on your machi
 
 ### Node.js (v18.0.0 or higher)
 
-Love Ledger is built with Next.js 15 and React 19, which require Node.js 18 or later.
+Backtrack is built with Next.js 15 and React 19, which require Node.js 18 or later.
 
 **Check your version:**
 ```bash
@@ -128,25 +128,25 @@ Write-Host "Git: $(git --version)"
 
 ### Clone the Repository
 
-Clone the Love Ledger repository to your local machine:
+Clone the Backtrack repository to your local machine:
 
 ```bash
 # Using HTTPS
-git clone https://github.com/your-username/love-ledger.git
+git clone https://github.com/your-username/backtrack.git
 
 # Or using SSH (if you have SSH keys set up)
-git clone git@github.com:your-username/love-ledger.git
+git clone git@github.com:your-username/backtrack.git
 ```
 
 Navigate to the project directory:
 
 ```bash
-cd love-ledger
+cd backtrack
 ```
 
 ### Install Dependencies
 
-Love Ledger uses Node.js packages managed by npm or pnpm. Install all required dependencies:
+Backtrack uses Node.js packages managed by npm or pnpm. Install all required dependencies:
 
 **Using npm:**
 ```bash
@@ -165,7 +165,7 @@ pnpm install
 After cloning, you'll find the following key directories and files:
 
 ```
-love-ledger/
+backtrack/
 ├── app/                    # Next.js App Router pages and layouts
 │   ├── layout.tsx          # Root layout with providers
 │   ├── page.tsx            # Home page
@@ -221,7 +221,7 @@ You should see packages including:
 
 ## Supabase Setup
 
-Love Ledger uses [Supabase](https://supabase.com/) as its backend, providing PostgreSQL database, authentication, and real-time capabilities. Follow these steps to create and configure your Supabase project.
+Backtrack uses [Supabase](https://supabase.com/) as its backend, providing PostgreSQL database, authentication, and real-time capabilities. Follow these steps to create and configure your Supabase project.
 
 ### Step 1: Create a Supabase Account
 
@@ -234,7 +234,7 @@ Love Ledger uses [Supabase](https://supabase.com/) as its backend, providing Pos
 
 1. From the [Supabase Dashboard](https://supabase.com/dashboard), click **New Project**
 2. Fill in the project details:
-   - **Name:** `love-ledger-dev` (or any name you prefer)
+   - **Name:** `backtrack-dev` (or any name you prefer)
    - **Database Password:** Create a strong password and **save it securely** - you'll need it for database access
    - **Region:** Choose the region closest to you for lower latency
    - **Pricing Plan:** Free tier works for development
@@ -265,7 +265,7 @@ Dashboard → Settings (⚙️) → API
 
 ### Step 4: Enable PostGIS Extension
 
-Love Ledger uses the PostGIS extension for geospatial queries (finding nearby locations). You must enable this extension before running migrations:
+Backtrack uses the PostGIS extension for geospatial queries (finding nearby locations). You must enable this extension before running migrations:
 
 1. In your Supabase Dashboard, go to the **SQL Editor** (sidebar)
 2. Click **New query**
@@ -288,7 +288,7 @@ CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;
 
 ### Step 5: Run Database Migrations
 
-Love Ledger's database schema is defined in migration files located in `supabase/migrations/`. These create the necessary tables, indexes, and Row Level Security (RLS) policies.
+Backtrack's database schema is defined in migration files located in `supabase/migrations/`. These create the necessary tables, indexes, and Row Level Security (RLS) policies.
 
 **Option A: Using the Supabase SQL Editor (Recommended for beginners)**
 
@@ -395,7 +395,7 @@ Here's a quick overview of the main tables:
 
 ## Google Maps API Setup
 
-Love Ledger uses the Google Maps JavaScript API and Places API for location search and map display. Follow these steps to set up your Google Cloud project and obtain an API key.
+Backtrack uses the Google Maps JavaScript API and Places API for location search and map display. Follow these steps to set up your Google Cloud project and obtain an API key.
 
 ### Step 1: Create a Google Cloud Account
 
@@ -410,7 +410,7 @@ Love Ledger uses the Google Maps JavaScript API and Places API for location sear
 1. In the [Google Cloud Console](https://console.cloud.google.com/), click the project dropdown at the top of the page
 2. Click **New Project**
 3. Enter the project details:
-   - **Project name:** `love-ledger-dev` (or any name you prefer)
+   - **Project name:** `backtrack-dev` (or any name you prefer)
    - **Organization:** Leave as "No organization" for personal projects
    - **Location:** Leave as default
 4. Click **Create**
@@ -419,7 +419,7 @@ Love Ledger uses the Google Maps JavaScript API and Places API for location sear
 
 ### Step 3: Enable Required APIs
 
-You need to enable two Google Maps APIs for Love Ledger:
+You need to enable two Google Maps APIs for Backtrack:
 
 #### Enable Maps JavaScript API
 
@@ -575,7 +575,7 @@ Now that you've set up Supabase and Google Maps, it's time to configure your env
 
 ### Step 1: Create Your Environment File
 
-Love Ledger uses a `.env.local` file to store sensitive configuration values. This file is specific to your local machine and should **never be committed to version control**.
+Backtrack uses a `.env.local` file to store sensitive configuration values. This file is specific to your local machine and should **never be committed to version control**.
 
 Copy the example environment file to create your local configuration:
 
@@ -671,7 +671,7 @@ cat .env.local | grep -E '=.*"' && echo "⚠️  Remove quotes around values" ||
 
 ### Environment Variable Reference
 
-Here's a complete reference of all environment variables used by Love Ledger:
+Here's a complete reference of all environment variables used by Backtrack:
 
 | Variable | Required | Exposed to Browser | Description |
 |----------|----------|-------------------|-------------|
@@ -810,7 +810,7 @@ After starting the development server, verify that all integrations are working 
 #### ✅ Step 1: Verify the Application Loads
 
 1. Open `http://localhost:3000` in your browser
-2. You should see the Love Ledger homepage
+2. You should see the Backtrack homepage
 3. Check the browser console (F12 → Console tab) for any errors
 
 **What to look for:**
@@ -963,7 +963,7 @@ If you encounter issues starting the development server, see the [Troubleshootin
 
 ## Development Workflow
 
-This section covers the common development commands and workflows you'll use while working on Love Ledger.
+This section covers the common development commands and workflows you'll use while working on Backtrack.
 
 ### Available npm Scripts
 
@@ -978,7 +978,7 @@ Here are the main npm scripts available for development:
 
 ### Running the Linter
 
-Love Ledger uses [ESLint](https://eslint.org/) for code quality and consistency. Always run the linter before committing code:
+Backtrack uses [ESLint](https://eslint.org/) for code quality and consistency. Always run the linter before committing code:
 
 **Run linting:**
 ```bash
@@ -1061,7 +1061,7 @@ npm run build && npm run start
 
 ### Code Style Guidelines
 
-Love Ledger follows these code style conventions:
+Backtrack follows these code style conventions:
 
 #### TypeScript
 - Use TypeScript for all new files (`.ts`, `.tsx`)
@@ -1158,7 +1158,7 @@ import type { Props } from './types';
 
 ### Git Commit Conventions
 
-Love Ledger follows conventional commit messages for clear project history:
+Backtrack follows conventional commit messages for clear project history:
 
 #### Commit Message Format
 
@@ -1684,7 +1684,7 @@ This appears when billing is not enabled on your Google Cloud project:
 
 2. Check file location - must be in project root:
    ```
-   love-ledger/
+   backtrack/
    ├── .env.local     ✅ Correct location
    ├── app/
    ├── components/
@@ -1870,13 +1870,13 @@ if ($port) { Write-Host "⚠ Port 3000 is in use" -ForegroundColor Yellow } else
 
 If you're still experiencing issues after trying the solutions above:
 
-1. **Search existing issues:** Check the [GitHub Issues](https://github.com/your-username/love-ledger/issues) for similar problems
+1. **Search existing issues:** Check the [GitHub Issues](https://github.com/your-username/backtrack/issues) for similar problems
 
 2. **Check service status:**
    - [Supabase Status](https://status.supabase.com/)
    - [Google Cloud Status](https://status.cloud.google.com/)
 
-3. **Open a new issue:** If your problem isn't documented, [open a new issue](https://github.com/your-username/love-ledger/issues/new) with:
+3. **Open a new issue:** If your problem isn't documented, [open a new issue](https://github.com/your-username/backtrack/issues/new) with:
    - Your operating system and version
    - Node.js version (`node --version`)
    - Error message (full text)

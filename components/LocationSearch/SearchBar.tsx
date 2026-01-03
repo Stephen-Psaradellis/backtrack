@@ -119,7 +119,7 @@ interface SuggestionItemProps {
  * iOS-style colors matching the app theme
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   secondary: '#8E8E93',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
@@ -127,7 +127,7 @@ const COLORS = {
   text: '#000000',
   textSecondary: '#8E8E93',
   danger: '#FF3B30',
-  pink: '#EC4899',
+  pink: '#FF6B47',
 } as const
 
 /**

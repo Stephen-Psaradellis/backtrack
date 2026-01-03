@@ -56,7 +56,7 @@ import type { CreatePostStep } from './CreatePost/types'
  * Orchestrates a 6-step wizard using extracted step components
  * and the useCreatePostForm hook for state management.
  */
-export function CreatePostScreen(): JSX.Element {
+export function CreatePostScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // HOOKS
   // ---------------------------------------------------------------------------
@@ -286,55 +286,37 @@ export function CreatePostScreen(): JSX.Element {
   const isFullScreenStep = form.currentStep === 'photo' || form.currentStep === 'avatar'
 
   if (isFullScreenStep) {
+    // Render without Tooltip to debug blank screen
     return (
-      <Tooltip
-        isVisible={tutorial.isVisible}
-        content={renderTutorialContent()}
-        placement="bottom"
-        onClose={tutorial.markComplete}
-        closeOnChildInteraction={false}
-        allowChildInteraction={true}
-        topAdjustment={Platform.OS === 'android' ? -(StatusBar.currentHeight ?? 0) : 0}
-      >
-        <View style={sharedStyles.fullScreenContainer} testID="create-post-screen">
-          {renderStepContent()}
-        </View>
-      </Tooltip>
+      <View style={sharedStyles.fullScreenContainer} testID="create-post-screen">
+        {renderStepContent()}
+      </View>
     )
   }
 
+  // Render without Tooltip to fix Android blank screen issue
   return (
-    <Tooltip
-      isVisible={tutorial.isVisible}
-      content={renderTutorialContent()}
-      placement="bottom"
-      onClose={tutorial.markComplete}
-      closeOnChildInteraction={false}
-      allowChildInteraction={true}
-      topAdjustment={Platform.OS === 'android' ? -(StatusBar.currentHeight ?? 0) : 0}
-    >
-      <View style={sharedStyles.container} testID="create-post-screen">
-        {/* Header with step indicator */}
-        <StepHeader
-          stepConfig={form.currentStepConfig}
-          onBack={handleBackWithFeedback}
-          testID="create-post"
-        />
+    <View style={sharedStyles.container} testID="create-post-screen">
+      {/* Header with step indicator */}
+      <StepHeader
+        stepConfig={form.currentStepConfig}
+        onBack={handleBackWithFeedback}
+        testID="create-post"
+      />
 
-        {/* Animated progress bar */}
-        <ProgressBar
-          progressAnim={form.progressAnim}
-          currentStep={form.currentStepIndex + 1}
-          totalSteps={STEPS.length}
-          testID="create-post"
-        />
+      {/* Animated progress bar */}
+      <ProgressBar
+        progressAnim={form.progressAnim}
+        currentStep={form.currentStepIndex + 1}
+        totalSteps={STEPS.length}
+        testID="create-post"
+      />
 
-        {/* Step content */}
-        <View style={sharedStyles.content}>
-          {renderStepContent()}
-        </View>
+      {/* Step content */}
+      <View style={sharedStyles.content}>
+        {renderStepContent()}
       </View>
-    </Tooltip>
+    </View>
   )
 }
 
@@ -363,10 +345,10 @@ const tooltipStyles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#EC4899',
+    backgroundColor: '#FF6B47',
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   buttonText: {

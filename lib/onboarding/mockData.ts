@@ -28,7 +28,7 @@
  * ```
  */
 
-import type { AvatarConfig } from '@/types/avatar'
+import type { AvatarConfig } from '../../types/avatar'
 
 // ============================================================================
 // TYPES

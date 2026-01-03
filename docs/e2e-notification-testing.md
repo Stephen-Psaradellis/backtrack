@@ -310,7 +310,7 @@ curl -X POST \
     "body": "This is a test notification from the API",
     "data": {
       "type": "match",
-      "url": "loveledger://conversation/test-id"
+      "url": "backtrack://conversation/test-id"
     }
   }'
 ```
@@ -323,10 +323,10 @@ Test deep-links using uri-scheme:
 
 ```bash
 # iOS
-npx uri-scheme open loveledger://conversation/CONVERSATION_ID --ios
+npx uri-scheme open backtrack://conversation/CONVERSATION_ID --ios
 
 # Android
-npx uri-scheme open loveledger://conversation/CONVERSATION_ID --android
+npx uri-scheme open backtrack://conversation/CONVERSATION_ID --android
 ```
 
 ---
@@ -364,7 +364,7 @@ npx uri-scheme open loveledger://conversation/CONVERSATION_ID --android
 
 ### Deep-Link Not Working
 
-1. Verify app.json has scheme: "loveledger"
+1. Verify app.json has scheme: "backtrack"
 2. Check linking config in AppNavigator.tsx
 3. Verify navigation param types match expected format
 

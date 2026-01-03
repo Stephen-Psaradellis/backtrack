@@ -1,6 +1,6 @@
 # Supabase Integration
 
-This document details how Love Ledger integrates with Supabase for authentication, database access, file storage, and real-time features.
+This document details how Backtrack integrates with Supabase for authentication, database access, file storage, and real-time features.
 
 ## Table of Contents
 
@@ -34,7 +34,7 @@ This document details how Love Ledger integrates with Supabase for authenticatio
 
 ## Overview
 
-Love Ledger uses [Supabase](https://supabase.com) as its Backend-as-a-Service (BaaS) platform, providing:
+Backtrack uses [Supabase](https://supabase.com) as its Backend-as-a-Service (BaaS) platform, providing:
 
 | Service | Purpose |
 |---------|---------|
@@ -47,7 +47,7 @@ Love Ledger uses [Supabase](https://supabase.com) as its Backend-as-a-Service (B
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        LOVE LEDGER + SUPABASE                                │
+│                        BACKTRACK + SUPABASE                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   ┌──────────────────┐          ┌───────────────────────────────────────┐   │
@@ -96,7 +96,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ## Client Setup
 
-Love Ledger uses the `@supabase/ssr` package for proper SSR/SSG support with Next.js App Router.
+Backtrack uses the `@supabase/ssr` package for proper SSR/SSG support with Next.js App Router.
 
 ### Browser Client
 
@@ -241,7 +241,7 @@ export async function updateSession(request: NextRequest) {
 
 ## Authentication Flow
 
-Love Ledger uses Supabase Auth for user authentication, supporting multiple auth methods.
+Backtrack uses Supabase Auth for user authentication, supporting multiple auth methods.
 
 ### Authentication Methods
 
@@ -344,7 +344,7 @@ export default async function ProtectedPage() {
 
 ### How It Works
 
-Next.js middleware runs on every request (matching the configured paths). The Love Ledger middleware:
+Next.js middleware runs on every request (matching the configured paths). The Backtrack middleware:
 
 1. Creates a Supabase client with cookie access
 2. Calls `supabase.auth.getUser()` to validate/refresh the session

@@ -1,4 +1,8 @@
 /**
+ * @vitest-environment jsdom
+ */
+
+/**
  * Unit tests for Push Notification Service
  *
  * Tests the notification service including permission handling,
@@ -15,15 +19,46 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
 
 // ============================================================================
-// Mock Setup
+// Mock Setup - Use vi.hoisted() for variables used in vi.mock factories
 // ============================================================================
 
-// Mock expo-notifications
-const mockGetPermissionsAsync = vi.fn()
-const mockRequestPermissionsAsync = vi.fn()
-const mockGetExpoPushTokenAsync = vi.fn()
-const mockSetNotificationChannelAsync = vi.fn()
+// Hoist mock functions and objects so they're available when vi.mock runs
+const {
+  mockGetPermissionsAsync,
+  mockRequestPermissionsAsync,
+  mockGetExpoPushTokenAsync,
+  mockSetNotificationChannelAsync,
+  mockDevice,
+  mockConstants,
+} = vi.hoisted(() => ({
+  mockGetPermissionsAsync: vi.fn(),
+  mockRequestPermissionsAsync: vi.fn(),
+  mockGetExpoPushTokenAsync: vi.fn(),
+  mockSetNotificationChannelAsync: vi.fn(),
+  mockDevice: {
+    isDevice: true,
+    brand: 'Apple',
+    modelName: 'iPhone 14',
+    osName: 'iOS',
+    osVersion: '17.0',
+    deviceType: 1,
+  },
+  mockConstants: {
+    expoConfig: {
+      extra: {
+        eas: {
+          projectId: 'test-project-id',
+        },
+      },
+    },
+    manifest: null,
+  } as {
+    expoConfig: { extra: { eas: { projectId: string } } } | null
+    manifest: null
+  },
+}))
 
+// Mock expo-notifications
 vi.mock('expo-notifications', () => ({
   getPermissionsAsync: () => mockGetPermissionsAsync(),
   requestPermissionsAsync: (options: unknown) => mockRequestPermissionsAsync(options),
@@ -50,15 +85,6 @@ vi.mock('expo-notifications', () => ({
 }))
 
 // Mock expo-device
-const mockDevice = {
-  isDevice: true,
-  brand: 'Apple',
-  modelName: 'iPhone 14',
-  osName: 'iOS',
-  osVersion: '17.0',
-  deviceType: 1,
-}
-
 vi.mock('expo-device', () => ({
   get isDevice() {
     return mockDevice.isDevice
@@ -81,17 +107,6 @@ vi.mock('expo-device', () => ({
 }))
 
 // Mock expo-constants
-const mockConstants = {
-  expoConfig: {
-    extra: {
-      eas: {
-        projectId: 'test-project-id',
-      },
-    },
-  },
-  manifest: null,
-}
-
 vi.mock('expo-constants', () => ({
   default: mockConstants,
 }))
@@ -104,11 +119,18 @@ vi.mock('react-native', () => ({
   },
 }))
 
-// Mock Supabase client
-const mockSupabaseRpc = vi.fn()
-const mockSupabaseFrom = vi.fn()
-const mockSupabaseDelete = vi.fn()
-const mockSupabaseEq = vi.fn()
+// Hoist Supabase mock functions
+const {
+  mockSupabaseRpc,
+  mockSupabaseFrom,
+  mockSupabaseDelete,
+  mockSupabaseEq,
+} = vi.hoisted(() => ({
+  mockSupabaseRpc: vi.fn(),
+  mockSupabaseFrom: vi.fn(),
+  mockSupabaseDelete: vi.fn(),
+  mockSupabaseEq: vi.fn(),
+}))
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
@@ -120,8 +142,8 @@ vi.mock('../../lib/supabase', () => ({
           mockSupabaseDelete()
           return {
             eq: (column: string, value: string) => {
-              mockSupabaseEq(column, value)
-              return Promise.resolve({ error: null })
+              // Return the mock function's result, which can be configured per-test
+              return mockSupabaseEq(column, value)
             },
           }
         },

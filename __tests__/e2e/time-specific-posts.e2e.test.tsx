@@ -159,7 +159,7 @@ interface TestWrapperProps {
   children: React.ReactNode
 }
 
-function TestWrapper({ children }: TestWrapperProps): JSX.Element {
+function TestWrapper({ children }: TestWrapperProps): React.ReactNode {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider

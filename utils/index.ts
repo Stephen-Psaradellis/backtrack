@@ -1,7 +1,7 @@
 /**
  * Utils Module
  *
- * Utility functions for the Love Ledger app.
+ * Utility functions for the Backtrack app.
  * Import all utilities from this file for convenience.
  *
  * @example

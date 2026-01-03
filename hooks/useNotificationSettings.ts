@@ -1,7 +1,7 @@
 /**
  * useNotificationSettings Hook
  *
- * Custom hook for managing user notification preferences in the Love Ledger app.
+ * Custom hook for managing user notification preferences in the Backtrack app.
  * Syncs notification settings with the Supabase database and provides toggle functionality.
  *
  * Features:

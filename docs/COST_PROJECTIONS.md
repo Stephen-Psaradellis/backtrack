@@ -1,4 +1,4 @@
-# Love Ledger - Cost Projection & Operational Expenses
+# Backtrack - Cost Projection & Operational Expenses
 
 > Comprehensive analysis of hosting, API, and operational costs at different scales
 
@@ -21,7 +21,7 @@
 
 ## Executive Summary
 
-Love Ledger's infrastructure costs are primarily driven by:
+Backtrack's infrastructure costs are primarily driven by:
 
 | Cost Driver | Impact | Scalability |
 |-------------|--------|-------------|
@@ -49,7 +49,7 @@ Love Ledger's infrastructure costs are primarily driven by:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    LOVE LEDGER STACK                        │
+│                    BACKTRACK STACK                        │
 ├─────────────────────────────────────────────────────────────┤
 │  FRONTEND                                                   │
 │  ├── Expo (iOS/Android)     → App Store/Play Store fees     │
@@ -226,7 +226,7 @@ Love Ledger's infrastructure costs are primarily driven by:
 | Realtime Messages | 200K | $2.50/million |
 | Auth MAU | 50K | $0.00325/MAU |
 
-#### Love Ledger Specific Usage Patterns
+#### Backtrack Specific Usage Patterns
 
 ```
 Per Active User (Monthly Estimates):
@@ -280,7 +280,7 @@ Per Active User (Monthly Estimates):
 | Places - Autocomplete | $2.83/session | $200 credit | Search suggestions |
 | Geocoding | $5.00 | $200 credit | Lat/lng lookup |
 
-#### Love Ledger Usage Patterns
+#### Backtrack Usage Patterns
 
 ```
 Per Active User (Monthly):
@@ -324,7 +324,7 @@ Per Active User (Monthly):
 | Label Detection | $1.50 | Optional enhancement |
 | First 1,000/month | Free | Per feature |
 
-#### Love Ledger Usage
+#### Backtrack Usage
 
 ```
 Per Active User (Monthly):
@@ -582,7 +582,7 @@ Monthly Cost ≈
 
 ## Summary
 
-Love Ledger's infrastructure is designed to scale cost-effectively:
+Backtrack's infrastructure is designed to scale cost-effectively:
 
 1. **Start cheap:** Free tiers cover MVP through ~1,000 users
 2. **Scale predictably:** Costs grow roughly linearly with users

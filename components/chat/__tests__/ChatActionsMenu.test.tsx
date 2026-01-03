@@ -16,25 +16,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChatActionsMenu } from '../ChatActionsMenu'
 
-// Mock CSS module
+// Mock CSS module - must have default export
 vi.mock('../styles/ChatScreen.module.css', () => ({
-  actionsMenuOverlay: 'actionsMenuOverlay',
-  actionsMenu: 'actionsMenu',
-  actionsMenuHeader: 'actionsMenuHeader',
-  actionsMenuTitle: 'actionsMenuTitle',
-  closeButton: 'closeButton',
-  dragHandle: 'dragHandle',
-  dragIndicator: 'dragIndicator',
-  menuItems: 'menuItems',
-  menuItem: 'menuItem',
-  menuItemDefault: 'menuItemDefault',
-  menuItemDanger: 'menuItemDanger',
-  menuItemWarning: 'menuItemWarning',
-  menuItemIcon: 'menuItemIcon',
-  menuItemLabel: 'menuItemLabel',
-  separator: 'separator',
-  actionsMenuFooter: 'actionsMenuFooter',
-  cancelButton: 'cancelButton',
+  default: {
+    actionsMenuOverlay: 'actionsMenuOverlay',
+    actionsMenu: 'actionsMenu',
+    actionsMenuHeader: 'actionsMenuHeader',
+    actionsMenuTitle: 'actionsMenuTitle',
+    closeButton: 'closeButton',
+    dragHandle: 'dragHandle',
+    dragIndicator: 'dragIndicator',
+    menuItems: 'menuItems',
+    menuItem: 'menuItem',
+    menuItemDefault: 'menuItemDefault',
+    menuItemDanger: 'menuItemDanger',
+    menuItemWarning: 'menuItemWarning',
+    menuItemIcon: 'menuItemIcon',
+    menuItemLabel: 'menuItemLabel',
+    separator: 'separator',
+    actionsMenuFooter: 'actionsMenuFooter',
+    cancelButton: 'cancelButton',
+  },
 }))
 
 const defaultProps = {
@@ -265,14 +267,16 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should have role="separator" on separator element', () => {
-      render(
+      const { container } = render(
         <ChatActionsMenu
           {...defaultProps}
           onMuteNotifications={vi.fn()}
         />
       )
 
-      expect(screen.getByRole('separator')).toBeInTheDocument()
+      // The separator has aria-hidden="true" so we need to query by attribute
+      const separator = container.querySelector('[role="separator"]')
+      expect(separator).toBeInTheDocument()
     })
   })
 
@@ -292,9 +296,9 @@ describe('ChatActionsMenu', () => {
       const onClose = vi.fn()
       render(<ChatActionsMenu {...defaultProps} onClose={onClose} />)
 
-      // Get the overlay (parent of dialog)
-      const overlay = screen.getByRole('dialog').parentElement
-      fireEvent.click(overlay!)
+      // The overlay IS the dialog element - click directly on it
+      const overlay = screen.getByRole('dialog')
+      fireEvent.click(overlay)
 
       expect(onClose).toHaveBeenCalledTimes(1)
     })
@@ -329,20 +333,23 @@ describe('ChatActionsMenu', () => {
     it('should have role="dialog" on overlay', () => {
       render(<ChatActionsMenu {...defaultProps} />)
 
-      expect(screen.getByRole('dialog').parentElement).toHaveAttribute('role', 'dialog')
+      // The overlay div IS the dialog element
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
 
     it('should have aria-modal="true"', () => {
       render(<ChatActionsMenu {...defaultProps} />)
 
-      expect(screen.getByRole('dialog').parentElement).toHaveAttribute('aria-modal', 'true')
+      // The overlay div IS the dialog element with aria-modal
+      expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true')
     })
 
     it('should have aria-labelledby pointing to title', () => {
       render(<ChatActionsMenu {...defaultProps} />)
 
-      const overlay = screen.getByRole('dialog').parentElement
-      expect(overlay).toHaveAttribute('aria-labelledby', 'actions-menu-title')
+      // The overlay div IS the dialog element with aria-labelledby
+      const dialog = screen.getByRole('dialog')
+      expect(dialog).toHaveAttribute('aria-labelledby', 'actions-menu-title')
 
       const title = document.getElementById('actions-menu-title')
       expect(title).toHaveTextContent('Chat Actions')
@@ -399,14 +406,16 @@ describe('ChatActionsMenu', () => {
     })
 
     it('should have aria-hidden on separator', () => {
-      render(
+      const { container } = render(
         <ChatActionsMenu
           {...defaultProps}
           onMuteNotifications={vi.fn()}
         />
       )
 
-      expect(screen.getByRole('separator')).toHaveAttribute('aria-hidden', 'true')
+      // The separator has aria-hidden="true" so we need to query by attribute
+      const separator = container.querySelector('[role="separator"]')
+      expect(separator).toHaveAttribute('aria-hidden', 'true')
     })
   })
 

@@ -18,27 +18,29 @@ import { MessageBubble } from '../MessageBubble'
 import type { MessageWithSender, OptimisticMessageDisplay } from '../../../types/chat'
 import type { UUID } from '../../../types/database'
 
-// Mock CSS module
+// Mock CSS module - must have default export
 vi.mock('../styles/ChatScreen.module.css', () => ({
-  messageRow: 'messageRow',
-  messageRowSent: 'messageRowSent',
-  messageRowReceived: 'messageRowReceived',
-  messageBubble: 'messageBubble',
-  messageBubbleSent: 'messageBubbleSent',
-  messageBubbleReceived: 'messageBubbleReceived',
-  messageBubbleFailed: 'messageBubbleFailed',
-  messageAvatar: 'messageAvatar',
-  messageContent: 'messageContent',
-  messageFooter: 'messageFooter',
-  messageTime: 'messageTime',
-  messageStatus: 'messageStatus',
-  sendingIcon: 'sendingIcon',
-  failedIcon: 'failedIcon',
-  readIcon: 'readIcon',
-  sentIcon: 'sentIcon',
-  failedActions: 'failedActions',
-  retryMessageButton: 'retryMessageButton',
-  deleteMessageButton: 'deleteMessageButton',
+  default: {
+    messageRow: 'messageRow',
+    messageRowSent: 'messageRowSent',
+    messageRowReceived: 'messageRowReceived',
+    messageBubble: 'messageBubble',
+    messageBubbleSent: 'messageBubbleSent',
+    messageBubbleReceived: 'messageBubbleReceived',
+    messageBubbleFailed: 'messageBubbleFailed',
+    messageAvatar: 'messageAvatar',
+    messageContent: 'messageContent',
+    messageFooter: 'messageFooter',
+    messageTime: 'messageTime',
+    messageStatus: 'messageStatus',
+    sendingIcon: 'sendingIcon',
+    failedIcon: 'failedIcon',
+    readIcon: 'readIcon',
+    sentIcon: 'sentIcon',
+    failedActions: 'failedActions',
+    retryMessageButton: 'retryMessageButton',
+    deleteMessageButton: 'deleteMessageButton',
+  },
 }))
 
 // Mock formatMessageTime

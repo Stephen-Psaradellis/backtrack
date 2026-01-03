@@ -173,14 +173,14 @@ export interface FavoriteLocationCardProps {
  * Follows iOS design guidelines (matching LocationPicker and FavoritesList)
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   textPrimary: '#000000',
   textSecondary: '#8E8E93',
   textTertiary: '#C7C7CC',
   background: '#FFFFFF',
   backgroundSecondary: '#F2F2F7',
   border: '#E5E5EA',
-  selectedBackground: '#E3F2FF',
+  selectedBackground: '#FFE8E3',
   heart: '#FF2D55',
   success: '#34C759',
   distanceBadge: '#E8F5E9',

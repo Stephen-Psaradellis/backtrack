@@ -1,7 +1,7 @@
 /**
  * DateTime Utility
  *
- * Utility functions for handling date/time formatting and validation in the Love Ledger app.
+ * Utility functions for handling date/time formatting and validation in the Backtrack app.
  * Supports sighting time display with flexible granularity (specific time vs. approximate periods).
  *
  * Time granularity options:
@@ -69,6 +69,8 @@ export interface FormatTimeOptions {
   includeDayOfWeek?: boolean
   /** Whether to use 12-hour format (default: true) */
   use12HourFormat?: boolean
+  /** Reference date for relative day calculation (defaults to now) */
+  referenceDate?: Date
 }
 
 // ============================================================================
@@ -145,7 +147,7 @@ export const MONTH_NAMES_SHORT = [
  * - Afternoon: 12:00 PM - 5:59 PM
  * - Evening: 6:00 PM - 11:59 PM
  */
-export const TIME_GRANULARITY_RANGES: Record<Exclude<TimeGranularity, 'specific'>, TimeRange> = {
+export const TIME_GRANULARITY_RANGES: Record<'morning' | 'afternoon' | 'evening', TimeRange> = {
   morning: {
     startHour: 6,
     endHour: 12,
@@ -175,7 +177,7 @@ export const DATE_TIME_ERRORS = {
 /**
  * Default formatting options
  */
-export const DEFAULT_FORMAT_OPTIONS: Required<FormatTimeOptions> = {
+export const DEFAULT_FORMAT_OPTIONS: Omit<Required<FormatTimeOptions>, 'referenceDate'> = {
   includeDayOfWeek: true,
   use12HourFormat: true,
 }
@@ -312,7 +314,7 @@ export function formatSightingTime(
   options: FormatTimeOptions = {}
 ): string {
   const config = { ...DEFAULT_FORMAT_OPTIONS, ...options }
-  const dayLabel = formatRelativeDay(date)
+  const dayLabel = formatRelativeDay(date, options.referenceDate)
 
   if (granularity === 'specific') {
     const timeStr = formatTimeOfDay(date, config.use12HourFormat)

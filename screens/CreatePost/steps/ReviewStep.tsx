@@ -211,7 +211,7 @@ export const ReviewStep = memo(function ReviewStep({
         <View style={styles.reviewPhotoContainer}>
           {photoLoading ? (
             <View style={styles.photoPlaceholder}>
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color="#FF6B47" />
             </View>
           ) : photo?.signedUrl ? (
             <Image

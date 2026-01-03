@@ -34,17 +34,15 @@
  * ```
  */
 
-'use client'
-
 import { memo, useState, useCallback, useEffect, useRef } from 'react'
-import { Modal } from '@/components/ui/Modal'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { useEvents, type Event } from '@/hooks/useEvents'
-import { useEventPosts, type CreatePostParams, type EventPost } from '@/hooks/useEventPosts'
-import { useUserLocation } from '@/hooks/useUserLocation'
-import { CompactEventCard } from '@/components/events/EventCard'
-import { formatEventTime } from '@/utils/date-helpers'
+import { Modal } from '../ui/Modal'
+import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
+import { useEvents, type Event } from '../../hooks/useEvents'
+import { useEventPosts, type CreatePostParams, type EventPost } from '../../hooks/useEventPosts'
+import { useUserLocation } from '../../hooks/useUserLocation'
+import { CompactEventCard } from '../events/EventCard'
+import { formatEventTime } from '../../utils/date-helpers'
 
 // ============================================================================
 // Types
@@ -323,7 +321,7 @@ function EventSearchDropdown({
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <LoadingSpinner className="text-pink-500" />
+            <LoadingSpinner className="text-primary-500" />
           </div>
         )}
       </div>
@@ -677,7 +675,7 @@ export const CreatePostModal = memo(function CreatePostModal({
               'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
               errors.targetDescription
                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:border-pink-500 focus:ring-pink-500 dark:border-gray-600',
+                : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600',
               'bg-white dark:bg-gray-800',
               'text-gray-900 dark:text-gray-100',
             ].join(' ')}
@@ -720,7 +718,7 @@ export const CreatePostModal = memo(function CreatePostModal({
               'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
               errors.message
                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:border-pink-500 focus:ring-pink-500 dark:border-gray-600',
+                : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600',
               'bg-white dark:bg-gray-800',
               'text-gray-900 dark:text-gray-100',
             ].join(' ')}
@@ -762,7 +760,7 @@ export const CreatePostModal = memo(function CreatePostModal({
               'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
               errors.note
                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:border-pink-500 focus:ring-pink-500 dark:border-gray-600',
+                : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600',
               'bg-white dark:bg-gray-800',
               'text-gray-900 dark:text-gray-100',
             ].join(' ')}

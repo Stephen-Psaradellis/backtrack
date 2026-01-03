@@ -1,0 +1,26 @@
+# Maestro Configuration
+# https://maestro.mobile.dev/reference/configuration
+
+appId: com.loveledger.app
+
+# Environment variables available in all flows
+env:
+  TEST_USER_EMAIL: ${TEST_USER_EMAIL}
+  TEST_USER_PASSWORD: ${TEST_USER_PASSWORD}
+
+# Default settings
+onFlowStart:
+  - clearState # Clear app state before each flow
+
+# Screenshot on failure
+onFlowComplete:
+  - takeScreenshot: flow_complete
+
+# Tags for filtering tests
+tags:
+  smoke: # Quick sanity tests
+    - auth-login.yaml
+  full: # All E2E tests
+    - auth-login.yaml
+    - producer-flow.yaml
+    - consumer-flow.yaml

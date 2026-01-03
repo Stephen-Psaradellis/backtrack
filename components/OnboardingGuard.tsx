@@ -1,4 +1,4 @@
-'use client';
+;
 
 /**
  * OnboardingGuard Component
@@ -27,7 +27,7 @@
 
 import { useEffect, useState, memo, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { isOnboardingComplete } from '@/utils/storage';
+import { isOnboardingComplete } from '../utils/storage';
 
 // ============================================================================
 // TYPES
@@ -119,7 +119,7 @@ export const OnboardingGuard = memo(function OnboardingGuard({
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
         <div className="text-center animate-pulse">
           <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Love Ledger
+            Backtrack
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Loading...

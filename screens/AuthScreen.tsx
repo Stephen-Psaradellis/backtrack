@@ -54,8 +54,20 @@ type AuthMode = 'login' | 'signup'
 // CONSTANTS
 // ============================================================================
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const MIN_PASSWORD_LENGTH = 6
+/**
+ * RFC 5322 compliant email regex
+ * Validates:
+ * - Local part: alphanumeric, dots, underscores, hyphens, plus signs
+ * - Domain: valid domain name with TLD (2+ characters)
+ * - Prevents common invalid patterns like double dots, leading/trailing dots
+ */
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/
+
+/**
+ * Minimum password length for security
+ * NIST recommends 8+ characters minimum for user-generated passwords
+ */
+const MIN_PASSWORD_LENGTH = 8
 
 // ============================================================================
 // COMPONENT
@@ -68,7 +80,7 @@ const MIN_PASSWORD_LENGTH = 6
  * // Used in navigation
  * <Stack.Screen name="Login" component={AuthScreen} />
  */
-export function AuthScreen(): JSX.Element {
+export function AuthScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // HOOKS
   // ---------------------------------------------------------------------------
@@ -340,8 +352,8 @@ export function AuthScreen(): JSX.Element {
           </Text>
           <Text style={styles.subtitle}>
             {mode === 'login'
-              ? 'Sign in to continue to Love Ledger'
-              : 'Sign up to start using Love Ledger'}
+              ? 'Sign in to continue to Backtrack'
+              : 'Sign up to start using Backtrack'}
           </Text>
         </View>
 
@@ -652,12 +664,12 @@ const styles = StyleSheet.create({
   },
   toggleModeLink: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#FF6B47',
     fontWeight: '600',
   },
   forgotPasswordLink: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#FF6B47',
     fontWeight: '600',
     marginTop: 16,
     textAlign: 'center',

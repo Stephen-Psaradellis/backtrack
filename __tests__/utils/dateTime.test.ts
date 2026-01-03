@@ -256,38 +256,38 @@ describe('formatSightingTime', () => {
   describe('with specific granularity', () => {
     it('should format "Today at HH:MM AM/PM"', () => {
       const today = createDateWithTime(0, 15, 30, REFERENCE_DATE)
-      const result = formatSightingTime(today, 'specific', { use12HourFormat: true })
+      const result = formatSightingTime(today, 'specific', { use12HourFormat: true, referenceDate: REFERENCE_DATE })
       expect(result).toBe('Today at 3:30 PM')
     })
 
     it('should format "Yesterday at HH:MM AM/PM"', () => {
       const yesterday = createDateWithTime(1, 10, 15, REFERENCE_DATE)
-      const result = formatSightingTime(yesterday, 'specific')
+      const result = formatSightingTime(yesterday, 'specific', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Yesterday at 10:15 AM')
     })
 
     it('should format day name with time for dates within week', () => {
       const threeDaysAgo = createDateWithTime(3, 14, 0, REFERENCE_DATE)
       const dayName = DAY_NAMES[threeDaysAgo.getDay()]
-      const result = formatSightingTime(threeDaysAgo, 'specific')
+      const result = formatSightingTime(threeDaysAgo, 'specific', { referenceDate: REFERENCE_DATE })
       expect(result).toBe(`${dayName} at 2:00 PM`)
     })
 
     it('should format "Mon DD at HH:MM" for older dates', () => {
       const oldDate = createDateWithTime(10, 9, 45, REFERENCE_DATE)
-      const result = formatSightingTime(oldDate, 'specific')
+      const result = formatSightingTime(oldDate, 'specific', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Dec 17 at 9:45 AM')
     })
 
     it('should handle midnight correctly', () => {
       const midnight = createDateWithTime(1, 0, 0, REFERENCE_DATE)
-      const result = formatSightingTime(midnight, 'specific')
+      const result = formatSightingTime(midnight, 'specific', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Yesterday at 12:00 AM')
     })
 
     it('should handle noon correctly', () => {
       const noon = createDateWithTime(0, 12, 0, REFERENCE_DATE)
-      const result = formatSightingTime(noon, 'specific', { use12HourFormat: true })
+      const result = formatSightingTime(noon, 'specific', { use12HourFormat: true, referenceDate: REFERENCE_DATE })
       expect(result).toBe('Today at 12:00 PM')
     })
   })
@@ -295,26 +295,26 @@ describe('formatSightingTime', () => {
   describe('with morning granularity', () => {
     it('should format "Today morning"', () => {
       const today = createDateWithTime(0, 9, 0, REFERENCE_DATE)
-      const result = formatSightingTime(today, 'morning')
+      const result = formatSightingTime(today, 'morning', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Today morning')
     })
 
     it('should format "Yesterday morning"', () => {
       const yesterday = createDate(1, REFERENCE_DATE)
-      const result = formatSightingTime(yesterday, 'morning')
+      const result = formatSightingTime(yesterday, 'morning', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Yesterday morning')
     })
 
     it('should format day name with morning for dates within week', () => {
       const threeDaysAgo = createDate(3, REFERENCE_DATE)
       const dayName = DAY_NAMES[threeDaysAgo.getDay()]
-      const result = formatSightingTime(threeDaysAgo, 'morning')
+      const result = formatSightingTime(threeDaysAgo, 'morning', { referenceDate: REFERENCE_DATE })
       expect(result).toBe(`${dayName} morning`)
     })
 
     it('should format "Mon DD morning" for older dates', () => {
       const oldDate = createDate(10, REFERENCE_DATE)
-      const result = formatSightingTime(oldDate, 'morning')
+      const result = formatSightingTime(oldDate, 'morning', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Dec 17 morning')
     })
   })
@@ -322,13 +322,13 @@ describe('formatSightingTime', () => {
   describe('with afternoon granularity', () => {
     it('should format "Today afternoon"', () => {
       const today = createDate(0, REFERENCE_DATE)
-      const result = formatSightingTime(today, 'afternoon')
+      const result = formatSightingTime(today, 'afternoon', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Today afternoon')
     })
 
     it('should format "Yesterday afternoon"', () => {
       const yesterday = createDate(1, REFERENCE_DATE)
-      const result = formatSightingTime(yesterday, 'afternoon')
+      const result = formatSightingTime(yesterday, 'afternoon', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Yesterday afternoon')
     })
   })
@@ -336,14 +336,14 @@ describe('formatSightingTime', () => {
   describe('with evening granularity', () => {
     it('should format "Today evening"', () => {
       const today = createDate(0, REFERENCE_DATE)
-      const result = formatSightingTime(today, 'evening')
+      const result = formatSightingTime(today, 'evening', { referenceDate: REFERENCE_DATE })
       expect(result).toBe('Today evening')
     })
 
     it('should format "Tuesday evening" for day within week', () => {
       const threeDaysAgo = createDate(3, REFERENCE_DATE)
       const dayName = DAY_NAMES[threeDaysAgo.getDay()]
-      const result = formatSightingTime(threeDaysAgo, 'evening')
+      const result = formatSightingTime(threeDaysAgo, 'evening', { referenceDate: REFERENCE_DATE })
       expect(result).toBe(`${dayName} evening`)
     })
   })
@@ -351,7 +351,7 @@ describe('formatSightingTime', () => {
   describe('format options', () => {
     it('should respect use12HourFormat option when false', () => {
       const date = createDateWithTime(0, 14, 30, REFERENCE_DATE)
-      const result = formatSightingTime(date, 'specific', { use12HourFormat: false })
+      const result = formatSightingTime(date, 'specific', { use12HourFormat: false, referenceDate: REFERENCE_DATE })
       expect(result).toBe('Today at 14:30')
     })
   })

@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.loveledger.app'
+    namespace 'com.backtrack.app'
     defaultConfig {
-        applicationId 'com.loveledger.app'
+        applicationId 'com.backtrack.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

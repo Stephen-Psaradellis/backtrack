@@ -38,7 +38,7 @@ export {
   type ButtonSize,
 } from './Button'
 
-// Map
+// Map components
 export {
   MapView,
   UserLocationMap,
@@ -63,38 +63,20 @@ export {
   type LocationItem,
 } from './LocationPicker'
 
-// Avatar Preview
-export {
-  AvatarPreview,
-  SmallAvatarPreview,
-  MediumAvatarPreview,
-  LargeAvatarPreview,
-  XLargeAvatarPreview,
-  TransparentAvatarPreview,
-  isValidAvatarConfig,
-  createAvatarConfig,
-  areAvatarConfigsEqual,
-  DEFAULT_AVATAR_SIZE,
-  AVATAR_SIZES,
-  type AvatarPreviewProps,
-} from './AvatarPreview'
-
-// Avatar Builder
-export {
-  AvatarBuilder,
-  CompactAvatarBuilder,
-  ModalAvatarBuilder,
-  type AvatarBuilderProps,
-} from './AvatarBuilder'
-
 // Ready Player Me Avatar
 export {
+  RPMAvatarPreview,
+  XSAvatarPreview,
   SmallAvatarPreview,
   MediumAvatarPreview,
   LargeAvatarPreview,
+  XLAvatarPreview,
+  FullBodyAvatarPreview,
   ReadyPlayerMeCreator,
+  AVATAR_SIZES,
   type StoredAvatar,
   type RPMAvatarData,
+  type RPMAvatarPreviewProps,
 } from './ReadyPlayerMe'
 
 // Selfie Camera
@@ -115,16 +97,11 @@ export {
 export {
   PostCard,
   CompactPostCard,
-  PostCardNoLocation,
-  MatchablePostCard,
-  PostCardListItem,
-  createPostCardRenderer,
   formatRelativeTime,
   truncateText,
   getMatchColor,
   getMatchLabel,
   type PostCardProps,
-  type PostCardListItemProps,
 } from './PostCard'
 
 // Chat Bubble
@@ -193,3 +170,96 @@ export {
 
 // Onboarding Guard
 export { OnboardingGuard } from './OnboardingGuard'
+
+// Streak components
+export {
+  StreakBadge,
+} from './streaks/StreakBadge'
+
+export {
+  StreakCard,
+  LocationStreaksCard,
+} from './streaks/StreakCard'
+
+// Event attendance components
+export {
+  AttendanceButton,
+} from './events/AttendanceButton'
+
+export {
+  AttendeesPreview,
+  AttendeesCompact,
+} from './events/AttendeesPreview'
+
+// Regulars components
+export {
+  RegularCard,
+  RegularAvatar,
+} from './regulars/RegularCard'
+
+export {
+  FellowRegularsList,
+  LocationRegularsList,
+  RegularsPreview,
+} from './regulars/RegularsList'
+
+export {
+  RegularsModeToggle,
+  RegularsModeCompactToggle,
+} from './regulars/RegularsModeToggle'
+
+// Settings components
+export { NotificationSettings } from './settings/NotificationSettings'
+
+// Check-in button (tiered matching)
+export {
+  CheckinButton,
+  type CheckinButtonProps,
+} from './CheckinButton'
+
+// Verification tier badge
+export {
+  VerificationTierBadge,
+  useTierColor,
+  useTierBgColor,
+  type VerificationTierBadgeProps,
+} from './VerificationTierBadge'
+
+// Avatar component (with gradient rings and status indicators)
+export {
+  Avatar,
+  AvatarGroup,
+  type AvatarProps,
+  type AvatarGroupProps,
+  type AvatarSize,
+  type AvatarStatus,
+} from './Avatar'
+
+// Badge components (modern badges and status dots)
+export {
+  Badge,
+  NotificationBadge,
+  StatusDot,
+  type BadgeProps,
+  type NotificationBadgeProps,
+  type StatusDotProps,
+  type BadgeVariant,
+  type BadgeSize,
+  type StatusDotVariant,
+} from './Badge'
+
+// Skeleton loading components (shimmer animation)
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonCircle,
+  SkeletonAvatar,
+  SkeletonCard,
+  SkeletonButton,
+  SkeletonList,
+  type SkeletonProps,
+  type SkeletonTextProps,
+} from './Skeleton'
+
+// Navigation components
+export { AnimatedTabBar } from './navigation/AnimatedTabBar'

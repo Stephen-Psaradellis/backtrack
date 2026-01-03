@@ -1,7 +1,7 @@
 /**
  * Haptics Utilities
  *
- * Provides centralized haptic feedback functions for the Love Ledger app.
+ * Provides centralized haptic feedback functions for the Backtrack app.
  * Uses expo-haptics to deliver tactile feedback for user interactions.
  *
  * HAPTIC FEEDBACK TYPES:

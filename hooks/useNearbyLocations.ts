@@ -7,10 +7,8 @@
  * @module hooks/useNearbyLocations
  */
 
-'use client'
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '../lib/supabase'
 import {
   fetchNearbyLocations,
   fetchLocationsWithActivePosts,
@@ -18,13 +16,13 @@ import {
   DEFAULT_RADIUS_METERS,
   GeoError,
   isValidCoordinates,
-} from '@/lib/utils/geo'
+} from '../lib/utils/geo'
 import type {
   Coordinates,
   LocationWithDistance,
   LocationWithActivePosts,
   LocationWithVisit,
-} from '@/types/database'
+} from '../types/database'
 
 // ============================================================================
 // Constants
@@ -137,7 +135,7 @@ export function useNearbyLocations(
   // Refs for cleanup and debouncing
   const abortControllerRef = useRef<AbortController | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const supabaseRef = useRef(createClient())
+  const supabaseRef = useRef(supabase)
 
   // Memoize the coordinate values to prevent unnecessary effect triggers
   const memoizedCoordinates = useMemo(() => {
@@ -373,7 +371,7 @@ export function useVisitedLocations(
 
   // Refs for cleanup
   const abortControllerRef = useRef<AbortController | null>(null)
-  const supabaseRef = useRef(createClient())
+  const supabaseRef = useRef(supabase)
 
   /**
    * Core fetch function that calls the geospatial API

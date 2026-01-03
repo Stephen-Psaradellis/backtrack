@@ -2,7 +2,7 @@
  * Button Component
  *
  * Reusable button with multiple variants, sizes, and states.
- * Provides a consistent button experience throughout the app.
+ * Uses the unified design system colors.
  */
 
 import React, { useCallback } from 'react'
@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native'
 import { lightFeedback, warningFeedback } from '../lib/haptics'
+import { colors, borderRadius, shadows } from '../constants/theme'
 
 // ============================================================================
 // TYPES
@@ -26,33 +27,19 @@ export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'dan
 export type ButtonSize = 'small' | 'medium' | 'large'
 
 export interface ButtonProps {
-  /** Button text */
   title: string
-  /** Press handler */
   onPress: () => void
-  /** Visual variant (default: 'primary') */
   variant?: ButtonVariant
-  /** Button size (default: 'medium') */
   size?: ButtonSize
-  /** Whether the button is disabled */
   disabled?: boolean
-  /** Whether to show loading state */
   loading?: boolean
-  /** Icon to display before the title */
   leftIcon?: React.ReactNode
-  /** Icon to display after the title */
   rightIcon?: React.ReactNode
-  /** Whether the button should fill its container width */
   fullWidth?: boolean
-  /** Custom container style */
   style?: StyleProp<ViewStyle>
-  /** Custom text style */
   textStyle?: StyleProp<TextStyle>
-  /** Test ID for testing purposes */
   testID?: string
-  /** Accessibility label */
   accessibilityLabel?: string
-  /** Whether to disable haptic feedback on press (default: false) */
   hapticDisabled?: boolean
 }
 
@@ -60,34 +47,6 @@ export interface ButtonProps {
 // COMPONENT
 // ============================================================================
 
-/**
- * Button - A customizable button component
- *
- * @example
- * // Primary button (default)
- * <Button title="Submit" onPress={handleSubmit} />
- *
- * @example
- * // Outline button with loading
- * <Button
- *   title="Save"
- *   variant="outline"
- *   loading={isLoading}
- *   onPress={handleSave}
- * />
- *
- * @example
- * // Danger button (for destructive actions)
- * <Button
- *   title="Delete"
- *   variant="danger"
- *   onPress={handleDelete}
- * />
- *
- * @example
- * // Full width button
- * <Button title="Continue" fullWidth onPress={handleContinue} />
- */
 export function Button({
   title,
   onPress,
@@ -104,13 +63,10 @@ export function Button({
   accessibilityLabel,
   hapticDisabled = false,
 }: ButtonProps): JSX.Element {
-  // Determine if button should be interactive
   const isDisabled = disabled || loading
 
-  // Wrap onPress to trigger haptic feedback before executing callback
   const handlePress = useCallback(async () => {
     if (!hapticDisabled) {
-      // Danger variant uses warning feedback, all others use light feedback
       if (variant === 'danger') {
         await warningFeedback()
       } else {
@@ -120,7 +76,6 @@ export function Button({
     onPress()
   }, [hapticDisabled, variant, onPress])
 
-  // Get styles based on variant and size
   const containerStyles = [
     styles.container,
     styles[`container_${size}` as keyof typeof styles],
@@ -140,15 +95,16 @@ export function Button({
     textStyle,
   ]
 
-  // Get loading indicator color based on variant
-  const loadingColor = variant === 'primary' || variant === 'danger' ? '#FFFFFF' : '#007AFF'
+  const loadingColor = variant === 'primary' || variant === 'danger'
+    ? colors.white
+    : colors.primary[500]
 
   return (
     <TouchableOpacity
       style={containerStyles}
       onPress={handlePress}
       disabled={isDisabled}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
       testID={testID}
       accessibilityLabel={accessibilityLabel || title}
       accessibilityRole="button"
@@ -177,54 +133,36 @@ export function Button({
 // PRESET VARIANTS
 // ============================================================================
 
-/**
- * Primary action button
- */
 export function PrimaryButton(
   props: Omit<ButtonProps, 'variant'>
 ): JSX.Element {
   return <Button {...props} variant="primary" />
 }
 
-/**
- * Secondary action button
- */
 export function SecondaryButton(
   props: Omit<ButtonProps, 'variant'>
 ): JSX.Element {
   return <Button {...props} variant="secondary" />
 }
 
-/**
- * Outline button
- */
 export function OutlineButton(
   props: Omit<ButtonProps, 'variant'>
 ): JSX.Element {
   return <Button {...props} variant="outline" />
 }
 
-/**
- * Ghost/text button (minimal styling)
- */
 export function GhostButton(
   props: Omit<ButtonProps, 'variant'>
 ): JSX.Element {
   return <Button {...props} variant="ghost" />
 }
 
-/**
- * Danger button (for destructive actions)
- */
 export function DangerButton(
   props: Omit<ButtonProps, 'variant'>
 ): JSX.Element {
   return <Button {...props} variant="danger" />
 }
 
-/**
- * Icon-only button
- */
 export function IconButton({
   icon,
   onPress,
@@ -242,10 +180,8 @@ export function IconButton({
   disabled?: boolean
   testID?: string
   accessibilityLabel: string
-  /** Whether to disable haptic feedback on press (default: false) */
   hapticDisabled?: boolean
 }): JSX.Element {
-  // Wrap onPress to trigger haptic feedback before executing callback
   const handlePress = useCallback(async () => {
     if (!hapticDisabled) {
       await lightFeedback()
@@ -265,7 +201,7 @@ export function IconButton({
       style={containerStyles}
       onPress={handlePress}
       disabled={disabled}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
       testID={testID}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
@@ -285,71 +221,80 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
+    ...shadows.native.DEFAULT,
   },
   fullWidth: {
     width: '100%',
   },
   containerDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
+    ...shadows.native.sm,
   },
 
   // Container sizes
   container_small: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    minHeight: 32,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    minHeight: 36,
+    borderRadius: borderRadius.DEFAULT,
   },
   container_medium: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    minHeight: 44,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    minHeight: 48,
+    borderRadius: borderRadius.md,
   },
   container_large: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    minHeight: 52,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    minHeight: 56,
+    borderRadius: borderRadius.lg,
   },
 
-  // Container variants
+  // Container variants - Using new coral/violet palette
   container_primary: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary[500],
   },
   container_primary_disabled: {
-    backgroundColor: '#B0D4FF',
+    backgroundColor: colors.primary[200],
   },
   container_secondary: {
-    backgroundColor: '#E5E5EA',
+    backgroundColor: colors.neutral[100],
+    shadowOpacity: 0.04,
   },
   container_secondary_disabled: {
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.neutral[50],
   },
   container_outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#007AFF',
+    backgroundColor: colors.transparent,
+    borderWidth: 2,
+    borderColor: colors.primary[500],
+    shadowOpacity: 0,
   },
   container_outline_disabled: {
-    borderColor: '#B0D4FF',
+    borderColor: colors.primary[200],
   },
   container_ghost: {
-    backgroundColor: 'transparent',
+    backgroundColor: colors.transparent,
+    shadowOpacity: 0,
   },
   container_ghost_disabled: {},
   container_danger: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.error.main,
   },
   container_danger_disabled: {
-    backgroundColor: '#FFB0AB',
+    backgroundColor: colors.error.light,
   },
 
   // Text base
   text: {
     fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   textDisabled: {
-    opacity: 0.7,
+    opacity: 0.8,
   },
 
   // Text sizes
@@ -365,34 +310,34 @@ const styles = StyleSheet.create({
 
   // Text variants
   text_primary: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   text_primary_disabled: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   text_secondary: {
-    color: '#000000',
+    color: colors.neutral[900],
   },
   text_secondary_disabled: {
-    color: '#8E8E93',
+    color: colors.neutral[500],
   },
   text_outline: {
-    color: '#007AFF',
+    color: colors.primary[600],
   },
   text_outline_disabled: {
-    color: '#B0D4FF',
+    color: colors.primary[300],
   },
   text_ghost: {
-    color: '#007AFF',
+    color: colors.primary[600],
   },
   text_ghost_disabled: {
-    color: '#B0D4FF',
+    color: colors.primary[300],
   },
   text_danger: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   text_danger_disabled: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
 
   // Content container (for icons)
@@ -402,29 +347,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   leftIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   rightIcon: {
-    marginLeft: 8,
+    marginLeft: 10,
   },
 
   // Icon button styles
   iconButton: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: borderRadius.DEFAULT,
   },
   iconButton_small: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
   },
   iconButton_medium: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
   },
   iconButton_large: {
-    width: 52,
-    height: 52,
+    width: 56,
+    height: 56,
   },
 })
 

@@ -116,14 +116,14 @@ export interface PopularVenuesSkeletonProps {
  * iOS-style colors matching the app theme
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   secondary: '#8E8E93',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
   border: '#E5E5EA',
   text: '#000000',
   textSecondary: '#8E8E93',
-  pink: '#EC4899',
+  pink: '#FF6B47',
   error: '#FF3B30',
 } as const
 

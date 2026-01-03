@@ -310,7 +310,7 @@ export function ReadyPlayerMeCreator({
       <View style={styles.webViewContainer}>
         {isLoading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color="#FF6B47" />
             <Text style={styles.loadingText}>Loading avatar creator...</Text>
           </View>
         )}
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#FF6B47',
     fontWeight: '500',
   },
   webViewContainer: {

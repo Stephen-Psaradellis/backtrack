@@ -90,7 +90,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: #d1d5db;
+  background-color: #D6D3D1;
   color: #374151;
   display: flex;
   align-items: center;
@@ -110,7 +110,7 @@
 }
 
 .messageBubbleSent {
-  background-color: #ec4899;
+  background-color: #FF6B47;
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -193,15 +193,15 @@
 .deleteMessageButton {
   padding: 4px 8px;
   background-color: transparent;
-  color: #6b7280;
-  border: 1px solid #d1d5db;
+  color: #78716C;
+  border: 1px solid #D6D3D1;
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
 }
 
 .deleteMessageButton:hover {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
 }
 
 /* ============================================================================
@@ -216,7 +216,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background-color: #f9fafb;
+  background-color: #FAFAF9;
   scroll-behavior: smooth;
   will-change: scroll-position;
   -webkit-overflow-scrolling: touch;
@@ -256,12 +256,12 @@
 }
 
 .emptyStateIcon {
-  color: #d1d5db;
+  color: #D6D3D1;
   margin-bottom: 16px;
 }
 
 .emptyStateText {
-  color: #6b7280;
+  color: #78716C;
   font-size: 14px;
   margin: 0;
 }
@@ -278,8 +278,8 @@
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #ec4899;
+  border: 2px solid #E7E5E4;
+  border-top-color: #FF6B47;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -287,8 +287,8 @@
 .spinnerLarge {
   width: 40px;
   height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #ec4899;
+  border: 3px solid #E7E5E4;
+  border-top-color: #FF6B47;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -303,7 +303,7 @@
 }
 
 .loadingMoreText {
-  color: #6b7280;
+  color: #78716C;
   font-size: 12px;
 }
 
@@ -320,11 +320,11 @@
 .dateSeparatorLine {
   flex: 1;
   height: 1px;
-  background-color: #e5e7eb;
+  background-color: #E7E5E4;
 }
 
 .dateSeparatorText {
-  color: #6b7280;
+  color: #78716C;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -352,14 +352,14 @@
   align-items: center;
   gap: 4px;
   padding: 8px 12px;
-  background-color: #e5e7eb;
+  background-color: #E7E5E4;
   border-radius: 16px;
 }
 
 .typingDot {
   width: 8px;
   height: 8px;
-  background-color: #9ca3af;
+  background-color: #A8A29E;
   border-radius: 50%;
   animation: typingBounce 1.4s infinite ease-in-out;
 }
@@ -377,7 +377,7 @@
 }
 
 .typingText {
-  color: #6b7280;
+  color: #78716C;
   font-size: 12px;
   font-style: italic;
 }
@@ -391,7 +391,7 @@
   align-items: flex-end;
   padding: 12px 16px;
   background-color: white;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #E7E5E4;
   gap: 12px;
 }
 
@@ -404,7 +404,7 @@
   width: 100%;
   padding: 10px 14px;
   padding-right: 60px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #D6D3D1;
   border-radius: 20px;
   font-size: 14px;
   resize: none;
@@ -418,12 +418,12 @@
 }
 
 .textInput:focus {
-  border-color: #ec4899;
+  border-color: #FF6B47;
 }
 
 .textInputDisabled {
-  background-color: #f3f4f6;
-  color: #9ca3af;
+  background-color: #F5F5F4;
+  color: #A8A29E;
   cursor: not-allowed;
 }
 
@@ -446,7 +446,7 @@
 
 .sendButton {
   padding: 10px;
-  background-color: #ec4899;
+  background-color: #FF6B47;
   color: white;
   border: none;
   border-radius: 50%;
@@ -459,7 +459,7 @@
 }
 
 .sendButton:hover:not(:disabled) {
-  background-color: #db2777;
+  background-color: #F04E2A;
 }
 
 .sendButtonDisabled {
@@ -505,12 +505,12 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  color: #6b7280;
+  color: #78716C;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .toolbarButton:hover:not(:disabled) {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
   color: #374151;
 }
 
@@ -531,7 +531,7 @@
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background-color: #ec4899;
+  background-color: #FF6B47;
   color: white;
   border-radius: 8px;
   font-size: 10px;
@@ -546,7 +546,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px;
-  background-color: #f9fafb;
+  background-color: #FAFAF9;
   border-radius: 8px;
   margin-bottom: 4px;
 }
@@ -558,7 +558,7 @@
   padding: 6px 8px;
   background-color: white;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #E7E5E4;
   max-width: 200px;
   position: relative;
 }
@@ -587,9 +587,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
   border-radius: 4px;
-  color: #6b7280;
+  color: #78716C;
   flex-shrink: 0;
 }
 
@@ -611,7 +611,7 @@
 
 .attachmentSize {
   font-size: 10px;
-  color: #9ca3af;
+  color: #A8A29E;
 }
 
 .attachmentProgress {
@@ -620,7 +620,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background-color: #e5e7eb;
+  background-color: #E7E5E4;
   border-radius: 0 0 6px 6px;
   overflow: hidden;
 }
@@ -646,13 +646,13 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  color: #9ca3af;
+  color: #A8A29E;
   margin-left: auto;
   flex-shrink: 0;
 }
 
 .removeAttachmentButton:hover {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
   color: #374151;
 }
 
@@ -665,7 +665,7 @@
   align-items: center;
   padding: 12px 16px;
   background-color: white;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #E7E5E4;
   gap: 12px;
 }
 
@@ -683,7 +683,7 @@
 }
 
 .backButton:hover {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
 }
 
 .headerUserInfo {
@@ -703,7 +703,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #ec4899;
+  background-color: #FF6B47;
   color: white;
   display: flex;
   align-items: center;
@@ -768,7 +768,7 @@
 }
 
 .actionsButton:hover {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
 }
 
 /* ============================================================================
@@ -793,7 +793,7 @@
 }
 
 .presenceDotOffline {
-  background-color: #9ca3af;
+  background-color: #A8A29E;
 }
 
 .presenceText {
@@ -807,7 +807,7 @@
 }
 
 .presenceTextOffline {
-  color: #6b7280;
+  color: #78716C;
 }
 
 /* ============================================================================
@@ -894,7 +894,7 @@
 .modalDescription {
   margin: 0 0 8px;
   font-size: 14px;
-  color: #6b7280;
+  color: #78716C;
   font-weight: 500;
 }
 
@@ -902,7 +902,7 @@
   margin: 0 0 16px;
   padding-left: 20px;
   font-size: 14px;
-  color: #6b7280;
+  color: #78716C;
   line-height: 1.6;
 }
 
@@ -945,7 +945,7 @@
 
 .modalCancelButton {
   padding: 10px 16px;
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
   color: #374151;
   border: none;
   border-radius: 8px;
@@ -956,7 +956,7 @@
 }
 
 .modalCancelButton:hover:not(:disabled) {
-  background-color: #e5e7eb;
+  background-color: #E7E5E4;
 }
 
 .modalCancelButton:disabled {
@@ -1022,7 +1022,7 @@
 }
 
 .modalSubmitButtonDisabled {
-  background-color: #d1d5db;
+  background-color: #D6D3D1;
   cursor: not-allowed;
 }
 
@@ -1055,7 +1055,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background-color: #f9fafb;
+  background-color: #FAFAF9;
   border-radius: 8px;
   border: 2px solid transparent;
   cursor: pointer;
@@ -1063,7 +1063,7 @@
 }
 
 .reasonOption:hover {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
 }
 
 .reasonOptionSelected {
@@ -1087,7 +1087,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid #d1d5db;
+  border: 2px solid #D6D3D1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1127,7 +1127,7 @@
 
 .optionalText {
   font-weight: 400;
-  color: #6b7280;
+  color: #78716C;
 }
 
 .detailsTextarea {
@@ -1137,8 +1137,8 @@
   font-size: 14px;
   line-height: 1.5;
   color: #111827;
-  background-color: #f9fafb;
-  border: 1px solid #d1d5db;
+  background-color: #FAFAF9;
+  border: 1px solid #D6D3D1;
   border-radius: 8px;
   resize: vertical;
   font-family: inherit;
@@ -1161,8 +1161,8 @@
   margin: 0 0 16px;
   padding: 12px;
   font-size: 13px;
-  color: #6b7280;
-  background-color: #f9fafb;
+  color: #78716C;
+  background-color: #FAFAF9;
   border-radius: 8px;
   line-height: 1.5;
 }
@@ -1218,7 +1218,7 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  color: #6b7280;
+  color: #78716C;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1226,7 +1226,7 @@
 }
 
 .closeButton:hover {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
 }
 
 .dragHandle {
@@ -1238,7 +1238,7 @@
 .dragIndicator {
   width: 40px;
   height: 4px;
-  background-color: #e5e7eb;
+  background-color: #E7E5E4;
   border-radius: 2px;
 }
 
@@ -1263,7 +1263,7 @@
 }
 
 .menuItem:hover {
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
 }
 
 .menuItemDefault {
@@ -1291,20 +1291,20 @@
 
 .separator {
   height: 1px;
-  background-color: #e5e7eb;
+  background-color: #E7E5E4;
   margin: 8px 16px;
 }
 
 .actionsMenuFooter {
   padding: 12px 12px 20px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #E7E5E4;
 }
 
 .cancelButton {
   display: block;
   width: 100%;
   padding: 14px 16px;
-  background-color: #f3f4f6;
+  background-color: #F5F5F4;
   color: #374151;
   border: none;
   border-radius: 12px;
@@ -1315,7 +1315,7 @@
 }
 
 .cancelButton:hover {
-  background-color: #e5e7eb;
+  background-color: #E7E5E4;
 }
 
 /* ============================================================================
@@ -1329,5 +1329,5 @@
   justify-content: center;
   height: 100vh;
   gap: 16px;
-  background-color: #f9fafb;
+  background-color: #FAFAF9;
 }

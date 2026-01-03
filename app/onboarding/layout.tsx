@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Get Started - Love Ledger",
-  description: "Welcome to Love Ledger! Let's get you set up to discover missed connections.",
+  title: "Get Started - Backtrack",
+  description: "Welcome to Backtrack! Let's get you set up to discover missed connections.",
 };
 
 /**
@@ -16,7 +16,7 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-pink-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-b from-white to-primary-50 dark:from-gray-900 dark:to-gray-800">
       <main className="flex min-h-screen flex-col">
         {/* Onboarding content container - mobile-first with max-width for larger screens */}
         <div className="flex flex-1 flex-col w-full max-w-lg mx-auto px-4 py-6 sm:px-6 sm:py-8">

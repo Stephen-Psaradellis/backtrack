@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEvent } from '@/hooks/useEvents'
 import { useEventPosts } from '@/hooks/useEventPosts'
+import { useEventAttendance } from '@/hooks/useEventAttendance'
 import {
   formatEventTime,
   formatEventDateRange,
@@ -13,6 +14,7 @@ import {
   isEventPast,
 } from '@/utils/date-helpers'
 import type { EventPost } from '@/hooks/useEventPosts'
+import { AttendanceSection } from './AttendanceSection'
 
 // ============================================================================
 // Types
@@ -162,7 +164,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry?: () => voi
       {onRetry && (
         <button
           onClick={onRetry}
-          className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
           Try Again
         </button>
@@ -180,9 +182,9 @@ function EmptyPostsState({ eventTitle }: { eventTitle: string }) {
       className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700"
       data-testid="empty-posts-state"
     >
-      <div className="w-16 h-16 mb-4 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+      <div className="w-16 h-16 mb-4 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
         <svg
-          className="w-8 h-8 text-pink-600 dark:text-pink-400"
+          className="w-8 h-8 text-primary-600 dark:text-primary-400"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -213,12 +215,12 @@ function EventPostCard({ post }: { post: EventPost }) {
 
   return (
     <div
-      className="flex gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-pink-300 dark:hover:border-pink-600 transition-colors"
+      className="flex gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
       data-testid={`post-card-${post.id}`}
     >
       {/* Avatar placeholder */}
       <div className="flex-shrink-0">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-purple-500 flex items-center justify-center">
           <svg
             className="w-6 h-6 text-white"
             fill="none"
@@ -326,6 +328,14 @@ export default function EventDetailsPage() {
     fetchNextPage,
     fetchPosts,
   } = useEventPosts(eventId)
+
+  // Event attendance
+  const {
+    userStatus: attendanceStatus,
+    goingCount, interestedCount,
+    setAttendance,
+    isLoading: attendanceLoading,
+  } = useEventAttendance(eventId || "")
 
   // Combined loading state
   const isLoading = eventLoading || (postsLoading && posts.length === 0)
@@ -492,7 +502,7 @@ export default function EventDetailsPage() {
             {/* Post count badge */}
             {pagination && pagination.totalCount > 0 && (
               <span
-                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300"
+                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
                 data-testid="post-count-badge"
               >
                 {pagination.totalCount} {pagination.totalCount === 1 ? 'post' : 'posts'}
@@ -545,7 +555,7 @@ export default function EventDetailsPage() {
                   {formattedDateTime}
                 </p>
                 {timeUntil && (
-                  <p className="text-sm text-pink-600 dark:text-pink-400" data-testid="event-time-until">
+                  <p className="text-sm text-primary-600 dark:text-primary-400" data-testid="event-time-until">
                     Starts {timeUntil}
                   </p>
                 )}
@@ -638,7 +648,7 @@ export default function EventDetailsPage() {
                   href={event.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-pink-600 dark:text-pink-400 hover:underline"
+                  className="text-primary-600 dark:text-primary-400 hover:underline"
                   data-testid="event-url"
                 >
                   View on {platformConfig.label}
@@ -662,6 +672,15 @@ export default function EventDetailsPage() {
             </div>
           )}
         </header>
+
+        {/* Attendance Section */}
+        <AttendanceSection
+          eventId={eventId || ""}
+          status={attendanceStatus}
+          stats={{ interested: interestedCount, going: goingCount, went: 0 }}
+          onSetAttendance={setAttendance}
+          isLoading={attendanceLoading}
+        />
 
         {/* Divider */}
         <div className="h-px bg-gray-200 dark:bg-gray-700 mb-8" />

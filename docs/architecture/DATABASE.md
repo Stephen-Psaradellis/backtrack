@@ -1,6 +1,6 @@
 # Database Schema Documentation
 
-This document provides comprehensive documentation of the Love Ledger database schema, including entity relationships, table structures, indexes, and PostGIS geospatial features.
+This document provides comprehensive documentation of the Backtrack database schema, including entity relationships, table structures, indexes, and PostGIS geospatial features.
 
 ## Table of Contents
 
@@ -30,7 +30,7 @@ This document provides comprehensive documentation of the Love Ledger database s
 
 ## Overview
 
-Love Ledger uses **PostgreSQL** (managed by Supabase) with the **PostGIS** extension for geospatial queries. The database is designed around the Producer/Consumer model where:
+Backtrack uses **PostgreSQL** (managed by Supabase) with the **PostGIS** extension for geospatial queries. The database is designed around the Producer/Consumer model where:
 
 - **Producers** create posts at physical locations
 - **Consumers** browse locations and respond to posts
@@ -54,7 +54,7 @@ Love Ledger uses **PostgreSQL** (managed by Supabase) with the **PostGIS** exten
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                            LOVE LEDGER DATABASE SCHEMA                                       │
+│                            BACKTRACK DATABASE SCHEMA                                       │
 ├─────────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                              │
 │   ┌──────────────────┐                                                                       │

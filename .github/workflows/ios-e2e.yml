@@ -1,0 +1,98 @@
+name: iOS E2E Tests
+
+on:
+  # Only run manually until secrets are configured
+  # Uncomment push/pull_request triggers when ready:
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
+  workflow_dispatch: # Manual trigger only for now
+
+jobs:
+  ios-e2e:
+    name: iOS E2E Tests (Maestro)
+    runs-on: macos-14 # M1 Mac runner
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Cache iOS build
+        uses: actions/cache@v4
+        id: ios-build-cache
+        with:
+          path: ios-build/
+          key: ios-build-${{ hashFiles('package-lock.json', 'app.json', 'app.config.js') }}
+
+      - name: Build iOS Simulator app
+        if: steps.ios-build-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ios-build
+          # Build development client for simulator
+          eas build --platform ios --profile development --local --output ios-build/app.tar.gz
+          cd ios-build && tar -xzf app.tar.gz
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
+
+      - name: Boot iOS Simulator
+        run: |
+          # List available simulators
+          xcrun simctl list devices available
+          # Boot iPhone 15 Pro simulator
+          DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 15 Pro" | head -1 | grep -oE '[A-F0-9-]{36}')
+          xcrun simctl boot "$DEVICE_ID" || true
+          # Wait for simulator to be ready
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+
+      - name: Install app on Simulator
+        run: |
+          APP_PATH=$(find ios-build -name "*.app" -type d | head -1)
+          xcrun simctl install booted "$APP_PATH"
+
+      - name: Run Maestro E2E tests
+        run: |
+          maestro test .maestro/ --format junit --output maestro-report.xml
+        env:
+          # Test credentials (use dedicated test account)
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+      - name: Upload Maestro report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro-report
+          path: maestro-report.xml
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: maestro-screenshots
+          path: ~/.maestro/tests/

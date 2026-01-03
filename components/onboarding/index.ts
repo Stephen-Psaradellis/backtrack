@@ -1,7 +1,7 @@
 /**
  * Onboarding Components Module
  *
- * This module provides all components for the Love Ledger onboarding flow.
+ * This module provides all components for the Backtrack onboarding flow.
  * The onboarding is designed to complete in under 3 minutes and includes:
  * - Welcome screen introducing the app concept
  * - Avatar creation step
@@ -22,7 +22,7 @@
  *   ConsumerDemoScreen,
  *   OnboardingComplete,
  *   OnboardingStepper,
- * } from '@/components/onboarding'
+ * } from './'
  *
  * // Use in onboarding flow
  * function OnboardingFlow() {
@@ -45,7 +45,7 @@
 
 /**
  * Welcome screen - first step of onboarding
- * Introduces Love Ledger and the missed connections concept.
+ * Introduces Backtrack and the missed connections concept.
  */
 export { WelcomeScreen } from './WelcomeScreen'
 export type { WelcomeScreenProps } from './WelcomeScreen'

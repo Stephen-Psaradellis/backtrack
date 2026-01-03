@@ -22,7 +22,7 @@ import {
 export interface LoadingSpinnerProps {
   /** Size of the spinner - 'small' | 'large' | number (default: 'large') */
   size?: 'small' | 'large' | number
-  /** Color of the spinner (default: '#007AFF') */
+  /** Color of the spinner (default: '#FF6B47') */
   color?: string
   /** Optional message to display below the spinner */
   message?: string
@@ -61,7 +61,7 @@ export interface LoadingSpinnerProps {
  */
 export function LoadingSpinner({
   size = 'large',
-  color = '#007AFF',
+  color = '#FF6B47',
   message,
   fullScreen = false,
   style,

@@ -1,7 +1,7 @@
 /**
  * Onboarding Configuration
  *
- * Defines the steps, content, and flow logic for the Love Ledger onboarding process.
+ * Defines the steps, content, and flow logic for the Backtrack onboarding process.
  * This configuration drives the multi-step onboarding flow, providing consistent
  * metadata for each step including titles, descriptions, and icons.
  *
@@ -93,7 +93,7 @@ export const TARGET_COMPLETION_MINUTES = 3
  * All onboarding steps in order
  *
  * Step order:
- * 1. Welcome - Introduce Love Ledger concept
+ * 1. Welcome - Introduce Backtrack concept
  * 2. Avatar - Create privacy-preserving avatar
  * 3. Location - Request location permission
  * 4. Producer Demo - Show how to post about others
@@ -103,7 +103,7 @@ export const TARGET_COMPLETION_MINUTES = 3
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to Love Ledger',
+    title: 'Welcome to Backtrack',
     description:
       'A gentle way to find the people you noticed but never got to meet.',
     icon: '💝',
@@ -160,11 +160,11 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: 'complete',
     title: "You're All Set!",
     description:
-      'Start exploring Love Ledger. Post about someone you noticed or browse to see if anyone posted about you.',
+      'Start exploring Backtrack. Post about someone you noticed or browse to see if anyone posted about you.',
     icon: '🎉',
     showSkip: false,
     showBack: true,
-    primaryButtonLabel: 'Enter Love Ledger',
+    primaryButtonLabel: 'Enter Backtrack',
     estimatedSeconds: 10,
   },
 ] as const
@@ -172,7 +172,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
 /**
  * Features highlighted on the welcome screen
  *
- * These explain the core value proposition of Love Ledger
+ * These explain the core value proposition of Backtrack
  * in an introvert-friendly, non-intimidating way.
  */
 export const WELCOME_FEATURES: readonly OnboardingFeature[] = [

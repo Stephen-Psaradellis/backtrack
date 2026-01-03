@@ -1,111 +1,124 @@
 /**
  * Vitest Setup File
  *
- * Unified setup merging jest.setup.ts and jest.setup.js
- * Global setup and mocks for all tests.
+ * Unified setup for all tests. Handles both Node and JSDOM environments.
  */
 
+import React from 'react'
 import { vi, beforeAll, afterAll } from 'vitest'
 
-// Import jest-dom matchers for DOM testing assertions
-// This adds custom matchers like toBeInTheDocument(), toHaveClass(), etc.
-import '@testing-library/jest-dom'
-
-// Configure testing-library to auto-cleanup after each test
-// This is default behavior but we explicitly configure it here
-import { configure } from '@testing-library/react'
-
-configure({
-  // Recommended for async testing
-  asyncUtilTimeout: 5000,
-  // Show element in error messages for easier debugging
-  getElementError: (message, container) => {
-    const error = new Error(
-      [message, container?.innerHTML].filter(Boolean).join('\n\n')
-    )
-    error.name = 'TestingLibraryElementError'
-    return error
-  },
-})
+// Make React available globally for JSX transform
+globalThis.React = React
 
 // ============================================================================
-// Browser API Mocks (from jest.setup.ts)
+// Jest Compatibility Layer
 // ============================================================================
 
-// Mock window.matchMedia for components that use media queries
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-})
+// Provide Jest globals that map to Vitest equivalents
+// This allows Jest-style tests to work with Vitest
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(globalThis as any).jest = vi
 
-// Mock IntersectionObserver for components that use it
-class MockIntersectionObserver {
-  readonly root: Element | null = null
-  readonly rootMargin: string = ''
-  readonly thresholds: ReadonlyArray<number> = []
+// ============================================================================
+// Global Variables for React Native
+// ============================================================================
 
-  constructor() {}
+// Define __DEV__ global for React Native compatibility
+// This is typically set by the RN bundler but not in test environments
+declare global {
+  var __DEV__: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  var React: typeof import('react')
+}
+globalThis.__DEV__ = process.env.NODE_ENV !== 'production'
 
-  disconnect() {}
-  observe() {}
-  takeRecords(): IntersectionObserverEntry[] {
-    return []
+// ============================================================================
+// Browser API Mocks (only in jsdom environment)
+// ============================================================================
+
+if (typeof window !== 'undefined') {
+  // Import jest-dom matchers for DOM testing assertions
+  await import('@testing-library/jest-dom')
+
+  // Configure testing-library
+  const { configure } = await import('@testing-library/react')
+  configure({
+    asyncUtilTimeout: 5000,
+    getElementError: (message, container) => {
+      const error = new Error(
+        [message, container?.innerHTML].filter(Boolean).join('\n\n')
+      )
+      error.name = 'TestingLibraryElementError'
+      return error
+    },
+  })
+
+  // Mock window.matchMedia for components that use media queries
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+
+  // Mock IntersectionObserver
+  class MockIntersectionObserver {
+    readonly root: Element | null = null
+    readonly rootMargin: string = ''
+    readonly thresholds: ReadonlyArray<number> = []
+    disconnect() {}
+    observe() {}
+    takeRecords(): IntersectionObserverEntry[] { return [] }
+    unobserve() {}
   }
-  unobserve() {}
+  Object.defineProperty(window, 'IntersectionObserver', {
+    writable: true,
+    configurable: true,
+    value: MockIntersectionObserver,
+  })
+
+  // Mock ResizeObserver
+  class MockResizeObserver {
+    disconnect() {}
+    observe() {}
+    unobserve() {}
+  }
+  Object.defineProperty(window, 'ResizeObserver', {
+    writable: true,
+    configurable: true,
+    value: MockResizeObserver,
+  })
 }
 
-Object.defineProperty(window, 'IntersectionObserver', {
-  writable: true,
-  configurable: true,
-  value: MockIntersectionObserver,
-})
-
-// Mock ResizeObserver for components that use it
-class MockResizeObserver {
-  constructor() {}
-  disconnect() {}
-  observe() {}
-  unobserve() {}
-}
-
-Object.defineProperty(window, 'ResizeObserver', {
-  writable: true,
-  configurable: true,
-  value: MockResizeObserver,
-})
-
 // ============================================================================
-// React Native Mocks (from jest.setup.js)
+// React Native Mocks (safe to define in any environment)
 // ============================================================================
-
-// Import react-native-gesture-handler setup for gesture handling in tests
-// Note: This may need adjustment depending on Vitest compatibility
-// import 'react-native-gesture-handler/jestSetup'
-
-// Silence the warning: Animated: `useNativeDriver` is not supported
-vi.mock('react-native/Libraries/Animated/NativeAnimatedHelper')
 
 // Mock AsyncStorage
-vi.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-)
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  default: {
+    getItem: vi.fn(() => Promise.resolve(null)),
+    setItem: vi.fn(() => Promise.resolve()),
+    removeItem: vi.fn(() => Promise.resolve()),
+    clear: vi.fn(() => Promise.resolve()),
+    getAllKeys: vi.fn(() => Promise.resolve([])),
+    multiGet: vi.fn(() => Promise.resolve([])),
+    multiSet: vi.fn(() => Promise.resolve()),
+    multiRemove: vi.fn(() => Promise.resolve()),
+  },
+}))
 
 // Mock expo-camera
 vi.mock('expo-camera', () => ({
   CameraView: 'CameraView',
-  CameraType: {
-    front: 'front',
-    back: 'back',
-  },
+  CameraType: { front: 'front', back: 'back' },
   useCameraPermissions: vi.fn(() => [{ granted: true }, vi.fn()]),
 }))
 
@@ -128,7 +141,7 @@ vi.mock('expo-location', () => ({
       timestamp: Date.now(),
     })
   ),
-  watchPositionAsync: vi.fn(),
+  watchPositionAsync: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
   Accuracy: {
     Lowest: 1,
     Low: 2,
@@ -149,145 +162,216 @@ vi.mock('expo-image-picker', () => ({
   launchCameraAsync: vi.fn(() =>
     Promise.resolve({
       canceled: false,
-      assets: [
-        {
-          uri: 'file:///mock/selfie.jpg',
-          width: 1000,
-          height: 1000,
-          type: 'image',
-        },
-      ],
+      assets: [{ uri: 'file:///mock/selfie.jpg', width: 1000, height: 1000, type: 'image' }],
     })
   ),
   launchImageLibraryAsync: vi.fn(() =>
     Promise.resolve({
       canceled: false,
-      assets: [
-        {
-          uri: 'file:///mock/photo.jpg',
-          width: 1000,
-          height: 1000,
-          type: 'image',
-        },
-      ],
+      assets: [{ uri: 'file:///mock/photo.jpg', width: 1000, height: 1000, type: 'image' }],
     })
   ),
-  requestCameraPermissionsAsync: vi.fn(() =>
-    Promise.resolve({ status: 'granted' })
-  ),
-  requestMediaLibraryPermissionsAsync: vi.fn(() =>
-    Promise.resolve({ status: 'granted' })
-  ),
-  MediaTypeOptions: {
-    All: 'All',
-    Videos: 'Videos',
-    Images: 'Images',
-  },
-  CameraType: {
-    front: 'front',
-    back: 'back',
+  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: 'granted' })),
+  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: 'granted' })),
+  MediaTypeOptions: { All: 'All', Videos: 'Videos', Images: 'Images' },
+  CameraType: { front: 'front', back: 'back' },
+}))
+
+// Mock expo-haptics
+vi.mock('expo-haptics', () => ({
+  impactAsync: vi.fn(() => Promise.resolve()),
+  notificationAsync: vi.fn(() => Promise.resolve()),
+  selectionAsync: vi.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}))
+
+// Mock expo-notifications
+vi.mock('expo-notifications', () => ({
+  getPermissionsAsync: vi.fn(() => Promise.resolve({ status: 'granted' })),
+  requestPermissionsAsync: vi.fn(() => Promise.resolve({ status: 'granted' })),
+  getExpoPushTokenAsync: vi.fn(() => Promise.resolve({ data: 'ExponentPushToken[mock]' })),
+  setNotificationHandler: vi.fn(),
+  addNotificationReceivedListener: vi.fn(() => ({ remove: vi.fn() })),
+  addNotificationResponseReceivedListener: vi.fn(() => ({ remove: vi.fn() })),
+  AndroidImportance: { MAX: 5, HIGH: 4, DEFAULT: 3, LOW: 2, MIN: 1, NONE: 0 },
+}))
+
+// Mock expo-secure-store
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn(() => Promise.resolve(null)),
+  setItemAsync: vi.fn(() => Promise.resolve()),
+  deleteItemAsync: vi.fn(() => Promise.resolve()),
+}))
+
+// Mock expo-device
+vi.mock('expo-device', () => ({
+  isDevice: true,
+  brand: 'Mock',
+  modelName: 'MockDevice',
+  osName: 'MockOS',
+  osVersion: '1.0',
+}))
+
+// Mock expo-constants
+vi.mock('expo-constants', () => ({
+  default: {
+    expoConfig: { name: 'test', slug: 'test' },
+    manifest: null,
+    systemFonts: [],
+    appOwnership: 'expo',
+    executionEnvironment: 'storeClient',
   },
 }))
 
 // Mock react-native-maps
-vi.mock('react-native-maps', () => {
-  const { View } = require('react-native')
-  const MockMapView = (props: { testID?: string; children?: React.ReactNode }) => {
-    return <View testID={props.testID}>{props.children}</View>
-  }
-  MockMapView.Marker = (props: { testID?: string }) => {
-    return <View testID={props.testID} />
-  }
-  return {
-    __esModule: true,
-    default: MockMapView,
-    Marker: MockMapView.Marker,
-    PROVIDER_GOOGLE: 'google',
-  }
-})
+vi.mock('react-native-maps', () => ({
+  __esModule: true,
+  default: 'MapView',
+  Marker: 'Marker',
+  PROVIDER_GOOGLE: 'google',
+}))
 
-// Mock react-native-svg for DiceBear avatar rendering
-vi.mock('react-native-svg', () => {
-  const { View } = require('react-native')
-  return {
-    Svg: View,
-    Circle: View,
-    Ellipse: View,
-    G: View,
-    Text: View,
-    TSpan: View,
-    TextPath: View,
-    Path: View,
-    Polygon: View,
-    Polyline: View,
-    Line: View,
-    Rect: View,
-    Use: View,
-    Image: View,
-    Symbol: View,
-    Defs: View,
-    LinearGradient: View,
-    RadialGradient: View,
-    Stop: View,
-    ClipPath: View,
-    Pattern: View,
-    Mask: View,
-    SvgXml: (props: Record<string, unknown>) => (
-      <View testID="svg-xml-mock" {...props} />
-    ),
-  }
-})
+// Mock react-native-svg
+vi.mock('react-native-svg', () => ({
+  Svg: 'Svg',
+  Circle: 'Circle',
+  Ellipse: 'Ellipse',
+  G: 'G',
+  Text: 'Text',
+  TSpan: 'TSpan',
+  TextPath: 'TextPath',
+  Path: 'Path',
+  Polygon: 'Polygon',
+  Polyline: 'Polyline',
+  Line: 'Line',
+  Rect: 'Rect',
+  Use: 'Use',
+  Image: 'Image',
+  Symbol: 'Symbol',
+  Defs: 'Defs',
+  LinearGradient: 'LinearGradient',
+  RadialGradient: 'RadialGradient',
+  Stop: 'Stop',
+  ClipPath: 'ClipPath',
+  Pattern: 'Pattern',
+  Mask: 'Mask',
+  SvgXml: 'SvgXml',
+}))
 
 // Mock @dicebear/core
 vi.mock('@dicebear/core', () => ({
-  createAvatar: vi.fn((_style: unknown, _options: unknown) => ({
-    toString: () =>
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#ccc"/></svg>',
-    toDataUri: () =>
-      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23ccc"/></svg>',
+  createAvatar: vi.fn(() => ({
+    toString: () => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#ccc"/></svg>',
+    toDataUri: () => 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23ccc"/></svg>',
   })),
 }))
 
 // Mock @dicebear/collection
 vi.mock('@dicebear/collection', () => ({
-  avataaars: {
-    meta: { title: 'Avataaars' },
-  },
+  avataaars: { meta: { title: 'Avataaars' } },
 }))
 
 // Mock @react-navigation/native
-vi.mock('@react-navigation/native', async () => {
-  const actualNav = await vi.importActual('@react-navigation/native')
+vi.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    navigate: vi.fn(),
+    goBack: vi.fn(),
+    replace: vi.fn(),
+    reset: vi.fn(),
+    setOptions: vi.fn(),
+    addListener: vi.fn(() => () => {}),
+  }),
+  useRoute: () => ({ params: {} }),
+  useFocusEffect: vi.fn((callback) => {
+    const cleanup = callback()
+    return cleanup
+  }),
+  useIsFocused: () => true,
+  NavigationContainer: ({ children }: { children: React.ReactNode }) => children,
+  createNavigationContainerRef: () => ({ current: null }),
+}))
+
+// Mock @react-navigation/native-stack
+vi.mock('@react-navigation/native-stack', () => ({
+  createNativeStackNavigator: () => ({
+    Navigator: ({ children }: { children: React.ReactNode }) => children,
+    Screen: () => null,
+  }),
+}))
+
+// Mock @react-navigation/bottom-tabs
+vi.mock('@react-navigation/bottom-tabs', () => ({
+  createBottomTabNavigator: () => ({
+    Navigator: ({ children }: { children: React.ReactNode }) => children,
+    Screen: () => null,
+  }),
+}))
+
+// Mock react-native core
+vi.mock('react-native', async () => {
+  const actual = await vi.importActual<object>('react-native')
   return {
-    ...actualNav,
-    useNavigation: () => ({
-      navigate: vi.fn(),
-      goBack: vi.fn(),
-      replace: vi.fn(),
-      reset: vi.fn(),
-    }),
-    useRoute: () => ({
-      params: {},
-    }),
-    useFocusEffect: vi.fn((callback: () => void) => callback()),
+    ...actual,
+    Alert: {
+      alert: vi.fn(),
+    },
+    Linking: {
+      openURL: vi.fn(() => Promise.resolve()),
+      canOpenURL: vi.fn(() => Promise.resolve(true)),
+      addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+    },
+    Platform: {
+      OS: 'ios',
+      select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,
+    },
+    Dimensions: {
+      get: () => ({ width: 375, height: 812, scale: 2, fontScale: 1 }),
+      addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+    },
+    Animated: {
+      View: 'Animated.View',
+      Text: 'Animated.Text',
+      Image: 'Animated.Image',
+      Value: class {
+        _value: number
+        constructor(val: number) { this._value = val }
+        setValue(val: number) { this._value = val }
+        interpolate() { return this }
+      },
+      timing: () => ({ start: (cb?: () => void) => cb?.() }),
+      spring: () => ({ start: (cb?: () => void) => cb?.() }),
+      parallel: () => ({ start: (cb?: () => void) => cb?.() }),
+      sequence: () => ({ start: (cb?: () => void) => cb?.() }),
+      loop: () => ({ start: (cb?: () => void) => cb?.() }),
+      event: () => vi.fn(),
+      createAnimatedComponent: (component: unknown) => component,
+    },
+    Keyboard: {
+      dismiss: vi.fn(),
+      addListener: vi.fn(() => ({ remove: vi.fn() })),
+    },
   }
 })
 
-// Mock Alert
-vi.spyOn(require('react-native').Alert, 'alert')
+// Mock @react-native-community/netinfo
+vi.mock('@react-native-community/netinfo', () => ({
+  default: {
+    addEventListener: vi.fn(() => vi.fn()),
+    fetch: vi.fn(() => Promise.resolve({ isConnected: true, isInternetReachable: true })),
+  },
+  useNetInfo: () => ({ isConnected: true, isInternetReachable: true }),
+}))
 
 // ============================================================================
 // Console Output Suppression
 // ============================================================================
 
-// Suppress console errors during tests (optional - comment out if you want to see them)
-// This helps keep test output clean while still catching actual test failures
 const originalError = console.error
 const originalWarn = console.warn
 
 beforeAll(() => {
   console.error = (...args: unknown[]) => {
-    // Filter out React act() warnings and other known noise
     const message = args[0]?.toString() || ''
     if (
       message.includes('Warning: ReactDOM.render is no longer supported') ||
@@ -299,7 +383,6 @@ beforeAll(() => {
     originalError.apply(console, args)
   }
 
-  // Suppress specific console warnings during tests
   console.warn = (...args: unknown[]) => {
     const message = args[0]?.toString() || ''
     if (

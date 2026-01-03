@@ -1,7 +1,7 @@
 /**
  * Image Picker Utility
  *
- * Utility functions for picking and capturing selfie images in the Love Ledger app.
+ * Utility functions for picking and capturing selfie images in the Backtrack app.
  * Supports both gallery selection and camera capture with proper permission handling.
  *
  * Uses expo-image-picker for cross-platform compatibility.

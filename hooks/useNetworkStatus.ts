@@ -1,7 +1,7 @@
 /**
  * useNetworkStatus Hook
  *
- * Custom hook for monitoring network connectivity status in the Love Ledger app.
+ * Custom hook for monitoring network connectivity status in the Backtrack app.
  * Provides real-time network state updates and connection type information.
  *
  * Features:

@@ -3,7 +3,7 @@
 /**
  * Discover Screen
  *
- * Location-based venue discovery screen for the Love Ledger app.
+ * Location-based venue discovery screen for the Backtrack app.
  * Enables users to search for specific venues by name and discover
  * popular locations in their area where missed connection posts are
  * actively occurring.
@@ -66,7 +66,7 @@ type ViewMode = 'search' | 'discover'
  * iOS-style colors matching the app theme
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   secondary: '#8E8E93',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
@@ -74,7 +74,6 @@ const COLORS = {
   text: '#000000',
   textSecondary: '#8E8E93',
   danger: '#FF3B30',
-  pink: '#EC4899',
 } as const
 
 // ============================================================================

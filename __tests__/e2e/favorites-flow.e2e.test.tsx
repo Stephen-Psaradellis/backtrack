@@ -287,7 +287,7 @@ interface TestWrapperProps {
   children: React.ReactNode
 }
 
-function TestWrapper({ children }: TestWrapperProps): JSX.Element {
+function TestWrapper({ children }: TestWrapperProps): React.ReactNode {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider
@@ -1010,7 +1010,7 @@ describe('E2E: Save and Browse Favorite Flow', () => {
  * Favorites Flow E2E Test Summary:
  *
  * This test suite verifies the complete flow for saving and browsing
- * favorite locations in the Love Ledger app.
+ * favorite locations in the Backtrack app.
  *
  * Steps Tested:
  * 1. Open map - HomeScreen renders with map and favorites button

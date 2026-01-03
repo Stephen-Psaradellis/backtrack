@@ -24,8 +24,8 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js'
 
 // Skip tests if not running against real Supabase
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY
 
 // Test users for RLS verification
 interface TestUser {
@@ -72,7 +72,7 @@ const testFavoriteDataB = {
 // ============================================================================
 // These tests only run when proper Supabase credentials are available
 
-const describeRLS = SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_SERVICE_KEY
+const describeRLS = SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && SUPABASE_SECRET_KEY
   ? describe
   : describe.skip
 
@@ -83,8 +83,8 @@ describeRLS('Favorites RLS Policies - Database Verification', () => {
 
   beforeAll(async () => {
     // Create admin client with service role key for user management
-    if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-      adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+    if (SUPABASE_URL && SUPABASE_SECRET_KEY) {
+      adminClient = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
@@ -115,7 +115,7 @@ describeRLS('Favorites RLS Policies - Database Verification', () => {
       testUserB.id = userBData.user?.id
 
       // Create authenticated clients for each user
-      testUserA.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY!, {
+      testUserA.client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY!, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
@@ -127,7 +127,7 @@ describeRLS('Favorites RLS Policies - Database Verification', () => {
         password: testUserA.password,
       })
 
-      testUserB.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY!, {
+      testUserB.client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY!, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
@@ -466,7 +466,7 @@ describeRLS('Favorites RLS Policies - Database Verification', () => {
 
   describe('Cascade Delete - User deletion removes favorites', () => {
     it('Deleting a user cascades to delete their favorites', async () => {
-      if (!adminClient || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      if (!adminClient || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
         throw new Error('Admin client not initialized')
       }
 
@@ -486,7 +486,7 @@ describeRLS('Favorites RLS Policies - Database Verification', () => {
       expect(tempUserId).toBeDefined()
 
       // Sign in as temp user and create favorites
-      const tempClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const tempClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
@@ -829,7 +829,7 @@ export const MANUAL_VERIFICATION_GUIDE = `
 === DATABASE VERIFICATION - RLS AND DATA INTEGRITY ===
 
 AUTOMATED TEST REQUIREMENTS:
-- SUPABASE_SERVICE_ROLE_KEY environment variable (for user management)
+- SUPABASE_SECRET_KEY environment variable (for user management)
 - Active Supabase connection (local or remote)
 
 RUN AUTOMATED TESTS:

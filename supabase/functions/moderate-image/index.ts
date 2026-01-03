@@ -13,7 +13,7 @@
  * Environment variables required:
  * - GOOGLE_CLOUD_VISION_API_KEY: API key for Google Cloud Vision
  * - SUPABASE_URL: Supabase project URL (auto-injected)
- * - SUPABASE_SERVICE_ROLE_KEY: Service role key (auto-injected)
+ * - SUPABASE_SECRET_KEY: Service role key (auto-injected)
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -51,10 +51,40 @@ interface ModerationRequest {
 }
 
 // Rejection thresholds - content at or above these levels is rejected
+// SECURITY: Stricter thresholds to prevent inappropriate content
 const REJECTION_THRESHOLDS: Partial<Record<keyof SafeSearchResult, SafeSearchLikelihood[]>> = {
   adult: ['LIKELY', 'VERY_LIKELY'],
   violence: ['LIKELY', 'VERY_LIKELY'],
-  racy: ['VERY_LIKELY'], // More lenient for racy content
+  racy: ['LIKELY', 'VERY_LIKELY'], // Tightened: was only VERY_LIKELY, now includes LIKELY
+}
+
+// Allowed CORS origins for security
+// Only allow requests from our app domains
+const ALLOWED_ORIGINS = [
+  'https://backtrack.social',
+  'https://www.backtrack.social',
+  'https://app.backtrack.social',
+  // Development origins
+  'http://localhost:3000',
+  'http://localhost:8081',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:8081',
+]
+
+/**
+ * Get CORS origin header based on request origin
+ * Returns the origin if it's in the allowed list, otherwise null
+ */
+function getCorsOrigin(requestOrigin: string | null): string | null {
+  if (!requestOrigin) return null
+  if (ALLOWED_ORIGINS.includes(requestOrigin)) {
+    return requestOrigin
+  }
+  // Allow Expo development URLs (exp:// and custom schemes)
+  if (requestOrigin.startsWith('exp://') || requestOrigin.startsWith('backtrack://')) {
+    return requestOrigin
+  }
+  return null
 }
 
 // Likelihood levels in order (for comparison)
@@ -126,14 +156,22 @@ async function moderateImage(
 }
 
 serve(async (req) => {
+  const requestOrigin = req.headers.get('origin')
+  const corsOrigin = getCorsOrigin(requestOrigin)
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    // Only allow preflight from allowed origins
+    if (!corsOrigin) {
+      return new Response(null, { status: 403 })
+    }
     return new Response(null, {
       status: 204,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
       },
     })
   }
@@ -148,7 +186,7 @@ serve(async (req) => {
   try {
     // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SECRET_KEY')
     const visionApiKey = Deno.env.get('GOOGLE_CLOUD_VISION_API_KEY')
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -251,6 +289,14 @@ serve(async (req) => {
       }
     }
 
+    // Build response headers with CORS if origin is allowed
+    const responseHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (corsOrigin) {
+      responseHeaders['Access-Control-Allow-Origin'] = corsOrigin
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -260,10 +306,7 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: responseHeaders,
       }
     )
   } catch (error) {

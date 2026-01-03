@@ -1,8 +1,6 @@
-'use client'
-
 import { memo, useCallback } from 'react'
-import { Button } from '@/components/ui/Button'
-import { WELCOME_FEATURES, getStepById } from '@/lib/onboarding/onboardingConfig'
+import { Button } from '../ui/Button'
+import { WELCOME_FEATURES, getStepById } from '../../lib/onboarding/onboardingConfig'
 
 // ============================================================================
 // Types
@@ -44,7 +42,7 @@ const FeatureItem = memo(function FeatureItem({
     <div className="flex items-start gap-3 sm:gap-4 group">
       {/* Feature icon with hover effect */}
       <div
-        className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
+        className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
         aria-hidden="true"
       >
         <span className="text-xl sm:text-2xl">{icon}</span>
@@ -73,13 +71,13 @@ const FeatureItem = memo(function FeatureItem({
 const HeroIcon = memo(function HeroIcon() {
   return (
     <div
-      className="mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900/40 dark:to-pink-800/30 flex items-center justify-center shadow-lg shadow-pink-500/10 animate-fade-in-scale"
+      className="mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/40 dark:to-primary-800/30 flex items-center justify-center shadow-lg shadow-primary-500/10 animate-fade-in-scale"
       aria-hidden="true"
     >
       {/* Heart icon with subtle animation */}
       <div className="relative">
         <svg
-          className="w-12 h-12 sm:w-14 sm:h-14 text-pink-500 transition-transform duration-300 hover:scale-110"
+          className="w-12 h-12 sm:w-14 sm:h-14 text-primary-500 transition-transform duration-300 hover:scale-110"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -111,7 +109,7 @@ const HeroIcon = memo(function HeroIcon() {
  * Welcome screen for the onboarding flow
  *
  * This is the first screen users see when starting onboarding.
- * It introduces the Love Ledger concept with a gentle, introvert-friendly
+ * It introduces the Backtrack concept with a gentle, introvert-friendly
  * approach that explains:
  * - The "missed connections" concept
  * - Avatar-based privacy (no photos required)
@@ -162,7 +160,7 @@ function WelcomeScreenComponent({
           id="welcome-heading"
           className="mt-6 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white animate-fade-in-up animation-delay-100"
         >
-          Welcome to Love Ledger
+          Welcome to Backtrack
         </h2>
 
         <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-xs sm:max-w-sm mx-auto leading-relaxed animate-fade-in-up animation-delay-200">
@@ -237,7 +235,7 @@ function WelcomeScreenComponent({
         <button
           type="button"
           onClick={handleSkip}
-          className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-pink-500 rounded-lg"
+          className="w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 min-touch-target transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 rounded-lg"
           aria-label="Skip onboarding and go directly to the app"
         >
           Skip for now
@@ -268,7 +266,7 @@ function arePropsEqual(
 
 /**
  * Memoized WelcomeScreen component.
- * First screen of the onboarding flow that introduces Love Ledger.
+ * First screen of the onboarding flow that introduces Backtrack.
  */
 export const WelcomeScreen = memo(WelcomeScreenComponent, arePropsEqual)
 

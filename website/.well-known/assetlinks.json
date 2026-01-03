@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.backtrack.app",
+      "sha256_cert_fingerprints": [
+        "CE:6F:35:9B:FE:06:F0:59:48:9D:84:2B:3F:82:61:EB:C9:2D:B3:0A:AF:7D:EB:57:2F:EC:7B:A3:B0:69:3A:B9"
+      ]
+    }
+  }
+]

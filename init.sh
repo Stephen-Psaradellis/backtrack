@@ -6,7 +6,7 @@
 set -e
 
 echo "========================================"
-echo "Love Ledger - Development Environment"
+echo "Backtrack - Development Environment"
 echo "========================================"
 
 # Colors

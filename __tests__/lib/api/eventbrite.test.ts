@@ -79,6 +79,9 @@ beforeEach(() => {
   delete process.env.EVENTBRITE_CLIENT_SECRET
   delete process.env.EVENTBRITE_REDIRECT_URI
 
+  // Reset __DEV__ to match the default test environment
+  globalThis.__DEV__ = true
+
   // Reset fetch mock
   vi.stubGlobal('fetch', mockFetch)
   mockFetch.mockReset()
@@ -233,6 +236,8 @@ describe('shouldUseMockEventbrite', () => {
 
   describe('in production mode', () => {
     it('returns false even with missing credentials', () => {
+      // __DEV__ takes precedence over NODE_ENV in isDevMode()
+      globalThis.__DEV__ = false
       setEnv({
         NODE_ENV: 'production',
         EVENTBRITE_CLIENT_ID: undefined,
@@ -244,6 +249,8 @@ describe('shouldUseMockEventbrite', () => {
 
   describe('in test mode', () => {
     it('returns false even with missing credentials', () => {
+      // When __DEV__ is false, it's not dev mode regardless of NODE_ENV
+      globalThis.__DEV__ = false
       setEnv({
         NODE_ENV: 'test',
         EVENTBRITE_CLIENT_ID: undefined,

@@ -270,12 +270,19 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session with timeout to prevent infinite hang
     const initializeAuth = async () => {
       try {
-        const {
-          data: { session: initialSession },
-        } = await supabase.auth.getSession()
+        // Add 10 second timeout to prevent infinite hang
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
+        )
+
+        const { data: { session: initialSession } } = await Promise.race([
+          sessionPromise,
+          timeoutPromise,
+        ]) as Awaited<typeof sessionPromise>
 
         if (initialSession) {
           setSession(initialSession)
@@ -289,6 +296,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
             // Error fetching profile - continue without it
           }
         }
+      } catch (error) {
+        // Auth initialization failed or timed out - proceed without session
+        console.warn('Auth initialization failed:', error)
       } finally {
         setIsLoading(false)
       }

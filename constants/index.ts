@@ -5,5 +5,6 @@
  * Import from this file for convenient access to all constants.
  */
 
-// Note: Old avatar options have been removed.
-// Ready Player Me avatars are now used instead.
+// Design System
+export * from './theme';
+export { default as theme } from './theme';

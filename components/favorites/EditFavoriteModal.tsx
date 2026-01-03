@@ -126,7 +126,7 @@ const MIN_CUSTOM_NAME_LENGTH = 1
  * Colors used in the EditFavoriteModal component
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#FFFFFF',
   overlay: 'rgba(0, 0, 0, 0.5)',
   border: '#E5E5EA',
@@ -137,7 +137,7 @@ const COLORS = {
   danger: '#FF3B30',
   dangerBackground: 'rgba(255, 59, 48, 0.1)',
   inputBackground: '#F9F9F9',
-  buttonDisabled: '#C7C7CC',
+  buttonDisabled: '#FFD0C2',
   locationBackground: '#F2F2F7',
 } as const
 

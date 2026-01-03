@@ -1,4 +1,4 @@
--- Love Ledger Test Location Seed Data
+-- Backtrack Test Location Seed Data
 -- Description: Sample location data at known distances from a center point for testing geospatial queries
 -- Center Point: San Francisco Union Square (37.7879, -122.4074)
 --

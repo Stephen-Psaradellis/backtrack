@@ -1,10 +1,10 @@
-# Love Ledger Architecture Documentation
+# Backtrack Architecture Documentation
 
-Welcome to the Love Ledger architecture documentation. This documentation provides a comprehensive understanding of the system design, data flow, and technical implementation of the Love Ledger application.
+Welcome to the Backtrack architecture documentation. This documentation provides a comprehensive understanding of the system design, data flow, and technical implementation of the Backtrack application.
 
 ## Quick Start for New Developers
 
-If you're new to the Love Ledger codebase, we recommend reading the documents in this order:
+If you're new to the Backtrack codebase, we recommend reading the documents in this order:
 
 1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Start here to understand the core concepts and tech stack
 2. **[USER_FLOWS.md](./USER_FLOWS.md)** - Learn how Producers and Consumers interact with the app
@@ -21,7 +21,7 @@ If you're new to the Love Ledger codebase, we recommend reading the documents in
 
 | Document | Description |
 |----------|-------------|
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | High-level system overview including the Love Ledger concept, Producer/Consumer model, technology stack (Next.js 15, React 19, Supabase, PostGIS), project structure, and key terminology |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | High-level system overview including the Backtrack concept, Producer/Consumer model, technology stack (Next.js 15, React 19, Supabase, PostGIS), project structure, and key terminology |
 
 ### User Experience
 
@@ -47,9 +47,9 @@ If you're new to the Love Ledger codebase, we recommend reading the documents in
 
 ## Key Concepts at a Glance
 
-### The Love Ledger Model
+### The Backtrack Model
 
-Love Ledger is a **location-based "missed connections"** dating application where:
+Backtrack is a **location-based "missed connections"** dating application where:
 
 - **Producers** leave digital notes at physical locations for people they've noticed
 - **Consumers** browse locations and respond to posts that match their appearance
@@ -82,7 +82,7 @@ locations ─────────►│
 
 | I want to... | Read this |
 |--------------|-----------|
-| Understand what Love Ledger does | [ARCHITECTURE.md - What is Love Ledger?](./ARCHITECTURE.md#what-is-love-ledger) |
+| Understand what Backtrack does | [ARCHITECTURE.md - What is Backtrack?](./ARCHITECTURE.md#what-is-backtrack) |
 | Learn about Producer/Consumer roles | [ARCHITECTURE.md - Core Concepts](./ARCHITECTURE.md#core-concepts) |
 | See the Producer user journey | [USER_FLOWS.md - Producer Flow](./USER_FLOWS.md#producer-flow) |
 | See the Consumer user journey | [USER_FLOWS.md - Consumer Flow](./USER_FLOWS.md#consumer-flow) |

@@ -1,12 +1,12 @@
 /**
- * Storage Utilities for Love Ledger
+ * Storage Utilities for Backtrack
  *
  * Utility functions for localStorage operations with error handling.
  * Provides type-safe wrappers for common storage operations.
  *
  * @example
  * ```tsx
- * import { isOnboardingComplete, setOnboardingComplete } from '@/utils/storage'
+ * import { isOnboardingComplete, setOnboardingComplete } from './storage'
  *
  * // Check if user has completed onboarding
  * if (isOnboardingComplete()) {
@@ -26,13 +26,13 @@
  * Storage key for onboarding state
  * Must match the key used in useOnboardingState hook
  */
-export const ONBOARDING_STORAGE_KEY = 'love_ledger_onboarding'
+export const ONBOARDING_STORAGE_KEY = 'backtrack_onboarding'
 
 /**
  * Storage key for onboarding redirect check
  * Used to track if we've already redirected in this session
  */
-export const ONBOARDING_REDIRECT_KEY = 'love_ledger_onboarding_redirect'
+export const ONBOARDING_REDIRECT_KEY = 'backtrack_onboarding_redirect'
 
 // ============================================================================
 // TYPES

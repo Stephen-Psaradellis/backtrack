@@ -15,7 +15,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { createClient } from '../../../lib/supabase/client'
+import { supabase } from '../../../lib/supabase'
 import type { UUID } from '../../../types/database'
 import type { MessageWithSender, UseChatMessagesReturn } from '../../../types/chat'
 import { CHAT_CONSTANTS } from '../../../types/chat'
@@ -60,7 +60,7 @@ export function useChatMessages({
   currentUserId,
   onNewMessage,
 }: UseChatMessagesOptions): UseChatMessagesReturn {
-  const supabase = createClient()
+  // supabase imported from lib/supabase
 
   // ============================================================================
   // State

@@ -125,7 +125,7 @@ afterEach(() => {
 describe('Storage Constants', () => {
   describe('ONBOARDING_STORAGE_KEY', () => {
     it('has the expected value', () => {
-      expect(ONBOARDING_STORAGE_KEY).toBe('love_ledger_onboarding')
+      expect(ONBOARDING_STORAGE_KEY).toBe('backtrack_onboarding')
     })
   })
 })

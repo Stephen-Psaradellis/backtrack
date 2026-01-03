@@ -69,7 +69,7 @@ interface PostWithLocation extends Post {
  * Colors used in the PostDetailScreen
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
   textPrimary: '#000000',
@@ -91,7 +91,7 @@ const COLORS = {
  * calculates match score if user has configured their avatar,
  * and provides "Start Chat" button for initiating conversations.
  */
-export function PostDetailScreen(): JSX.Element {
+export function PostDetailScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // HOOKS
   // ---------------------------------------------------------------------------

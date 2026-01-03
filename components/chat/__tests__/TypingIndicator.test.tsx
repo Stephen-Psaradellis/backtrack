@@ -13,16 +13,18 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TypingIndicator } from '../TypingIndicator'
 
-// Mock CSS module
+// Mock CSS module - must have default export
 vi.mock('../styles/ChatScreen.module.css', () => ({
-  typingContainer: 'typingContainer',
-  typingBubbleWrapper: 'typingBubbleWrapper',
-  typingDotsContainer: 'typingDotsContainer',
-  typingDot: 'typingDot',
-  typingDotDelay1: 'typingDotDelay1',
-  typingDotDelay2: 'typingDotDelay2',
-  typingDotDelay3: 'typingDotDelay3',
-  typingText: 'typingText',
+  default: {
+    typingContainer: 'typingContainer',
+    typingBubbleWrapper: 'typingBubbleWrapper',
+    typingDotsContainer: 'typingDotsContainer',
+    typingDot: 'typingDot',
+    typingDotDelay1: 'typingDotDelay1',
+    typingDotDelay2: 'typingDotDelay2',
+    typingDotDelay3: 'typingDotDelay3',
+    typingText: 'typingText',
+  },
 }))
 
 describe('TypingIndicator', () => {

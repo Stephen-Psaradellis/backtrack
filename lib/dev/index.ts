@@ -11,8 +11,14 @@
 
 /**
  * Check if the application is running in development mode
+ * Uses __DEV__ for React Native/Expo, falls back to process.env.NODE_ENV for Next.js
  */
 export function isDevMode(): boolean {
+  // In React Native/Expo, __DEV__ is the standard way to check dev mode
+  if (typeof __DEV__ !== 'undefined') {
+    return __DEV__
+  }
+  // Fallback for Next.js and other environments
   return process.env.NODE_ENV === 'development'
 }
 
@@ -30,7 +36,7 @@ export function isProductionMode(): boolean {
 export function isMissingSupabaseCredentials(): boolean {
   return (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   )
 }
 
@@ -41,7 +47,7 @@ export function isMissingSupabaseCredentials(): boolean {
 export function isMissingExpoSupabaseCredentials(): boolean {
   return (
     !process.env.EXPO_PUBLIC_SUPABASE_URL ||
-    !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+    !process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   )
 }
 
@@ -49,7 +55,7 @@ export function isMissingExpoSupabaseCredentials(): boolean {
  * Check if Google Maps API key is missing
  */
 export function isMissingGoogleMapsKey(): boolean {
-  return !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  return !process.env.NEXT_PUBLIC_GCP_MAPS_API_KEY
 }
 
 /**
@@ -149,10 +155,10 @@ export function logDevModeStatus(): void {
   if (summary.mockSupabase || summary.mockGoogleMaps) {
     console.warn('[Dev Mode] Running with mock services:')
     if (summary.mockSupabase) {
-      console.warn('  - Mock Supabase client (missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY)')
+      console.warn('  - Mock Supabase client (missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)')
     }
     if (summary.mockGoogleMaps) {
-      console.warn('  - Mock Google Maps (missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)')
+      console.warn('  - Mock Google Maps (missing NEXT_PUBLIC_GCP_MAPS_API_KEY)')
     }
   }
 }
@@ -168,6 +174,6 @@ export function logExpoDevModeStatus(): void {
 
   if (summary.mockExpoSupabase) {
     console.warn('[Dev Mode] Running with mock services:')
-    console.warn('  - Mock Supabase client (missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY)')
+    console.warn('  - Mock Supabase client (missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY)')
   }
 }

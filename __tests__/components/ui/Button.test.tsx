@@ -20,15 +20,15 @@ describe('Button', () => {
       renderWithProviders(<Button>Click me</Button>)
       const button = screen.getByRole('button', { name: 'Click me' })
       expect(button).toBeInTheDocument()
-      // Primary variant has pink background
-      expect(button).toHaveClass('bg-pink-500')
+      // Primary variant has gradient background
+      expect(button).toHaveClass('bg-gradient-to-br')
     })
 
     it('renders with default medium size', () => {
       renderWithProviders(<Button>Click me</Button>)
       const button = screen.getByRole('button', { name: 'Click me' })
-      // Medium size has px-4 py-2
-      expect(button).toHaveClass('px-4', 'py-2')
+      // Medium size has px-5 py-2.5
+      expect(button).toHaveClass('px-5', 'py-2.5')
     })
 
     it('renders with type="button" by default', () => {
@@ -53,8 +53,8 @@ describe('Button', () => {
       const button = screen.getByRole('button', { name: 'Click me' })
       // Check for base styles
       expect(button).toHaveClass('inline-flex', 'items-center', 'justify-center')
-      expect(button).toHaveClass('font-medium', 'rounded-lg')
-      expect(button).toHaveClass('transition-colors')
+      expect(button).toHaveClass('font-semibold')
+      expect(button).toHaveClass('transition-all')
     })
   })
 
@@ -67,31 +67,31 @@ describe('Button', () => {
       it('renders with primary variant styles', () => {
         renderWithProviders(<Button variant="primary">Primary</Button>)
         const button = screen.getByRole('button', { name: 'Primary' })
-        expect(button).toHaveClass('bg-pink-500', 'text-white')
+        expect(button).toHaveClass('bg-gradient-to-br', 'text-white')
       })
 
       it('has correct hover styles', () => {
         renderWithProviders(<Button variant="primary">Primary</Button>)
         const button = screen.getByRole('button', { name: 'Primary' })
-        expect(button).toHaveClass('hover:bg-pink-600')
+        expect(button).toHaveClass('hover:shadow-lg')
       })
 
       it('has correct focus ring color', () => {
         renderWithProviders(<Button variant="primary">Primary</Button>)
         const button = screen.getByRole('button', { name: 'Primary' })
-        expect(button).toHaveClass('focus:ring-pink-500')
+        expect(button).toHaveClass('focus-visible:ring-primary-500')
       })
 
       it('has correct active state styles', () => {
         renderWithProviders(<Button variant="primary">Primary</Button>)
         const button = screen.getByRole('button', { name: 'Primary' })
-        expect(button).toHaveClass('active:bg-pink-700')
+        expect(button).toHaveClass('active:scale-[0.98]')
       })
 
       it('has correct disabled styles', () => {
         renderWithProviders(<Button variant="primary">Primary</Button>)
         const button = screen.getByRole('button', { name: 'Primary' })
-        expect(button).toHaveClass('disabled:bg-pink-300')
+        expect(button).toHaveClass('disabled:from-primary-200')
       })
     })
 
@@ -99,25 +99,25 @@ describe('Button', () => {
       it('renders with secondary variant styles', () => {
         renderWithProviders(<Button variant="secondary">Secondary</Button>)
         const button = screen.getByRole('button', { name: 'Secondary' })
-        expect(button).toHaveClass('bg-gray-100', 'text-gray-900')
+        expect(button).toHaveClass('bg-neutral-100', 'text-neutral-900')
       })
 
       it('has correct hover styles', () => {
         renderWithProviders(<Button variant="secondary">Secondary</Button>)
         const button = screen.getByRole('button', { name: 'Secondary' })
-        expect(button).toHaveClass('hover:bg-gray-200')
+        expect(button).toHaveClass('hover:bg-neutral-200')
       })
 
       it('has correct focus ring color', () => {
         renderWithProviders(<Button variant="secondary">Secondary</Button>)
         const button = screen.getByRole('button', { name: 'Secondary' })
-        expect(button).toHaveClass('focus:ring-gray-500')
+        expect(button).toHaveClass('focus-visible:ring-neutral-400')
       })
 
       it('has dark mode styles', () => {
         renderWithProviders(<Button variant="secondary">Secondary</Button>)
         const button = screen.getByRole('button', { name: 'Secondary' })
-        expect(button).toHaveClass('dark:bg-gray-800', 'dark:text-gray-100')
+        expect(button).toHaveClass('dark:bg-neutral-800', 'dark:text-neutral-100')
       })
     })
 
@@ -125,25 +125,25 @@ describe('Button', () => {
       it('renders with ghost variant styles', () => {
         renderWithProviders(<Button variant="ghost">Ghost</Button>)
         const button = screen.getByRole('button', { name: 'Ghost' })
-        expect(button).toHaveClass('bg-transparent', 'text-gray-700')
+        expect(button).toHaveClass('bg-transparent', 'text-neutral-700')
       })
 
       it('has correct hover styles', () => {
         renderWithProviders(<Button variant="ghost">Ghost</Button>)
         const button = screen.getByRole('button', { name: 'Ghost' })
-        expect(button).toHaveClass('hover:bg-gray-100')
+        expect(button).toHaveClass('hover:bg-neutral-100')
       })
 
       it('has correct active state styles', () => {
         renderWithProviders(<Button variant="ghost">Ghost</Button>)
         const button = screen.getByRole('button', { name: 'Ghost' })
-        expect(button).toHaveClass('active:bg-gray-200')
+        expect(button).toHaveClass('active:bg-neutral-200')
       })
 
       it('has dark mode styles', () => {
         renderWithProviders(<Button variant="ghost">Ghost</Button>)
         const button = screen.getByRole('button', { name: 'Ghost' })
-        expect(button).toHaveClass('dark:text-gray-300', 'dark:hover:bg-gray-800')
+        expect(button).toHaveClass('dark:text-neutral-300', 'dark:hover:bg-neutral-800')
       })
     })
 
@@ -151,31 +151,31 @@ describe('Button', () => {
       it('renders with danger variant styles', () => {
         renderWithProviders(<Button variant="danger">Danger</Button>)
         const button = screen.getByRole('button', { name: 'Danger' })
-        expect(button).toHaveClass('bg-red-500', 'text-white')
+        expect(button).toHaveClass('bg-gradient-to-br', 'from-error', 'to-error-dark', 'text-white')
       })
 
       it('has correct hover styles', () => {
         renderWithProviders(<Button variant="danger">Danger</Button>)
         const button = screen.getByRole('button', { name: 'Danger' })
-        expect(button).toHaveClass('hover:bg-red-600')
+        expect(button).toHaveClass('hover:shadow-lg', 'hover:shadow-error/25')
       })
 
       it('has correct focus ring color', () => {
         renderWithProviders(<Button variant="danger">Danger</Button>)
         const button = screen.getByRole('button', { name: 'Danger' })
-        expect(button).toHaveClass('focus:ring-red-500')
+        expect(button).toHaveClass('focus-visible:ring-error')
       })
 
       it('has correct active state styles', () => {
         renderWithProviders(<Button variant="danger">Danger</Button>)
         const button = screen.getByRole('button', { name: 'Danger' })
-        expect(button).toHaveClass('active:bg-red-700')
+        expect(button).toHaveClass('active:from-error-dark', 'active:to-red-800')
       })
 
       it('has correct disabled styles', () => {
         renderWithProviders(<Button variant="danger">Danger</Button>)
         const button = screen.getByRole('button', { name: 'Danger' })
-        expect(button).toHaveClass('disabled:bg-red-300')
+        expect(button).toHaveClass('disabled:from-red-200', 'disabled:to-red-300')
       })
     })
 
@@ -201,7 +201,7 @@ describe('Button', () => {
       it('renders with small size styles', () => {
         renderWithProviders(<Button size="sm">Small</Button>)
         const button = screen.getByRole('button', { name: 'Small' })
-        expect(button).toHaveClass('px-3', 'py-1.5', 'text-sm', 'gap-1.5')
+        expect(button).toHaveClass('px-4', 'py-2', 'text-sm', 'gap-1.5', 'rounded-[12px]')
       })
     })
 
@@ -209,7 +209,7 @@ describe('Button', () => {
       it('renders with medium size styles', () => {
         renderWithProviders(<Button size="md">Medium</Button>)
         const button = screen.getByRole('button', { name: 'Medium' })
-        expect(button).toHaveClass('px-4', 'py-2', 'text-base', 'gap-2')
+        expect(button).toHaveClass('px-5', 'py-2.5', 'text-base', 'gap-2', 'rounded-[14px]')
       })
     })
 
@@ -217,7 +217,7 @@ describe('Button', () => {
       it('renders with large size styles', () => {
         renderWithProviders(<Button size="lg">Large</Button>)
         const button = screen.getByRole('button', { name: 'Large' })
-        expect(button).toHaveClass('px-6', 'py-3', 'text-lg', 'gap-2.5')
+        expect(button).toHaveClass('px-7', 'py-3.5', 'text-lg', 'gap-2.5', 'rounded-[16px]')
       })
     })
 
@@ -258,7 +258,7 @@ describe('Button', () => {
         </Button>
       )
       const button = screen.getByRole('button', { name: 'Secondary Full' })
-      expect(button).toHaveClass('w-full', 'bg-gray-100')
+      expect(button).toHaveClass('w-full', 'bg-neutral-100')
     })
 
     it('works with different sizes', () => {
@@ -268,7 +268,7 @@ describe('Button', () => {
         </Button>
       )
       const button = screen.getByRole('button', { name: 'Large Full' })
-      expect(button).toHaveClass('w-full', 'px-6', 'py-3')
+      expect(button).toHaveClass('w-full', 'px-7', 'py-3.5')
     })
   })
 
@@ -284,7 +284,7 @@ describe('Button', () => {
         </Button>
       )
       const button = screen.getByRole('button', { name: 'Small Primary' })
-      expect(button).toHaveClass('bg-pink-500', 'px-3', 'py-1.5')
+      expect(button).toHaveClass('bg-gradient-to-br', 'px-4', 'py-2', 'rounded-[12px]')
     })
 
     it('renders large secondary button correctly', () => {
@@ -294,7 +294,7 @@ describe('Button', () => {
         </Button>
       )
       const button = screen.getByRole('button', { name: 'Large Secondary' })
-      expect(button).toHaveClass('bg-gray-100', 'px-6', 'py-3')
+      expect(button).toHaveClass('bg-neutral-100', 'px-7', 'py-3.5', 'rounded-[16px]')
     })
 
     it('renders medium ghost button correctly', () => {
@@ -304,7 +304,7 @@ describe('Button', () => {
         </Button>
       )
       const button = screen.getByRole('button', { name: 'Medium Ghost' })
-      expect(button).toHaveClass('bg-transparent', 'px-4', 'py-2')
+      expect(button).toHaveClass('bg-transparent', 'px-5', 'py-2.5', 'rounded-[14px]')
     })
 
     it('renders small danger button correctly', () => {
@@ -314,7 +314,7 @@ describe('Button', () => {
         </Button>
       )
       const button = screen.getByRole('button', { name: 'Small Danger' })
-      expect(button).toHaveClass('bg-red-500', 'px-3', 'py-1.5')
+      expect(button).toHaveClass('from-error', 'px-4', 'py-2', 'rounded-[12px]')
     })
   })
 
@@ -421,15 +421,15 @@ describe('Button', () => {
       it('has focus ring classes', () => {
         renderWithProviders(<Button>Focus me</Button>)
         const button = screen.getByRole('button', { name: 'Focus me' })
-        expect(button).toHaveClass('focus:ring-2', 'focus:ring-offset-2', 'focus:outline-none')
+        expect(button).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-offset-2', 'focus:outline-none')
       })
 
       it('has correct focus ring color for each variant', () => {
         const variantRingColors = {
-          primary: 'focus:ring-pink-500',
-          secondary: 'focus:ring-gray-500',
-          ghost: 'focus:ring-gray-500',
-          danger: 'focus:ring-red-500',
+          primary: 'focus-visible:ring-primary-500',
+          secondary: 'focus-visible:ring-neutral-400',
+          ghost: 'focus-visible:ring-neutral-400',
+          danger: 'focus-visible:ring-error',
         }
 
         Object.entries(variantRingColors).forEach(([variant, ringColor]) => {
@@ -541,7 +541,7 @@ describe('Button', () => {
 
   describe('loading state', () => {
     it('renders with loading prop', () => {
-      renderWithProviders(<Button loading>Loading</Button>)
+      renderWithProviders(<Button isLoading>Loading</Button>)
       const button = screen.getByRole('button')
       expect(button).toHaveAttribute('aria-busy', 'true')
     })
@@ -549,7 +549,7 @@ describe('Button', () => {
     it('disables click when loading', async () => {
       const handleClick = vi.fn()
       const { user } = renderWithProviders(
-        <Button loading onClick={handleClick}>
+        <Button isLoading onClick={handleClick}>
           Loading
         </Button>
       )
@@ -562,7 +562,7 @@ describe('Button', () => {
 
     it('shows loading indicator when loading', () => {
       renderWithProviders(
-        <Button loading>
+        <Button isLoading>
           <span data-testid="loading-indicator">...</span>
           Loading
         </Button>

@@ -78,7 +78,7 @@ interface ConversationItem extends Conversation {
  * Colors used in the ChatListScreen
  */
 const COLORS = {
-  primary: '#007AFF',
+  primary: '#FF6B47',
   background: '#F2F2F7',
   cardBackground: '#FFFFFF',
   textPrimary: '#000000',
@@ -163,7 +163,7 @@ function truncateMessage(content: string | null, maxLength: number = MAX_PREVIEW
  * Fetches and displays all conversations for the current user,
  * sorted by most recent activity.
  */
-export function ChatListScreen(): JSX.Element {
+export function ChatListScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
   // HOOKS
   // ---------------------------------------------------------------------------
@@ -207,37 +207,34 @@ export function ChatListScreen(): JSX.Element {
 
     try {
       // Get list of hidden user IDs (blocked users + users who blocked us)
+      // This is optional - if it fails, we just show all conversations
       let hiddenUserIds: string[] = []
-      const hiddenResult = await getHiddenUserIds(userId)
-      if (hiddenResult.success) {
-        hiddenUserIds = hiddenResult.hiddenUserIds
+      try {
+        const hiddenResult = await getHiddenUserIds(userId)
+        if (hiddenResult.success) {
+          hiddenUserIds = hiddenResult.hiddenUserIds
+        }
+      } catch {
+        // Silently ignore - getHiddenUserIds RPC may not exist yet
+        console.warn('getHiddenUserIds failed, showing all conversations')
       }
 
       // Fetch conversations where user is producer or consumer
+      // Simplified query - fetch posts data separately to avoid nested join issues
       const { data: conversationsData, error: fetchError } = await supabase
         .from('conversations')
-        .select(`
-          *,
-          posts:post_id (
-            id,
-            target_rpm_avatar,
-            note,
-            location_id,
-            locations:location_id (
-              name
-            )
-          )
-        `)
+        .select('*')
         .or(`producer_id.eq.${userId},consumer_id.eq.${userId}`)
         .eq('is_active', true)
         .order('updated_at', { ascending: false })
 
       if (fetchError) {
+        console.error('Failed to fetch conversations:', fetchError)
         setError('Failed to load conversations. Please try again.')
         return
       }
 
-      if (!conversationsData) {
+      if (!conversationsData || conversationsData.length === 0) {
         setConversations([])
         return
       }
@@ -256,14 +253,14 @@ export function ChatListScreen(): JSX.Element {
           // Determine the other user's ID
           const otherUserId = conv.producer_id === userId ? conv.consumer_id : conv.producer_id
 
-          // Fetch last message
+          // Fetch last message - use maybeSingle() to handle no messages case
           const { data: lastMessageData } = await supabase
             .from('messages')
             .select('content, created_at, sender_id')
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single()
+            .maybeSingle()
 
           // Fetch unread count
           const { count: unreadCount } = await supabase
@@ -273,30 +270,51 @@ export function ChatListScreen(): JSX.Element {
             .eq('is_read', false)
             .neq('sender_id', userId)
 
-          // Fetch other user's verification status
+          // Fetch other user's verification status - use maybeSingle() to handle missing profile
           const { data: otherUserProfile } = await supabase
             .from('profiles')
             .select('is_verified')
             .eq('id', otherUserId)
-            .single()
+            .maybeSingle()
 
-          // Extract post data
-          const post = conv.posts as unknown as {
+          // Fetch post data separately to avoid nested join issues
+          let postData: {
             id: string
             target_rpm_avatar: StoredAvatar | null
             note: string
             location_id: string
-            locations: { name: string } | null
-          } | null
+          } | null = null
+          let locationName: string | null = null
+
+          if (conv.post_id) {
+            const { data: post } = await supabase
+              .from('posts')
+              .select('id, target_rpm_avatar, note, location_id')
+              .eq('id', conv.post_id)
+              .maybeSingle()
+
+            if (post) {
+              postData = post as typeof postData
+              // Fetch location name
+              if (post.location_id) {
+                const { data: location } = await supabase
+                  .from('locations')
+                  .select('name')
+                  .eq('id', post.location_id)
+                  .maybeSingle()
+                locationName = location?.name || null
+              }
+            }
+          }
 
           return {
             ...conv,
-            target_rpm_avatar: post?.target_rpm_avatar || null,
+            target_rpm_avatar: postData?.target_rpm_avatar || null,
             last_message_content: lastMessageData?.content || null,
             last_message_at: lastMessageData?.created_at || conv.updated_at,
             last_message_sender_id: lastMessageData?.sender_id || null,
             unread_count: unreadCount || 0,
-            location_name: post?.locations?.name || null,
+            location_name: locationName,
             other_user_is_verified: otherUserProfile?.is_verified ?? false,
           } as ConversationItem
         })
@@ -310,8 +328,9 @@ export function ChatListScreen(): JSX.Element {
       })
 
       setConversations(conversationItems)
-    } catch {
-      setError('An unexpected error occurred.')
+    } catch (err) {
+      console.error('Unexpected error fetching conversations:', err)
+      setError('An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
       setRefreshing(false)

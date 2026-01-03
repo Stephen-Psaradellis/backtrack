@@ -1,7 +1,7 @@
 /**
  * Conversation Management Utilities
  *
- * Handles conversation initiation and management for the Love Ledger app.
+ * Handles conversation initiation and management for the Backtrack app.
  * Conversations are anonymous chats between a post producer and a consumer
  * who believes they match the post's description.
  *

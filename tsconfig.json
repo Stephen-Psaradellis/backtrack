@@ -43,6 +43,12 @@
     "expo-env.d.ts"
   ],
   "exclude": [
+    "__tests__/**/*.ts",
+    "supabase/functions/**/*.ts",
+    "vitest.setup.ts",
+    "__tests__/**/*.tsx",
+    "components/**/__tests__/**/*.tsx",
+    ".next/types/**/*.ts",
     "node_modules"
   ]
 }

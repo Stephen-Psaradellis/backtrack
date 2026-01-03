@@ -2,74 +2,213 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =============================================================================
+   CSS VARIABLES - Modern Design System
+   ============================================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background & Foreground */
+  --background: #FAFAF9;
+  --foreground: #1C1917;
+
+  /* Primary - Warm Coral */
+  --primary: #FF6B47;
+  --primary-light: #FF8C6B;
+  --primary-dark: #F04E2A;
+  --primary-foreground: #FFFFFF;
+
+  /* Accent - Deep Violet */
+  --accent: #8B5CF6;
+  --accent-light: #A78BFA;
+  --accent-dark: #7C3AED;
+  --accent-foreground: #FFFFFF;
+
+  /* Neutral */
+  --muted: #F5F5F4;
+  --muted-foreground: #78716C;
+  --border: #E7E5E4;
+  --ring: #FF6B47;
+
+  /* Semantic */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0C0A09;
+    --foreground: #FAFAF9;
+
+    --primary: #FF8C6B;
+    --primary-light: #FFB199;
+    --primary-dark: #FF6B47;
+    --primary-foreground: #0C0A09;
+
+    --accent: #A78BFA;
+    --accent-light: #C4B5FD;
+    --accent-dark: #8B5CF6;
+    --accent-foreground: #0C0A09;
+
+    --muted: #292524;
+    --muted-foreground: #A8A29E;
+    --border: #44403C;
+    --ring: #FF8C6B;
   }
 }
+
+/* =============================================================================
+   BASE STYLES
+   ============================================================================= */
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ============================================================================
-   Onboarding Animations
-   ============================================================================ */
+/* =============================================================================
+   GLASSMORPHISM COMPONENTS
+   ============================================================================= */
 
-/* Fade in animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+@layer components {
+  /* Glass effect - light mode */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
-  to {
-    opacity: 1;
+
+  /* Glass effect - dark mode */
+  .dark .glass,
+  .glass-dark {
+    background: rgba(28, 25, 23, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Frosted glass card */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.04), 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark .glass-card {
+    background: rgba(41, 37, 36, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Gradient text */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, #FF8C6B 0%, #F04E2A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-accent {
+    background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-sunset {
+    background: linear-gradient(135deg, #FF8C6B 0%, #8B5CF6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Modern button base */
+  .btn {
+    @apply inline-flex items-center justify-center font-medium transition-all duration-200;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+    @apply active:scale-[0.98];
+  }
+
+  .btn-primary {
+    @apply btn rounded-md px-5 py-3;
+    @apply bg-gradient-primary text-white shadow-md;
+    @apply hover:shadow-lg hover:shadow-primary-500/25;
+    @apply focus-visible:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn rounded-md px-5 py-3;
+    @apply bg-neutral-100 text-neutral-900;
+    @apply hover:bg-neutral-200;
+    @apply dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700;
+    @apply focus-visible:ring-neutral-500;
+  }
+
+  .btn-ghost {
+    @apply btn rounded-md px-5 py-3;
+    @apply bg-transparent text-neutral-700;
+    @apply hover:bg-neutral-100;
+    @apply dark:text-neutral-300 dark:hover:bg-neutral-800;
+    @apply focus-visible:ring-neutral-500;
+  }
+
+  /* Modern card */
+  .card {
+    @apply bg-white rounded-lg shadow-md;
+    @apply dark:bg-neutral-800;
+    @apply transition-shadow duration-200;
+    @apply hover:shadow-lg;
+  }
+
+  /* Input styling */
+  .input {
+    @apply block w-full rounded-[12px] border-[1.5px] border-neutral-300;
+    @apply bg-white px-4 py-3 text-neutral-900;
+    @apply placeholder:text-neutral-400;
+    @apply transition-all duration-200;
+    @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
+    @apply disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500;
+    @apply dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100;
+    @apply dark:placeholder:text-neutral-500 dark:focus:border-primary-400;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-700;
+  }
+
+  /* Skeleton shimmer effect */
+  .skeleton-shimmer {
+    @apply relative overflow-hidden;
+    @apply bg-neutral-200 dark:bg-neutral-700;
+  }
+
+  .skeleton-shimmer::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
   }
 }
 
-/* Fade in and slide up animation */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
 
-/* Fade in and scale animation for hero icons */
-@keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Subtle bounce animation for completion celebration */
-@keyframes subtleBounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-/* Animation utility classes for onboarding */
 @layer utilities {
+  /* Animation utilities */
   .animate-fade-in {
     animation: fadeIn 0.4s ease-out forwards;
   }
@@ -86,7 +225,7 @@ body {
     animation: subtleBounce 2s ease-in-out infinite;
   }
 
-  /* Staggered animation delays for list items */
+  /* Staggered animation delays */
   .animation-delay-100 {
     animation-delay: 100ms;
   }
@@ -148,5 +287,126 @@ body {
   .min-touch-target {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Gradient borders */
+  .border-gradient-primary {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, #FF8C6B 0%, #F04E2A 100%) border-box;
+  }
+
+  .border-gradient-accent {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%) border-box;
+  }
+
+  .border-gradient-sunset {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, #FF8C6B 0%, #8B5CF6 100%) border-box;
+  }
+
+  /* Focus ring utilities */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  .focus-ring-accent {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2;
+  }
+
+  /* Smooth hover scale */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105 active:scale-[0.98];
+  }
+
+  .hover-scale-sm {
+    @apply transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    @apply transition-all duration-200;
+    @apply hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  /* Interactive card */
+  .interactive-card {
+    @apply transition-all duration-200;
+    @apply hover:-translate-y-1 hover:shadow-lg;
+    @apply active:translate-y-0 active:shadow-md;
+  }
+}
+
+/* =============================================================================
+   KEYFRAME ANIMATIONS
+   ============================================================================= */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes subtleBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
   }
 }

@@ -102,7 +102,7 @@ describe('Constants', () => {
       it('has correct configuration', () => {
         const welcomeStep = ONBOARDING_STEPS[0]
         expect(welcomeStep.id).toBe('welcome')
-        expect(welcomeStep.title).toBe('Welcome to Love Ledger')
+        expect(welcomeStep.title).toBe('Welcome to Backtrack')
         expect(welcomeStep.showSkip).toBe(true)
         expect(welcomeStep.showBack).toBe(false)
         expect(welcomeStep.primaryButtonLabel).toBe('Get Started')
@@ -155,7 +155,7 @@ describe('Constants', () => {
         expect(completeStep.id).toBe('complete')
         expect(completeStep.showSkip).toBe(false) // No skip on complete step
         expect(completeStep.showBack).toBe(true)
-        expect(completeStep.primaryButtonLabel).toBe('Enter Love Ledger')
+        expect(completeStep.primaryButtonLabel).toBe('Enter Backtrack')
       })
     })
 
@@ -209,7 +209,7 @@ describe('Step Lookup Functions', () => {
     it('returns complete step data', () => {
       const step = getStepById('welcome')
       expect(step).toBeDefined()
-      expect(step!.title).toBe('Welcome to Love Ledger')
+      expect(step!.title).toBe('Welcome to Backtrack')
       expect(step!.showSkip).toBe(true)
       expect(step!.showBack).toBe(false)
     })

@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * AvatarCreationStep Component
  *
@@ -14,13 +12,18 @@
  */
 
 import { memo, useCallback, useMemo, useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { getStepById } from '@/lib/onboarding/onboardingConfig'
+import { Button } from '../ui/Button'
+import { getStepById } from '../../lib/onboarding/onboardingConfig'
 import {
   AvatarConfig,
   AVATAR_OPTIONS,
-} from '@/types/avatar'
-import { createAvatarDataUri } from '@/lib/avatar/dicebear'
+} from '../../types/avatar'
+
+// Placeholder for legacy DiceBear avatar - this component needs to be migrated to RPM
+const createAvatarDataUri = (_config: AvatarConfig, _size: number): string => {
+  // Return a placeholder image data URI
+  return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23f0f0f0"/><circle cx="50" cy="40" r="20" fill="%23ccc"/><ellipse cx="50" cy="80" rx="30" ry="20" fill="%23ccc"/></svg>'
+}
 
 // ============================================================================
 // Types
@@ -134,9 +137,9 @@ const AvatarPreviewSection = memo(function AvatarPreviewSection({
     <div
       className={`
         relative mx-auto w-36 h-36 sm:w-44 sm:h-44
-        rounded-full bg-gradient-to-br from-pink-50 to-pink-100
-        dark:from-pink-900/20 dark:to-pink-800/10
-        shadow-lg shadow-pink-500/10 hover:shadow-xl hover:shadow-pink-500/15
+        rounded-full bg-gradient-to-br from-primary-50 to-primary-100
+        dark:from-primary-900/20 dark:to-primary-800/10
+        shadow-lg shadow-primary-500/10 hover:shadow-xl hover:shadow-primary-500/15
         flex items-center justify-center
         transition-all duration-300 ease-out
         animate-fade-in-scale
@@ -158,7 +161,7 @@ const AvatarPreviewSection = memo(function AvatarPreviewSection({
       {/* Loading indicator overlay */}
       {isAnimating && (
         <div className="absolute inset-0 flex items-center justify-center rounded-full bg-white/30 dark:bg-black/20 backdrop-blur-sm">
-          <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
     </div>
@@ -194,11 +197,11 @@ const QuickOptionSelector = memo(function QuickOptionSelector({
             className={`
               flex-shrink-0 px-3 py-2 rounded-lg text-xs font-medium
               min-touch-target transition-all duration-150
-              focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-1
+              focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1
               active:scale-95
               ${
                 value === option
-                  ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20'
+                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
               }
             `}
@@ -235,10 +238,10 @@ const QuickActions = memo(function QuickActions({
           rounded-xl text-sm font-medium
           text-gray-700 dark:text-gray-300
           hover:bg-gray-50 dark:hover:bg-gray-750
-          hover:border-pink-300 dark:hover:border-pink-700
+          hover:border-primary-300 dark:hover:border-primary-700
           active:scale-95
           transition-all duration-200
-          focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2
+          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
           disabled:opacity-50 disabled:cursor-not-allowed
           shadow-sm hover:shadow-md
           group
@@ -466,7 +469,7 @@ function AvatarCreationStepComponent({
             <button
               type="button"
               onClick={onBack}
-              className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 px-2 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg"
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 px-2 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg"
               aria-label="Go back to the previous step"
             >
               Go back
@@ -477,7 +480,7 @@ function AvatarCreationStepComponent({
             <button
               type="button"
               onClick={onSkip}
-              className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 px-2 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 rounded-lg ml-auto"
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-sm font-medium py-3 px-2 min-touch-target transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded-lg ml-auto"
               aria-label="Skip onboarding"
             >
               Skip for now
