@@ -50,19 +50,32 @@ import {
   Text,
   Platform,
 } from 'react-native'
-import RNMapView, {
-  Marker,
-  PROVIDER_GOOGLE,
-  Region,
-  MapPressEvent,
-  MarkerPressEvent,
-  Camera,
-} from 'react-native-maps'
 
 import { LoadingSpinner } from './LoadingSpinner'
 import { ErrorState } from './EmptyState'
 import { Button } from './Button'
 import type { Coordinates, MapRegion } from '../lib/types'
+
+// react-native-maps is excluded from iOS autolinking (see app.json)
+// Only import on Android to prevent iOS crash
+let RNMapView: any = null
+let Marker: any = null
+let PROVIDER_GOOGLE: any = null
+
+if (Platform.OS === 'android') {
+  const maps = require('react-native-maps')
+  RNMapView = maps.default
+  Marker = maps.Marker
+  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE
+}
+
+// Type imports for TypeScript (these don't affect runtime)
+import type {
+  Region,
+  MapPressEvent,
+  MarkerPressEvent,
+  Camera,
+} from 'react-native-maps'
 
 // ============================================================================
 // TYPES
@@ -247,7 +260,7 @@ export function MapView({
   // REFS
   // ---------------------------------------------------------------------------
 
-  const mapRef = useRef<RNMapView>(null)
+  const mapRef = useRef<any>(null)
 
   // ---------------------------------------------------------------------------
   // HANDLERS
@@ -399,7 +412,19 @@ export function MapView({
   }
 
   // ---------------------------------------------------------------------------
-  // RENDER: MAP
+  // RENDER: iOS FALLBACK (react-native-maps not linked on iOS)
+  // ---------------------------------------------------------------------------
+
+  if (Platform.OS === 'ios' || !RNMapView) {
+    return (
+      <View style={[styles.container, styles.centered, style]} testID={testID}>
+        <Text style={styles.fallbackText}>Map not available on this platform</Text>
+      </View>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // RENDER: MAP (Android only)
   // ---------------------------------------------------------------------------
 
   return (
@@ -609,6 +634,11 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  fallbackText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 })
 
