@@ -1,20 +1,33 @@
 /**
  * HomeScreen - Main home screen with map and favorites
  */
-import React, { useState, useCallback } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import React, { useState, useCallback, useEffect } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true)
+}
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useLocation } from '../hooks/useLocation'
 import { useFavoriteLocations, type FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
-import { MapView, createRegion, createMarker, type MapMarker } from '../components/MapView'
+import { MapView, createRegion, createMarker, type MapMarker, type PoiData } from '../components/MapView'
 import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Button, OutlineButton } from '../components/Button'
 import { FavoritesList } from '../components/favorites/FavoritesList'
 import { AddFavoriteModal, type AddFavoriteLocationData } from '../components/favorites/AddFavoriteModal'
 import type { MainTabNavigationProp } from '../navigation/types'
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const FAVORITES_COLLAPSED_KEY = '@homescreen:favorites_collapsed'
 
 // ============================================================================
 // HomeScreen Component
@@ -45,6 +58,16 @@ export function HomeScreen(): React.ReactNode {
   const [addModalLocation, setAddModalLocation] = useState<AddFavoriteLocationData | null>(null)
   const [isAddingFavorite, setIsAddingFavorite] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
+  const [isFavoritesExpanded, setIsFavoritesExpanded] = useState(true)
+
+  // Load persisted collapsed state on mount
+  useEffect(() => {
+    AsyncStorage.getItem(FAVORITES_COLLAPSED_KEY).then((value) => {
+      if (value !== null) {
+        setIsFavoritesExpanded(value !== 'true')
+      }
+    })
+  }, [])
 
   // ---------------------------------------------------------------------------
   // Map Configuration
@@ -70,19 +93,19 @@ export function HomeScreen(): React.ReactNode {
   const handleSelectFavorite = useCallback((favorite: FavoriteLocationWithDistance) => {
     selectionFeedback()
     setSelectedFavorite(favorite)
-  }, [])
+  }, [navigation])
 
   const handlePostHere = useCallback((favorite: FavoriteLocationWithDistance) => {
     selectionFeedback()
     // Navigate to create post with this location
-    // navigation.navigate('CreatePost', { location: favorite })
-  }, [])
+    navigation.navigate('CreatePost', { locationId: favorite.place_id ?? undefined })
+  }, [navigation])
 
   const handleBrowse = useCallback((favorite: FavoriteLocationWithDistance) => {
     selectionFeedback()
     // Navigate to ledger filtered by this location
-    // navigation.navigate('Ledger', { locationId: favorite.place_id })
-  }, [])
+    navigation.navigate('Ledger', { locationId: favorite.place_id ?? '', locationName: favorite.place_name })
+  }, [navigation])
 
   const handleUpdateFavorite = useCallback(async (favoriteId: string, customName: string) => {
     const result = await updateFavorite(favoriteId, { custom_name: customName })
@@ -113,6 +136,26 @@ export function HomeScreen(): React.ReactNode {
     setShowAddModal(true)
   }, [userCoordinates])
 
+  const handlePoiClick = useCallback((poi: PoiData) => {
+    selectionFeedback()
+    // Navigate to posts for this POI location
+    navigation.navigate('Ledger', {
+      locationId: poi.placeId ?? '',
+      locationName: poi.name,
+    })
+  }, [navigation])
+
+  const toggleFavoritesExpanded = useCallback(() => {
+    selectionFeedback()
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setIsFavoritesExpanded(prev => {
+      const newValue = !prev
+      // Persist the collapsed state
+      AsyncStorage.setItem(FAVORITES_COLLAPSED_KEY, (!newValue).toString())
+      return newValue
+    })
+  }, [])
+
   const handleSaveNewFavorite = useCallback(async (customName: string) => {
     if (!addModalLocation) return
 
@@ -142,7 +185,7 @@ export function HomeScreen(): React.ReactNode {
     setShowAddModal(false)
     setAddModalLocation(null)
     setAddError(null)
-  }, [])
+  }, [navigation])
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -180,6 +223,7 @@ export function HomeScreen(): React.ReactNode {
             const fav = favorites.find(f => f.id === marker.id)
             if (fav) handleSelectFavorite(fav)
           }}
+          onPoiClick={handlePoiClick}
         />
 
         {/* Map Overlay with Add Button */}
@@ -195,15 +239,33 @@ export function HomeScreen(): React.ReactNode {
       </View>
 
       {/* Favorites Section */}
-      <View style={styles.favoritesContainer}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Your Favorites</Text>
-          {favorites.length > 0 && (
-            <Text style={styles.sectionCount}>{favorites.length}</Text>
-          )}
-        </View>
+      <View style={[styles.favoritesContainer, !isFavoritesExpanded && styles.favoritesCollapsed]}>
+        <TouchableOpacity
+          style={styles.sectionHeader}
+          onPress={toggleFavoritesExpanded}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Your Favorites, ${favorites.length} items, ${isFavoritesExpanded ? 'expanded' : 'collapsed'}`}
+          accessibilityHint="Double tap to toggle favorites list"
+        >
+          <View style={styles.sectionHeaderLeft}>
+            <Text style={styles.sectionTitle}>Your Favorites</Text>
+            {favorites.length > 0 && (
+              <View style={styles.sectionCountBadge}>
+                <Text style={styles.sectionCount}>{favorites.length}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.expandIconContainer}>
+            <Ionicons
+              name={isFavoritesExpanded ? 'chevron-down' : 'chevron-up'}
+              size={20}
+              color="#8E8E93"
+            />
+          </View>
+        </TouchableOpacity>
 
-        <FavoritesList
+        {isFavoritesExpanded && <FavoritesList
           favorites={favorites}
           isLoading={favoritesLoading}
           error={favoritesError?.message}
@@ -218,7 +280,7 @@ export function HomeScreen(): React.ReactNode {
           emptyTitle="No Favorites Yet"
           emptyMessage="Add your favorite spots for quick access to posting and browsing missed connections."
           style={styles.favoritesList}
-        />
+        />}
       </View>
 
       {/* Add Favorite Modal */}
@@ -250,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAF9',
   },
   mapContainer: {
-    height: 250,
+    height: 325,
     position: 'relative',
   },
   mapOverlay: {
@@ -276,30 +338,59 @@ const styles = StyleSheet.create({
   },
   favoritesContainer: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  favoritesCollapsed: {
+    flex: 0,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
+    // Add subtle shadow for visual separation from map
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  expandIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1C1917',
   },
-  sectionCount: {
-    fontSize: 14,
-    color: '#8E8E93',
-    backgroundColor: '#F2F2F7',
+  sectionCountBadge: {
+    backgroundColor: '#FF6B47',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    overflow: 'hidden',
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  sectionCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   favoritesList: {
     flex: 1,

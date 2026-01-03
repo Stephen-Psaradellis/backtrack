@@ -714,9 +714,8 @@ export function ChatScreen(): React.ReactNode {
       await fetchMessages()
       await loadSharedPhotos()
       await refreshProfilePhotos()
-    } else {
-      setConversationLoading(false)
     }
+    setConversationLoading(false)
   }, [fetchConversation, fetchMessages, loadSharedPhotos, refreshProfilePhotos])
 
   // ---------------------------------------------------------------------------
@@ -803,9 +802,10 @@ export function ChatScreen(): React.ReactNode {
 
       const message = item.data as Message
       const isOwn = message.sender_id === userId
+      const messageIndex = messages.findIndex(m => m.id === message.id)
       const position = getBubblePosition(
-        message,
         messages,
+        messageIndex,
         userId || ''
       )
 

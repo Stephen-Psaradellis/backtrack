@@ -1,4 +1,4 @@
-package com.backtrack.app
+package app.backtrack.social
 
 import android.app.Application
 import android.content.res.Configuration

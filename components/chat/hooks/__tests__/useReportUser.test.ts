@@ -11,15 +11,17 @@
  * - Report reason and details handling
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useReportUser } from '../useReportUser'
-import { createClient } from '../../../../lib/supabase/client'
+import * as supabaseModule from '../../../../lib/supabase'
 import type { UUID, ReportReason } from '../../../../types/database'
 
 // Mock the Supabase client
-vi.mock('../../../../lib/supabase/client', () => ({
-  createClient: vi.fn(),
+vi.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(),
+  },
 }))
 
 // Mock data
@@ -47,7 +49,8 @@ describe('useReportUser', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSupabase = createMockSupabase()
-    ;(createClient as Mock).mockReturnValue(mockSupabase)
+    // Set up the mocked supabase module
+    vi.mocked(supabaseModule.supabase.from).mockImplementation(mockSupabase.from)
   })
 
   describe('Initial state', () => {
@@ -99,7 +102,7 @@ describe('useReportUser', () => {
         await result.current.reportUser('harassment')
       })
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('user_reports')
+      expect(supabaseModule.supabase.from).toHaveBeenCalledWith('user_reports')
       expect(mockSupabase._mockInsert).toHaveBeenCalledWith({
         reporter_id: mockCurrentUserId,
         reported_id: mockTargetUserId,

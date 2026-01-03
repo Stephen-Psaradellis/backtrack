@@ -9,16 +9,20 @@
  * - Error handling and recovery
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useChatMessages } from '../useChatMessages'
-import { createClient } from '../../../../lib/supabase/client'
+import * as supabaseModule from '../../../../lib/supabase'
 import type { MessageWithSender } from '../../../../types/chat'
 import type { UUID } from '../../../../types/database'
 
 // Mock the Supabase client
-vi.mock('../../../../lib/supabase/client', () => ({
-  createClient: vi.fn(),
+vi.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(),
+    channel: vi.fn(),
+    removeChannel: vi.fn(),
+  },
 }))
 
 // Mock data
@@ -141,7 +145,10 @@ describe('useChatMessages', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSupabase = createMockSupabase()
-    ;(createClient as Mock).mockReturnValue(mockSupabase)
+    // Set up the mocked supabase module
+    vi.mocked(supabaseModule.supabase.from).mockImplementation(mockSupabase.from)
+    vi.mocked(supabaseModule.supabase.channel).mockImplementation(mockSupabase.channel)
+    vi.mocked(supabaseModule.supabase.removeChannel).mockImplementation(mockSupabase.removeChannel)
   })
 
   afterEach(() => {
@@ -172,7 +179,7 @@ describe('useChatMessages', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('messages')
+      expect(supabaseModule.supabase.from).toHaveBeenCalledWith('messages')
       expect(result.current.messages).toHaveLength(3)
     })
 
@@ -301,7 +308,7 @@ describe('useChatMessages', () => {
       )
 
       await waitFor(() => {
-        expect(mockSupabase.channel).toHaveBeenCalledWith(`messages:${mockConversationId}`)
+        expect(supabaseModule.supabase.channel).toHaveBeenCalledWith(`messages:${mockConversationId}`)
       })
 
       expect(mockSupabase._mockChannel.on).toHaveBeenCalledWith(
@@ -324,12 +331,12 @@ describe('useChatMessages', () => {
       )
 
       await waitFor(() => {
-        expect(mockSupabase.channel).toHaveBeenCalled()
+        expect(supabaseModule.supabase.channel).toHaveBeenCalled()
       })
 
       unmount()
 
-      expect(mockSupabase.removeChannel).toHaveBeenCalled()
+      expect(supabaseModule.supabase.removeChannel).toHaveBeenCalled()
     })
 
     it('should call onNewMessage callback when receiving new message', async () => {
@@ -422,7 +429,7 @@ describe('useChatMessages', () => {
         await result.current.markAsRead()
       })
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('messages')
+      expect(supabaseModule.supabase.from).toHaveBeenCalledWith('messages')
     })
 
     it('should not call API when conversationId is empty', async () => {

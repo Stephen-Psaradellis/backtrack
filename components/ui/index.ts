@@ -45,3 +45,8 @@ export type { EmptyStateProps, EmptyStateVariant } from './EmptyState';
 // Animation utilities
 export { AnimatedList, AnimatedListItem } from './AnimatedList';
 export type { AnimatedListProps, AnimatedListItemProps } from './AnimatedList';
+
+
+// Icons
+export * from './Icons';
+export { default as Icons } from './Icons';

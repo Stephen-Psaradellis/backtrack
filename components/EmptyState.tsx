@@ -5,7 +5,8 @@
  * and optional action button. Use this when there's no data to display.
  */
 
-import React from 'react'
+import React, { ReactNode } from 'react'
+import { FileEdit, MessageSquare, Search, SearchX, AlertTriangle } from 'lucide-react-native'
 import {
   View,
   Text,
@@ -21,8 +22,8 @@ import { Button, ButtonProps } from './Button'
 // ============================================================================
 
 export interface EmptyStateProps {
-  /** Icon to display (emoji or text) */
-  icon?: string
+  /** Icon to display (emoji, text, or React node) */
+  icon?: string | ReactNode
   /** Main title text */
   title: string
   /** Optional description message */
@@ -61,7 +62,7 @@ export interface EmptyStateProps {
  * @example
  * // With action button
  * <EmptyState
- *   icon="💬"
+ *   icon={<MessageSquare size={48} strokeWidth={1.5} color="#8B5CF6" />}
  *   title="No conversations"
  *   message="Start chatting with someone who caught your eye"
  *   action={{
@@ -91,9 +92,13 @@ export function EmptyState({
   return (
     <View style={[styles.container, style]} testID={testID}>
       {icon && (
-        <Text style={styles.icon} testID={`${testID}-icon`}>
-          {icon}
-        </Text>
+        <View style={styles.iconContainer} testID={`${testID}-icon`}>
+          {typeof icon === 'string' ? (
+            <Text style={styles.icon}>{icon}</Text>
+          ) : (
+            icon
+          )}
+        </View>
       )}
       <Text style={[styles.title, titleStyle]} testID={`${testID}-title`}>
         {title}
@@ -133,9 +138,9 @@ export function EmptyLedger({
   return (
     <EmptyState
       {...props}
-      icon="📝"
+      icon={<FileEdit size={48} strokeWidth={1.5} color="#FF6B47" />}
       title="No posts here yet"
-      message="Be the first to leave a note at this location! Describe someone who caught your eye."
+      message="Be the first to post and notify Regulars immediately!"
       action={
         onCreatePost
           ? {
@@ -160,7 +165,7 @@ export function EmptyChats({
   return (
     <EmptyState
       {...props}
-      icon="💬"
+      icon={<MessageSquare size={48} strokeWidth={1.5} color="#8B5CF6" />}
       title="No conversations yet"
       message="When you connect with someone, your conversations will appear here."
       action={
@@ -187,7 +192,7 @@ export function NoMatches({
   return (
     <EmptyState
       {...props}
-      icon="🔍"
+      icon={<Search size={48} strokeWidth={1.5} color="#8E8E93" />}
       title="No matches found"
       message="Nobody has described someone matching your avatar yet. Check back later!"
       action={
@@ -217,7 +222,7 @@ export function NoSearchResults({
   return (
     <EmptyState
       {...props}
-      icon="🔎"
+      icon={<SearchX size={48} strokeWidth={1.5} color="#8E8E93" />}
       title="No results found"
       message={
         query
@@ -251,7 +256,7 @@ export function ErrorState({
   return (
     <EmptyState
       {...props}
-      icon="⚠️"
+      icon={<AlertTriangle size={48} strokeWidth={1.5} color="#FF3B30" />}
       title="Something went wrong"
       message={error || 'An unexpected error occurred. Please try again.'}
       action={
@@ -279,9 +284,13 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     backgroundColor: '#F2F2F7',
   },
+  iconContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   icon: {
     fontSize: 64,
-    marginBottom: 16,
   },
   title: {
     fontSize: 20,

@@ -9,16 +9,19 @@
  * - Cleanup on unmount
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useTypingIndicator } from '../useTypingIndicator'
-import { createClient } from '../../../../lib/supabase/client'
+import * as supabaseModule from '../../../../lib/supabase'
 import { CHAT_CONSTANTS } from '../../../../types/chat'
 import type { UUID } from '../../../../types/database'
 
 // Mock the Supabase client
-vi.mock('../../../../lib/supabase/client', () => ({
-  createClient: vi.fn(),
+vi.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    channel: vi.fn(),
+    removeChannel: vi.fn(),
+  },
 }))
 
 // Mock data
@@ -69,7 +72,9 @@ describe('useTypingIndicator', () => {
     vi.clearAllMocks()
     vi.useFakeTimers()
     mockSupabase = createMockSupabase()
-    ;(createClient as Mock).mockReturnValue(mockSupabase)
+    // Set up the mocked supabase module
+    vi.mocked(supabaseModule.supabase.channel).mockImplementation(mockSupabase.channel)
+    vi.mocked(supabaseModule.supabase.removeChannel).mockImplementation(mockSupabase.removeChannel)
   })
 
   afterEach(() => {
@@ -109,7 +114,7 @@ describe('useTypingIndicator', () => {
         })
       )
 
-      expect(mockSupabase.channel).toHaveBeenCalledWith(`typing:${mockConversationId}`)
+      expect(supabaseModule.supabase.channel).toHaveBeenCalledWith(`typing:${mockConversationId}`)
       expect(mockSupabase._mockChannel.on).toHaveBeenCalledWith(
         'broadcast',
         { event: 'typing' },
@@ -128,7 +133,7 @@ describe('useTypingIndicator', () => {
 
       unmount()
 
-      expect(mockSupabase.removeChannel).toHaveBeenCalled()
+      expect(supabaseModule.supabase.removeChannel).toHaveBeenCalled()
     })
   })
 

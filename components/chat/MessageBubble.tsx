@@ -4,54 +4,21 @@
  * MessageBubble Component
  *
  * Renders an individual chat message with appropriate styling based on
- * whether it was sent or received. Handles:
- * - Sent vs received message styling
- * - Timestamp display
- * - Read receipt indicators
- * - Optimistic message status (sending, failed)
- * - Failed message actions (retry, delete)
- * - Long text wrapping
- *
- * @example
- * ```tsx
- * // Regular message
- * <MessageBubble
- *   message={messageData}
- *   isOwn={message.sender_id === currentUserId}
- * />
- *
- * // With retry/delete handlers for optimistic messages
- * <MessageBubble
- *   message={optimisticMessage}
- *   isOwn={true}
- *   onRetry={(id) => retryMessage(id)}
- *   onDelete={(id) => deleteFailedMessage(id)}
- * />
- * ```
+ * whether it was sent or received.
  */
 
 import React, { memo, useCallback } from 'react'
+import { Check, CheckCheck } from 'lucide-react'
 import type { MessageBubbleProps, OptimisticMessageDisplay } from '../../types/chat'
 import { formatMessageTime } from './utils/formatters'
 import styles from './styles/ChatScreen.module.css'
 
-/**
- * Type guard to check if a message is optimistic
- */
 function isOptimisticMessage(
   message: MessageBubbleProps['message']
 ): message is OptimisticMessageDisplay {
   return '_optimistic' in message && message._optimistic === true
 }
 
-/**
- * MessageBubble displays a single chat message bubble
- *
- * @param message - The message data to display
- * @param isOwn - Whether the message was sent by the current user
- * @param onRetry - Callback to retry sending a failed message
- * @param onDelete - Callback to delete a failed message
- */
 function MessageBubbleComponent({
   message,
   isOwn,
@@ -75,7 +42,6 @@ function MessageBubbleComponent({
 
   return (
     <div className={messageRowClass}>
-      {/* Avatar for received messages */}
       {!isOwn && (
         <div className={styles.messageAvatar} aria-hidden="true">
           {message.sender?.username?.[0]?.toUpperCase() || '?'}
@@ -87,16 +53,13 @@ function MessageBubbleComponent({
         role="article"
         aria-label={`Message from ${isOwn ? 'you' : message.sender?.username || 'unknown'}`}
       >
-        {/* Message content */}
         <p className={styles.messageContent}>{message.content}</p>
 
-        {/* Message footer with timestamp and status */}
         <div className={styles.messageFooter}>
           <span className={styles.messageTime}>
             {formatMessageTime(message.created_at)}
           </span>
 
-          {/* Status indicator for own messages */}
           {isOwn && (
             <MessageStatus
               isOptimistic={isOptimistic}
@@ -106,7 +69,6 @@ function MessageBubbleComponent({
           )}
         </div>
 
-        {/* Failed message actions */}
         {isOptimistic && isFailed && (
           <div className={styles.failedActions}>
             <button
@@ -130,9 +92,6 @@ function MessageBubbleComponent({
   )
 }
 
-/**
- * MessageStatus displays the delivery status of a sent message
- */
 interface MessageStatusProps {
   isOptimistic: boolean
   optimisticStatus: 'sending' | 'sent' | 'failed' | null
@@ -150,20 +109,17 @@ function MessageStatus({ isOptimistic, optimisticStatus, isRead }: MessageStatus
         ) : null
       ) : isRead ? (
         <span className={styles.readIcon} aria-hidden="true">
-          <DoubleCheckIcon />
+          <CheckCheck size={16} strokeWidth={2} />
         </span>
       ) : (
         <span className={styles.sentIcon} aria-hidden="true">
-          <SingleCheckIcon />
+          <Check size={16} strokeWidth={2} />
         </span>
       )}
     </span>
   )
 }
 
-/**
- * Get accessible label for message status
- */
 function getStatusLabel(
   isOptimistic: boolean,
   optimisticStatus: string | null,
@@ -177,45 +133,4 @@ function getStatusLabel(
   return isRead ? 'Read' : 'Delivered'
 }
 
-/**
- * Double check icon for read messages
- */
-function DoubleCheckIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M20 6L9 17l-5-5" />
-      <path d="M15 6L4 17" />
-    </svg>
-  )
-}
-
-/**
- * Single check icon for delivered messages
- */
-function SingleCheckIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  )
-}
-
-/**
- * Memoized MessageBubble for performance optimization
- * Only re-renders when message data or callbacks change
- */
 export const MessageBubble = memo(MessageBubbleComponent)

@@ -57,7 +57,7 @@ import { Button } from './Button'
 import type { Coordinates, MapRegion } from '../lib/types'
 
 // Import react-native-maps for both platforms
-// iOS uses Apple Maps (PROVIDER_DEFAULT), Android uses Google Maps (PROVIDER_GOOGLE)
+// Both iOS and Android use Google Maps (PROVIDER_GOOGLE) to enable POI click support
 let RNMapView: any = null
 let Marker: any = null
 let PROVIDER_GOOGLE: any = null
@@ -99,6 +99,31 @@ interface MarkerPressEvent {
       longitude: number
     }
   }
+}
+
+interface PoiClickEvent {
+  nativeEvent: {
+    placeId: string
+    name: string
+    coordinate: {
+      latitude: number
+      longitude: number
+    }
+  }
+}
+
+/**
+ * Point of Interest data from native map POI click
+ */
+export interface PoiData {
+  /** Place ID from the map provider (Google Places ID or Apple Maps ID) */
+  placeId: string
+  /** Display name of the POI */
+  name: string
+  /** Latitude coordinate */
+  latitude: number
+  /** Longitude coordinate */
+  longitude: number
 }
 
 // ============================================================================
@@ -159,6 +184,8 @@ export interface MapViewProps {
   onMapPress?: (coordinates: Coordinates) => void
   /** Callback when a marker is pressed */
   onMarkerPress?: (marker: MapMarker) => void
+  /** Callback when a point of interest is pressed (iOS/Android native POIs) */
+  onPoiClick?: (poi: PoiData) => void
   /** Callback when map is ready */
   onMapReady?: () => void
   /** Whether to show the my location button */
@@ -261,6 +288,7 @@ export function MapView({
   onRegionChangeComplete,
   onMapPress,
   onMarkerPress,
+  onPoiClick,
   onMapReady,
   showsMyLocationButton = true,
   showsCompass = true,
@@ -343,6 +371,23 @@ export function MapView({
       onMarkerPress?.(marker)
     },
     [onMarkerPress]
+  )
+
+  /**
+   * Handle POI (Point of Interest) click
+   * Fires when user taps on native map POIs like restaurants, stores, etc.
+   */
+  const handlePoiClick = useCallback(
+    (event: PoiClickEvent) => {
+      const { placeId, name, coordinate } = event.nativeEvent
+      onPoiClick?.({
+        placeId,
+        name,
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+      })
+    },
+    [onPoiClick]
   )
 
   /**
@@ -462,7 +507,7 @@ export function MapView({
       <RNMapView
         ref={mapRef}
         style={[styles.map, mapStyle]}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        provider={PROVIDER_GOOGLE}
         initialRegion={region || initialRegion}
         region={region}
         showsUserLocation={showsUserLocation}
@@ -484,6 +529,7 @@ export function MapView({
         onRegionChange={handleRegionChange}
         onRegionChangeComplete={handleRegionChangeComplete}
         onPress={handleMapPress}
+        onPoiClick={handlePoiClick}
         onMapReady={handleMapReady}
         testID={`${testID}-native`}
       >

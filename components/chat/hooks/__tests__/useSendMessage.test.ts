@@ -10,16 +10,18 @@
  * - Sending state tracking
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useSendMessage } from '../useSendMessage'
-import { createClient } from '../../../../lib/supabase/client'
+import * as supabaseModule from '../../../../lib/supabase'
 import type { MessageWithSender } from '../../../../types/chat'
 import type { UUID } from '../../../../types/database'
 
 // Mock the Supabase client
-vi.mock('../../../../lib/supabase/client', () => ({
-  createClient: vi.fn(),
+vi.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(),
+  },
 }))
 
 // Mock generateOptimisticId
@@ -87,7 +89,8 @@ describe('useSendMessage', () => {
     // Note: Don't use fake timers globally - they break waitFor
     // Use vi.useFakeTimers() only in specific tests that need debounce testing
     mockSupabase = createMockSupabase()
-    ;(createClient as Mock).mockReturnValue(mockSupabase)
+    // Set up the mocked supabase module
+    vi.mocked(supabaseModule.supabase.from).mockImplementation(mockSupabase.from)
   })
 
   afterEach(() => {
@@ -131,7 +134,7 @@ describe('useSendMessage', () => {
         await result.current.sendMessage('')
       })
 
-      expect(mockSupabase.from).not.toHaveBeenCalled()
+      expect(supabaseModule.supabase.from).not.toHaveBeenCalled()
       expect(result.current.optimisticMessages).toHaveLength(0)
     })
 
@@ -147,7 +150,7 @@ describe('useSendMessage', () => {
         await result.current.sendMessage('   ')
       })
 
-      expect(mockSupabase.from).not.toHaveBeenCalled()
+      expect(supabaseModule.supabase.from).not.toHaveBeenCalled()
       expect(result.current.optimisticMessages).toHaveLength(0)
     })
 

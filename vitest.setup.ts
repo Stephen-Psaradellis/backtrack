@@ -101,6 +101,12 @@ if (typeof window !== 'undefined') {
 // React Native Mocks (safe to define in any environment)
 // ============================================================================
 
+// Mock react-native-url-polyfill (must be before other RN mocks)
+vi.mock('react-native-url-polyfill/auto', () => ({}))
+vi.mock('react-native-url-polyfill', () => ({
+  setupURLPolyfill: vi.fn(),
+}))
+
 // Mock AsyncStorage
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {

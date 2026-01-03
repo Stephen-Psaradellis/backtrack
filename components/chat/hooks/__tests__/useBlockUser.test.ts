@@ -10,15 +10,17 @@
  * - Already blocked user handling
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useBlockUser } from '../useBlockUser'
-import { createClient } from '../../../../lib/supabase/client'
+import * as supabaseModule from '../../../../lib/supabase'
 import type { UUID } from '../../../../types/database'
 
 // Mock the Supabase client
-vi.mock('../../../../lib/supabase/client', () => ({
-  createClient: vi.fn(),
+vi.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(),
+  },
 }))
 
 // Mock console.warn for testing warning scenarios
@@ -66,7 +68,8 @@ describe('useBlockUser', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSupabase = createMockSupabase()
-    ;(createClient as Mock).mockReturnValue(mockSupabase)
+    // Set up the mocked supabase module
+    vi.mocked(supabaseModule.supabase.from).mockImplementation(mockSupabase.from)
   })
 
   describe('Initial state', () => {
@@ -122,7 +125,7 @@ describe('useBlockUser', () => {
         await result.current.blockUser()
       })
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('blocked_users')
+      expect(supabaseModule.supabase.from).toHaveBeenCalledWith('blocked_users')
       expect(mockSupabase._mockInsert).toHaveBeenCalledWith({
         blocker_id: mockCurrentUserId,
         blocked_id: mockTargetUserId,
@@ -142,7 +145,7 @@ describe('useBlockUser', () => {
         await result.current.blockUser()
       })
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('conversations')
+      expect(supabaseModule.supabase.from).toHaveBeenCalledWith('conversations')
       expect(mockSupabase._mockUpdate).toHaveBeenCalledWith({ status: 'blocked' })
     })
 

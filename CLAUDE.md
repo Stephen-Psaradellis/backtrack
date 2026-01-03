@@ -204,11 +204,22 @@ This project uses `strict: true`. Always:
 
 ## E2E Testing
 
-### Test Account
+### Test Accounts
 
-Use this verified test account for E2E testing:
+Use these verified test accounts for E2E testing:
+
+**User 1 (Primary):**
 - **Email**: `s.n.psaradellis@gmail.com`
 - **Password**: `Test1234!`
+
+**User 2 (Secondary):**
+- **Email**: `spsaradellis@gmail.com`
+- **Password**: `Test1234!`
+
+User 2 has pre-seeded data for user-to-user testing:
+- Posts with target avatars matching User 1
+- Active conversation with User 1
+- Favorite locations
 
 ### Android MCP Testing
 

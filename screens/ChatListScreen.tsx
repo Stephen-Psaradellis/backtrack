@@ -352,6 +352,16 @@ export function ChatListScreen(): React.ReactNode {
   )
 
   /**
+   * Fetch when userId becomes available (handles late auth initialization)
+   * This ensures conversations load even if auth completes after initial render
+   */
+  useEffect(() => {
+    if (userId && conversations.length === 0 && !error) {
+      fetchConversations()
+    }
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
    * Subscribe to real-time message updates
    * When a new message arrives, refresh the conversation list
    */

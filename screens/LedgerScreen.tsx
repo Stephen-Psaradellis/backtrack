@@ -111,7 +111,7 @@ export function LedgerScreen(): React.ReactNode {
   // Check-in state for tiered matching
   const { activeCheckin, isCheckedInAt } = useCheckin()
 
-  const { locationId, locationName } = route.params
+  const { locationId: rawLocationId, locationName } = route.params
 
   // ---------------------------------------------------------------------------
   // STATE
@@ -119,10 +119,61 @@ export function LedgerScreen(): React.ReactNode {
 
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [resolvedLocationId, setResolvedLocationId] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sortOrder] = useState<SortOption>('newest')
   const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('any_time')
+
+  // ---------------------------------------------------------------------------
+  // LOCATION ID RESOLUTION
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve the location ID - handles both UUID and Google Place ID formats
+   * Google Place IDs typically start with "ChIJ" while UUIDs have dashes
+   */
+  useEffect(() => {
+    const resolveLocationId = async () => {
+      if (!rawLocationId) {
+        setResolvedLocationId('')
+        setLoading(false)
+        return
+      }
+
+      // Check if it looks like a UUID (contains dashes in UUID format)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawLocationId)
+
+      if (isUuid) {
+        // It's already a UUID, use it directly
+        setResolvedLocationId(rawLocationId)
+      } else {
+        // It's likely a Google Place ID, look up the location
+        try {
+          const { data, error: lookupError } = await supabase
+            .from('locations')
+            .select('id')
+            .eq('google_place_id', rawLocationId)
+            .single()
+
+          if (lookupError || !data) {
+            // Location not found in database - this is a new POI
+            // Set to empty string to trigger empty state
+            setResolvedLocationId('')
+          } else {
+            setResolvedLocationId(data.id)
+          }
+        } catch {
+          setResolvedLocationId('')
+        }
+      }
+    }
+
+    resolveLocationId()
+  }, [rawLocationId])
+
+  // Use resolved ID for queries, fallback to raw ID for display purposes
+  const locationId = resolvedLocationId ?? rawLocationId
 
   // ---------------------------------------------------------------------------
   // DATA FETCHING
@@ -135,6 +186,18 @@ export function LedgerScreen(): React.ReactNode {
    * Applies time-based filtering when selected
    */
   const fetchPosts = useCallback(async (isRefresh = false) => {
+    // Don't fetch if we haven't resolved the location ID yet
+    if (resolvedLocationId === null) {
+      return
+    }
+
+    // If resolved to empty string, location doesn't exist in database
+    if (resolvedLocationId === '') {
+      setPosts([])
+      setLoading(false)
+      return
+    }
+
     if (!isRefresh) {
       setLoading(true)
     }
@@ -154,7 +217,7 @@ export function LedgerScreen(): React.ReactNode {
       let query = supabase
         .from('posts')
         .select('*')
-        .eq('location_id', locationId)
+        .eq('location_id', resolvedLocationId)
         .eq('is_active', true)
         .order('created_at', { ascending: sortOrder === 'oldest' })
         .limit(PAGE_SIZE)
@@ -198,7 +261,7 @@ export function LedgerScreen(): React.ReactNode {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [locationId, sortOrder, userId, timeFilter])
+  }, [resolvedLocationId, sortOrder, userId, timeFilter])
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -243,10 +306,11 @@ export function LedgerScreen(): React.ReactNode {
 
   /**
    * Handle create post navigation
+   * Pass the raw location ID (could be UUID or Google Place ID)
    */
   const handleCreatePost = useCallback(() => {
-    navigation.navigate('CreatePost', { locationId })
-  }, [navigation, locationId])
+    navigation.navigate('CreatePost', { locationId: rawLocationId })
+  }, [navigation, rawLocationId])
 
   /**
    * Handle retry on error
@@ -313,7 +377,8 @@ export function LedgerScreen(): React.ReactNode {
     }
 
     // Show check-in status in subtitle if checked in here
-    const isCheckedInHere = isCheckedInAt(locationId)
+    // Use rawLocationId for check-in since it could be a Google Place ID
+    const isCheckedInHere = isCheckedInAt(rawLocationId)
     if (isCheckedInHere && activeCheckin?.verified) {
       subtitleText += ' • You\'re checked in'
     }
@@ -327,7 +392,7 @@ export function LedgerScreen(): React.ReactNode {
               <Text style={styles.headerSubtitle}>{subtitleText}</Text>
             </View>
             <CheckinButton
-              locationId={locationId}
+              locationId={rawLocationId}
               locationName={locationName}
               size="small"
               testID="ledger-checkin-button"
@@ -342,7 +407,7 @@ export function LedgerScreen(): React.ReactNode {
         />
       </View>
     )
-  }, [locationId, locationName, posts.length, timeFilter, handleTimeFilterChange, loading, isCheckedInAt, activeCheckin])
+  }, [rawLocationId, locationName, posts.length, timeFilter, handleTimeFilterChange, loading, isCheckedInAt, activeCheckin])
 
   /**
    * Render empty state when no posts exist
@@ -391,7 +456,8 @@ export function LedgerScreen(): React.ReactNode {
   // RENDER: LOADING STATE
   // ---------------------------------------------------------------------------
 
-  if (loading && !refreshing) {
+  // Show loading while resolving location ID or fetching posts
+  if ((resolvedLocationId === null || loading) && !refreshing) {
     return (
       <View style={styles.centeredContainer} testID="ledger-loading">
         <LoadingSpinner message="Loading posts..." />

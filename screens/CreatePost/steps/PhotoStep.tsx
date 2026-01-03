@@ -291,7 +291,7 @@ export const PhotoStep = memo(function PhotoStep({
 
   // Navigate to profile
   const handleGoToProfile = useCallback(() => {
-    navigation.navigate('ProfileTab')
+    navigation.navigate('MainTabs', { screen: 'ProfileTab' })
   }, [navigation])
 
   // Show error alert

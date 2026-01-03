@@ -24,6 +24,7 @@ import React, {
   useMemo,
   KeyboardEvent,
 } from 'react'
+import { Paperclip, Smile, X, FileText, Video, Music, Image as LucideImage, File } from 'lucide-react'
 import type { ChatInputToolbarProps, ChatAttachment } from '../../types/chat'
 import styles from './styles/ChatScreen.module.css'
 
@@ -245,7 +246,7 @@ function ChatInputToolbarComponent({
                 />
               ) : (
                 <div className={styles.attachmentIcon}>
-                  <FileIcon type={attachment.type} />
+                  <FileTypeIcon type={attachment.type} />
                 </div>
               )}
 
@@ -288,7 +289,7 @@ function ChatInputToolbarComponent({
                   aria-label={`Remove ${attachment.file.name}`}
                   type="button"
                 >
-                  <CloseIcon />
+                  <X size={14} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -316,7 +317,7 @@ function ChatInputToolbarComponent({
           }
           type="button"
         >
-          <AttachmentIcon />
+          <Paperclip size={20} aria-hidden="true" />
           {hasAttachments && (
             <span className={styles.attachmentBadge} aria-hidden="true">
               {attachmentCount}
@@ -335,184 +336,25 @@ function ChatInputToolbarComponent({
           title="Emoji"
           type="button"
         >
-          <EmojiIcon />
+          <Smile size={20} aria-hidden="true" />
         </button>
       </div>
     </div>
   )
 }
 
-// ============================================================================
-// Icon Components
-// ============================================================================
-
 /**
- * Attachment (paperclip) icon
+ * File type icon based on attachment type using Lucide icons
  */
-function AttachmentIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-    </svg>
-  )
-}
-
-/**
- * Emoji (smile) icon
- */
-function EmojiIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-      <line x1="9" y1="9" x2="9.01" y2="9" />
-      <line x1="15" y1="9" x2="15.01" y2="9" />
-    </svg>
-  )
-}
-
-/**
- * Close (X) icon for remove button
- */
-function CloseIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  )
-}
-
-/**
- * File type icon based on attachment type
- */
-function FileIcon({ type }: { type: ChatAttachment['type'] }) {
+function FileTypeIcon({ type }: { type: ChatAttachment['type'] }) {
+  const iconProps = { size: 20, strokeWidth: 2, 'aria-hidden': true as const }
   switch (type) {
-    case 'document':
-      return (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
-        </svg>
-      )
-    case 'video':
-      return (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polygon points="23 7 16 12 23 17 23 7" />
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-        </svg>
-      )
-    case 'audio':
-      return (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M9 18V5l12-2v13" />
-          <circle cx="6" cy="18" r="3" />
-          <circle cx="18" cy="16" r="3" />
-        </svg>
-      )
-    case 'image':
-      return (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
-      )
-    default:
-      return (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-          <polyline points="13 2 13 9 20 9" />
-        </svg>
-      )
+    case 'document': return <FileText {...iconProps} />
+    case 'video': return <Video {...iconProps} />
+    case 'audio': return <Music {...iconProps} />
+    case 'image': return <LucideImage {...iconProps} />
+    default: return <File {...iconProps} />
   }
 }
 
-/**
- * Memoized ChatInputToolbar for performance optimization
- * Only re-renders when props change
- */
 export const ChatInputToolbar = memo(ChatInputToolbarComponent)

@@ -1,4 +1,4 @@
-package com.backtrack.app
+package app.backtrack.social
 
 import android.os.Build
 import android.os.Bundle
