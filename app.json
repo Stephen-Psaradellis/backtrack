@@ -1,12 +1,5 @@
 {
   "expo": {
-    "autolinking": {
-      "ios": {
-        "exclude": [
-          "react-native-maps"
-        ]
-      }
-    },
     "name": "Backtrack",
     "slug": "backtrack",
     "scheme": "backtrack",
