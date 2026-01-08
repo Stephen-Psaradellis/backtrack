@@ -1503,9 +1503,6 @@ export function useFavoriteLocations(
           case 'delete':
             result = await processDeleteOperation(operation, idMappings)
             break
-
-          default:
-            result = { operationId: operation.id, success: false, error: 'Unknown operation type' }
         }
 
         if (result.success) {

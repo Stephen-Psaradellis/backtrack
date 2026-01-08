@@ -35,8 +35,8 @@ import {
   type TutorialFeature,
 } from '../utils/tutorialStorage'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { LgAvatarDisplay } from '../components/avatar'
-import type { StoredCustomAvatar } from '../components/avatar/types'
+import { LgAvatarSnapshot } from '../components/avatar3d'
+import type { StoredAvatar } from '../components/avatar/types'
 import { ProfilePhotoGallery } from '../components/ProfilePhotoGallery'
 import {
   loadCurrentUserAvatar,
@@ -101,7 +101,7 @@ export function ProfileScreen(): React.ReactNode {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
-  const [userAvatar, setUserAvatar] = useState<StoredCustomAvatar | null>(null)
+  const [userAvatar, setUserAvatar] = useState<StoredAvatar | null>(null)
   const [isLoadingAvatar, setIsLoadingAvatar] = useState(true)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
@@ -331,7 +331,7 @@ export function ProfileScreen(): React.ReactNode {
    * Navigate to avatar creator
    */
   const handleOpenAvatarCreator = useCallback(() => {
-    navigation.navigate('AvatarBuilder')
+    navigation.navigate('AvatarCreator', { mode: 'self' })
   }, [navigation])
 
   /**
@@ -556,9 +556,8 @@ export function ProfileScreen(): React.ReactNode {
             </View>
           ) : userAvatar ? (
             <View style={styles.avatarConfigured} testID="profile-avatar-preview">
-              <LgAvatarDisplay
+              <LgAvatarSnapshot
                 avatar={userAvatar}
-                fullBody
               />
               <View style={styles.avatarInfo}>
                 <Text style={styles.avatarLabel}>Your Avatar</Text>
@@ -701,6 +700,21 @@ export function ProfileScreen(): React.ReactNode {
           <Text style={styles.legalLinkArrow}>→</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Developer Tools Section (Dev Only) */}
+      {__DEV__ && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Developer Tools</Text>
+          <TouchableOpacity
+            style={styles.devButton}
+            onPress={() => navigation.navigate('WebGL3DTest')}
+            testID="profile-webgl-test-button"
+          >
+            <Text style={styles.devButtonText}>Test 3D WebGL</Text>
+            <Text style={styles.devButtonHint}>Task 1: WebView POC</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Account Actions Section */}
       <View style={styles.section}>
@@ -1032,5 +1046,21 @@ const styles = StyleSheet.create({
   legalLinkArrow: {
     fontSize: 16,
     color: '#8E8E93',
+  },
+  devButton: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
+  },
+  devButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6366f1',
+  },
+  devButtonHint: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 4,
   },
 })

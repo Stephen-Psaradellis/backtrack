@@ -53,12 +53,40 @@ export interface UnsharePhotoResult {
   error: string | null
 }
 
-export interface SharedPhotoWithUrl extends SharedPhotoForConversation {
-  signedUrl: string | null
+/**
+ * Photo shared with the current user, including signed URL for display
+ */
+export interface SharedPhotoWithUrl {
+  share_id: string
+  photo_id: string
+  owner_id: string
+  storage_path: string
+  is_primary: boolean
+  shared_at: string
+  signedUrl: string | undefined
 }
 
-export interface MySharedPhotoWithUrl extends MySharedPhotoForConversation {
-  signedUrl: string | null
+/**
+ * Photo that the current user has shared with others
+ */
+export interface MySharedPhotoWithUrl {
+  share_id: string
+  photo_id: string
+  shared_with_user_id: string
+  storage_path: string
+  is_primary: boolean
+  shared_at: string
+  signedUrl: string | undefined
+}
+
+/**
+ * Record of a photo share (where/when/with whom a photo was shared)
+ */
+export interface PhotoShareRecord {
+  share_id: string
+  conversation_id: string
+  shared_with_user_id: string
+  shared_at: string
 }
 
 // ============================================================================
@@ -383,8 +411,8 @@ export async function getSharedPhotosForConversation(
             storage_path: share.profile_photos.storage_path,
             is_primary: share.profile_photos.is_primary,
             shared_at: share.created_at,
-            signedUrl: urlResult.success ? urlResult.signedUrl : null,
-          } as SharedPhotoWithUrl
+            signedUrl: urlResult.success ? (urlResult.signedUrl ?? undefined) : undefined,
+          }
         })
     )
 
@@ -446,8 +474,8 @@ export async function getMySharedPhotosForConversation(
             storage_path: share.profile_photos.storage_path,
             is_primary: share.profile_photos.is_primary,
             shared_at: share.created_at,
-            signedUrl: urlResult.success ? urlResult.signedUrl : null,
-          } as MySharedPhotoWithUrl
+            signedUrl: urlResult.success ? (urlResult.signedUrl ?? undefined) : undefined,
+          }
         })
     )
 
@@ -502,7 +530,7 @@ export async function isPhotoSharedInConversation(
  */
 export async function getPhotoShareStatus(
   photoId: string
-): Promise<PhotoShareStatus[]> {
+): Promise<PhotoShareRecord[]> {
   const userId = await getCurrentUserId()
   if (!userId) {
     return []
@@ -525,7 +553,7 @@ export async function getPhotoShareStatus(
       conversation_id: share.conversation_id,
       shared_with_user_id: share.shared_with_user_id,
       shared_at: share.created_at,
-    })) as PhotoShareStatus[]
+    }))
   } catch (error) {
     return []
   }

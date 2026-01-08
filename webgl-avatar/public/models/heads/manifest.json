@@ -1,0 +1,79 @@
+{
+  "category": "heads",
+  "version": "1.0.0",
+  "description": "Head shape variants - attach to Head bone",
+  "maxTriangles": 2000,
+  "maxSizeKB": 50,
+  "colorTintable": true,
+  "tintProperty": "skinTone",
+  "generator": "scripts/generate-heads.mjs",
+  "generatedAt": "2026-01-05",
+  "assets": [
+    {
+      "id": "oval",
+      "name": "Oval Face",
+      "file": "oval.glb",
+      "status": "complete",
+      "sizeKB": 47.21,
+      "triangles": 2048,
+      "vertices": 1089,
+      "tags": ["common", "balanced"]
+    },
+    {
+      "id": "round",
+      "name": "Round Face",
+      "file": "round.glb",
+      "status": "complete",
+      "sizeKB": 47.13,
+      "triangles": 2048,
+      "vertices": 1089,
+      "tags": ["common", "soft"]
+    },
+    {
+      "id": "square",
+      "name": "Square Face",
+      "file": "square.glb",
+      "status": "complete",
+      "sizeKB": 47.21,
+      "triangles": 2048,
+      "vertices": 1089,
+      "tags": ["angular", "strong"]
+    },
+    {
+      "id": "heart",
+      "name": "Heart Face",
+      "file": "heart.glb",
+      "status": "complete",
+      "sizeKB": 47.21,
+      "triangles": 2048,
+      "vertices": 1089,
+      "tags": ["pointed-chin", "wide-forehead"]
+    },
+    {
+      "id": "oblong",
+      "name": "Oblong Face",
+      "file": "oblong.glb",
+      "status": "complete",
+      "sizeKB": 47.20,
+      "triangles": 2048,
+      "vertices": 1089,
+      "tags": ["long", "narrow"]
+    },
+    {
+      "id": "diamond",
+      "name": "Diamond Face",
+      "file": "diamond.glb",
+      "status": "complete",
+      "sizeKB": 47.22,
+      "triangles": 2048,
+      "vertices": 1089,
+      "tags": ["angular", "narrow"]
+    }
+  ],
+  "notes": [
+    "All heads generated procedurally using parametric sphere displacement",
+    "Each head has consistent UV layout for texture swapping",
+    "Materials support runtime color tinting via PBR baseColorFactor",
+    "Use the generate-heads.mjs script to regenerate if needed"
+  ]
+}

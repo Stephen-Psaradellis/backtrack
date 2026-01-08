@@ -37,7 +37,7 @@ import {
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 
-import { LgAvatarDisplay } from '../components/avatar'
+import { LgAvatarSnapshot } from '../components/avatar3d'
 import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { ErrorState } from '../components/EmptyState'
@@ -338,7 +338,7 @@ export function PostDetailScreen(): React.ReactNode {
       {/* Avatar Section */}
       <View style={styles.avatarSection} testID="post-detail-avatar-section">
         {post.target_avatar_v2 && (
-          <LgAvatarDisplay
+          <LgAvatarSnapshot
             avatar={post.target_avatar_v2}
             testID="post-detail-avatar"
           />

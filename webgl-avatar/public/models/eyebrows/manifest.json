@@ -1,0 +1,65 @@
+{
+  "category": "eyebrows",
+  "version": "1.0.0",
+  "description": "Eyebrow style variants - attach to Head bone",
+  "maxTriangles": 200,
+  "maxSizeKB": 10,
+  "colorTintable": true,
+  "tintProperty": "hairColor",
+  "generator": "scripts/generate-facial-features.mjs",
+  "generatedAt": "2026-01-05",
+  "assets": [
+    {
+      "id": "natural",
+      "name": "Natural",
+      "file": "natural.glb",
+      "status": "complete",
+      "sizeKB": 6.4,
+      "triangles": 192,
+      "vertices": 130,
+      "tags": [
+        "default",
+        "balanced"
+      ]
+    },
+    {
+      "id": "arched",
+      "name": "Arched",
+      "file": "arched.glb",
+      "status": "complete",
+      "sizeKB": 6.4,
+      "triangles": 192,
+      "vertices": 130,
+      "tags": [
+        "feminine",
+        "defined"
+      ]
+    },
+    {
+      "id": "thick",
+      "name": "Thick",
+      "file": "thick.glb",
+      "status": "complete",
+      "sizeKB": 6.39,
+      "triangles": 192,
+      "vertices": 130,
+      "tags": [
+        "bold",
+        "full"
+      ]
+    },
+    {
+      "id": "thin",
+      "name": "Thin",
+      "file": "thin.glb",
+      "status": "complete",
+      "sizeKB": 6.39,
+      "triangles": 192,
+      "vertices": 130,
+      "tags": [
+        "subtle",
+        "refined"
+      ]
+    }
+  ]
+}

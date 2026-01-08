@@ -16,8 +16,8 @@
 
 import React, { memo, useCallback } from 'react'
 
-import { AvatarCreator } from '../../../components/avatar'
-import type { StoredCustomAvatar } from '../../../components/avatar/types'
+import { AvatarCreator } from '../../../components/avatar/index'
+import type { StoredAvatar } from '../../../components/avatar/types'
 
 // ============================================================================
 // TYPES
@@ -30,13 +30,13 @@ export interface AvatarStepProps {
   /**
    * Current avatar (if already created)
    */
-  avatar: StoredCustomAvatar | null
+  avatar: StoredAvatar | null
 
   /**
    * Callback fired when user saves the avatar and wants to proceed
    * @param avatar - The created avatar
    */
-  onSave: (avatar: StoredCustomAvatar) => void
+  onSave: (avatar: StoredAvatar) => void
 
   /**
    * Callback when user wants to go back to previous step
@@ -69,18 +69,17 @@ export const AvatarStep = memo(function AvatarStep({
 }: AvatarStepProps): JSX.Element {
   /**
    * Handle avatar creation complete
-   * AvatarCreator already wraps the config in a StoredCustomAvatar
    */
   const handleComplete = useCallback(
-    (storedAvatar: StoredCustomAvatar) => {
-      onSave(storedAvatar)
+    (createdAvatar: StoredAvatar) => {
+      onSave(createdAvatar)
     },
     [onSave]
   )
 
   return (
     <AvatarCreator
-      initialConfig={avatar?.config}
+      initialAvatarId={avatar?.config?.avatarId}
       mode="target"
       onComplete={handleComplete}
       onCancel={onBack}

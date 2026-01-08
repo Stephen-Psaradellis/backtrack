@@ -34,6 +34,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AppNavigator } from './navigation/AppNavigator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerForPushNotifications } from './services/notifications'
+import { avatarLoader } from './lib/avatar'
 
 // ============================================================================
 // NOTIFICATION SETUP (Lazy loaded to handle native module issues)
@@ -75,6 +76,37 @@ async function initializeNotifications(): Promise<void> {
 
 // Initialize notifications (non-blocking)
 initializeNotifications()
+
+// ============================================================================
+// AVATAR PRELOADING SETUP
+// ============================================================================
+
+/**
+ * Initialize avatar preloading system.
+ * This sets up the loading state tracking for local avatar presets.
+ * Actual 3D model preloading happens when the WebGL view is mounted.
+ *
+ * Task 4.1: Avatar Preloading System
+ */
+function initializeAvatarPreloading(): void {
+  try {
+    // Initialize loading state for all local avatar presets
+    // This doesn't load the 3D models - just sets up tracking
+    avatarLoader.initializeLocalAvatars()
+
+    if (__DEV__) {
+      const stats = avatarLoader.getCacheStats()
+      console.log(`[App] Avatar preloading initialized: ${stats.local} local avatars registered`)
+    }
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('[App] Failed to initialize avatar preloading:', error)
+    }
+  }
+}
+
+// Initialize avatar preloading (non-blocking)
+initializeAvatarPreloading()
 
 // ============================================================================
 // HELPER COMPONENTS

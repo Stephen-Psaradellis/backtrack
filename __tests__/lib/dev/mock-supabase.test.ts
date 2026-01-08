@@ -75,7 +75,8 @@ describe('Mock Data Exports', () => {
     it('has required fields', () => {
       expect(devMockProfile.id).toBeDefined()
       expect(devMockProfile.username).toBeDefined()
-      expect(devMockProfile.avatar_config).toBeDefined()
+      // Note: Profile uses 'avatar' field (StoredAvatar | null), not 'avatar_config'
+      // The avatar field is optional and may be null
     })
 
     it('matches user id', () => {
@@ -103,7 +104,8 @@ describe('Mock Data Exports', () => {
       expect(devMockPost.id).toBeDefined()
       expect(devMockPost.producer_id).toBeDefined()
       expect(devMockPost.location_id).toBeDefined()
-      expect(devMockPost.target_avatar).toBeDefined()
+      // Note: Post uses 'target_avatar_v2' field (StoredAvatar | null), not 'target_avatar'
+      // The field is optional and may be null
     })
 
     it('references mock user and location', () => {

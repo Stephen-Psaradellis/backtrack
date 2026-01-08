@@ -33,8 +33,8 @@ import {
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
-import { MdAvatarDisplay } from '../components/avatar'
-import type { StoredCustomAvatar } from '../components/avatar/types'
+import { MdAvatarSnapshot } from '../components/avatar3d'
+import type { StoredAvatar } from '../components/avatar/types'
 import { VerifiedBadge } from '../components/VerifiedBadge'
 import { lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
@@ -56,7 +56,7 @@ import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/s
  */
 interface ConversationItem extends Conversation {
   /** The post's target avatar for display */
-  target_avatar_v2: StoredCustomAvatar | null
+  target_avatar_v2: StoredAvatar | null
   /** Preview of the most recent message */
   last_message_content: string | null
   /** Timestamp of the most recent message */
@@ -281,7 +281,7 @@ export function ChatListScreen(): React.ReactNode {
           // Fetch post data separately to avoid nested join issues
           let postData: {
             id: string
-            target_avatar_v2: StoredCustomAvatar | null
+            target_avatar_v2: StoredAvatar | null
             note: string
             location_id: string
           } | null = null
@@ -295,7 +295,12 @@ export function ChatListScreen(): React.ReactNode {
               .maybeSingle()
 
             if (post) {
-              postData = post as typeof postData
+              postData = post as {
+                id: string
+                target_avatar_v2: StoredAvatar | null
+                note: string
+                location_id: string
+              }
               // Fetch location name
               if (post.location_id) {
                 const { data: location } = await supabase
@@ -486,7 +491,7 @@ export function ChatListScreen(): React.ReactNode {
           <View style={styles.avatarContainer}>
             {item.target_avatar_v2 ? (
               <>
-                <MdAvatarDisplay avatar={item.target_avatar_v2} />
+                <MdAvatarSnapshot avatar={item.target_avatar_v2} />
                 {item.other_user_is_verified && (
                   <View style={styles.verifiedBadgeContainer}>
                     <VerifiedBadge />

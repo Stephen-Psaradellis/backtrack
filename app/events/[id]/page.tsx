@@ -334,6 +334,7 @@ export default function EventDetailsPage() {
     userStatus: attendanceStatus,
     goingCount, interestedCount,
     setAttendance,
+    removeAttendance,
     isLoading: attendanceLoading,
   } = useEventAttendance(eventId || "")
 
@@ -679,6 +680,7 @@ export default function EventDetailsPage() {
           status={attendanceStatus}
           stats={{ interested: interestedCount, going: goingCount, went: 0 }}
           onSetAttendance={setAttendance}
+          onRemoveAttendance={removeAttendance}
           isLoading={attendanceLoading}
         />
 

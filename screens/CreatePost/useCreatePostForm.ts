@@ -45,7 +45,7 @@ import { useLocation } from '../../hooks/useLocation'
 import { useVisitedLocations, useNearbyLocations } from '../../hooks/useNearbyLocations'
 import { supabase } from '../../lib/supabase'
 import { recordLocationVisit } from '../../lib/utils/geo'
-import type { StoredCustomAvatar } from '../../components/avatar/types'
+import type { StoredAvatar } from '../../components/avatar/types'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../../navigation/types'
 import type { Location as LocationEntity, LocationWithVisit } from '../../lib/types'
 import type { TimeGranularity } from '../../types/database'
@@ -137,9 +137,9 @@ export interface UseCreatePostFormResult {
   /** Handle next step navigation */
   handleNext: () => void
   /** Handle avatar save */
-  handleAvatarSave: (avatar: StoredCustomAvatar) => void
+  handleAvatarSave: (avatar: StoredAvatar) => void
   /** Handle avatar change (without advancing step) */
-  handleAvatarChange: (avatar: StoredCustomAvatar) => void
+  handleAvatarChange: (avatar: StoredAvatar) => void
   /** Handle location selection */
   handleLocationSelect: (location: LocationItem) => void
   /** Handle note text change */
@@ -482,14 +482,14 @@ export function useCreatePostForm(
   /**
    * Handle avatar change (without advancing step)
    */
-  const handleAvatarChange = useCallback((avatar: StoredCustomAvatar) => {
+  const handleAvatarChange = useCallback((avatar: StoredAvatar) => {
     setFormData((prev) => ({ ...prev, targetAvatar: avatar }))
   }, [])
 
   /**
    * Handle avatar save
    */
-  const handleAvatarSave = useCallback((avatar: StoredCustomAvatar) => {
+  const handleAvatarSave = useCallback((avatar: StoredAvatar) => {
     setFormData((prev) => ({ ...prev, targetAvatar: avatar }))
     // Advance to next step after save
     const currentIndex = STEPS.findIndex((s) => s.id === 'avatar')

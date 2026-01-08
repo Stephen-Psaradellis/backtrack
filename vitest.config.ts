@@ -32,17 +32,6 @@ export default defineConfig({
       '**/__tests__/utils/test-utils.ts',
     ],
 
-    // Multi-environment support: assign different environments based on file patterns
-    // Default is jsdom (set above), only override for node-specific tests
-    // Vitest 4.x uses first matching pattern, so order matters
-    environmentMatchGlobs: [
-      // Server-side / pure logic tests use node environment
-      ['**/app/api/**/*.test.ts', 'node'],
-      // Happy-dom for tests that need DOM but want faster execution
-      ['**/*.happy.test.{ts,tsx}', 'happy-dom'],
-      // Everything else uses default (jsdom)
-    ],
-
     // Clear mocks between tests for isolation
     clearMocks: true,
     mockReset: true,

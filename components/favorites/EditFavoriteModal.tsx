@@ -296,7 +296,7 @@ export const EditFavoriteModal = memo(function EditFavoriteModal({
   const [customName, setCustomName] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
   const inputRef = useRef<TextInput>(null)
-  const cancelButtonRef = useRef<TouchableOpacity>(null)
+  const cancelButtonRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null)
 
   // ---------------------------------------------------------------------------
   // RESET STATE WHEN MODAL OPENS

@@ -1,0 +1,120 @@
+{
+  "category": "bodies",
+  "version": "1.1.0",
+  "description": "Complete avatar body models with diverse representations",
+  "generated": "2026-01-06T00:37:00.000Z",
+  "maxSizeKB": 2500,
+  "colorTintable": false,
+  "requiresSkeleton": true,
+  "assets": [
+    {
+      "id": "default",
+      "name": "Default Body",
+      "file": "default.glb",
+      "status": "complete",
+      "sizeKB": 428,
+      "source": "Khronos glTF-Sample-Assets (CesiumMan)",
+      "license": "CC0",
+      "tags": ["animated", "textured", "default"]
+    },
+    {
+      "id": "simple",
+      "name": "Simple Body",
+      "file": "simple.glb",
+      "status": "complete",
+      "sizeKB": 49,
+      "source": "Khronos glTF-Sample-Assets (RiggedFigure)",
+      "license": "CC0",
+      "tags": ["simple", "lightweight", "rigged"]
+    },
+    {
+      "id": "avatar_asian_m",
+      "name": "Asian Male (Casual)",
+      "file": "avatar_asian_m.glb",
+      "status": "complete",
+      "sizeKB": 1791,
+      "ethnicity": "Asian",
+      "gender": "M",
+      "outfit": "Casual",
+      "source": "c-frame/valid-avatars-glb (VALID Project)",
+      "license": "CC0",
+      "tags": ["diverse", "casual", "male", "asian"]
+    },
+    {
+      "id": "avatar_asian_f",
+      "name": "Asian Female (Casual)",
+      "file": "avatar_asian_f.glb",
+      "status": "complete",
+      "sizeKB": 1710,
+      "ethnicity": "Asian",
+      "gender": "F",
+      "outfit": "Casual",
+      "source": "c-frame/valid-avatars-glb (VALID Project)",
+      "license": "CC0",
+      "tags": ["diverse", "casual", "female", "asian"]
+    },
+    {
+      "id": "avatar_black_m",
+      "name": "Black Male (Casual)",
+      "file": "avatar_black_m.glb",
+      "status": "complete",
+      "sizeKB": 1890,
+      "ethnicity": "Black",
+      "gender": "M",
+      "outfit": "Casual",
+      "source": "c-frame/valid-avatars-glb (VALID Project)",
+      "license": "CC0",
+      "tags": ["diverse", "casual", "male", "black"]
+    },
+    {
+      "id": "avatar_white_f",
+      "name": "White Female (Casual)",
+      "file": "avatar_white_f.glb",
+      "status": "complete",
+      "sizeKB": 2095,
+      "ethnicity": "White",
+      "gender": "F",
+      "outfit": "Casual",
+      "source": "c-frame/valid-avatars-glb (VALID Project)",
+      "license": "CC0",
+      "tags": ["diverse", "casual", "female", "white"]
+    },
+    {
+      "id": "avatar_hispanic_m",
+      "name": "Hispanic Male (Casual)",
+      "file": "avatar_hispanic_m.glb",
+      "status": "complete",
+      "sizeKB": 1897,
+      "ethnicity": "Hispanic",
+      "gender": "M",
+      "outfit": "Casual",
+      "source": "c-frame/valid-avatars-glb (VALID Project)",
+      "license": "CC0",
+      "tags": ["diverse", "casual", "male", "hispanic"]
+    },
+    {
+      "id": "avatar_mena_f",
+      "name": "MENA Female (Casual)",
+      "file": "avatar_mena_f.glb",
+      "status": "complete",
+      "sizeKB": 1808,
+      "ethnicity": "MENA",
+      "gender": "F",
+      "outfit": "Casual",
+      "source": "c-frame/valid-avatars-glb (VALID Project)",
+      "license": "CC0",
+      "tags": ["diverse", "casual", "female", "mena"]
+    }
+  ],
+  "cdnSource": {
+    "baseUrl": "https://cdn.jsdelivr.net/gh/c-frame/valid-avatars-glb@c539a28/",
+    "manifestUrl": "https://cdn.jsdelivr.net/gh/c-frame/valid-avatars-glb@c539a28/avatars.json",
+    "notes": "Additional avatars can be loaded directly from CDN. Manifest contains 100+ diverse avatars."
+  },
+  "notes": [
+    "Complete avatar models from VALID project - diverse, inclusive representations",
+    "All avatars are CC0 licensed - free for any use",
+    "Avatars include full body, clothing, and textures",
+    "Additional avatars available via CDN for runtime loading"
+  ]
+}

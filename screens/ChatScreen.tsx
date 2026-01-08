@@ -851,7 +851,7 @@ export function ChatScreen(): React.ReactNode {
     if (conversationError) {
       return (
         <View style={styles.headerContainer}>
-          <ErrorState message={conversationError} />
+          <ErrorState error={conversationError} />
         </View>
       )
     }
@@ -865,7 +865,7 @@ export function ChatScreen(): React.ReactNode {
         <View style={styles.emptyContainer}>
           <EmptyState
             title="Start the Conversation"
-            description="Send a message to begin chatting with this user"
+            message="Send a message to begin chatting with this user"
           />
         </View>
       )
@@ -880,7 +880,7 @@ export function ChatScreen(): React.ReactNode {
 
     return (
       <Tooltip
-        isVisible={tutorial.showMessageInputTutorial}
+        isVisible={tutorial.isVisible}
         content={
           <View>
             <Text style={{ color: 'white', fontSize: 14 }}>
@@ -889,7 +889,7 @@ export function ChatScreen(): React.ReactNode {
           </View>
         }
         placement="top"
-        onClose={() => tutorial.dismissMessageInputTutorial()}
+        onClose={() => tutorial.hide()}
       >
         <View style={styles.inputContainer}>
           <TextInput
@@ -976,7 +976,7 @@ export function ChatScreen(): React.ReactNode {
       {/* Modals */}
       <ReportMessageModal
         visible={reportModalVisible}
-        message={messageToReport}
+        reportedId={messageToReport?.id ?? ''}
         onClose={() => {
           setReportModalVisible(false)
           setMessageToReport(null)
@@ -985,8 +985,8 @@ export function ChatScreen(): React.ReactNode {
 
       <ReportUserModal
         visible={userReportModalVisible}
+        reportedId={otherUserId ?? ''}
         onClose={() => setUserReportModalVisible(false)}
-        onBlock={handleBlockUser}
       />
 
       <SharePhotoModal

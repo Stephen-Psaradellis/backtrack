@@ -112,7 +112,7 @@ export const SelfieStep = memo(function SelfieStep({
   /**
    * Render tutorial tooltip content for selfie verification onboarding
    */
-  const renderTutorialContent = (): React.ReactNode => (
+  const renderTutorialContent = (): JSX.Element => (
     <View style={tooltipStyles.container}>
       <Text style={tooltipStyles.title}>Verify It's You</Text>
       <Text style={tooltipStyles.description}>

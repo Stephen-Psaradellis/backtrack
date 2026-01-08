@@ -16,8 +16,8 @@ export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
 
 // Display components
-export { Card, InteractiveCard, CardHeader, CardBody, CardFooter } from './Card';
-export type { CardProps, InteractiveCardProps, CardHeaderProps, CardBodyProps, CardFooterProps } from './Card';
+export { Card, CardHeader, CardContent, CardFooter } from './Card';
+export type { CardProps, CardHeaderProps, CardVariant } from './Card';
 
 export { Avatar, AvatarGroup } from './Avatar';
 export type { AvatarProps, AvatarGroupProps, AvatarSize, AvatarStatus } from './Avatar';
@@ -29,14 +29,13 @@ export type { BadgeProps, BadgeGroupProps, NotificationBadgeProps, BadgeVariant,
 export {
   Skeleton,
   SkeletonText,
-  SkeletonCircle,
   SkeletonCard,
   SkeletonAvatar,
-  SkeletonButton,
+  SkeletonPostCard,
+  SkeletonChatItem,
   SkeletonList,
-  SkeletonTable,
 } from './Skeleton';
-export type { SkeletonProps, SkeletonTextProps } from './Skeleton';
+export type { SkeletonProps } from './Skeleton';
 
 // Empty states
 export { EmptyState } from './EmptyState';

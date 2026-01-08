@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
 **Backtrack** is a location-based anonymous matchmaking app. Users create "missed connection" posts at physical locations using customizable avatars, and others can browse posts to find matches.
 
-- **Mobile**: Expo SDK 52, React Native 0.76.5
+- **Mobile**: Expo SDK 54, React Native 0.81.5
 - **Web**: Next.js 15 with App Router
 - **Backend**: Supabase (PostgreSQL + PostGIS, Auth, Realtime, Storage)
 - **Maps**: Google Maps API via `@vis.gl/react-google-maps` (web) and `react-native-maps` (native)
@@ -25,18 +25,20 @@ This file provides guidance to Claude Code when working with this repository.
 - Any string that looks like `AIza...`, `sk-...`, `pk_...`, `eyJ...` (JWT tokens)
 
 ### Before Every Commit - Mandatory Checks
-1. **Check staged files for secrets:**
+1. **Verify no native directories are staged:**
    ```bash
-   git diff --cached | grep -iE "(api_key|apikey|secret|password|token|AIza|sk-|pk_)"
+   git diff --cached --name-only | grep -E "^(android|ios)/"
+   # If this returns ANY files, DO NOT COMMIT. Run: git reset HEAD android/ ios/
    ```
-2. **Never commit these files:**
+2. **Check staged files for secrets:**
+   ```bash
+   git diff --cached | grep -iE "(AIza[0-9A-Za-z_-]{35}|sk-[a-zA-Z0-9]{20,}|pk_live|eyJ[a-zA-Z0-9_-]+\.eyJ)"
+   ```
+3. **Never commit these files:**
+   - `android/` or `ios/` directories (EVER - they contain embedded secrets)
    - `*.keystore`, `*.jks`, `*.p12`, `*.pem`, `*.key`
    - `.env`, `.env.*` (except `.env.example` with placeholder values)
    - `credentials.json`, `google-services.json`, `GoogleService-Info.plist`
-3. **Review generated native files:**
-   - `android/app/src/main/AndroidManifest.xml` - Check for hardcoded API keys
-   - `ios/*/Info.plist` - Check for hardcoded API keys
-   - After running `expo prebuild`, ALWAYS check these files before committing
 
 ### Where Secrets Should Live
 - **Development**: Doppler CLI (`doppler run -- npx expo start`)
@@ -49,11 +51,41 @@ This file provides guidance to Claude Code when working with this repository.
 2. Remove from code and commit the fix
 3. The old secret is compromised forever (git history) - rotation is mandatory
 
-### Expo/React Native Specific
-- `app.config.js` reads secrets from `process.env` - this is correct
-- After `expo prebuild`, the actual values get injected into native files
-- **NEVER commit native files with real API keys** - use placeholders
-- The `android/` and `ios/` directories contain generated files that may have secrets injected
+### CNG (Continuous Native Generation) - CRITICAL
+This project uses **CNG**: the `android/` and `ios/` directories are **NOT committed to git**.
+
+**Why CNG prevents secret leaks:**
+1. `app.config.js` reads secrets from `process.env` (e.g., `EXPO_PUBLIC_GCP_MAPS_API_KEY`)
+2. `expo prebuild` or `expo run:android` generates native files with actual secret values embedded
+3. Since `android/` and `ios/` are gitignored, these secrets never enter version control
+
+**NEVER do these things:**
+- `git add android/` - This would commit secrets!
+- `git add ios/` - This would commit secrets!
+- `git add -A` without checking - Might include native files if .gitignore is broken
+- Remove android/ or ios/ from .gitignore
+
+**Build workflow:**
+```bash
+# Development (native files auto-generated)
+doppler run -- npx expo run:android
+doppler run -- npx expo run:ios
+
+# Production (EAS Build regenerates native files in cloud)
+eas build --platform all
+```
+
+**If you see android/ or ios/ in `git status`:**
+1. STOP - Do not commit
+2. Verify .gitignore includes `android/` and `ios/`
+3. Run: `git rm --cached -r android/ ios/`
+
+### Security Hooks in Place
+Two layers of protection prevent accidental secret commits:
+1. **Git pre-commit hook** (`.git/hooks/pre-commit`) - Scans staged files for API key patterns
+2. **Claude Code hook** (`.claude/settings.json`) - Blocks Claude from running git commit if secrets detected
+
+If a commit is blocked, follow the instructions in the error message.
 
 ## Essential Commands
 
@@ -66,6 +98,8 @@ npx expo start --clear      # Start with cleared cache
 npm test                    # Run all tests
 npm run test:watch          # Watch mode
 npm run test:coverage       # With coverage
+npm test -- path/to/file.test.ts  # Run single test file
+npm test -- -t "pattern"    # Run tests matching pattern
 
 # Code quality
 npm run typecheck           # TypeScript check
@@ -87,16 +121,30 @@ components/        # Shared React components
   ├── ui/          # Generic UI components
   ├── chat/        # Chat components + photo sharing
   ├── onboarding/  # Onboarding flow components
+  ├── avatar/      # Avatar UI components
+  │   ├── AvatarCreator/  # Avatar selection interface
+  │   │   ├── AvatarBrowser.tsx    # Grid view for selecting presets
+  │   │   ├── PreviewPanel.tsx     # 3D preview panel
+  │   │   └── index.tsx            # Main creator component
+  │   └── types.ts                 # Avatar type definitions
+  ├── avatar3d/    # WebView bridge for 3D rendering
   └── LocationSearch/  # Location search components
 lib/               # Core business logic
   ├── supabase/    # Supabase client setup
   ├── dev/         # Dev mode utilities and mocks
-  ├── matching.ts  # Avatar matching algorithm
-  └── utils/       # Utility functions (geo, avatar)
+  ├── avatar/      # Avatar system utilities
+  │   ├── matching.ts   # Avatar matching algorithm
+  │   └── defaults.ts   # Default configs and presets
+  └── utils/       # Utility functions (geo)
 hooks/             # Custom React hooks
 services/          # External service integrations
 types/             # TypeScript type definitions
-supabase/migrations/  # Database migrations (001-010)
+supabase/migrations/  # Database migrations
+webgl-avatar/      # React Three Fiber WebGL bundle
+  ├── src/
+  │   ├── components/   # R3F components (CompleteAvatar, CameraManager)
+  │   └── constants/    # Avatar registry, asset maps
+  └── public/models/bodies/  # GLB avatar models
 ```
 
 ### Environment Variables
@@ -104,12 +152,12 @@ supabase/migrations/  # Database migrations (001-010)
 This project needs both Expo and Next.js prefixes (same values):
 
 ```bash
-EXPO_PUBLIC_SUPABASE_URL=...      # Mobile
-NEXT_PUBLIC_SUPABASE_URL=...      # Web (same value)
-EXPO_PUBLIC_SUPABASE_ANON_KEY=... # Mobile
-NEXT_PUBLIC_SUPABASE_ANON_KEY=... # Web (same value)
-EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=...
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
+EXPO_PUBLIC_SUPABASE_URL=...              # Mobile
+NEXT_PUBLIC_SUPABASE_URL=...              # Web (same value)
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...  # Mobile
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...  # Web (same value)
+EXPO_PUBLIC_GCP_MAPS_API_KEY=...          # Mobile (Google Maps)
+NEXT_PUBLIC_GCP_MAPS_API_KEY=...          # Web (same value)
 ```
 
 **Always set both prefixes** when adding new environment variables.
@@ -170,20 +218,61 @@ All tables have RLS enabled:
 
 ## Key Features
 
-### Avatar Matching Algorithm (`lib/matching.ts`)
+### Avatar System Architecture
 
-Matches users based on avatar descriptions with weighted attributes:
+The app uses a **preset-based avatar system** with complete 3D GLB models. Users select from professionally-made, diverse avatar presets rather than building avatars part-by-part.
 
-- **Primary (60%)**: `skinColor`, `hairColor`, `topType`, `facialHairType`, `facialHairColor`
-- **Secondary (40%)**: `eyeType`, `eyebrowType`, `mouthType`, `clotheType`, `clotheColor`, `accessoriesType`, `graphicType`
+**Key Components:**
+- `webgl-avatar/` - React Three Fiber (R3F) WebGL bundle for 3D avatar rendering
+- `components/avatar/AvatarCreator/` - React Native avatar selection UI
+- `components/avatar3d/` - WebView bridge for 3D preview in React Native
+- `lib/avatar/` - Avatar utilities, matching, and defaults
+
+**Local Avatar Presets (6 bundled):**
+| ID | Name | Ethnicity | Gender |
+|----|------|-----------|--------|
+| `avatar_asian_m` | Asian Male | Asian | M |
+| `avatar_asian_f` | Asian Female | Asian | F |
+| `avatar_black_m` | Black Male | Black | M |
+| `avatar_white_f` | White Female | White | F |
+| `avatar_hispanic_m` | Hispanic Male | Hispanic | M |
+| `avatar_mena_f` | MENA Female | MENA | F |
+
+**CDN Avatars:** 100+ additional avatars available from VALID Project CDN (`cdn.jsdelivr.net/gh/c-frame/valid-avatars-glb`).
+
+**Avatar Configuration:**
+```typescript
+interface AvatarConfig {
+  avatarId: string;       // e.g., 'avatar_asian_m'
+  ethnicity?: string;     // Cached for matching
+  gender?: 'M' | 'F';     // Cached for matching
+  outfit?: string;        // Cached for reference
+}
+```
+
+### Avatar Matching Algorithm (`lib/avatar/matching.ts`)
+
+Matches users based on avatar appearance attributes with weighted matching:
+
+- **Ethnicity (40%)**: Most visible distinguishing feature
+- **Gender (30%)**: Very visible attribute
+- **Outfit (30%)**: Clothing style category
 
 Thresholds: Excellent (≥85), Good (≥70), Fair (≥50), Poor (<50)
 
 Key functions:
 ```typescript
+// New preset-based matching (primary)
+comparePresetAvatars(targetAvatar, consumerAvatar, threshold = 60): MatchResult
+quickPresetMatch(target, consumer): boolean
+filterMatchingPresetPosts(consumerAvatar, posts[], threshold): Post[]
+
+// Universal matching (auto-detects avatar type)
+compareAnyAvatars(target, consumer, threshold): MatchResult
+filterMatchingAnyPosts(consumerAvatar, posts[], threshold): Post[]
+
+// Legacy part-based (deprecated, still supported)
 compareAvatars(targetAvatar, consumerAvatar, threshold = 60): MatchResult
-quickMatch(target, consumer): boolean  // Fast primary-attribute check
-filterMatchingPosts(consumerAvatar, posts[], threshold): Post[]
 ```
 
 ### CreatePost Flow (`screens/CreatePost/`)
@@ -215,9 +304,21 @@ In-chat photo sharing between matched users:
 ## Common Gotchas
 
 ### Avatar Matching Returns 0
-- Ensure both avatars have all required fields
-- Use `DEFAULT_AVATAR_CONFIG` as fallback
-- Verify weights sum to 1.0
+- Ensure avatar has `avatarId` field (new system) or all config fields (legacy)
+- Use `DEFAULT_AVATAR_CONFIG_NEW` for preset system, `DEFAULT_AVATAR_CONFIG` for legacy
+- Check avatar type compatibility - new and legacy avatars don't match each other
+
+### Avatar Not Rendering in 3D Preview
+- Verify GLB model exists in `webgl-avatar/public/models/bodies/`
+- Check WebView console for loading errors
+- Ensure avatar ID matches a preset in `LOCAL_AVATAR_PRESETS`
+- If CDN avatar, verify network connectivity
+
+### Avatar WebView Shows Blank Screen
+- Clear Metro cache: `npx expo start --clear`
+- Rebuild WebGL bundle: `cd webgl-avatar && npm run build`
+- Run bundle updater: `npm run build:webgl`
+- Check r3fBundle.ts was generated correctly
 
 ### Realtime Subscriptions Not Working
 - Check RLS policies allow user to read the table

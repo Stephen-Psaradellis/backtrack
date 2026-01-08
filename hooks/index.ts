@@ -141,3 +141,12 @@ export {
   type UseTieredPostsOptions,
   type UseTieredPostsResult,
 } from './useTieredPosts'
+
+// Avatar snapshot hooks (Task 16 - 3D avatar snapshots)
+export {
+  useAvatarSnapshot,
+  usePrefetchSnapshots,
+  useUploadSnapshot,
+  type UseAvatarSnapshotOptions,
+  type UseAvatarSnapshotResult,
+} from './useAvatarSnapshot'

@@ -625,7 +625,7 @@ function FavoriteLocationCardComponent({
   const handleBrowse = useCallback(() => {
     if (onBrowse) {
       onBrowse(favorite)
-    } else {
+    } else if (favorite.place_id) {
       // Default navigation to Ledger filtered by this location
       navigation.navigate('Ledger', {
         locationId: favorite.place_id,

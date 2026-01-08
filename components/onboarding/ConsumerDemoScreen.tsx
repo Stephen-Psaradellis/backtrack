@@ -1,9 +1,10 @@
 import { memo, useCallback } from 'react'
 import { Button } from '../ui/Button'
 import { getStepById } from '../../lib/onboarding/onboardingConfig'
+import { CONSUMER_DEMO_POSTS, type DemoConsumerPost } from '../../lib/onboarding/mockData'
 
 // Placeholder avatar for demo screens - returns a simple SVG silhouette
-const createAvatarDataUri = (_size: number): string => {
+const createAvatarDataUri = (): string => {
   return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23f0f0f0"/><circle cx="50" cy="40" r="20" fill="%23ccc"/><ellipse cx="50" cy="80" rx="30" ry="20" fill="%23ccc"/></svg>'
 }
 
@@ -23,68 +24,6 @@ export interface ConsumerDemoScreenProps {
   /** Additional CSS classes for the container */
   className?: string
 }
-
-// ============================================================================
-// Mock Data for Demo
-// ============================================================================
-
-/**
- * Mock posts that might be about the user
- * Shows a variety of scenarios to demonstrate the browsing experience
- */
-interface MockBrowsePost {
-  id: string
-  avatar: AvatarConfig
-  message: string
-  location: string
-  timeAgo: string
-  matchScore?: number
-}
-
-const DEMO_POSTS: readonly MockBrowsePost[] = [
-  {
-    id: 'demo-1',
-    avatar: {
-      avatarStyle: 'Circle',
-      topType: 'ShortHairShortFlat',
-      hairColor: 'BrownDark',
-      accessoriesType: 'Blank',
-      facialHairType: 'Blank',
-      clotheType: 'BlazerShirt',
-      clotheColor: 'Black',
-      eyeType: 'Default',
-      eyebrowType: 'DefaultNatural',
-      mouthType: 'Smile',
-      skinColor: 'Light',
-    },
-    message:
-      'You were wearing a blue scarf and reading at the window seat. Your laugh made my day brighter!',
-    location: 'Central Library',
-    timeAgo: '2 hours ago',
-    matchScore: 85,
-  },
-  {
-    id: 'demo-2',
-    avatar: {
-      avatarStyle: 'Circle',
-      topType: 'LongHairCurly',
-      hairColor: 'Black',
-      accessoriesType: 'Round',
-      facialHairType: 'Blank',
-      clotheType: 'GraphicShirt',
-      clotheColor: 'Blue01',
-      eyeType: 'Happy',
-      eyebrowType: 'RaisedExcitedNatural',
-      mouthType: 'Twinkle',
-      skinColor: 'Brown',
-    },
-    message:
-      'We both reached for the last oat milk latte. You let me have it - thanks! Coffee sometime?',
-    location: 'Sunrise Coffee Shop',
-    timeAgo: '5 hours ago',
-    matchScore: 72,
-  },
-] as const
 
 // ============================================================================
 // Consumer Icon Component
@@ -132,7 +71,7 @@ const ConsumerIcon = memo(function ConsumerIcon() {
 
 interface MockBrowsePostCardProps {
   /** Post data to display */
-  post: MockBrowsePost
+  post: DemoConsumerPost
   /** Whether this is a potential match */
   isHighlighted?: boolean
 }
@@ -144,7 +83,7 @@ const MockBrowsePostCard = memo(function MockBrowsePostCard({
   post,
   isHighlighted = false,
 }: MockBrowsePostCardProps) {
-  const avatarDataUri = createAvatarDataUri(64)
+  const avatarDataUri = createAvatarDataUri()
 
   return (
     <div
@@ -276,15 +215,6 @@ const HowItWorksStep = memo(function HowItWorksStep({
  * - Browsing nearby posts
  * - Match scores showing how likely a post is about you
  * - Claiming a post to connect with the poster
- *
- * @example
- * ```tsx
- * <ConsumerDemoScreen
- *   onContinue={() => goToNextStep()}
- *   onSkip={() => skipOnboarding()}
- *   onBack={() => goToPreviousStep()}
- * />
- * ```
  */
 function ConsumerDemoScreenComponent({
   onContinue,
@@ -339,7 +269,7 @@ function ConsumerDemoScreenComponent({
 
         {/* Mock browse posts with staggered entrance */}
         <div className="space-y-3">
-          {DEMO_POSTS.map((post, index) => (
+          {CONSUMER_DEMO_POSTS.map((post, index) => (
             <div
               key={post.id}
               className={`animate-fade-in-up ${index === 0 ? 'animation-delay-300' : 'animation-delay-400'}`}

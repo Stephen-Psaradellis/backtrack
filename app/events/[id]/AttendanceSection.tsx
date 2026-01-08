@@ -10,7 +10,8 @@ interface AttendanceSectionProps {
   eventId: string
   status: 'interested' | 'going' | 'went' | 'skipped' | null
   stats: { interested: number; going: number; went: number } | null
-  onSetAttendance: (status: 'interested' | 'going' | 'went' | 'skipped' | null) => Promise<boolean>
+  onSetAttendance: (status: 'interested' | 'going') => Promise<boolean>
+  onRemoveAttendance?: () => Promise<boolean>
   isLoading: boolean
 }
 
@@ -19,11 +20,13 @@ export function AttendanceSection({
   status,
   stats,
   onSetAttendance,
+  onRemoveAttendance,
   isLoading,
 }: AttendanceSectionProps) {
   const handleClick = async (newStatus: 'interested' | 'going') => {
     if (status === newStatus) {
-      await onSetAttendance(null) // Toggle off
+      // Toggle off by removing attendance
+      await onRemoveAttendance?.()
     } else {
       await onSetAttendance(newStatus)
     }

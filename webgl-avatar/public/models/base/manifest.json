@@ -1,0 +1,28 @@
+{
+  "category": "base",
+  "version": "1.0.0",
+  "description": "Base skeleton and body mesh for avatar system",
+  "assets": [
+    {
+      "id": "armature",
+      "name": "Base Armature",
+      "file": "Armature.glb",
+      "sizeKB": null,
+      "triangles": null,
+      "status": "pending",
+      "source": "quaternius",
+      "notes": "Mixamo-compatible skeleton with body mesh"
+    }
+  ],
+  "skeleton": {
+    "standard": "mixamo",
+    "boneCount": 65,
+    "requiredBones": [
+      "Hips", "Spine", "Spine1", "Spine2", "Neck", "Head",
+      "LeftUpLeg", "LeftLeg", "LeftFoot",
+      "RightUpLeg", "RightLeg", "RightFoot",
+      "LeftArm", "LeftForeArm", "LeftHand",
+      "RightArm", "RightForeArm", "RightHand"
+    ]
+  }
+}

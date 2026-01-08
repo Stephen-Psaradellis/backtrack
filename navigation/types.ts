@@ -47,19 +47,18 @@ export type MainStackParamList = {
    * Deep-linked from message notifications: backtrack://conversation/:conversationId
    */
   Chat: { conversationId: string }
-  /** Avatar builder screen */
-  AvatarBuilder: {
-    /** Initial avatar configuration to edit */
-    initialConfig?: AvatarConfig
-    /** Callback when avatar is completed (passed via navigation params for serialization) */
-    returnScreen?: keyof MainStackParamList
-    returnParamKey?: string
+  /** Avatar creator screen */
+  AvatarCreator: {
+    /** Initial avatar ID to edit */
+    initialAvatarId?: string
   }
   /** Legal documents screen (privacy policy, terms of service) */
   Legal: {
     /** Type of legal document to display */
     type: 'privacy' | 'terms'
   }
+  /** WebGL 3D Test screen (development only) */
+  WebGL3DTest: undefined
 }
 
 /**
@@ -103,7 +102,7 @@ export type CreatePostScreenProps = NativeStackScreenProps<MainStackParamList, '
 export type LedgerScreenProps = NativeStackScreenProps<MainStackParamList, 'Ledger'>
 export type PostDetailScreenProps = NativeStackScreenProps<MainStackParamList, 'PostDetail'>
 export type ChatScreenProps = NativeStackScreenProps<MainStackParamList, 'Chat'>
-export type AvatarBuilderScreenProps = NativeStackScreenProps<MainStackParamList, 'AvatarBuilder'>
+export type AvatarCreatorScreenProps = NativeStackScreenProps<MainStackParamList, 'AvatarCreator'>
 
 // Tab Screen Props with composite navigation (can access both tab and stack navigation)
 export type HomeTabScreenProps = CompositeScreenProps<
@@ -156,12 +155,8 @@ export type CreatePostRouteProp = RouteProp<MainStackParamList, 'CreatePost'>
 export type LedgerRouteProp = RouteProp<MainStackParamList, 'Ledger'>
 export type PostDetailRouteProp = RouteProp<MainStackParamList, 'PostDetail'>
 export type ChatRouteProp = RouteProp<MainStackParamList, 'Chat'>
-export type AvatarBuilderRouteProp = RouteProp<MainStackParamList, 'AvatarBuilder'>
+export type AvatarCreatorRouteProp = RouteProp<MainStackParamList, 'AvatarCreator'>
 
-/** @deprecated Use AvatarBuilderScreenProps instead */
-export type AvatarCreatorScreenProps = AvatarBuilderScreenProps
-/** @deprecated Use AvatarBuilderRouteProp instead */
-export type AvatarCreatorRouteProp = AvatarBuilderRouteProp
 
 // ============================================================================
 // NAVIGATION CONSTANTS
@@ -185,8 +180,9 @@ export const SCREENS = {
   Ledger: 'Ledger' as const,
   PostDetail: 'PostDetail' as const,
   Chat: 'Chat' as const,
-  AvatarBuilder: 'AvatarBuilder' as const,
+  AvatarCreator: 'AvatarCreator' as const,
   Legal: 'Legal' as const,
+  WebGL3DTest: 'WebGL3DTest' as const,
 
   // Tabs
   HomeTab: 'HomeTab' as const,
@@ -276,7 +272,7 @@ export function isMainScreen(screenName: string): screenName is keyof MainStackP
     'Ledger',
     'PostDetail',
     'Chat',
-    'AvatarBuilder',
+    'AvatarCreator',
   ]
   return mainScreens.includes(screenName as keyof MainStackParamList)
 }

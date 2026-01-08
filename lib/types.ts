@@ -42,8 +42,8 @@ export type {
   Database,
 } from '../types/database'
 
-// Avatar types (Custom SVG Avatar System)
-export type { CustomAvatarConfig, StoredCustomAvatar } from '../components/avatar/types'
+// Avatar types (3D preset-based avatar system)
+export type { AvatarConfig, StoredAvatar } from '../components/avatar/types'
 
 // ============================================================================
 // APPLICATION-SPECIFIC TYPES
@@ -147,7 +147,7 @@ export interface AuthFormData {
  */
 export interface CreatePostFormData {
   locationId: string
-  targetAvatar: import('../components/avatar/types').StoredCustomAvatar | null
+  targetAvatar: import('../components/avatar/types').StoredAvatar | null
   note: string
   selfieUri: string | null
 }

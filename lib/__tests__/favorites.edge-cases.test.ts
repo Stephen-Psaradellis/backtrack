@@ -43,7 +43,7 @@ const createMockQueryBuilder = () => {
 }
 
 const mockQueryBuilder = createMockQueryBuilder()
-const mockFrom = vi.fn(() => mockQueryBuilder)
+const mockFrom = vi.fn((_table: string) => mockQueryBuilder)
 
 vi.mock('../supabase', () => ({
   supabase: {

@@ -5,7 +5,7 @@ import { type ImgHTMLAttributes } from 'react';
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 export type AvatarStatus = 'online' | 'offline' | 'away' | 'busy' | 'none';
 
-export interface AvatarProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'size'> {
+export interface AvatarProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'size' | 'src'> {
   src?: string | null;
   alt?: string;
   size?: AvatarSize;
@@ -82,7 +82,7 @@ export function Avatar({
     <div className={`${containerClasses} ${gradientRingClasses}`}>
       {hasImage ? (
         <img
-          src={src}
+          src={src ?? undefined}
           alt={alt}
           className="h-full w-full object-cover rounded-full"
           {...props}

@@ -195,7 +195,7 @@ function LocationPermissionModal({
           style={styles.modalContainer}
           activeOpacity={1}
           onPress={() => {}}
-          accessibilityRole="dialog"
+          accessibilityRole="none"
           accessibilityLabel="Location permission request"
         >
           <View style={styles.modalHeader}>

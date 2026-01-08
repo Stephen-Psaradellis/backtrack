@@ -11,6 +11,7 @@
 
 # Dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -18,6 +19,9 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
+# Downloaded assets (large files, fetch from source)
+assets/downloads/
 
 # Expo
 .expo/
@@ -37,31 +41,21 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-# iOS
-ios/Pods/
-*.xcworkspace
-!default.xcworkspace
-xcuserdata/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-*.hmap
+# iOS build artifacts (redundant since ios/ is ignored, but explicit for safety)
 *.ipa
 *.dSYM.zip
 *.dSYM
 
-# Android
-android/.gradle/
-android/app/build/
-android/build/
+# Android - ENTIRE DIRECTORY (CNG approach - regenerated via expo prebuild)
+android/
+
+# Android build artifacts (redundant but explicit)
 *.apk
 *.aab
 local.properties
+
+# iOS - ENTIRE DIRECTORY (CNG approach - regenerated via expo prebuild)
+ios/
 
 # Production
 /build
@@ -104,6 +98,14 @@ logs/
 tmp/
 temp/
 .cache/
+
+# E2E test screenshots (generated during testing)
+e2e_screenshots/
+screen.png
+nul
+
+# Task planning files (Claude working documents)
+tasks/
 # Credentials and secrets (NEVER commit)
 credentials.json
 google-services.json

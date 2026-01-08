@@ -73,16 +73,9 @@ export {
   type DemoProducerPost,
   type DemoConsumerPost,
   type DemoLocation,
-  // Avatar presets
-  AVATAR_PRESET_READER,
-  AVATAR_PRESET_PROFESSIONAL,
-  AVATAR_PRESET_CURLY,
-  AVATAR_PRESET_COZY,
-  AVATAR_PRESET_MUSIC,
-  AVATAR_PRESET_VINTAGE,
-  AVATAR_PRESET_FRIENDLY,
-  AVATAR_PRESET_RELAXED,
-  AVATAR_PRESETS,
+  type DemoAvatarId,
+  // Avatar preset IDs
+  DEMO_AVATAR_IDS,
   // Location data
   DEMO_LOCATIONS,
   // Producer demo data
@@ -94,7 +87,7 @@ export {
   // Message collections
   DEMO_MESSAGES,
   // Helper functions
-  getRandomAvatarPreset,
+  getRandomAvatarId,
   getRandomDemoLocation,
   getRandomMessage,
   formatTimeAgo,

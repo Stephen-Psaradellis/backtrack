@@ -63,18 +63,31 @@ export {
   type LocationItem,
 } from './LocationPicker'
 
-// Custom Avatar System
+// 3D Avatar System
 export {
-  AvatarDisplay,
-  AvatarCreator,
-  XSAvatarDisplay,
-  SmallAvatarDisplay,
-  MediumAvatarDisplay,
-  LargeAvatarDisplay,
-  XLAvatarDisplay,
-  type CustomAvatarConfig,
-  type StoredCustomAvatar,
-  type AvatarDisplayProps,
+  // 3D Avatar Snapshot Components
+  AvatarSnapshot,
+  XSAvatarSnapshot,
+  SmAvatarSnapshot,
+  MdAvatarSnapshot,
+  LgAvatarSnapshot,
+  XLAvatarSnapshot,
+  type AvatarSnapshotProps,
+} from './avatar3d'
+
+// Avatar Creator
+export { AvatarCreator } from './avatar/index'
+
+// Avatar types
+export type {
+  AvatarConfig,
+  StoredAvatar,
+  AvatarPreset,
+  AvatarEthnicity,
+  AvatarGender,
+  AvatarOutfit,
+  AvatarSize,
+  AvatarView,
 } from './avatar/index'
 
 // Selfie Camera
@@ -229,7 +242,7 @@ export {
   AvatarGroup,
   type AvatarProps,
   type AvatarGroupProps,
-  type AvatarSize,
+  type AvatarSize as UIAvatarSize,
   type AvatarStatus,
 } from './Avatar'
 
@@ -250,13 +263,10 @@ export {
 export {
   Skeleton,
   SkeletonText,
-  SkeletonCircle,
   SkeletonAvatar,
   SkeletonCard,
-  SkeletonButton,
   SkeletonList,
   type SkeletonProps,
-  type SkeletonTextProps,
 } from './Skeleton'
 
 // Navigation components

@@ -5,7 +5,7 @@
  * These types mirror the Supabase PostgreSQL schema defined in migrations.
  */
 
-import type { StoredCustomAvatar } from '../components/avatar/types'
+import type { StoredAvatar } from '../components/avatar/types'
 
 // ============================================================================
 // COMMON TYPES
@@ -55,7 +55,7 @@ export interface Profile {
   /** Optional display name for the user */
   display_name: string | null
   /** Custom avatar data for matching and display */
-  avatar: StoredCustomAvatar | null
+  avatar: StoredAvatar | null
   /** Avatar schema version for migrations */
   avatar_version: number
   /** Whether the user has completed identity verification */
@@ -77,7 +77,7 @@ export interface ProfileInsert {
   id: UUID
   username?: string | null
   display_name?: string | null
-  avatar?: StoredCustomAvatar | null
+  avatar?: StoredAvatar | null
   avatar_version?: number
   is_verified?: boolean
   verified_at?: Timestamp | null
@@ -92,7 +92,7 @@ export interface ProfileInsert {
 export interface ProfileUpdate {
   username?: string | null
   display_name?: string | null
-  avatar?: StoredCustomAvatar | null
+  avatar?: StoredAvatar | null
   avatar_version?: number
   terms_accepted_at?: Timestamp | null
   updated_at?: Timestamp
@@ -403,7 +403,7 @@ export interface Post {
   /** Reference to profile photo used for verification */
   photo_id: UUID | null
   /** Custom avatar for describing the person of interest */
-  target_avatar_v2: StoredCustomAvatar | null
+  target_avatar_v2: StoredAvatar | null
   /** Additional description of the target person */
   target_description: string | null
   /** Message left by the producer */
@@ -433,7 +433,7 @@ export interface PostInsert {
   location_id: UUID
   selfie_url: string
   photo_id?: UUID | null
-  target_avatar_v2?: StoredCustomAvatar | null
+  target_avatar_v2?: StoredAvatar | null
   target_description?: string | null
   message: string
   note?: string | null
@@ -451,7 +451,7 @@ export interface PostInsert {
 export interface PostUpdate {
   selfie_url?: string
   photo_id?: UUID | null
-  target_avatar_v2?: StoredCustomAvatar | null
+  target_avatar_v2?: StoredAvatar | null
   target_description?: string | null
   message?: string
   note?: string | null
@@ -987,28 +987,29 @@ export interface LocationWithVisit extends Location {
  * Parameters for nearby location queries
  */
 export interface NearbyLocationParams {
-  latitude: number
-  longitude: number
+  user_lat: number
+  user_lon: number
   radius_meters?: number
-  limit?: number
+  max_results?: number
 }
 
 /**
  * Parameters for locations with active posts query
  */
 export interface LocationsWithActivePostsParams {
-  latitude: number
-  longitude: number
+  user_lat: number
+  user_lon: number
   radius_meters?: number
-  limit?: number
+  max_results?: number
+  min_post_count?: number
 }
 
 /**
- * Parameters for recently visited locations query
+ * Parameters for recently visited locations query.
+ * Note: user_id is obtained from auth.uid() internally.
  */
 export interface RecentlyVisitedLocationParams {
-  user_id: UUID
-  limit?: number
+  max_results?: number | null
 }
 
 // ============================================================================

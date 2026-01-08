@@ -147,7 +147,7 @@ const DEFAULTS = {
  */
 function SearchIcon(): JSX.Element {
   return (
-    <Text style={styles.searchIcon} accessibilityHidden>
+    <Text style={styles.searchIcon} accessible={false}>
       🔍
     </Text>
   )
@@ -462,22 +462,18 @@ function SearchBarComponent({
   }, [style])
 
   const inputContainerStyles = useMemo(() => {
-    const baseStyles = [styles.inputContainer]
-    if (disabled) {
-      baseStyles.push(styles.inputContainerDisabled)
-    }
-    if (hasError) {
-      baseStyles.push(styles.inputContainerError)
-    }
-    return baseStyles
+    return [
+      styles.inputContainer,
+      disabled && styles.inputContainerDisabled,
+      hasError && styles.inputContainerError,
+    ].filter(Boolean)
   }, [disabled, hasError])
 
   const inputStyles = useMemo(() => {
-    const baseStyles = [styles.input]
-    if (disabled) {
-      baseStyles.push(styles.inputDisabled)
-    }
-    return baseStyles
+    return [
+      styles.input,
+      disabled && styles.inputDisabled,
+    ].filter(Boolean)
   }, [disabled])
 
   // ---------------------------------------------------------------------------

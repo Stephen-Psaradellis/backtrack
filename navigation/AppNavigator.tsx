@@ -17,7 +17,7 @@ import * as Linking from 'expo-linking'
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
 
 import { useAuth } from '../contexts/AuthContext'
-import { SmAvatarDisplay } from '../components/avatar'
+import { SmAvatarSnapshot } from '../components/avatar3d'
 import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
@@ -27,8 +27,9 @@ import { LedgerScreen } from '../screens/LedgerScreen'
 import { PostDetailScreen } from '../screens/PostDetailScreen'
 import { ChatScreen } from '../screens/ChatScreen'
 import { ChatListScreen } from '../screens/ChatListScreen'
-import { AvatarCreatorScreen } from '../screens/AvatarCreatorScreen'
+import AvatarCreatorScreen from '../screens/AvatarCreatorScreen'
 import { LegalScreen } from '../screens/LegalScreen'
+import { WebGL3DTestScreen } from '../screens/WebGL3DTestScreen'
 import type {
   RootStackParamList,
   AuthStackParamList,
@@ -85,7 +86,7 @@ function HeaderAvatar({ onPress }: { onPress?: () => void }) {
       activeOpacity={0.7}
     >
       {hasAvatar ? (
-        <SmAvatarDisplay
+        <SmAvatarSnapshot
           avatar={profile.avatar}
           testID="header-avatar-preview"
         />
@@ -218,7 +219,7 @@ function MainStackNavigator() {
         }}
       />
       <MainStack.Screen
-        name={SCREENS.AvatarBuilder}
+        name={SCREENS.AvatarCreator}
         component={AvatarCreatorScreen}
         options={{
           headerShown: false, // AvatarCreatorScreen has its own header
@@ -230,6 +231,14 @@ function MainStackNavigator() {
         component={LegalScreen}
         options={{
           headerShown: false, // LegalScreen has its own header
+        }}
+      />
+      <MainStack.Screen
+        name={SCREENS.WebGL3DTest}
+        component={WebGL3DTestScreen}
+        options={{
+          headerShown: false, // WebGL3DTestScreen has its own header
+          presentation: 'modal',
         }}
       />
     </MainStack.Navigator>

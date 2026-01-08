@@ -410,7 +410,7 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
   // Refs
   const isMountedRef = useRef(true)
   const abortControllerRef = useRef<AbortController | null>(null)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Memoize initial params to avoid infinite loops
   const initialParamsRef = useRef(initialParams)

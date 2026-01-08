@@ -5,7 +5,7 @@
  * Defines step configuration, form data structure, and validation constants.
  */
 
-import type { StoredCustomAvatar } from '../../components/avatar/types'
+import type { StoredAvatar } from '../../components/avatar/types'
 import type { LocationItem } from '../../components/LocationPicker'
 import type { TimeGranularity } from '../../types/database'
 
@@ -25,7 +25,7 @@ export interface CreatePostFormData {
   /** Selected profile photo ID for verification */
   selectedPhotoId: string | null
   /** Avatar describing the person seen */
-  targetAvatar: StoredCustomAvatar | null
+  targetAvatar: StoredAvatar | null
   /** Message/note to the person */
   note: string
   /** Location where the connection happened */

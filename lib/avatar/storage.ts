@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '../supabase/client';
-import type { StoredCustomAvatar, CustomAvatarConfig } from '../../components/avatar/types';
+import type { StoredAvatar, AvatarConfig } from '../../components/avatar/types';
 import { createStoredAvatar, normalizeStoredAvatar } from './defaults';
 
 // =============================================================================
@@ -15,12 +15,12 @@ import { createStoredAvatar, normalizeStoredAvatar } from './defaults';
 
 export interface AvatarSaveResult {
   success: boolean;
-  avatar?: StoredCustomAvatar;
+  avatar?: StoredAvatar;
   error?: string;
 }
 
 export interface AvatarLoadResult {
-  avatar: StoredCustomAvatar | null;
+  avatar: StoredAvatar | null;
   error?: string;
 }
 
@@ -33,13 +33,13 @@ export interface AvatarLoadResult {
  */
 export async function saveUserAvatar(
   userId: string,
-  avatar: StoredCustomAvatar
+  avatar: StoredAvatar
 ): Promise<AvatarSaveResult> {
   try {
     const supabase = createClient();
 
     // Update the avatar's updatedAt timestamp
-    const updatedAvatar: StoredCustomAvatar = {
+    const updatedAvatar: StoredAvatar = {
       ...avatar,
       updatedAt: new Date().toISOString(),
     };
@@ -78,7 +78,7 @@ export async function saveUserAvatar(
  * Save avatar for the current authenticated user
  */
 export async function saveCurrentUserAvatar(
-  avatar: StoredCustomAvatar
+  avatar: StoredAvatar
 ): Promise<AvatarSaveResult> {
   try {
     const supabase = createClient();
@@ -96,12 +96,12 @@ export async function saveCurrentUserAvatar(
 }
 
 /**
- * Save avatar config (creates a StoredCustomAvatar automatically)
+ * Save avatar config (creates a StoredAvatar automatically)
  */
 export async function saveCurrentUserAvatarConfig(
-  config: CustomAvatarConfig
+  config: AvatarConfig
 ): Promise<AvatarSaveResult> {
-  const avatar = createStoredAvatar(config);
+  const avatar = createStoredAvatar(config.avatarId);
   return saveCurrentUserAvatar(avatar);
 }
 
@@ -129,7 +129,7 @@ export async function loadUserAvatar(
     }
 
     // Normalize the avatar to ensure all fields are present
-    const avatar = normalizeStoredAvatar(data.avatar as Partial<StoredCustomAvatar>);
+    const avatar = normalizeStoredAvatar(data.avatar as Partial<StoredAvatar>);
     return { avatar };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -256,7 +256,7 @@ export async function hasCurrentUserAvatar(): Promise<boolean> {
  */
 export async function updatePostTargetAvatar(
   postId: string,
-  avatar: StoredCustomAvatar
+  avatar: StoredAvatar
 ): Promise<AvatarSaveResult> {
   try {
     const supabase = createClient();
@@ -304,7 +304,7 @@ export async function loadPostTargetAvatar(
     }
 
     const avatar = normalizeStoredAvatar(
-      data.target_avatar_v2 as Partial<StoredCustomAvatar>
+      data.target_avatar_v2 as Partial<StoredAvatar>
     );
     return { avatar };
   } catch (err) {
@@ -322,8 +322,8 @@ export async function loadPostTargetAvatar(
  */
 export async function loadMultipleUserAvatars(
   userIds: string[]
-): Promise<Map<string, StoredCustomAvatar | null>> {
-  const result = new Map<string, StoredCustomAvatar | null>();
+): Promise<Map<string, StoredAvatar | null>> {
+  const result = new Map<string, StoredAvatar | null>();
 
   if (userIds.length === 0) {
     return result;
@@ -353,7 +353,7 @@ export async function loadMultipleUserAvatars(
       if (rawAvatar) {
         result.set(
           userId,
-          normalizeStoredAvatar(rawAvatar as Partial<StoredCustomAvatar>)
+          normalizeStoredAvatar(rawAvatar as Partial<StoredAvatar>)
         );
       } else {
         result.set(userId, null);

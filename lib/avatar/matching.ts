@@ -1,12 +1,18 @@
 /**
- * Custom Avatar Matching Algorithm
+ * Avatar Matching Algorithm
  *
- * Enhanced matching for the new CustomAvatarConfig system.
- * Supports fuzzy matching for similar attributes.
+ * Preset-based matching using avatar appearance attributes:
+ * - Style: 40% weight (visual appearance category)
+ * - Gender: 30% weight (very visible)
+ * - Outfit: 30% weight (clothing style)
+ *
+ * NOTE: This algorithm uses neutral "style" categories instead of
+ * ethnicity-based categorization. The style categories represent
+ * visual appearance diversity without ethnic labeling.
  *
  * @example
  * ```tsx
- * import { compareAvatars, quickMatch, filterMatchingPosts } from 'lib/avatar/matching'
+ * import { compareAvatars, quickMatch } from 'lib/avatar/matching'
  *
  * const result = compareAvatars(targetAvatar, myAvatar)
  * console.log(result.score) // 0-100
@@ -15,17 +21,15 @@
  */
 
 import type {
-  CustomAvatarConfig,
-  StoredCustomAvatar,
-  AvatarAttribute,
+  AvatarConfig,
+  AvatarPreset,
+  AvatarStyle,
+  AvatarGender,
+  AvatarOutfit,
+  StoredAvatar,
 } from '../../components/avatar/types';
-import {
-  PRIMARY_ATTRIBUTES,
-  SECONDARY_ATTRIBUTES,
-  MATCHING_WEIGHTS,
-} from '../../components/avatar/types';
-import { getAttributeSimilarity } from '../../components/avatar/constants';
-import { DEFAULT_AVATAR_CONFIG } from './defaults';
+import { MATCHING_WEIGHTS, ETHNICITY_TO_STYLE } from '../../components/avatar/types';
+import { getAvatarPreset } from './defaults';
 
 // ============================================================================
 // TYPES
@@ -53,11 +57,11 @@ export interface MatchResult {
     /** Secondary attributes match percentage (0-100) */
     secondaryScore: number;
     /** List of matching attribute names */
-    matchingAttributes: AvatarAttribute[];
+    matchingAttributes: string[];
     /** List of partially matching attribute names (fuzzy) */
-    partialMatchAttributes: AvatarAttribute[];
+    partialMatchAttributes: string[];
     /** List of non-matching attribute names */
-    nonMatchingAttributes: AvatarAttribute[];
+    nonMatchingAttributes: string[];
   };
 }
 
@@ -65,10 +69,6 @@ export interface MatchResult {
  * Configuration for the matching algorithm
  */
 export interface MatchingConfig {
-  /** Weight for primary attributes (0-1, default 0.6) */
-  primaryWeight: number;
-  /** Weight for secondary attributes (0-1, default 0.4) */
-  secondaryWeight: number;
   /** Minimum score to be considered a match (0-100, default 60) */
   defaultThreshold: number;
   /** Enable fuzzy matching for similar values (default true) */
@@ -78,9 +78,10 @@ export interface MatchingConfig {
 /**
  * Post with target avatar for filtering
  */
-export interface PostWithCustomAvatar {
+export interface PostWithAvatar {
   id: string;
-  target_avatar_v2?: StoredCustomAvatar | CustomAvatarConfig | null;
+  /** Avatar config or stored avatar */
+  target_avatar?: StoredAvatar | AvatarConfig | null;
   [key: string]: unknown;
 }
 
@@ -92,8 +93,6 @@ export interface PostWithCustomAvatar {
  * Default matching configuration
  */
 export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
-  primaryWeight: MATCHING_WEIGHTS.primary,
-  secondaryWeight: MATCHING_WEIGHTS.secondary,
   defaultThreshold: 60,
   useFuzzyMatching: true,
 };
@@ -107,40 +106,56 @@ export const QUALITY_THRESHOLDS = {
   fair: 50,
 } as const;
 
+/**
+ * Similar outfits for fuzzy matching
+ */
+export const OUTFIT_SIMILARITY: AvatarOutfit[][] = [
+  ['Casual', 'Utility'], // Informal clothing
+  ['Business', 'Medical'], // Professional attire
+];
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
 /**
- * Extract config from a StoredCustomAvatar or CustomAvatarConfig
+ * Extract AvatarConfig from various input types
  */
 function extractConfig(
-  avatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined
-): CustomAvatarConfig | null {
+  avatar: StoredAvatar | AvatarConfig | AvatarPreset | null | undefined
+): AvatarConfig | null {
   if (!avatar) return null;
-  if ('config' in avatar && avatar.config) {
-    return avatar.config;
+
+  // StoredAvatar has a config property
+  if ('config' in avatar && avatar.config && 'avatarId' in avatar.config) {
+    return avatar.config as AvatarConfig;
   }
-  if ('skinTone' in avatar) {
-    return avatar as CustomAvatarConfig;
+
+  // AvatarConfig has avatarId directly
+  if ('avatarId' in avatar) {
+    return avatar as AvatarConfig;
   }
+
+  // AvatarPreset - convert to AvatarConfig
+  if ('id' in avatar && ('style' in avatar || 'ethnicity' in avatar)) {
+    const preset = avatar as AvatarPreset;
+    return {
+      avatarId: preset.id,
+      style: preset.style,
+      ethnicity: preset.ethnicity,
+      gender: preset.gender as AvatarGender,
+      outfit: preset.outfit as AvatarOutfit,
+    };
+  }
+
   return null;
 }
 
 /**
- * Normalize an avatar config, filling in missing values with defaults
+ * Get full preset info for an avatar config
  */
-function normalizeAvatar(
-  avatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined
-): CustomAvatarConfig {
-  const config = extractConfig(avatar);
-  if (!config) {
-    return { ...DEFAULT_AVATAR_CONFIG };
-  }
-  return {
-    ...DEFAULT_AVATAR_CONFIG,
-    ...config,
-  };
+function getPresetInfo(config: AvatarConfig): AvatarPreset | null {
+  return getAvatarPreset(config.avatarId) || null;
 }
 
 /**
@@ -154,135 +169,167 @@ function getQualityFromScore(score: number): MatchQuality {
 }
 
 /**
- * Compare a single attribute between two avatars
- * Returns a score from 0 to 1 (supports fuzzy matching)
+ * Check if two outfits are similar (for fuzzy matching)
  */
-function compareAttribute(
-  attribute: AvatarAttribute,
-  targetValue: string,
-  consumerValue: string,
-  useFuzzy: boolean
-): number {
-  // Exact match
-  if (targetValue.toLowerCase() === consumerValue.toLowerCase()) {
-    return 1;
-  }
+function areOutfitsSimilar(
+  outfit1: AvatarOutfit | undefined,
+  outfit2: AvatarOutfit | undefined
+): boolean {
+  if (!outfit1 || !outfit2) return false;
+  if (outfit1 === outfit2) return true;
 
-  // Fuzzy match
-  if (useFuzzy) {
-    return getAttributeSimilarity(attribute, targetValue, consumerValue);
+  for (const group of OUTFIT_SIMILARITY) {
+    if (group.includes(outfit1) && group.includes(outfit2)) {
+      return true;
+    }
   }
-
-  return 0;
+  return false;
 }
 
 /**
- * Calculate match percentage for a set of attributes
+ * Get style from config, converting from ethnicity if needed for backward compatibility
  */
-function calculateAttributeGroupScore(
-  targetAvatar: CustomAvatarConfig,
-  consumerAvatar: CustomAvatarConfig,
-  attributes: readonly AvatarAttribute[],
-  useFuzzy: boolean
-): {
-  score: number;
-  matching: AvatarAttribute[];
-  partial: AvatarAttribute[];
-  nonMatching: AvatarAttribute[];
-} {
-  const matching: AvatarAttribute[] = [];
-  const partial: AvatarAttribute[] = [];
-  const nonMatching: AvatarAttribute[] = [];
-  let totalScore = 0;
+function getStyleFromConfig(config: AvatarConfig, preset: AvatarPreset | null): AvatarStyle | undefined {
+  // Prefer style if available
+  if (config.style) return config.style;
 
-  for (const attr of attributes) {
-    const targetVal = targetAvatar[attr] as string;
-    const consumerVal = consumerAvatar[attr] as string;
-    const attrScore = compareAttribute(attr, targetVal, consumerVal, useFuzzy);
+  // Check preset for style
+  if (preset?.style) return preset.style;
 
-    if (attrScore >= 1) {
-      matching.push(attr);
-    } else if (attrScore > 0) {
-      partial.push(attr);
-    } else {
-      nonMatching.push(attr);
-    }
-
-    totalScore += attrScore;
+  // Fall back to converting ethnicity to style (backward compatibility)
+  if (config.ethnicity) {
+    return ETHNICITY_TO_STYLE[config.ethnicity];
   }
 
-  const score =
-    attributes.length > 0 ? (totalScore / attributes.length) * 100 : 0;
+  if (preset?.ethnicity) {
+    return ETHNICITY_TO_STYLE[preset.ethnicity];
+  }
 
-  return { score, matching, partial, nonMatching };
+  return undefined;
 }
 
 // ============================================================================
-// MAIN FUNCTIONS
+// MATCHING FUNCTIONS
 // ============================================================================
 
 /**
  * Compare two avatars and calculate a match score
  *
- * @param targetAvatar - The avatar from the post's target_avatar_v2 field
+ * Matching weights:
+ * - Style: 40% (visual appearance category - neutral descriptor)
+ * - Gender: 30% (very visible)
+ * - Outfit: 30% (clothing style)
+ *
+ * @param targetAvatar - The avatar from the post's target_avatar field
  * @param consumerAvatar - The consumer's own avatar from their profile
  * @param threshold - Minimum score to be considered a match (default: 60)
- * @param config - Optional matching configuration
+ * @param useFuzzy - Enable fuzzy matching for similar values (default: true)
  * @returns Detailed match result with score, quality, and breakdown
  */
 export function compareAvatars(
-  targetAvatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined,
-  consumerAvatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined,
+  targetAvatar: StoredAvatar | AvatarConfig | AvatarPreset | null | undefined,
+  consumerAvatar: StoredAvatar | AvatarConfig | AvatarPreset | null | undefined,
   threshold: number = DEFAULT_MATCHING_CONFIG.defaultThreshold,
-  config: Partial<MatchingConfig> = {}
+  useFuzzy: boolean = true
 ): MatchResult {
-  const matchConfig = { ...DEFAULT_MATCHING_CONFIG, ...config };
+  const target = extractConfig(targetAvatar);
+  const consumer = extractConfig(consumerAvatar);
 
-  // Normalize both avatars
-  const normalizedTarget = normalizeAvatar(targetAvatar);
-  const normalizedConsumer = normalizeAvatar(consumerAvatar);
+  // If either avatar is missing, return no match
+  if (!target || !consumer) {
+    return {
+      score: 0,
+      quality: 'poor',
+      isMatch: false,
+      breakdown: {
+        primaryScore: 0,
+        secondaryScore: 0,
+        matchingAttributes: [],
+        partialMatchAttributes: [],
+        nonMatchingAttributes: ['style', 'gender', 'outfit'],
+      },
+    };
+  }
 
-  // Calculate primary attributes score
-  const primaryResult = calculateAttributeGroupScore(
-    normalizedTarget,
-    normalizedConsumer,
-    PRIMARY_ATTRIBUTES,
-    matchConfig.useFuzzyMatching
-  );
+  // Get preset info to fill in any missing attributes
+  const targetPreset = getPresetInfo(target);
+  const consumerPreset = getPresetInfo(consumer);
 
-  // Calculate secondary attributes score
-  const secondaryResult = calculateAttributeGroupScore(
-    normalizedTarget,
-    normalizedConsumer,
-    SECONDARY_ATTRIBUTES,
-    matchConfig.useFuzzyMatching
-  );
+  // Get attribute values (from config or preset)
+  const targetStyle = getStyleFromConfig(target, targetPreset);
+  const targetGender = target.gender || targetPreset?.gender;
+  const targetOutfit = target.outfit || targetPreset?.outfit;
+
+  const consumerStyle = getStyleFromConfig(consumer, consumerPreset);
+  const consumerGender = consumer.gender || consumerPreset?.gender;
+  const consumerOutfit = consumer.outfit || consumerPreset?.outfit;
+
+  // Track matches
+  const matchingAttributes: string[] = [];
+  const partialMatchAttributes: string[] = [];
+  const nonMatchingAttributes: string[] = [];
+
+  // Calculate style score (40%)
+  let styleScore = 0;
+  if (targetStyle && consumerStyle) {
+    if (targetStyle === consumerStyle) {
+      styleScore = 1;
+      matchingAttributes.push('style');
+    } else {
+      nonMatchingAttributes.push('style');
+    }
+  }
+
+  // Calculate gender score (30%)
+  let genderScore = 0;
+  if (targetGender && consumerGender) {
+    if (targetGender === consumerGender) {
+      genderScore = 1;
+      matchingAttributes.push('gender');
+    } else {
+      nonMatchingAttributes.push('gender');
+    }
+  }
+
+  // Calculate outfit score (30%)
+  let outfitScore = 0;
+  if (targetOutfit && consumerOutfit) {
+    if (targetOutfit === consumerOutfit) {
+      outfitScore = 1;
+      matchingAttributes.push('outfit');
+    } else if (useFuzzy && areOutfitsSimilar(targetOutfit, consumerOutfit)) {
+      outfitScore = 0.7;
+      partialMatchAttributes.push('outfit');
+    } else {
+      nonMatchingAttributes.push('outfit');
+    }
+  }
 
   // Calculate weighted final score
   const finalScore = Math.round(
-    primaryResult.score * matchConfig.primaryWeight +
-      secondaryResult.score * matchConfig.secondaryWeight
+    styleScore * MATCHING_WEIGHTS.style * 100 +
+    genderScore * MATCHING_WEIGHTS.gender * 100 +
+    outfitScore * MATCHING_WEIGHTS.outfit * 100
   );
+
+  // Primary score is style + gender (most important)
+  const primaryScore = Math.round(
+    (styleScore * 0.57 + genderScore * 0.43) * 100
+  );
+
+  // Secondary score is outfit
+  const secondaryScore = Math.round(outfitScore * 100);
 
   return {
     score: finalScore,
     quality: getQualityFromScore(finalScore),
     isMatch: finalScore >= threshold,
     breakdown: {
-      primaryScore: Math.round(primaryResult.score),
-      secondaryScore: Math.round(secondaryResult.score),
-      matchingAttributes: [
-        ...primaryResult.matching,
-        ...secondaryResult.matching,
-      ],
-      partialMatchAttributes: [
-        ...primaryResult.partial,
-        ...secondaryResult.partial,
-      ],
-      nonMatchingAttributes: [
-        ...primaryResult.nonMatching,
-        ...secondaryResult.nonMatching,
-      ],
+      primaryScore,
+      secondaryScore,
+      matchingAttributes,
+      partialMatchAttributes,
+      nonMatchingAttributes,
     },
   };
 }
@@ -291,41 +338,19 @@ export function compareAvatars(
  * Quick boolean check if two avatars match
  */
 export function quickMatch(
-  targetAvatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined,
-  consumerAvatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined,
+  targetAvatar: StoredAvatar | AvatarConfig | AvatarPreset | null | undefined,
+  consumerAvatar: StoredAvatar | AvatarConfig | AvatarPreset | null | undefined,
   threshold: number = DEFAULT_MATCHING_CONFIG.defaultThreshold
 ): boolean {
-  const normalizedTarget = normalizeAvatar(targetAvatar);
-  const normalizedConsumer = normalizeAvatar(consumerAvatar);
-
-  // Quick check on primary attributes only
-  const primaryResult = calculateAttributeGroupScore(
-    normalizedTarget,
-    normalizedConsumer,
-    PRIMARY_ATTRIBUTES,
-    true
-  );
-
-  // If primary score is excellent, it's definitely a match
-  if (primaryResult.score >= QUALITY_THRESHOLDS.excellent) {
-    return true;
-  }
-
-  // If primary score is very low, it's definitely not a match
-  if (primaryResult.score < 30) {
-    return false;
-  }
-
-  // For borderline cases, do the full calculation
   const result = compareAvatars(targetAvatar, consumerAvatar, threshold);
   return result.isMatch;
 }
 
 /**
- * Filter an array of posts to only those matching the consumer's avatar
+ * Filter posts to only those matching the consumer's avatar
  */
-export function filterMatchingPosts<T extends PostWithCustomAvatar>(
-  consumerAvatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined,
+export function filterMatchingPosts<T extends PostWithAvatar>(
+  consumerAvatar: StoredAvatar | AvatarConfig | null | undefined,
   posts: T[],
   threshold: number = DEFAULT_MATCHING_CONFIG.defaultThreshold
 ): T[] {
@@ -336,7 +361,11 @@ export function filterMatchingPosts<T extends PostWithCustomAvatar>(
   return posts
     .map((post) => ({
       post,
-      result: compareAvatars(post.target_avatar_v2, consumerAvatar, threshold),
+      result: compareAvatars(
+        post.target_avatar as StoredAvatar | AvatarConfig | null | undefined,
+        consumerAvatar,
+        threshold
+      ),
     }))
     .filter(({ result }) => result.isMatch)
     .sort((a, b) => b.result.score - a.result.score)
@@ -346,8 +375,8 @@ export function filterMatchingPosts<T extends PostWithCustomAvatar>(
 /**
  * Get posts with their match scores
  */
-export function getPostsWithMatchScores<T extends PostWithCustomAvatar>(
-  consumerAvatar: StoredCustomAvatar | CustomAvatarConfig | null | undefined,
+export function getPostsWithMatchScores<T extends PostWithAvatar>(
+  consumerAvatar: StoredAvatar | AvatarConfig | null | undefined,
   posts: T[]
 ): Array<{ post: T; match: MatchResult }> {
   if (!posts || posts.length === 0) {
@@ -357,10 +386,17 @@ export function getPostsWithMatchScores<T extends PostWithCustomAvatar>(
   return posts
     .map((post) => ({
       post,
-      match: compareAvatars(post.target_avatar_v2, consumerAvatar),
+      match: compareAvatars(
+        post.target_avatar as StoredAvatar | AvatarConfig | null | undefined,
+        consumerAvatar
+      ),
     }))
     .sort((a, b) => b.match.score - a.match.score);
 }
+
+// ============================================================================
+// DISPLAY HELPERS
+// ============================================================================
 
 /**
  * Get a human-readable match description
@@ -379,26 +415,12 @@ export function getMatchDescription(result: MatchResult): string {
 /**
  * Human-readable attribute names
  */
-const ATTRIBUTE_LABELS: Record<AvatarAttribute, string> = {
-  skinTone: 'skin tone',
-  hairColor: 'hair color',
-  hairStyle: 'hairstyle',
-  facialHair: 'facial hair',
-  facialHairColor: 'facial hair color',
-  faceShape: 'face shape',
-  eyeShape: 'eye shape',
-  eyeColor: 'eye color',
-  eyebrowStyle: 'eyebrow style',
-  noseShape: 'nose shape',
-  mouthExpression: 'expression',
-  bodyShape: 'body type',
-  heightCategory: 'height',
-  topType: 'top style',
-  topColor: 'top color',
-  bottomType: 'bottom style',
-  bottomColor: 'bottom color',
-  glasses: 'glasses',
-  headwear: 'headwear',
+const ATTRIBUTE_LABELS: Record<string, string> = {
+  style: 'appearance',
+  gender: 'gender',
+  outfit: 'clothing',
+  // Legacy support
+  ethnicity: 'appearance',
 };
 
 /**
@@ -411,12 +433,17 @@ export function explainMatch(result: MatchResult): string {
     return 'No matching features';
   }
 
+  // Get labels for attributes
+  const getLabel = (attr: string): string => {
+    return ATTRIBUTE_LABELS[attr] || attr;
+  };
+
   // Combine exact and partial matches, prioritizing exact
   const allMatches = [
-    ...matchingAttributes.map((attr) => ATTRIBUTE_LABELS[attr]),
+    ...matchingAttributes.map((attr) => getLabel(attr)),
     ...partialMatchAttributes
       .slice(0, 2)
-      .map((attr) => `similar ${ATTRIBUTE_LABELS[attr]}`),
+      .map((attr) => `similar ${getLabel(attr)}`),
   ].slice(0, 3);
 
   if (allMatches.length === 1) {

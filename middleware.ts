@@ -52,7 +52,7 @@ export async function middleware(request: NextRequest) {
 
     const result = rateLimit(identifier, preset)
 
-    if (!result.allowed) {
+    if (!result.success) {
       return createRateLimitResponse(result)
     }
 

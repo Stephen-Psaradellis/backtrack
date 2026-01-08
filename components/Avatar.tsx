@@ -97,7 +97,7 @@ export function Avatar({
     >
       {hasImage ? (
         <Image
-          source={{ uri: src }}
+          source={{ uri: src ?? undefined }}
           style={[
             styles.image,
             {

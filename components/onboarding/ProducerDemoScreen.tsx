@@ -1,9 +1,10 @@
 import { memo, useCallback } from 'react'
 import { Button } from '../ui/Button'
 import { getStepById } from '../../lib/onboarding/onboardingConfig'
+import { PRODUCER_DEMO_POST } from '../../lib/onboarding/mockData'
 
 // Placeholder avatar for demo screens - returns a simple SVG silhouette
-const createAvatarDataUri = (_size: number): string => {
+const createAvatarDataUri = (): string => {
   return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23f0f0f0"/><circle cx="50" cy="40" r="20" fill="%23ccc"/><ellipse cx="50" cy="80" rx="30" ry="20" fill="%23ccc"/></svg>'
 }
 
@@ -23,44 +24,6 @@ export interface ProducerDemoScreenProps {
   /** Additional CSS classes for the container */
   className?: string
 }
-
-// ============================================================================
-// Mock Data for Demo
-// ============================================================================
-
-/**
- * Example avatar configuration for the demo post
- * Represents the person the user "saw" and is describing
- */
-const DEMO_TARGET_AVATAR: AvatarConfig = {
-  avatarStyle: 'Circle',
-  topType: 'LongHairStraight',
-  hairColor: 'Brown',
-  accessoriesType: 'Prescription01',
-  facialHairType: 'Blank',
-  clotheType: 'Hoodie',
-  clotheColor: 'PastelBlue',
-  eyeType: 'Happy',
-  eyebrowType: 'Default',
-  mouthType: 'Smile',
-  skinColor: 'Light',
-}
-
-/**
- * Example message for the demo post
- */
-const DEMO_MESSAGE =
-  'You were reading "The Midnight Library" at the corner table. I loved your laugh when your friend made a joke. Would love to chat about books sometime!'
-
-/**
- * Example location for the demo post
- */
-const DEMO_LOCATION = 'Sunrise Coffee Shop'
-
-/**
- * Example time ago for the demo post
- */
-const DEMO_TIME_AGO = 'Just now'
 
 // ============================================================================
 // Producer Icon Component
@@ -107,8 +70,6 @@ const ProducerIcon = memo(function ProducerIcon() {
 // ============================================================================
 
 interface MockPostCardProps {
-  /** Target avatar configuration */
-  avatar: AvatarConfig
   /** Post message content */
   message: string
   /** Location name */
@@ -121,12 +82,11 @@ interface MockPostCardProps {
  * A simplified post card component for demonstration purposes with enhanced transitions
  */
 const MockPostCard = memo(function MockPostCard({
-  avatar,
   message,
   location,
   timeAgo,
 }: MockPostCardProps) {
-  const avatarDataUri = createAvatarDataUri(80)
+  const avatarDataUri = createAvatarDataUri()
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl border border-gray-100 dark:border-gray-700 p-4 transition-shadow duration-300">
@@ -245,15 +205,6 @@ const HowItWorksStep = memo(function HowItWorksStep({
  * - Describing someone with an avatar (not a photo)
  * - Adding a location where you saw them
  * - Writing a friendly message
- *
- * @example
- * ```tsx
- * <ProducerDemoScreen
- *   onContinue={() => goToNextStep()}
- *   onSkip={() => skipOnboarding()}
- *   onBack={() => goToPreviousStep()}
- * />
- * ```
  */
 function ProducerDemoScreenComponent({
   onContinue,
@@ -309,10 +260,9 @@ function ProducerDemoScreenComponent({
         {/* Mock post card with entrance animation */}
         <div className="animate-fade-in-up animation-delay-300">
           <MockPostCard
-            avatar={DEMO_TARGET_AVATAR}
-            message={DEMO_MESSAGE}
-            location={DEMO_LOCATION}
-            timeAgo={DEMO_TIME_AGO}
+            message={PRODUCER_DEMO_POST.message}
+            location={PRODUCER_DEMO_POST.location}
+            timeAgo={PRODUCER_DEMO_POST.timeAgo}
           />
         </div>
 

@@ -46,12 +46,38 @@ interface PostWithAuthor {
   }
 }
 
-interface EventPost {
+/**
+ * Raw event post from Supabase query (nested relations come as arrays)
+ */
+interface RawEventPost {
   id: string
   event_id: string
   post_id: string
   created_at: string
-  post: PostWithAuthor
+  post: Array<{
+    id: string
+    producer_id: string
+    location_id: string
+    selfie_url: string
+    target_avatar: Record<string, unknown>
+    target_description: string | null
+    message: string
+    note: string | null
+    seen_at: string | null
+    is_active: boolean
+    created_at: string
+    expires_at: string
+    producer: Array<{
+      id: string
+      display_name: string | null
+      username: string | null
+    }>
+    location: Array<{
+      id: string
+      name: string
+      address: string | null
+    }>
+  }>
 }
 
 interface GetPostsResponse {
@@ -184,16 +210,32 @@ export async function GET(
     }
 
     // Extract posts from event_posts join result
-    const posts: PostWithAuthor[] = (eventPosts || [])
-      .map((ep: EventPost) => {
-        if (!ep.post) return null
+    // Supabase returns nested relations as arrays
+    const rawPosts = ((eventPosts || []) as RawEventPost[])
+      .map((ep) => {
+        const post = ep.post?.[0]
+        if (!post) return null
         return {
-          ...ep.post,
-          producer: Array.isArray(ep.post.producer) ? ep.post.producer[0] : ep.post.producer,
-          location: Array.isArray(ep.post.location) ? ep.post.location[0] : ep.post.location,
-        }
+          id: post.id,
+          producer_id: post.producer_id,
+          location_id: post.location_id,
+          selfie_url: post.selfie_url,
+          target_avatar: post.target_avatar,
+          target_description: post.target_description,
+          message: post.message,
+          note: post.note,
+          seen_at: post.seen_at,
+          is_active: post.is_active,
+          created_at: post.created_at,
+          expires_at: post.expires_at,
+          producer: post.producer?.[0],
+          location: post.location?.[0],
+        } as PostWithAuthor
       })
-      .filter((post): post is PostWithAuthor => post !== null && post.is_active)
+
+    const posts: PostWithAuthor[] = rawPosts.filter(
+      (post): post is PostWithAuthor => post !== null && post.is_active
+    )
 
     // Build response
     const response: GetPostsResponse = {

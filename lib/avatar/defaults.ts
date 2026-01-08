@@ -1,469 +1,547 @@
 /**
- * Custom Avatar System - Default Configurations
+ * Avatar System - Default Configurations
  *
- * Provides default avatar configurations and random generation utilities.
+ * Provides default avatar configurations, preset registry, and utilities.
+ * Loads 370+ diverse avatars from VALID Project CDN with fast preview loading.
+ *
+ * Key features:
+ * - 370+ prebuilt GLB avatars from CDN
+ * - Thumbnail images for fast grid preview
+ * - Caching for <1.5s load times
+ * - Neutral style categories (not ethnicity-based)
  */
+
+import type {
+  AvatarConfig,
+  AvatarPreset,
+  AvatarStyle,
+  AvatarEthnicity,
+  AvatarGender,
+  AvatarOutfit,
+  StoredAvatar,
+} from '../../components/avatar/types';
+import { ETHNICITY_TO_STYLE } from '../../components/avatar/types';
+
+// Re-export for convenience
+export { DEFAULT_AVATAR_ID, AVATAR_CONFIG_VERSION } from '../../components/avatar/types';
 
 /**
  * Generate a simple unique ID for avatars.
- * Uses timestamp + random string, sufficient for avatar IDs.
- * Avoids crypto.getRandomValues() which isn't available in React Native.
  */
-function generateAvatarId(): string {
+function generateStoredAvatarId(): string {
   const timestamp = Date.now().toString(36);
   const randomPart = Math.random().toString(36).substring(2, 15);
   const randomPart2 = Math.random().toString(36).substring(2, 15);
   return `${timestamp}-${randomPart}-${randomPart2}`;
 }
-import type {
-  CustomAvatarConfig,
-  StoredCustomAvatar,
-  SkinTone,
-  HairColor,
-  HairStyle,
-  FacialHairType,
-  FaceShape,
-  EyeShape,
-  EyeColor,
-  EyebrowStyle,
-  NoseShape,
-  MouthType,
-  BodyShape,
-  HeightCategory,
-  ClothingTop,
-  ClothingBottom,
-  ClothingColor,
-  GlassesType,
-  HeadwearType,
-  AvatarAttribute,
-} from '../../components/avatar/types';
 
 // =============================================================================
-// DEFAULT AVATAR CONFIGURATION
+// CDN CONFIGURATION
 // =============================================================================
 
 /**
- * Default avatar configuration used when no values are provided.
- * Represents a neutral, average-looking avatar.
+ * CDN configuration for loading avatars.
+ * Uses jsDelivr CDN for fast, global delivery.
  */
-export const DEFAULT_AVATAR_CONFIG: CustomAvatarConfig = {
-  // Face
-  skinTone: 'medium1',
-  faceShape: 'oval',
+export const AVATAR_CDN = {
+  /** Base URL for avatar assets */
+  baseUrl: 'https://cdn.jsdelivr.net/gh/c-frame/valid-avatars-glb@c539a28/',
+  /** Manifest URL listing all available avatars */
+  manifestUrl: 'https://cdn.jsdelivr.net/gh/c-frame/valid-avatars-glb@c539a28/avatars.json',
+  /** Image base URL for thumbnails */
+  imagesUrl: 'https://cdn.jsdelivr.net/gh/c-frame/valid-avatars-glb@c539a28/images/',
+} as const;
 
-  // Hair
-  hairStyle: 'sidePart',
-  hairColor: 'brown',
-  facialHair: 'none',
-  facialHairColor: 'brown',
+// =============================================================================
+// LOCAL AVATAR PRESETS (Bundled with app for offline fallback)
+// =============================================================================
 
-  // Eyes
-  eyeShape: 'almond',
-  eyeColor: 'brown',
-  eyebrowStyle: 'natural',
+/**
+ * Local avatar presets bundled with the app.
+ * These are immediately available without network requests.
+ * Using neutral style categories.
+ */
+export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
+  {
+    id: 'avatar_asian_m',
+    name: 'Style B Male 1',
+    file: 'avatar_asian_m.glb',
+    style: 'Style B',
+    ethnicity: 'Asian',
+    gender: 'M',
+    outfit: 'Casual',
+    isLocal: true,
+    sizeKB: 1791,
+    license: 'CC0',
+    source: 'VALID Project',
+    variant: 1,
+    tags: ['diverse', 'casual', 'male'],
+  },
+  {
+    id: 'avatar_asian_f',
+    name: 'Style B Female 1',
+    file: 'avatar_asian_f.glb',
+    style: 'Style B',
+    ethnicity: 'Asian',
+    gender: 'F',
+    outfit: 'Casual',
+    isLocal: true,
+    sizeKB: 1710,
+    license: 'CC0',
+    source: 'VALID Project',
+    variant: 1,
+    tags: ['diverse', 'casual', 'female'],
+  },
+  {
+    id: 'avatar_black_m',
+    name: 'Style C Male 1',
+    file: 'avatar_black_m.glb',
+    style: 'Style C',
+    ethnicity: 'Black',
+    gender: 'M',
+    outfit: 'Casual',
+    isLocal: true,
+    sizeKB: 1890,
+    license: 'CC0',
+    source: 'VALID Project',
+    variant: 1,
+    tags: ['diverse', 'casual', 'male'],
+  },
+  {
+    id: 'avatar_white_f',
+    name: 'Style G Female 1',
+    file: 'avatar_white_f.glb',
+    style: 'Style G',
+    ethnicity: 'White',
+    gender: 'F',
+    outfit: 'Casual',
+    isLocal: true,
+    sizeKB: 2095,
+    license: 'CC0',
+    source: 'VALID Project',
+    variant: 1,
+    tags: ['diverse', 'casual', 'female'],
+  },
+  {
+    id: 'avatar_hispanic_m',
+    name: 'Style D Male 1',
+    file: 'avatar_hispanic_m.glb',
+    style: 'Style D',
+    ethnicity: 'Hispanic',
+    gender: 'M',
+    outfit: 'Casual',
+    isLocal: true,
+    sizeKB: 1897,
+    license: 'CC0',
+    source: 'VALID Project',
+    variant: 1,
+    tags: ['diverse', 'casual', 'male'],
+  },
+  {
+    id: 'avatar_mena_f',
+    name: 'Style E Female 1',
+    file: 'avatar_mena_f.glb',
+    style: 'Style E',
+    ethnicity: 'MENA',
+    gender: 'F',
+    outfit: 'Casual',
+    isLocal: true,
+    sizeKB: 1808,
+    license: 'CC0',
+    source: 'VALID Project',
+    variant: 1,
+    tags: ['diverse', 'casual', 'female'],
+  },
+];
 
-  // Features
-  noseShape: 'straight',
-  mouthExpression: 'neutral',
+// =============================================================================
+// CDN AVATAR CACHE
+// =============================================================================
 
-  // Body
-  bodyShape: 'average',
-  heightCategory: 'average',
+/** Cache for CDN avatar manifest */
+let cdnAvatarCache: AvatarPreset[] | null = null;
 
-  // Outfit
-  topType: 'tshirt',
-  topColor: 'blue',
-  bottomType: 'jeans',
-  bottomColor: 'navy',
+/** Promise for in-flight CDN fetch */
+let cdnFetchPromise: Promise<AvatarPreset[]> | null = null;
 
-  // Accessories
-  glasses: 'none',
-  headwear: 'none',
+/** Timestamp of last CDN fetch for cache invalidation */
+let cdnFetchTimestamp: number | null = null;
+
+/** Cache duration: 1 hour */
+const CDN_CACHE_DURATION_MS = 60 * 60 * 1000;
+
+/**
+ * Map outfit abbreviations to full names
+ */
+const OUTFIT_MAP: Record<string, AvatarOutfit> = {
+  'Casual': 'Casual',
+  'Busi': 'Business',
+  'Medi': 'Medical',
+  'Milit': 'Military',
+  'Util': 'Utility',
 };
 
 /**
- * Current schema version for stored avatars.
- * Increment when making breaking changes to CustomAvatarConfig.
+ * Parse a CDN avatar entry from the manifest into an AvatarPreset
  */
-export const AVATAR_SCHEMA_VERSION = 1;
+function parseCdnAvatarEntry(entry: {
+  text: string;
+  image: string;
+  model: string;
+  ethnicity: string;
+  gender: string;
+  num: number;
+  outfit: string;
+}): AvatarPreset {
+  // Map ethnicity to style
+  const ethnicity = entry.ethnicity as AvatarEthnicity;
+  const style = ETHNICITY_TO_STYLE[ethnicity] || 'Style A';
 
-// =============================================================================
-// RANDOM GENERATION
-// =============================================================================
+  // Map outfit abbreviation to full name
+  const outfit = OUTFIT_MAP[entry.outfit] || 'Casual';
 
-// Arrays of all valid values for each attribute (for random selection)
-const SKIN_TONE_VALUES: SkinTone[] = [
-  'fair1',
-  'fair2',
-  'light1',
-  'light2',
-  'medium1',
-  'medium2',
-  'olive1',
-  'olive2',
-  'brown1',
-  'brown2',
-  'dark1',
-  'dark2',
-];
+  // Gender label for display name
+  const genderLabel = entry.gender === 'M' ? 'Male' : 'Female';
 
-const HAIR_COLOR_VALUES: HairColor[] = [
-  'black',
-  'darkBrown',
-  'brown',
-  'lightBrown',
-  'auburn',
-  'red',
-  'strawberry',
-  'blonde',
-  'platinum',
-  'gray',
-  'white',
-  'blue',
-  'purple',
-  'pink',
-  'green',
-];
+  // Create friendly display name using style
+  const name = `${style} ${genderLabel} ${entry.num} ${outfit}`;
 
-const HAIR_STYLE_VALUES: HairStyle[] = [
-  'bald',
-  'shaved',
-  'buzzCut',
-  'crew',
-  'fade',
-  'undercut',
-  'spiky',
-  'textured',
-  'caesar',
-  'slickBack',
-  'sidePart',
-  'quiff',
-  'pompadour',
-  'messyMedium',
-  'curtains',
-  'longStraight',
-  'longWavy',
-  'longCurly',
-  'ponytail',
-  'bun',
-  'braids',
-  'halfUp',
-  'afro',
-  'afroSmall',
-  'coils',
-  'locs',
-  'twists',
-  'cornrows',
-  'bobShort',
-  'bobLong',
-  'bobLayered',
-  'pixie',
-  'hijab',
-  'turban',
-  'headwrap',
-  'durag',
-  'straightBangs',
-  'sideBangs',
-  'curlyBangs',
-];
+  // Build unique ID from model path (remove .glb extension)
+  const id = entry.model.replace('.glb', '').replace(/\//g, '_');
 
-const FACIAL_HAIR_VALUES: FacialHairType[] = [
-  'none',
-  'stubble',
-  'goatee',
-  'vandyke',
-  'shortBeard',
-  'mediumBeard',
-  'longBeard',
-  'fullBeard',
-  'mustache',
-  'handlebar',
-  'soulPatch',
-  'chinStrap',
-];
-
-const FACE_SHAPE_VALUES: FaceShape[] = [
-  'oval',
-  'round',
-  'square',
-  'heart',
-  'oblong',
-  'diamond',
-];
-
-const EYE_SHAPE_VALUES: EyeShape[] = [
-  'almond',
-  'round',
-  'monolid',
-  'hooded',
-  'downturned',
-  'upturned',
-  'wide',
-  'close',
-];
-
-const EYE_COLOR_VALUES: EyeColor[] = [
-  'brown',
-  'hazel',
-  'amber',
-  'green',
-  'blue',
-  'gray',
-  'lightBlue',
-  'darkBrown',
-  'violet',
-];
-
-const EYEBROW_STYLE_VALUES: EyebrowStyle[] = [
-  'natural',
-  'thick',
-  'thin',
-  'arched',
-  'straight',
-  'rounded',
-  'angledUp',
-  'angledDown',
-];
-
-const NOSE_SHAPE_VALUES: NoseShape[] = [
-  'straight',
-  'roman',
-  'button',
-  'snub',
-  'wide',
-  'narrow',
-  'hooked',
-  'flat',
-];
-
-const MOUTH_TYPE_VALUES: MouthType[] = [
-  'neutral',
-  'smile',
-  'smileOpen',
-  'smirk',
-  'serious',
-  'slight',
-  'pursed',
-  'openMouth',
-  'frown',
-  'thinking',
-];
-
-const BODY_SHAPE_VALUES: BodyShape[] = [
-  'slim',
-  'average',
-  'athletic',
-  'plus',
-  'muscular',
-];
-
-const HEIGHT_CATEGORY_VALUES: HeightCategory[] = ['short', 'average', 'tall'];
-
-const CLOTHING_TOP_VALUES: ClothingTop[] = [
-  'tshirt',
-  'tshirtVneck',
-  'polo',
-  'buttonUp',
-  'blouse',
-  'sweater',
-  'hoodie',
-  'jacket',
-  'blazer',
-  'tank',
-  'crop',
-  'turtleneck',
-  'cardigan',
-  'dress',
-  'overall',
-];
-
-const CLOTHING_BOTTOM_VALUES: ClothingBottom[] = [
-  'jeans',
-  'pants',
-  'shorts',
-  'skirt',
-  'skirtLong',
-  'leggings',
-  'sweatpants',
-  'slacks',
-];
-
-const CLOTHING_COLOR_VALUES: ClothingColor[] = [
-  'black',
-  'white',
-  'gray',
-  'navy',
-  'blue',
-  'lightBlue',
-  'red',
-  'burgundy',
-  'pink',
-  'purple',
-  'green',
-  'olive',
-  'brown',
-  'tan',
-  'beige',
-  'orange',
-  'yellow',
-  'teal',
-  'coral',
-  'cream',
-];
-
-const GLASSES_TYPE_VALUES: GlassesType[] = [
-  'none',
-  'reading',
-  'round',
-  'square',
-  'aviator',
-  'cat',
-  'sunglasses',
-  'aviatorSun',
-  'sport',
-];
-
-const HEADWEAR_TYPE_VALUES: HeadwearType[] = [
-  'none',
-  'cap',
-  'beanie',
-  'fedora',
-  'bucket',
-  'snapback',
-  'visor',
-  'bandana',
-  'headband',
-  'beret',
-];
-
-/**
- * Get a random value from an array
- */
-function randomFrom<T>(array: readonly T[]): T {
-  return array[Math.floor(Math.random() * array.length)];
+  return {
+    id,
+    name,
+    file: entry.model,
+    style,
+    ethnicity,
+    gender: entry.gender as AvatarGender,
+    outfit,
+    isLocal: false,
+    sizeKB: 2000, // Average size estimate
+    thumbnailUrl: `${AVATAR_CDN.imagesUrl}${entry.image}`,
+    license: 'CC0',
+    source: 'VALID Project CDN',
+    variant: entry.num,
+    tags: [
+      style.toLowerCase().replace(' ', '-'),
+      entry.gender === 'M' ? 'male' : 'female',
+      outfit.toLowerCase(),
+    ],
+  };
 }
 
 /**
- * Get a random value for a specific attribute
+ * Fetch all avatars from the CDN manifest.
+ * Results are cached for fast subsequent loads.
  */
-export function getRandomValue<T extends string>(attribute: AvatarAttribute): T {
-  switch (attribute) {
-    case 'skinTone':
-      return randomFrom(SKIN_TONE_VALUES) as T;
-    case 'hairColor':
-    case 'facialHairColor':
-      return randomFrom(HAIR_COLOR_VALUES) as T;
-    case 'hairStyle':
-      return randomFrom(HAIR_STYLE_VALUES) as T;
-    case 'facialHair':
-      return randomFrom(FACIAL_HAIR_VALUES) as T;
-    case 'faceShape':
-      return randomFrom(FACE_SHAPE_VALUES) as T;
-    case 'eyeShape':
-      return randomFrom(EYE_SHAPE_VALUES) as T;
-    case 'eyeColor':
-      return randomFrom(EYE_COLOR_VALUES) as T;
-    case 'eyebrowStyle':
-      return randomFrom(EYEBROW_STYLE_VALUES) as T;
-    case 'noseShape':
-      return randomFrom(NOSE_SHAPE_VALUES) as T;
-    case 'mouthExpression':
-      return randomFrom(MOUTH_TYPE_VALUES) as T;
-    case 'bodyShape':
-      return randomFrom(BODY_SHAPE_VALUES) as T;
-    case 'heightCategory':
-      return randomFrom(HEIGHT_CATEGORY_VALUES) as T;
-    case 'topType':
-      return randomFrom(CLOTHING_TOP_VALUES) as T;
-    case 'topColor':
-    case 'bottomColor':
-      return randomFrom(CLOTHING_COLOR_VALUES) as T;
-    case 'bottomType':
-      return randomFrom(CLOTHING_BOTTOM_VALUES) as T;
-    case 'glasses':
-      return randomFrom(GLASSES_TYPE_VALUES) as T;
-    case 'headwear':
-      return randomFrom(HEADWEAR_TYPE_VALUES) as T;
-    default:
-      throw new Error(`Unknown attribute: ${attribute}`);
+export async function fetchCdnAvatars(): Promise<AvatarPreset[]> {
+  // Check if cache is still valid
+  const now = Date.now();
+  if (cdnAvatarCache && cdnFetchTimestamp && (now - cdnFetchTimestamp < CDN_CACHE_DURATION_MS)) {
+    return cdnAvatarCache;
   }
+
+  // Return in-progress fetch if already fetching
+  if (cdnFetchPromise) {
+    return cdnFetchPromise;
+  }
+
+  // Start new fetch
+  cdnFetchPromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+      const response = await fetch(AVATAR_CDN.manifestUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CDN manifest: ${response.status}`);
+      }
+
+      const manifest = await response.json();
+
+      // Parse manifest - it's an array of avatar entries
+      const avatars: AvatarPreset[] = [];
+
+      if (Array.isArray(manifest)) {
+        for (const entry of manifest) {
+          // Skip entries without required fields
+          if (!entry.model || !entry.ethnicity || !entry.gender) {
+            continue;
+          }
+          // Skip non-validated avatars (X_ prefix)
+          if (entry.ethnicity.startsWith('X_')) {
+            continue;
+          }
+          avatars.push(parseCdnAvatarEntry(entry));
+        }
+      }
+
+      console.log(`[Avatar] Loaded ${avatars.length} avatars from CDN`);
+      cdnAvatarCache = avatars;
+      cdnFetchTimestamp = now;
+      return avatars;
+    } catch (error) {
+      console.warn('[Avatar] Failed to fetch CDN avatars:', error);
+      // Return cached data if available, otherwise empty array
+      return cdnAvatarCache || [];
+    } finally {
+      cdnFetchPromise = null;
+    }
+  })();
+
+  return cdnFetchPromise;
 }
 
 /**
- * Generate a completely random avatar configuration
+ * Prefetch CDN avatars for fast initial load.
+ * Call this during app initialization.
  */
-export function generateRandomAvatarConfig(): CustomAvatarConfig {
-  // Decide if facial hair should match hair color or be different
-  const hairColor = randomFrom(HAIR_COLOR_VALUES);
-  const hasFacialHair = Math.random() > 0.5;
-  const facialHair = hasFacialHair
-    ? randomFrom(FACIAL_HAIR_VALUES.filter((v) => v !== 'none'))
-    : 'none';
+export function prefetchCdnAvatars(): void {
+  fetchCdnAvatars().catch(() => {
+    // Silently ignore prefetch errors
+  });
+}
 
-  // 20% chance of having glasses
-  const glasses =
-    Math.random() > 0.8
-      ? randomFrom(GLASSES_TYPE_VALUES.filter((v) => v !== 'none'))
-      : 'none';
+/**
+ * Check if CDN avatars have been loaded
+ */
+export function areCdnAvatarsLoaded(): boolean {
+  return cdnAvatarCache !== null && cdnAvatarCache.length > 0;
+}
 
-  // 15% chance of having headwear
-  const headwear =
-    Math.random() > 0.85
-      ? randomFrom(HEADWEAR_TYPE_VALUES.filter((v) => v !== 'none'))
-      : 'none';
+/**
+ * Get count of loaded CDN avatars
+ */
+export function getCdnAvatarCount(): number {
+  return cdnAvatarCache?.length || 0;
+}
 
+// =============================================================================
+// AVATAR PRESET REGISTRY
+// =============================================================================
+
+/**
+ * Get all available avatars (local + CDN, if loaded).
+ * Call with await to ensure CDN avatars are loaded.
+ */
+export async function getAllAvatarPresets(): Promise<AvatarPreset[]> {
+  const cdnAvatars = await fetchCdnAvatars();
+  // Local presets first, then CDN (deduped by ID)
+  const allAvatars = [...LOCAL_AVATAR_PRESETS];
+  const localIds = new Set(allAvatars.map(a => a.id));
+
+  for (const cdnAvatar of cdnAvatars) {
+    if (!localIds.has(cdnAvatar.id)) {
+      allAvatars.push(cdnAvatar);
+    }
+  }
+
+  return allAvatars;
+}
+
+/**
+ * Get all avatars synchronously (may not include CDN if not yet loaded).
+ * Use getAllAvatarPresets() for async version that ensures CDN is loaded.
+ */
+export function getAllAvatarPresetsSync(): AvatarPreset[] {
+  const allAvatars = [...LOCAL_AVATAR_PRESETS];
+  const localIds = new Set(allAvatars.map(a => a.id));
+
+  if (cdnAvatarCache) {
+    for (const cdnAvatar of cdnAvatarCache) {
+      if (!localIds.has(cdnAvatar.id)) {
+        allAvatars.push(cdnAvatar);
+      }
+    }
+  }
+
+  return allAvatars;
+}
+
+/**
+ * Get avatar preset by ID
+ */
+export function getAvatarPreset(avatarId: string): AvatarPreset | undefined {
+  // Check local presets first
+  const local = LOCAL_AVATAR_PRESETS.find((p) => p.id === avatarId);
+  if (local) return local;
+
+  // Check CDN cache
+  return cdnAvatarCache?.find((p) => p.id === avatarId);
+}
+
+/**
+ * Get avatar GLB URL (local or CDN)
+ */
+export function getAvatarUrl(avatarId: string): string {
+  const preset = getAvatarPreset(avatarId);
+  if (preset?.isLocal) {
+    // Local assets are served from the WebGL bundle
+    return `models/bodies/${preset.file}`;
+  }
+  if (preset) {
+    // CDN avatars use the full URL
+    return `${AVATAR_CDN.baseUrl}${preset.file}`;
+  }
+  // Fallback for unknown avatars - assume CDN path
+  return `${AVATAR_CDN.baseUrl}avatars/${avatarId}.glb`;
+}
+
+/**
+ * Get avatar thumbnail URL for fast preview
+ */
+export function getAvatarThumbnailUrl(avatarId: string): string | undefined {
+  const preset = getAvatarPreset(avatarId);
+  return preset?.thumbnailUrl;
+}
+
+// =============================================================================
+// FILTERING FUNCTIONS
+// =============================================================================
+
+/**
+ * Filter presets by criteria
+ */
+export function filterAvatarPresets(options: {
+  style?: AvatarStyle;
+  gender?: AvatarGender;
+  outfit?: AvatarOutfit;
+  isLocal?: boolean;
+}): AvatarPreset[] {
+  return getAllAvatarPresetsSync().filter((preset) => {
+    if (options.style && preset.style !== options.style) return false;
+    if (options.gender && preset.gender !== options.gender) return false;
+    if (options.outfit && preset.outfit !== options.outfit) return false;
+    if (options.isLocal !== undefined && preset.isLocal !== options.isLocal) return false;
+    return true;
+  });
+}
+
+/**
+ * Filter all presets (from provided array) by criteria
+ */
+export function filterAllAvatarPresets(
+  presets: AvatarPreset[],
+  options: {
+    style?: AvatarStyle;
+    ethnicity?: AvatarEthnicity; // Backward compatibility
+    gender?: AvatarGender;
+    outfit?: AvatarOutfit;
+    isLocal?: boolean;
+  }
+): AvatarPreset[] {
+  return presets.filter((preset) => {
+    // Support both style and legacy ethnicity filtering
+    if (options.style && preset.style !== options.style) return false;
+    if (options.ethnicity) {
+      const targetStyle = ETHNICITY_TO_STYLE[options.ethnicity];
+      if (preset.style !== targetStyle) return false;
+    }
+    if (options.gender && preset.gender !== options.gender) return false;
+    if (options.outfit && preset.outfit !== options.outfit) return false;
+    if (options.isLocal !== undefined && preset.isLocal !== options.isLocal) return false;
+    return true;
+  });
+}
+
+/**
+ * Get unique style values from presets
+ */
+export function getStylesFromPresets(presets: AvatarPreset[]): AvatarStyle[] {
+  const styles = new Set(presets.map((p) => p.style));
+  return Array.from(styles).sort();
+}
+
+/**
+ * Get unique ethnicity values from presets (backward compatibility)
+ * @deprecated Use getStylesFromPresets instead
+ */
+export function getEthnicitiesFromPresets(presets: AvatarPreset[]): AvatarEthnicity[] {
+  const ethnicities = new Set(presets.map((p) => p.ethnicity).filter(Boolean) as AvatarEthnicity[]);
+  return Array.from(ethnicities).sort();
+}
+
+/**
+ * Get unique outfit values from presets
+ */
+export function getOutfitsFromPresets(presets: AvatarPreset[]): AvatarOutfit[] {
+  const outfits = new Set(presets.map((p) => p.outfit));
+  return Array.from(outfits).sort();
+}
+
+/**
+ * Get all unique style values from currently loaded presets
+ */
+export function getAvailableStyles(): AvatarStyle[] {
+  return getStylesFromPresets(getAllAvatarPresetsSync());
+}
+
+/**
+ * Get all unique ethnicity values (backward compatibility)
+ * @deprecated Use getAvailableStyles instead
+ */
+export function getAvailableEthnicities(): AvatarEthnicity[] {
+  return getEthnicitiesFromPresets(getAllAvatarPresetsSync());
+}
+
+/**
+ * Get all unique outfit values from currently loaded presets
+ */
+export function getAvailableOutfits(): AvatarOutfit[] {
+  return getOutfitsFromPresets(getAllAvatarPresetsSync());
+}
+
+// =============================================================================
+// AVATAR CONFIG CREATION
+// =============================================================================
+
+/**
+ * Default avatar configuration
+ */
+export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
+  avatarId: 'avatar_asian_m',
+  style: 'Style B',
+  ethnicity: 'Asian',
+  gender: 'M',
+  outfit: 'Casual',
+};
+
+/**
+ * Create an AvatarConfig from a preset ID
+ */
+export function createAvatarConfig(avatarId: string): AvatarConfig {
+  const preset = getAvatarPreset(avatarId);
+  if (!preset) {
+    // Fallback to default if preset not found
+    return { ...DEFAULT_AVATAR_CONFIG };
+  }
   return {
-    skinTone: randomFrom(SKIN_TONE_VALUES),
-    hairColor,
-    hairStyle: randomFrom(HAIR_STYLE_VALUES),
-    facialHair,
-    facialHairColor: hasFacialHair ? hairColor : 'brown', // Match hair color if present
-    faceShape: randomFrom(FACE_SHAPE_VALUES),
-    eyeShape: randomFrom(EYE_SHAPE_VALUES),
-    eyeColor: randomFrom(EYE_COLOR_VALUES),
-    eyebrowStyle: randomFrom(EYEBROW_STYLE_VALUES),
-    noseShape: randomFrom(NOSE_SHAPE_VALUES),
-    mouthExpression: randomFrom(MOUTH_TYPE_VALUES),
-    bodyShape: randomFrom(BODY_SHAPE_VALUES),
-    heightCategory: randomFrom(HEIGHT_CATEGORY_VALUES),
-    topType: randomFrom(CLOTHING_TOP_VALUES),
-    topColor: randomFrom(CLOTHING_COLOR_VALUES),
-    bottomType: randomFrom(CLOTHING_BOTTOM_VALUES),
-    bottomColor: randomFrom(CLOTHING_COLOR_VALUES),
-    glasses,
-    headwear,
+    avatarId: preset.id,
+    style: preset.style,
+    ethnicity: preset.ethnicity,
+    gender: preset.gender,
+    outfit: preset.outfit,
   };
 }
 
 /**
- * Generate a random avatar with some constraints
+ * Create a new StoredAvatar from a preset ID
  */
-export function generateRandomAvatarWithConstraints(
-  constraints: Partial<CustomAvatarConfig>
-): CustomAvatarConfig {
-  const random = generateRandomAvatarConfig();
-  return {
-    ...random,
-    ...constraints,
-  };
-}
-
-// =============================================================================
-// STORED AVATAR CREATION
-// =============================================================================
-
-/**
- * Create a new StoredCustomAvatar from a config
- */
-export function createStoredAvatar(
-  config: CustomAvatarConfig,
-  id?: string
-): StoredCustomAvatar {
+export function createStoredAvatar(avatarId: string, id?: string): StoredAvatar {
   const now = new Date().toISOString();
   return {
-    id: id || generateAvatarId(),
-    config,
-    version: AVATAR_SCHEMA_VERSION,
+    id: id || generateStoredAvatarId(),
+    config: createAvatarConfig(avatarId),
+    version: 2,
     createdAt: now,
     updatedAt: now,
   };
@@ -472,46 +550,52 @@ export function createStoredAvatar(
 /**
  * Create a default stored avatar
  */
-export function createDefaultStoredAvatar(): StoredCustomAvatar {
-  return createStoredAvatar(DEFAULT_AVATAR_CONFIG);
+export function createDefaultStoredAvatar(): StoredAvatar {
+  return createStoredAvatar('avatar_asian_m');
+}
+
+/**
+ * Get a random avatar preset ID
+ */
+export function getRandomAvatarId(): string {
+  const allAvatars = getAllAvatarPresetsSync();
+  const randomIndex = Math.floor(Math.random() * allAvatars.length);
+  return allAvatars[randomIndex]?.id || 'avatar_asian_m';
 }
 
 /**
  * Create a random stored avatar
  */
-export function createRandomStoredAvatar(): StoredCustomAvatar {
-  return createStoredAvatar(generateRandomAvatarConfig());
+export function createRandomStoredAvatar(): StoredAvatar {
+  return createStoredAvatar(getRandomAvatarId());
 }
 
-// =============================================================================
-// NORMALIZATION
-// =============================================================================
-
 /**
- * Normalize a partial avatar config by filling missing values with defaults
+ * Normalize an avatar config by filling missing values with defaults
  */
 export function normalizeAvatarConfig(
-  partial: Partial<CustomAvatarConfig>
-): CustomAvatarConfig {
-  return {
-    ...DEFAULT_AVATAR_CONFIG,
-    ...partial,
-  };
+  partial: Partial<AvatarConfig>
+): AvatarConfig {
+  if (partial.avatarId) {
+    return createAvatarConfig(partial.avatarId);
+  }
+  return { ...DEFAULT_AVATAR_CONFIG, ...partial };
 }
 
 /**
  * Validate and normalize a stored avatar
  */
 export function normalizeStoredAvatar(
-  avatar: Partial<StoredCustomAvatar>
-): StoredCustomAvatar {
+  avatar: Partial<StoredAvatar>
+): StoredAvatar {
   const now = new Date().toISOString();
 
   return {
-    id: avatar.id || generateAvatarId(),
+    id: avatar.id || generateStoredAvatarId(),
     config: normalizeAvatarConfig(avatar.config || {}),
-    version: avatar.version || AVATAR_SCHEMA_VERSION,
+    version: avatar.version || 2,
     createdAt: avatar.createdAt || now,
     updatedAt: avatar.updatedAt || now,
+    snapshotUrl: avatar.snapshotUrl,
   };
 }

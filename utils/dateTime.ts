@@ -415,7 +415,7 @@ export function validateSightingDate(
  * // => { startHour: 6, endHour: 12, label: 'morning' }
  */
 export function getTimeRangeForGranularity(
-  granularity: Exclude<TimeGranularity, 'specific'>
+  granularity: 'morning' | 'afternoon' | 'evening'
 ): TimeRange {
   return TIME_GRANULARITY_RANGES[granularity]
 }
@@ -492,7 +492,7 @@ export function parseDate(input: string | number | Date | null | undefined): Dat
  */
 export function createDateWithGranularity(
   date: Date,
-  granularity: Exclude<TimeGranularity, 'specific'>
+  granularity: 'morning' | 'afternoon' | 'evening'
 ): Date {
   const result = new Date(date)
   const range = getTimeRangeForGranularity(granularity)
