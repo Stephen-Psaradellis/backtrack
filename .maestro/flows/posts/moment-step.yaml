@@ -1,0 +1,200 @@
+# Moment Step Test (Moment 2: Who & What)
+# Tests the avatar selection and note writing step
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in with test account
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Navigate to create post via favorites
+- tapOn:
+    id: "home-favorites-header"
+- waitForAnimationToEnd
+
+# Swipe up to ensure favorites list is visible
+- swipe:
+    direction: UP
+    duration: 500
+- waitForAnimationToEnd
+
+# Wait for favorites to load and tap on a favorite card to select it
+- extendedWaitUntil:
+    visible: "Current Location"
+    timeout: 10000
+
+- tapOn: "Current Location"
+- waitForAnimationToEnd
+
+# Wait for Post Here button to appear (shown when favorite is selected)
+- extendedWaitUntil:
+    visible: "Post Here"
+    timeout: 10000
+
+- tapOn: "Post Here"
+- waitForAnimationToEnd
+
+# Wait for Scene step
+- extendedWaitUntil:
+    visible: "Where & When"
+    timeout: 10000
+
+# A location should be preselected, so just proceed
+- tapOn:
+    id: "create-post-scene-next"
+- waitForAnimationToEnd
+
+# ============================================================================
+# TEST MOMENT STEP ELEMENTS
+# ============================================================================
+
+# Verify we're on the Moment step
+- extendedWaitUntil:
+    visible: "Who & What"
+    timeout: 10000
+
+# Verify avatar section header
+- assertVisible: "Who did you see?"
+
+# Verify avatar preview is tappable
+- assertVisible:
+    id: "create-post-avatar-preview"
+
+# Verify customize button
+- assertVisible: "Create Avatar"
+
+# Verify note section
+- assertVisible: "What would you say to them?"
+
+# ============================================================================
+# TEST AVATAR SELECTION
+# ============================================================================
+
+# Tap on avatar preview to open creator
+- tapOn:
+    id: "create-post-avatar-preview"
+- waitForAnimationToEnd
+
+# Verify avatar creator opened
+- extendedWaitUntil:
+    visible: "Describe Who You Saw"
+    timeout: 10000
+
+# Verify cancel and save buttons
+- assertVisible: "Cancel"
+
+# Cancel to go back (uses accessibility label)
+- tapOn: "Cancel"
+- waitForAnimationToEnd
+
+# Verify we're back on Moment step
+- extendedWaitUntil:
+    visible: "Who did you see?"
+    timeout: 10000
+
+# Open avatar creator again and save
+- tapOn:
+    id: "create-post-customize-avatar"
+- waitForAnimationToEnd
+
+# Wait for avatar creator
+- extendedWaitUntil:
+    visible: "Describe Who You Saw"
+    timeout: 10000
+
+# Save the selected avatar (uses accessibility label)
+- tapOn: "Save avatar"
+- waitForAnimationToEnd
+
+# Verify avatar is selected (button text changes)
+- extendedWaitUntil:
+    visible: "Change Avatar"
+    timeout: 10000
+
+# ============================================================================
+# TEST NOTE INPUT
+# ============================================================================
+
+# Note input should be visible
+- assertVisible:
+    id: "create-post-note-input"
+
+# Tap on note input
+- tapOn:
+    id: "create-post-note-input"
+
+# Enter a short note (less than minimum)
+- inputText: "Hi"
+
+# Dismiss keyboard
+- pressKey: back
+- waitForAnimationToEnd
+
+# Verify character count shows we need more
+- assertVisible: "more characters needed"
+
+# Clear and enter valid note
+- tapOn:
+    id: "create-post-note-input"
+- eraseText: 10
+- inputText: "I noticed you at the venue today. Would love to connect!"
+
+# Dismiss keyboard
+- pressKey: back
+- waitForAnimationToEnd
+
+# Verify character count shows remaining (not needed)
+- assertNotVisible: "more characters needed"
+
+# ============================================================================
+# TEST NEXT BUTTON STATE
+# ============================================================================
+
+# With avatar selected and valid note, Next should be enabled
+- tapOn:
+    id: "create-post-moment-next"
+- waitForAnimationToEnd
+
+# Verify we moved to Seal step
+- extendedWaitUntil:
+    visible: "Seal & Send"
+    timeout: 10000
+
+# ============================================================================
+# TEST BACK NAVIGATION
+# ============================================================================
+
+# Go back to Moment step
+- tapOn:
+    id: "create-post-seal-back"
+- waitForAnimationToEnd
+
+# Verify we're back on Moment step
+- extendedWaitUntil:
+    visible: "Who & What"
+    timeout: 10000
+
+# Verify our data is preserved
+- assertVisible: "Change Avatar"
+
+# Go back to Scene step
+- tapOn:
+    id: "create-post-moment-back"
+- waitForAnimationToEnd
+
+# Verify we're back on Scene step
+- extendedWaitUntil:
+    visible: "Where & When"
+    timeout: 10000

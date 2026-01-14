@@ -292,7 +292,7 @@ You may opt out of arbitration by sending written notice within 30 days of creat
 
 ## 15. Governing Law
 
-These Terms are governed by the laws of [Your State/Country], without regard to conflict of law principles. Any litigation will take place in the courts of [Your Jurisdiction].
+These Terms are governed by the laws of the State of Illinois, without regard to conflict of law principles. Any litigation will take place in the courts of Cook County, Illinois.
 
 ---
 
@@ -342,9 +342,9 @@ For questions about these Terms, please contact us:
 
 **Mailing Address**:
 Backtrack Legal Team
-[Your Company Address]
-[City, State, ZIP Code]
-[Country]
+1332 N Vail Ave
+Arlington Heights, IL 60004
+USA
 
 ---
 

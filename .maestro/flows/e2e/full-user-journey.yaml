@@ -1,0 +1,355 @@
+# Full E2E User Journey Test
+# Tests the complete flow from check-in to post to match to chat
+#
+# This is a comprehensive multi-user test that covers:
+# 1. User 1: Check-in at location
+# 2. User 1: Create post at location
+# 3. User 1: Logout
+# 4. User 2: Login
+# 5. User 2: Check-in at same location
+# 6. User 2: Find and reply to User 1's post (match)
+# 7. User 2: Send message in chat
+# 8. User 2: Logout
+# 9. User 1: Login
+# 10. User 1: Verify received message
+# 11. User 1: Reply in chat
+#
+# Prerequisites:
+# - App installed
+# - Both test accounts exist
+# - Mock GPS set for emulator testing
+#
+# Run with: maestro test .maestro/flows/e2e/full-user-journey.yaml
+
+appId: app.backtrack.social
+---
+
+# ============================================================================
+# PHASE 1: USER 1 - CHECK-IN AND CREATE POST
+# ============================================================================
+
+# Login as User 1
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# --- CHECK-IN ---
+# Skip check-in if already checked in (button shows location name)
+- runFlow:
+    when:
+      visible: "Check In"
+    file: ../checkin/checkin.yaml
+
+# Wait for check-in to complete
+- waitForAnimationToEnd
+
+# Take screenshot after check-in
+- takeScreenshot: user1_checkin_complete
+
+# --- CREATE POST ---
+# Navigate to favorites to post
+- swipe:
+    direction: UP
+    duration: 500
+- waitForAnimationToEnd
+
+# Tap on a favorite location
+- extendedWaitUntil:
+    visible: "Your Favorites"
+    timeout: 10000
+
+- tapOn: "Current Location"
+- waitForAnimationToEnd
+
+# Tap "Post Here" button
+- extendedWaitUntil:
+    visible: "Post Here"
+    timeout: 10000
+
+- tapOn: "Post Here"
+- waitForAnimationToEnd
+
+# SCENE STEP - Location should be pre-selected
+- extendedWaitUntil:
+    visible: "Where & When"
+    timeout: 10000
+
+# Add time info
+- tapOn:
+    id: "create-post-add-time"
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "create-post-day-today"
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "create-post-period-afternoon"
+    optional: true
+- waitForAnimationToEnd
+
+# Go to next step
+- tapOn:
+    id: "create-post-scene-next"
+- waitForAnimationToEnd
+
+# MOMENT STEP - Select avatar and write note
+- extendedWaitUntil:
+    visible: "Who & What"
+    timeout: 10000
+
+# Open avatar creator
+- tapOn:
+    id: "create-post-avatar-preview"
+- waitForAnimationToEnd
+
+# Save default avatar
+- extendedWaitUntil:
+    visible: "Describe Who You Saw"
+    timeout: 10000
+
+- tapOn: "Save avatar"
+- waitForAnimationToEnd
+
+# Write a unique note for this test
+- tapOn:
+    id: "create-post-note-input"
+- inputText: "E2E Test - Looking for you! Test timestamp: ${timestamp}"
+- pressKey: back
+
+# Go to next step
+- tapOn:
+    id: "create-post-moment-next"
+- waitForAnimationToEnd
+
+# SEAL STEP - Select photo and submit
+- extendedWaitUntil:
+    visible: "Seal & Send"
+    timeout: 10000
+
+# Wait for photos to load
+- extendedWaitUntil:
+    visible: "Post Missed Connection"
+    timeout: 15000
+
+# Submit the post
+- tapOn:
+    id: "create-post-submit"
+
+# Wait for submission
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+
+# Take screenshot of success
+- takeScreenshot: user1_post_created
+
+# --- LOGOUT ---
+- runFlow: ../auth/logout.yaml
+
+# Verify logged out
+- assertVisible: "Welcome Back"
+
+# Take screenshot
+- takeScreenshot: user1_logged_out
+
+
+# ============================================================================
+# PHASE 2: USER 2 - CHECK-IN, FIND POST, MATCH, AND MESSAGE
+# ============================================================================
+
+# Login as User 2
+- runFlow: ../auth/login-user2.yaml
+
+# Wait for home screen
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# --- CHECK-IN AS USER 2 ---
+# Skip if already checked in
+- runFlow:
+    when:
+      visible: "Check In"
+    file: ../checkin/checkin.yaml
+
+- waitForAnimationToEnd
+
+# Take screenshot
+- takeScreenshot: user2_checkin_complete
+
+# --- FIND USER 1'S POST ---
+# Navigate to favorites
+- swipe:
+    direction: UP
+    duration: 500
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your Favorites"
+    timeout: 10000
+
+# Tap on the same location to see posts
+- tapOn: "Current Location"
+- waitForAnimationToEnd
+
+# Wait for ledger
+- extendedWaitUntil:
+    visible:
+      id: "ledger-screen"
+    timeout: 15000
+
+# Pull to refresh to ensure we have latest posts
+- swipe:
+    direction: DOWN
+    duration: 300
+    startPoint: 50%, 30%
+    endPoint: 50%, 70%
+- waitForAnimationToEnd
+
+# Look for posts
+- extendedWaitUntil:
+    visible:
+      id: "ledger-post-list"
+    timeout: 10000
+
+# Tap on the first post (should be User 1's recent post)
+- tapOn:
+    index: 0
+    childOf:
+      id: "ledger-post-list"
+
+# Wait for post detail
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "post-detail-screen"
+    timeout: 10000
+
+# Take screenshot of post
+- takeScreenshot: user2_viewing_post
+
+# --- START CHAT (MATCH) ---
+- extendedWaitUntil:
+    visible: "Start Chat"
+    timeout: 10000
+
+- tapOn:
+    id: "post-detail-start-chat"
+
+# Wait for chat screen
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Type a message..."
+    timeout: 15000
+
+# Take screenshot of match
+- takeScreenshot: user2_match_created
+
+# --- SEND MESSAGE ---
+- tapOn:
+    id: "chat-message-input"
+- inputText: "Hi! I think we saw each other today. Is this you?"
+- tapOn: "Send"
+
+# Wait for message to send
+- waitForAnimationToEnd
+
+# Verify message appears
+- assertVisible: "Hi! I think we saw each other today"
+
+# Take screenshot
+- takeScreenshot: user2_message_sent
+
+# Go back to home
+- pressKey: back
+- waitForAnimationToEnd
+- pressKey: back
+- waitForAnimationToEnd
+
+# --- LOGOUT USER 2 ---
+- runFlow: ../auth/logout.yaml
+- assertVisible: "Welcome Back"
+- takeScreenshot: user2_logged_out
+
+
+# ============================================================================
+# PHASE 3: USER 1 - RECEIVE MESSAGE AND REPLY
+# ============================================================================
+
+# Login as User 1
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Navigate to Chats tab
+- tapOn: "Chats"
+- waitForAnimationToEnd
+
+# Wait for conversations to load
+- extendedWaitUntil:
+    visible: "Conversations"
+    timeout: 10000
+
+# Look for new conversation (should have unread indicator)
+# Tap on the conversation with User 2
+- tapOn: "Chat with Consumer"
+- waitForAnimationToEnd
+
+# Verify we see User 2's message
+- extendedWaitUntil:
+    visible: "Hi! I think we saw each other today"
+    timeout: 15000
+
+# Take screenshot of received message
+- takeScreenshot: user1_message_received
+
+# Reply to the message
+- tapOn:
+    id: "chat-message-input"
+- inputText: "Yes! Nice to meet you. What a coincidence!"
+- tapOn: "Send"
+
+# Wait for message to send
+- waitForAnimationToEnd
+
+# Verify reply appears
+- assertVisible: "Yes! Nice to meet you"
+
+# Take screenshot of conversation
+- takeScreenshot: user1_replied
+
+# ============================================================================
+# TEST COMPLETE
+# ============================================================================
+
+# Final verification - we've completed the full journey:
+# - User 1 checked in and created a post
+# - User 2 found the post and started a chat (match)
+# - User 2 sent a message
+# - User 1 received the message and replied
+
+# Navigate back
+- pressKey: back
+- waitForAnimationToEnd
+
+# Verify we're on conversations
+- assertVisible: "Conversations"
+
+# Final screenshot
+- takeScreenshot: e2e_journey_complete

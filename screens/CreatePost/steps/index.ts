@@ -2,9 +2,13 @@
  * CreatePost Step Components
  *
  * Barrel export for all step components used in the CreatePost wizard flow.
- * Each step handles a specific part of the post creation process.
  *
- * Steps:
+ * New 3-Moment Flow:
+ * 1. SceneStep - Where & When (location + time)
+ * 2. MomentStep - Who & What (avatar + note)
+ * 3. SealStep - Seal & Send (photo + review + submit)
+ *
+ * Legacy 6-Step Flow (kept for reference):
  * 1. PhotoStep - Select/upload verification photo
  * 2. AvatarStep - Build avatar of the person they saw
  * 3. NoteStep - Write a personalized note
@@ -14,9 +18,30 @@
  *
  * @example
  * ```tsx
+ * // New 3-moment flow
+ * import { SceneStep, MomentStep, SealStep } from './steps'
+ *
+ * // Legacy (kept for reference)
  * import { PhotoStep, AvatarStep, NoteStep, LocationStep, TimeStep, ReviewStep } from './steps'
  * ```
  */
+
+// =============================================================================
+// NEW 3-MOMENT FLOW
+// =============================================================================
+
+// Scene step (Moment 1: Where & When)
+export { SceneStep, type SceneStepProps } from './SceneStep'
+
+// Moment step (Moment 2: Who & What)
+export { MomentStep, type MomentStepProps } from './MomentStep'
+
+// Seal step (Moment 3: Seal & Send)
+export { SealStep, type SealStepProps } from './SealStep'
+
+// =============================================================================
+// LEGACY 6-STEP FLOW (kept for reference)
+// =============================================================================
 
 // Photo selection step
 export { PhotoStep, type PhotoStepProps } from './PhotoStep'

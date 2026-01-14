@@ -32,11 +32,14 @@ CREATE POLICY "Authenticated users can read non-sensitive config" ON app_configu
   USING (key NOT LIKE '%key%' AND key NOT LIKE '%secret%');
 
 -- Set the Edge Function URLs
+-- IMPORTANT: These are placeholder values. After deploying, update with your actual project reference:
+--   SELECT set_app_config('edge_function_url', 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-notification');
+-- The values below will fail until properly configured.
 INSERT INTO app_configuration (key, value) VALUES
-  ('edge_function_url', 'https://hyidfsfvqlsimefixfhc.supabase.co/functions/v1/send-notification'),
-  ('spark_notification_url', 'https://hyidfsfvqlsimefixfhc.supabase.co/functions/v1/send-spark-notification'),
-  ('match_notification_url', 'https://hyidfsfvqlsimefixfhc.supabase.co/functions/v1/send-match-notification'),
-  ('moderate_image_url', 'https://hyidfsfvqlsimefixfhc.supabase.co/functions/v1/moderate-image')
+  ('edge_function_url', 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-notification'),
+  ('spark_notification_url', 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-spark-notification'),
+  ('match_notification_url', 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-match-notification'),
+  ('moderate_image_url', 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/moderate-image')
 ON CONFLICT (key) DO UPDATE SET
   value = EXCLUDED.value,
   updated_at = NOW();

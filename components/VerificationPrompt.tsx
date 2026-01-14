@@ -155,7 +155,7 @@ export function VerificationPrompt({
         Get verified to build trust
       </Text>
       <Text style={styles.message} testID={`${testID}-message`}>
-        Complete selfie verification to show others you're a real person. Verified users get more responses!
+        Complete selfie verification to show others you&apos;re a real person. Verified users get more responses!
       </Text>
       <View style={styles.buttonContainer}>
         <Button

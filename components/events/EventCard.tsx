@@ -520,7 +520,7 @@ export const EventCardListItem = memo(function EventCardListItem({
  * ```
  */
 export function createEventCardRenderer(onPress: (event: Event) => void) {
-  return ({ item, index }: { item: Event; index: number }) => {
+  const EventCardRenderer = ({ item, index }: { item: Event; index: number }) => {
     return (
       <EventCardListItem
         event={item}
@@ -530,6 +530,8 @@ export function createEventCardRenderer(onPress: (event: Event) => void) {
       />
     )
   }
+  EventCardRenderer.displayName = 'EventCardRenderer'
+  return EventCardRenderer
 }
 
 export default EventCard

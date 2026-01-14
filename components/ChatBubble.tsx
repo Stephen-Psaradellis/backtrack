@@ -633,7 +633,7 @@ export function createChatBubbleRenderer(
   onLongPress?: (message: Message | MessageWithSender) => void,
   showTimestamps: boolean = true
 ) {
-  return ({
+  const ChatBubbleRenderer = ({
     item,
     index,
   }: {
@@ -658,6 +658,8 @@ export function createChatBubbleRenderer(
       />
     )
   }
+  ChatBubbleRenderer.displayName = 'ChatBubbleRenderer'
+  return ChatBubbleRenderer
 }
 
 // ============================================================================

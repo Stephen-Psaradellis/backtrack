@@ -48,7 +48,7 @@ import type { StoredAvatar } from '../../../components/avatar/types'
 import { Button, GhostButton } from '../../../components/Button'
 import { COLORS, sharedStyles } from '../styles'
 import type { LocationItem } from '../../../components/LocationPicker'
-import type { CreatePostStep } from '../types'
+import type { CreatePostStepLegacy } from '../types'
 import { getPhotoById, type ProfilePhotoWithUrl } from '../../../lib/profilePhotos'
 import type { TimeGranularity } from '../../../types/database'
 import { formatSightingTime } from '../../../utils/dateTime'
@@ -116,7 +116,7 @@ export interface ReviewStepProps {
    * Callback to navigate to a specific step for editing
    * @param step - The step to navigate to
    */
-  goToStep: (step: CreatePostStep) => void
+  goToStep: (step: CreatePostStepLegacy) => void
 
   /**
    * Test ID prefix for testing purposes

@@ -35,6 +35,7 @@ import { Button, GhostButton } from '../components/Button'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { TermsModal } from '../components/TermsModal'
 import { successFeedback, errorFeedback } from '../lib/haptics'
+import { trackEvent, AnalyticsEvent } from '../lib/analytics'
 import type { AuthStackNavigationProp } from '../navigation/types'
 
 // ============================================================================
@@ -181,21 +182,30 @@ export function AuthScreen(): React.ReactNode {
       if (error) {
         // Map Supabase error messages to user-friendly messages
         let errorMessage = 'An error occurred during login. Please try again.'
+        let errorType = 'unknown'
 
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = 'Invalid email or password. Please check your credentials and try again.'
+          errorType = 'invalid_credentials'
         } else if (error.message.includes('Email not confirmed')) {
           errorMessage = 'Please verify your email address before logging in. Check your inbox for a verification link.'
+          errorType = 'email_not_confirmed'
         } else if (error.message.includes('Too many requests')) {
           errorMessage = 'Too many login attempts. Please wait a few minutes and try again.'
+          errorType = 'rate_limited'
         } else if (error.message) {
           errorMessage = error.message
         }
+
+        // Track auth error (no PII - just error type)
+        trackEvent(AnalyticsEvent.AUTH_ERROR, { error_type: errorType, source: 'login' })
 
         // Trigger error haptic feedback on auth API errors
         await errorFeedback()
         setErrors({ general: errorMessage })
       } else {
+        // Track successful login
+        trackEvent(AnalyticsEvent.LOGIN)
         // Trigger success haptic feedback on successful login
         await successFeedback()
       }
@@ -249,23 +259,33 @@ export function AuthScreen(): React.ReactNode {
       if (error) {
         // Map Supabase error messages to user-friendly messages
         let errorMessage = 'An error occurred during signup. Please try again.'
+        let errorType = 'unknown'
 
         if (error.message.includes('User already registered')) {
           errorMessage = 'An account with this email already exists. Please sign in instead.'
+          errorType = 'user_exists'
         } else if (error.message.includes('Password should be')) {
           errorMessage = 'Password does not meet security requirements. Please use a stronger password.'
+          errorType = 'weak_password'
         } else if (error.message.includes('Invalid email')) {
           errorMessage = 'Please enter a valid email address.'
+          errorType = 'invalid_email'
         } else if (error.message.includes('Signup is disabled')) {
           errorMessage = 'Signup is currently disabled. Please try again later.'
+          errorType = 'signup_disabled'
         } else if (error.message) {
           errorMessage = error.message
         }
+
+        // Track auth error (no PII - just error type)
+        trackEvent(AnalyticsEvent.AUTH_ERROR, { error_type: errorType, source: 'signup' })
 
         // Trigger error haptic feedback on auth API errors
         await errorFeedback()
         setErrors({ general: errorMessage })
       } else {
+        // Track successful signup
+        trackEvent(AnalyticsEvent.SIGN_UP)
         // Trigger success haptic feedback on successful signup (before showing verification message)
         await successFeedback()
         // Success - show verification message
@@ -389,7 +409,7 @@ export function AuthScreen(): React.ReactNode {
           <View style={styles.formContainer}>
             {/* General Error */}
             {errors.general && (
-              <View style={styles.errorBanner} testID="auth-error-banner">
+              <View style={styles.errorBanner} testID="login-error">
                 <Text style={styles.errorBannerText}>{errors.general}</Text>
               </View>
             )}
@@ -412,10 +432,10 @@ export function AuthScreen(): React.ReactNode {
                 autoCorrect={false}
                 returnKeyType="next"
                 editable={!isSubmitting}
-                testID="auth-email-input"
+                testID="email-input"
               />
               {errors.email && (
-                <Text style={styles.errorText} testID="auth-email-error">
+                <Text style={styles.errorText} testID="email-error">
                   {errors.email}
                 </Text>
               )}
@@ -439,10 +459,10 @@ export function AuthScreen(): React.ReactNode {
                 returnKeyType={mode === 'signup' ? 'next' : 'done'}
                 editable={!isSubmitting}
                 onSubmitEditing={mode === 'login' ? handleSubmit : undefined}
-                testID="auth-password-input"
+                testID="password-input"
               />
               {errors.password && (
-                <Text style={styles.errorText} testID="auth-password-error">
+                <Text style={styles.errorText} testID="password-error">
                   {errors.password}
                 </Text>
               )}
@@ -467,10 +487,10 @@ export function AuthScreen(): React.ReactNode {
                   returnKeyType="done"
                   editable={!isSubmitting}
                   onSubmitEditing={handleSubmit}
-                  testID="auth-confirm-password-input"
+                  testID="confirm-password-input"
                 />
                 {errors.confirmPassword && (
-                  <Text style={styles.errorText} testID="auth-confirm-password-error">
+                  <Text style={styles.errorText} testID="confirm-password-error">
                     {errors.confirmPassword}
                   </Text>
                 )}
@@ -484,7 +504,7 @@ export function AuthScreen(): React.ReactNode {
               fullWidth
               loading={isSubmitting}
               disabled={isSubmitting}
-              testID="auth-submit-button"
+              testID="login-button"
             />
 
             {/* Forgot Password Link (Login only) */}
@@ -504,7 +524,7 @@ export function AuthScreen(): React.ReactNode {
               </Text>
               <TouchableOpacity
                 onPress={toggleMode}
-                testID="auth-toggle-mode-button"
+                testID="signup-link"
               >
                 <Text style={styles.toggleModeLink}>
                   {mode === 'login' ? 'Sign Up' : 'Sign In'}

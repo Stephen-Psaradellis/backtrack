@@ -64,6 +64,10 @@ export interface Profile {
   verified_at: Timestamp | null
   /** Timestamp when user accepted terms of service, privacy policy, and confirmed age (18+) */
   terms_accepted_at: Timestamp | null
+  /** Whether user has enabled always-on location tracking for auto check-in prompts */
+  always_on_tracking_enabled: boolean
+  /** Minutes to wait before prompting user to check in when at same location (1-60) */
+  checkin_prompt_minutes: number
   /** Timestamp when the profile was created */
   created_at: Timestamp
   /** Timestamp when the profile was last updated */
@@ -82,6 +86,8 @@ export interface ProfileInsert {
   is_verified?: boolean
   verified_at?: Timestamp | null
   terms_accepted_at?: Timestamp | null
+  always_on_tracking_enabled?: boolean
+  checkin_prompt_minutes?: number
   created_at?: Timestamp
   updated_at?: Timestamp
 }
@@ -95,6 +101,8 @@ export interface ProfileUpdate {
   avatar?: StoredAvatar | null
   avatar_version?: number
   terms_accepted_at?: Timestamp | null
+  always_on_tracking_enabled?: boolean
+  checkin_prompt_minutes?: number
   updated_at?: Timestamp
 }
 
@@ -263,6 +271,60 @@ export interface ActiveCheckin {
   location_name: string
   checked_in_at: Timestamp
   verified: boolean
+}
+
+/**
+ * Tracking settings for a user
+ */
+export interface TrackingSettings {
+  /** Whether always-on location tracking is enabled */
+  always_on_tracking_enabled: boolean
+  /** Minutes to wait before prompting check-in (1-60) */
+  checkin_prompt_minutes: number
+}
+
+/**
+ * Result from can_post_to_location RPC
+ */
+export interface CanPostResult {
+  /** Whether user can post at this location */
+  can_post: boolean
+  /** Human-readable reason if cannot post */
+  reason: string | null
+  /** Whether user is a Regular at this location */
+  is_regular: boolean
+  /** Whether user has a recent check-in at this location */
+  has_recent_checkin: boolean
+  /** Name of the location */
+  location_name?: string
+}
+
+/**
+ * Result from can_match_post RPC
+ */
+export interface CanMatchResult {
+  /** Whether user can match/respond to this post */
+  can_match: boolean
+  /** Human-readable reason if cannot match */
+  reason: string | null
+  /** Whether user is a Regular at the post's location */
+  is_regular: boolean
+  /** Whether user has a matching check-in */
+  has_matching_checkin: boolean
+  /** Name of the location */
+  location_name?: string
+}
+
+/**
+ * Live check-in user info (from get_active_checkins_at_location RPC)
+ */
+export interface LiveCheckinUser {
+  user_id: UUID
+  checkin_id: UUID
+  checked_in_at: Timestamp
+  avatar: import('../components/avatar/types').StoredAvatar | null
+  display_name: string | null
+  is_verified: boolean
 }
 
 // ============================================================================

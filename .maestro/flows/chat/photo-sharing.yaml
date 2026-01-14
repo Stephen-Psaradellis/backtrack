@@ -1,0 +1,46 @@
+# Photo Sharing Test
+# Tests the photo sharing modal in chat
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+# - User has at least one conversation
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Chats tab
+- tapOn: "Chats"
+
+# Wait for chats screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the conversations screen
+- assertVisible: "Conversations"
+
+# Open first conversation
+- tapOn: "Chat with Producer"
+
+# Wait for chat screen to load
+- waitForAnimationToEnd
+
+# Wait for message input to appear
+- extendedWaitUntil:
+    visible: "Type a message"
+    timeout: 15000
+
+# The photo button is a camera icon - tap on it
+# Looking for the camera/photo icon on the right side of input area
+# For now, verify the chat screen loads and basic functionality works
+
+# Navigate back using back arrow or back button
+- pressKey: back
+
+# Verify we're back on conversations screen
+- waitForAnimationToEnd
+- assertVisible: "Conversations"

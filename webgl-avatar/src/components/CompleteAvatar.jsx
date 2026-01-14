@@ -103,18 +103,9 @@ function AvatarModel({
   const [loadError, setLoadError] = useState(null);
 
   // Load the GLTF model
-  let gltf;
-  try {
-    gltf = useGLTF(url);
-  } catch (error) {
-    // Handle loading errors
-    console.warn('[CompleteAvatar] GLB loading error:', error?.message || error);
-    useEffect(() => {
-      setLoadError(error);
-      onError?.(error);
-    }, [error, onError]);
-    return <AvatarErrorFallback position={position} error={error} />;
-  }
+  // Note: meshopt decoding is handled by GLTFLoader via MeshoptDecoder setup in App.jsx
+  console.log('[AvatarModel] Loading GLB from:', url);
+  const gltf = useGLTF(url);
 
   const { scene, animations } = gltf;
 
@@ -125,7 +116,7 @@ function AvatarModel({
   }, [scene]);
 
   // Set up animations if available
-  const { actions, names } = useAnimations(animations, groupRef);
+  const { actions, names } = useAnimations(animations || [], groupRef);
 
   // Play animation
   useEffect(() => {
@@ -203,7 +194,9 @@ export function CompleteAvatar({
 }) {
   // Get avatar URL from registry
   const url = useMemo(() => {
-    return getAvatarUrl(avatarId);
+    const avatarUrl = getAvatarUrl(avatarId);
+    console.log('[CompleteAvatar] Loading avatar:', avatarId, '-> URL:', avatarUrl);
+    return avatarUrl;
   }, [avatarId]);
 
   // Get avatar metadata for debugging

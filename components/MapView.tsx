@@ -58,12 +58,15 @@ import type { Coordinates, MapRegion } from '../lib/types'
 
 // Import react-native-maps for both platforms
 // Both iOS and Android use Google Maps (PROVIDER_GOOGLE) to enable POI click support
-let RNMapView: any = null
-let Marker: any = null
-let PROVIDER_GOOGLE: any = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let RNMapView: React.ComponentType<any> | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Marker: React.ComponentType<any> | null = null
+let PROVIDER_GOOGLE: string | null = null
 let mapsLoadError: string | null = null
 
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const maps = require('react-native-maps')
   RNMapView = maps.default
   Marker = maps.Marker
@@ -312,6 +315,7 @@ export function MapView({
   // REFS
   // ---------------------------------------------------------------------------
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null)
 
   // ---------------------------------------------------------------------------
@@ -484,7 +488,7 @@ export function MapView({
   // RENDER: MODULE LOAD ERROR
   // ---------------------------------------------------------------------------
 
-  if (mapsLoadError || !RNMapView) {
+  if (mapsLoadError || !RNMapView || !Marker) {
     return (
       <View style={[styles.container, styles.centered, style]} testID={testID}>
         <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', padding: 20 }}>
@@ -499,7 +503,7 @@ export function MapView({
 
   // ---------------------------------------------------------------------------
   // RENDER: MAP
-  // iOS uses Apple Maps (no provider specified), Android uses Google Maps
+  // Both iOS and Android use Google Maps (PROVIDER_GOOGLE) for POI click support
   // ---------------------------------------------------------------------------
 
   return (
@@ -508,7 +512,7 @@ export function MapView({
         ref={mapRef}
         style={[styles.map, mapStyle]}
         provider={PROVIDER_GOOGLE}
-        initialRegion={region || initialRegion}
+        initialRegion={initialRegion}
         region={region}
         showsUserLocation={showsUserLocation}
         followsUserLocation={followsUserLocation}

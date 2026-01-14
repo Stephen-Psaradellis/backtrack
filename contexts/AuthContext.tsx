@@ -270,38 +270,51 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    // Get initial session with timeout to prevent infinite hang
+    // Get initial session with timeout and retry logic for emulator latency
     const initializeAuth = async () => {
-      try {
-        // Add 10 second timeout to prevent infinite hang
-        const sessionPromise = supabase.auth.getSession()
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
-        )
+      const MAX_RETRIES = 3
+      const TIMEOUT_MS = 15000 // 15 seconds per attempt
 
-        const { data: { session: initialSession } } = await Promise.race([
-          sessionPromise,
-          timeoutPromise,
-        ]) as Awaited<typeof sessionPromise>
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const sessionPromise = supabase.auth.getSession()
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Auth initialization timeout')), TIMEOUT_MS)
+          )
 
-        if (initialSession) {
-          setSession(initialSession)
-          setUser(initialSession.user)
+          const { data: { session: initialSession } } = await Promise.race([
+            sessionPromise,
+            timeoutPromise,
+          ]) as Awaited<typeof sessionPromise>
 
-          // Fetch profile for authenticated user
-          try {
-            const profileData = await fetchProfile(initialSession.user.id)
-            setProfile(profileData)
-          } catch {
-            // Error fetching profile - continue without it
+          if (initialSession) {
+            setSession(initialSession)
+            setUser(initialSession.user)
+
+            // Fetch profile for authenticated user
+            try {
+              const profileData = await fetchProfile(initialSession.user.id)
+              setProfile(profileData)
+            } catch {
+              // Error fetching profile - continue without it
+            }
+          }
+          // Success - exit retry loop
+          setIsLoading(false)
+          return
+        } catch (error) {
+          console.warn(`Auth initialization attempt ${attempt}/${MAX_RETRIES} failed:`, error)
+          if (attempt === MAX_RETRIES) {
+            // All retries exhausted - proceed without session
+            console.warn('Auth initialization failed after all retries')
+          }
+          // Wait briefly before retry (exponential backoff)
+          if (attempt < MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
           }
         }
-      } catch (error) {
-        // Auth initialization failed or timed out - proceed without session
-        console.warn('Auth initialization failed:', error)
-      } finally {
-        setIsLoading(false)
       }
+      setIsLoading(false)
     }
 
     initializeAuth()

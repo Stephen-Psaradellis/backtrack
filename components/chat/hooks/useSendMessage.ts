@@ -18,6 +18,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { trackEvent, AnalyticsEvent } from '../../../lib/analytics'
 import type { UUID } from '../../../types/database'
 import type {
   OptimisticMessage,
@@ -196,6 +197,9 @@ export function useSendMessage({
         const sentMessage = await sendToSupabase(trimmedContent, optimisticId)
 
         if (sentMessage) {
+          // Track message sent (no content, just type)
+          trackEvent(AnalyticsEvent.MESSAGE_SENT, { message_type: 'text' })
+
           // Remove optimistic message and notify about the real message
           removeOptimisticMessage(optimisticId)
 

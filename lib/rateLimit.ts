@@ -274,7 +274,7 @@ export const RATE_LIMIT_PRESETS = {
  * @param result - Rate limit result
  * @returns Headers object with rate limit information
  */
-export function getRateLimitHeaders(result: RateLimitResult): HeadersInit {
+export function getRateLimitHeaders(result: RateLimitResult): Record<string, string> {
   return {
     'X-RateLimit-Limit': result.limit.toString(),
     'X-RateLimit-Remaining': result.remaining.toString(),

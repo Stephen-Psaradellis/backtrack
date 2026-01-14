@@ -131,6 +131,36 @@ export {
   type UseCheckinResult,
 } from './useCheckin'
 
+// Check-in settings hook (tracking preferences)
+export {
+  useCheckinSettings,
+  type TrackingSettingsError,
+  type UseCheckinSettingsOptions,
+  type UseCheckinSettingsResult,
+} from './useCheckinSettings'
+
+// Live check-ins hook (real-time presence at locations)
+export {
+  useLiveCheckins,
+  type LiveCheckinAccessReason,
+  type UseLiveCheckinsOptions,
+  type UseLiveCheckinsResult,
+} from './useLiveCheckins'
+
+// Posting permission hook
+export {
+  useCanPost,
+  type UseCanPostOptions,
+  type UseCanPostResult,
+} from './useCanPost'
+
+// Matching permission hook
+export {
+  useCanMatch,
+  type UseCanMatchOptions,
+  type UseCanMatchResult,
+} from './useCanMatch'
+
 // Tiered posts hook
 export {
   useTieredPosts,

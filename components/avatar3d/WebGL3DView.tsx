@@ -80,6 +80,8 @@ export interface WebGL3DViewProps {
   onSnapshot?: (base64: string) => void;
   /** Called when an error occurs */
   onError?: (error: { message: string; code: string }) => void;
+  /** Called when avatar finishes loading */
+  onAvatarLoaded?: (avatarId: string) => void;
   /** Show loading indicator while initializing */
   showLoading?: boolean;
   /** Enable debug mode (shows console messages) */
@@ -293,6 +295,7 @@ const WebGL3DView = forwardRef<WebGL3DViewRef, WebGL3DViewProps>(
       onReady,
       onSnapshot,
       onError,
+      onAvatarLoaded,
       showLoading = true,
       debug = false,
     },
@@ -386,6 +389,11 @@ const WebGL3DView = forwardRef<WebGL3DViewRef, WebGL3DViewProps>(
 
             case 'SNAPSHOT_READY':
               onSnapshot?.(message.base64);
+              break;
+
+            case 'AVATAR_LOADED':
+              console.log('[WebGL3DView] Avatar loaded:', message.avatarId);
+              onAvatarLoaded?.(message.avatarId);
               break;
 
             case 'ERROR':

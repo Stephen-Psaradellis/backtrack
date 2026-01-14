@@ -16,10 +16,12 @@
 import 'react-native-gesture-handler'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { initSentry, setUserContext } from './lib/sentry'
+import { initializeAnalytics, flushAnalytics, resetAnalytics } from './lib/analytics'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { StyleSheet, LogBox } from 'react-native'
+import { StyleSheet, LogBox, AppState, AppStateStatus } from 'react-native'
 
 // Suppress Legacy Architecture warning - we intentionally use it for compatibility
 // with react-native-maps and some expo modules. Migration to New Architecture
@@ -109,6 +111,33 @@ function initializeAvatarPreloading(): void {
 initializeAvatarPreloading()
 
 // ============================================================================
+// SENTRY ERROR TRACKING SETUP
+// ============================================================================
+
+/**
+ * Initialize Sentry for crash reporting and error tracking.
+ * Only active in production builds; disabled in development.
+ */
+initSentry()
+
+// ============================================================================
+// ANALYTICS SETUP
+// ============================================================================
+
+/**
+ * Initialize PostHog analytics for user behavior tracking.
+ * Privacy-focused with anonymous user IDs and opt-out support.
+ */
+initializeAnalytics()
+
+// Flush analytics when app goes to background
+AppState.addEventListener('change', (nextState: AppStateStatus) => {
+  if (nextState === 'background') {
+    flushAnalytics()
+  }
+})
+
+// ============================================================================
 // HELPER COMPONENTS
 // ============================================================================
 
@@ -150,13 +179,20 @@ function NotificationRegistration({ children }: { children: React.ReactNode }): 
     checkNotifications()
   }, [])
 
-  // Register for push notifications when user is authenticated
+  // Register for push notifications and set Sentry user context when authenticated
   useEffect(() => {
     if (isAuthenticated && userId && notificationsReady) {
       // Register for push notifications
       // Note: This will request permissions and register token
       // Per spec, we don't request on first app launch - only when authenticated
       registerForPushNotifications(userId)
+    }
+
+    // Set Sentry user context for error tracking
+    if (isAuthenticated && userId) {
+      setUserContext(userId)
+    } else {
+      setUserContext(null)
     }
   }, [isAuthenticated, userId, notificationsReady])
 

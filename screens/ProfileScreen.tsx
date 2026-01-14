@@ -53,7 +53,7 @@ import { StreakCard } from '../components/streaks/StreakCard'
 import { useLocationStreaks } from '../hooks/useLocationStreaks'
 import { RegularsModeToggle } from '../components/regulars/RegularsModeToggle'
 import { FellowRegularsList } from '../components/regulars/RegularsList'
-import { NotificationSettings } from '../components/settings/NotificationSettings'
+import { NotificationSettings, LocationTrackingSettings } from '../components/settings'
 
 // ============================================================================
 // TYPES
@@ -648,6 +648,11 @@ export function ProfileScreen(): React.ReactNode {
       {/* Notification Settings Section */}
       <View style={styles.section} testID="profile-notification-settings-section">
         <NotificationSettings />
+      </View>
+
+      {/* Location Tracking Settings Section */}
+      <View style={styles.section} testID="profile-location-tracking-section">
+        <LocationTrackingSettings testID="profile-location-tracking" />
       </View>
 
       {/* Replay Tutorial Section */}

@@ -1,0 +1,38 @@
+# Signup Flow Test
+# Tests the signup UI toggle functionality
+#
+# Prerequisites:
+# - App installed and launched
+
+appId: app.backtrack.social
+---
+# Launch app with clean state
+- launchApp:
+    clearState: true
+
+# Wait for the auth screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the login screen
+- assertVisible: "Welcome Back"
+
+# Switch to signup mode by tapping "Sign Up" link
+- tapOn: "Sign Up"
+
+# Wait for UI to update
+- waitForAnimationToEnd
+
+# Verify we're in signup mode
+- assertVisible: "Create Account"
+
+# Verify signup form shows confirm password field
+- assertVisible: "Confirm Password"
+
+# Switch back to login mode
+- tapOn: "Sign In"
+
+# Wait for UI to update
+- waitForAnimationToEnd
+
+# Verify we're back on login screen
+- assertVisible: "Welcome Back"

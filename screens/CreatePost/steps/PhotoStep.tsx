@@ -101,6 +101,7 @@ interface PhotoTileProps {
   isSelected: boolean
   onSelect: () => void
   onDelete?: () => void
+  onRetry?: () => void
 }
 
 const PhotoTile = memo(function PhotoTile({
@@ -108,9 +109,11 @@ const PhotoTile = memo(function PhotoTile({
   isSelected,
   onSelect,
   onDelete,
+  onRetry,
 }: PhotoTileProps) {
   const isApproved = photo.moderation_status === 'approved'
   const isPending = photo.moderation_status === 'pending'
+  const isError = photo.moderation_status === 'error'
   const isTimedOut = photo.isTimedOut
 
   return (
@@ -151,16 +154,29 @@ const PhotoTile = memo(function PhotoTile({
         </View>
       )}
 
-      {/* Timed out indicator with delete option */}
+      {/* Timed out indicator with retry option */}
       {isPending && isTimedOut && (
         <TouchableOpacity
           style={styles.timedOutOverlay}
-          onPress={onDelete}
+          onPress={onRetry}
           activeOpacity={0.8}
         >
-          <Ionicons name="alert-circle" size={20} color="#FFFFFF" />
+          <Ionicons name="refresh" size={20} color="#FFFFFF" />
           <Text style={styles.timedOutText}>Timed out</Text>
-          <Text style={styles.timedOutSubtext}>Tap to delete</Text>
+          <Text style={styles.timedOutSubtext}>Tap to retry</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Error indicator with retry option */}
+      {isError && (
+        <TouchableOpacity
+          style={styles.errorOverlay}
+          onPress={onRetry}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="refresh" size={20} color="#FFFFFF" />
+          <Text style={styles.errorText}>Failed</Text>
+          <Text style={styles.errorSubtext}>Tap to retry</Text>
         </TouchableOpacity>
       )}
 
@@ -233,11 +249,15 @@ export const PhotoStep = memo(function PhotoStep({
     approvedPhotos,
     loading,
     uploading,
+    retrying,
     error,
     hasReachedLimit,
     hasTimedOutPhotos,
+    hasErrorPhotos,
+    hasPhotosNeedingAttention,
     uploadPhoto,
     deletePhoto,
+    retryModeration,
     refresh,
     clearError,
   } = useProfilePhotos()
@@ -306,12 +326,23 @@ export const PhotoStep = memo(function PhotoStep({
     onPhotoSelect(photoId)
   }, [onPhotoSelect])
 
-  // Handle deleting a timed-out photo
-  const handleDeleteTimedOutPhoto = useCallback(async (photoId: string) => {
+  // Handle retrying a failed/timed-out photo
+  const handleRetryPhoto = useCallback(async (photoId: string) => {
+    await lightFeedback()
+    const success = await retryModeration(photoId)
+    if (success) {
+      await successFeedback()
+    } else {
+      await errorFeedback()
+    }
+  }, [retryModeration])
+
+  // Handle deleting a photo (for rejected or permanently failed photos)
+  const handleDeletePhoto = useCallback(async (photoId: string) => {
     await errorFeedback()
     Alert.alert(
       'Delete Photo',
-      'Photo verification timed out. Delete this photo and try again?',
+      'Are you sure you want to delete this photo?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -435,7 +466,8 @@ export const PhotoStep = memo(function PhotoStep({
               photo={photo}
               isSelected={photo.id === selectedPhotoId}
               onSelect={() => handleSelectPhoto(photo.id)}
-              onDelete={() => handleDeleteTimedOutPhoto(photo.id)}
+              onDelete={() => handleDeletePhoto(photo.id)}
+              onRetry={() => handleRetryPhoto(photo.id)}
             />
           ))}
 
@@ -443,7 +475,7 @@ export const PhotoStep = memo(function PhotoStep({
           {!hasReachedLimit && (
             <AddPhotoTile
               onPress={handleAddPhoto}
-              disabled={uploading}
+              disabled={uploading || retrying}
             />
           )}
         </View>
@@ -453,6 +485,14 @@ export const PhotoStep = memo(function PhotoStep({
           <View style={styles.uploadingBanner}>
             <ActivityIndicator size="small" color="#FFFFFF" />
             <Text style={styles.uploadingText}>Uploading photo...</Text>
+          </View>
+        )}
+
+        {/* Retrying indicator */}
+        {retrying && (
+          <View style={styles.retryingBanner}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Text style={styles.retryingText}>Retrying verification...</Text>
           </View>
         )}
 
@@ -466,12 +506,22 @@ export const PhotoStep = memo(function PhotoStep({
           </View>
         )}
 
+        {/* Error photos notice */}
+        {hasErrorPhotos && !hasTimedOutPhotos && (
+          <View style={styles.errorNotice}>
+            <Ionicons name="alert-circle-outline" size={18} color="#FF3B30" />
+            <Text style={styles.errorNoticeText}>
+              Some photos failed verification. Tap them to retry.
+            </Text>
+          </View>
+        )}
+
         {/* Timed out photos notice */}
         {hasTimedOutPhotos && (
           <View style={styles.timedOutNotice}>
             <Ionicons name="alert-circle-outline" size={18} color="#FF3B30" />
             <Text style={styles.timedOutNoticeText}>
-              Some photos failed to verify. Tap them to delete and try again.
+              Some photos timed out. Tap them to retry verification.
             </Text>
           </View>
         )}
@@ -714,6 +764,55 @@ const styles = StyleSheet.create({
     color: '#CC0000',
     fontSize: 13,
     lineHeight: 18,
+  },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 149, 0, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    marginTop: 2,
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  errorSubtext: {
+    marginTop: 2,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 9,
+  },
+  errorNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E6',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorNoticeText: {
+    marginLeft: 8,
+    flex: 1,
+    color: '#995200',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  retryingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF9500',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  retryingText: {
+    marginLeft: 8,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 })
 

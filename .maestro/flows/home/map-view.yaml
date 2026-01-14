@@ -1,0 +1,36 @@
+# Home Screen Map View Test
+# Tests that the map loads and is interactive
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+# - Location permissions granted
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- assertVisible:
+    id: "home-screen"
+
+# Verify map container is visible
+- assertVisible:
+    id: "home-map-container"
+
+# Verify favorites section is visible
+- assertVisible:
+    id: "home-favorites-section"
+
+# Test map interaction - wait for map to fully render
+- extendedWaitUntil:
+    visible: "+ Add Favorite"
+    timeout: 10000
+
+# Verify the Add Favorite button is present
+- assertVisible:
+    id: "home-add-favorite-button"

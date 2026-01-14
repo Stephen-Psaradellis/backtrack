@@ -13,9 +13,10 @@
  */
 
 import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FellowRegular, LocationRegular } from '../../hooks/useRegulars'
+import { MdAvatarSnapshot } from '../avatar3d'
 
 // ============================================================================
 // Types
@@ -79,7 +80,7 @@ export function RegularCard({
   style,
 }: RegularCardProps) {
   const displayName = regular.display_name || 'Anonymous'
-  const avatarUrl = regular.avatar_url
+  const avatar = regular.avatar
   const isVerified = regular.is_verified
   const visibility = regular.visibility
 
@@ -100,8 +101,8 @@ export function RegularCard({
     >
       {/* Avatar */}
       <View style={styles.avatarContainer}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+        {avatar ? (
+          <MdAvatarSnapshot avatar={avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={24} color="#9CA3AF" />
@@ -163,7 +164,7 @@ interface RegularAvatarProps {
 }
 
 export function RegularAvatar({ regular, size = 40, onPress }: RegularAvatarProps) {
-  const avatarUrl = regular.avatar_url
+  const avatar = regular.avatar
   const isVerified = regular.is_verified
 
   return (
@@ -173,11 +174,8 @@ export function RegularAvatar({ regular, size = 40, onPress }: RegularAvatarProp
       disabled={!onPress}
     >
       <View style={[styles.avatarOnlyContainer, { width: size, height: size }]}>
-        {avatarUrl ? (
-          <Image
-            source={{ uri: avatarUrl }}
-            style={[styles.avatarOnly, { width: size, height: size, borderRadius: size / 2 }]}
-          />
+        {avatar ? (
+          <MdAvatarSnapshot avatar={avatar} />
         ) : (
           <View
             style={[

@@ -1,0 +1,59 @@
+# Send Message Test
+# Tests sending a message in an existing conversation
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+# - User has at least one conversation (test account has pre-seeded data)
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Chats tab
+- tapOn: "Chats"
+
+# Wait for chats screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the conversations screen
+- assertVisible: "Conversations"
+
+# Tap on the first conversation (Chat with Producer)
+- tapOn: "Chat with Producer"
+
+# Wait for chat screen to load
+- waitForAnimationToEnd
+
+# Wait for message input to appear (placeholder includes ellipsis)
+- extendedWaitUntil:
+    visible: "Type a message..."
+    timeout: 15000
+
+# Type a test message - use testID for reliability
+- tapOn:
+    id: "chat-message-input"
+
+- inputText: "Hello from Maestro E2E test!"
+
+# Send the message
+- tapOn: "Send"
+
+# Wait for message to be sent
+- waitForAnimationToEnd
+
+# Verify the message appears in the chat
+- assertVisible: "Hello from Maestro E2E test!"
+
+# Navigate back to conversations list
+- pressKey: back
+
+# Wait for navigation
+- waitForAnimationToEnd
+
+# Verify we're back on conversations screen
+- assertVisible: "Conversations"

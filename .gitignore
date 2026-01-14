@@ -66,6 +66,7 @@ ios/
 # Testing
 /coverage
 .jest/
+e2e/artifacts/
 
 # Debug
 npm-debug.log*
@@ -116,3 +117,6 @@ supabase/.temp/
 
 # E2E seed scripts that might contain secrets (use env vars instead)
 # scripts/seed-e2e-data.mjs  # Tracked but secrets removed - use doppler run
+
+# Strawberry-Claude (separate project, not part of main app)
+strawberry-claude/

@@ -171,10 +171,21 @@ function Avatar({
 
   const [hasError, setHasError] = useState(false);
 
-  // Handle load callback
+  // Handle load callback - notify React Native when avatar loads
   const handleLoad = () => {
-    if (debug) {
-      console.log('[Avatar] Loaded:', config.avatarId);
+    try {
+      const avatarId = config?.avatarId || 'unknown';
+      console.log('[Avatar] Successfully loaded:', avatarId);
+      // Send message to React Native that avatar loaded
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'AVATAR_LOADED',
+          avatarId: avatarId,
+          timestamp: Date.now(),
+        }));
+      }
+    } catch (err) {
+      console.error('[Avatar] Error in handleLoad:', err);
     }
     onLoad?.();
   };

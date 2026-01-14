@@ -19,11 +19,11 @@ export default defineConfig({
         manualChunks: undefined,
       },
     },
-    // Minify for production
+    // Minify for production - keep console for debugging avatar issues
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: false,
         drop_debugger: true,
       },
     },

@@ -386,3 +386,12 @@ $$;
 
 COMMENT ON FUNCTION get_users_checked_in_at_location(UUID, TIMESTAMPTZ, TIMESTAMPTZ) IS
     'Gets users with verified check-ins at a location within a time window. Used for Tier 1 matching.';
+
+-- ============================================================================
+-- GRANT EXECUTE PERMISSIONS
+-- ============================================================================
+
+GRANT EXECUTE ON FUNCTION checkin_to_location(UUID, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION) TO authenticated;
+GRANT EXECUTE ON FUNCTION checkout_from_location(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_active_checkin() TO authenticated;
+GRANT EXECUTE ON FUNCTION get_users_checked_in_at_location(UUID, TIMESTAMPTZ, TIMESTAMPTZ) TO authenticated;

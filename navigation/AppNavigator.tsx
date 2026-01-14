@@ -9,12 +9,14 @@
  * - MainTabs: Bottom tab navigation for core app sections
  */
 
-import React from 'react'
-import { NavigationContainer, LinkingOptions } from '@react-navigation/native'
+import React, { useRef, useCallback } from 'react'
+import { NavigationContainer, LinkingOptions, NavigationState, PartialState } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import * as Linking from 'expo-linking'
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
+
+import { trackScreenView } from '../lib/analytics'
 
 import { useAuth } from '../contexts/AuthContext'
 import { SmAvatarSnapshot } from '../components/avatar3d'
@@ -30,6 +32,8 @@ import { ChatListScreen } from '../screens/ChatListScreen'
 import AvatarCreatorScreen from '../screens/AvatarCreatorScreen'
 import { LegalScreen } from '../screens/LegalScreen'
 import { WebGL3DTestScreen } from '../screens/WebGL3DTestScreen'
+import { FavoritesScreen } from '../screens/FavoritesScreen'
+import { FavoritesTabScreen } from '../screens/FavoritesTabScreen'
 import type {
   RootStackParamList,
   AuthStackParamList,
@@ -126,6 +130,16 @@ function MainTabNavigator() {
         }}
       />
       <MainTabs.Screen
+        name={SCREENS.FavoritesTab}
+        component={FavoritesTabScreen}
+        options={{
+          title: TAB_LABELS.FavoritesTab,
+          headerTitle: 'Favorites',
+          // eslint-disable-next-line react/no-unstable-nested-components
+          headerRight: () => <HeaderAvatar />,
+        }}
+      />
+      <MainTabs.Screen
         name={SCREENS.ChatsTab}
         component={ChatListScreen}
         options={{
@@ -203,6 +217,13 @@ function MainStackNavigator() {
         options={({ route }) => ({
           headerTitle: route.params.locationName,
         })}
+      />
+      <MainStack.Screen
+        name={SCREENS.Favorites}
+        component={FavoritesScreen}
+        options={{
+          headerTitle: 'Your Favorites',
+        }}
       />
       <MainStack.Screen
         name={SCREENS.PostDetail}
@@ -338,14 +359,70 @@ const linking: LinkingOptions<RootStackParamList> = {
 // APP NAVIGATOR (EXPORTED COMPONENT)
 // ============================================================================
 
+// ============================================================================
+// ANALYTICS HELPERS
+// ============================================================================
+
+/**
+ * Get the current route name from a navigation state
+ */
+function getActiveRouteName(
+  state: NavigationState | PartialState<NavigationState> | undefined
+): string | undefined {
+  if (!state) return undefined
+
+  const route = state.routes[state.index ?? 0]
+
+  if (route.state) {
+    // Dive into nested navigators
+    return getActiveRouteName(route.state as NavigationState)
+  }
+
+  return route.name
+}
+
 /**
  * Main app navigator wrapped in NavigationContainer
  * This is the top-level navigation component that should be rendered in App.tsx
  * Includes deep-linking configuration for push notification navigation
  */
 export function AppNavigator() {
+  // Track the current route name for screen view analytics
+  const routeNameRef = useRef<string | undefined>(undefined)
+
+  /**
+   * Handle navigation state changes to track screen views
+   */
+  const handleStateChange = useCallback(
+    (state: NavigationState | undefined) => {
+      const previousRouteName = routeNameRef.current
+      const currentRouteName = getActiveRouteName(state)
+
+      if (previousRouteName !== currentRouteName && currentRouteName) {
+        // Track screen view (only route name, no params/PII)
+        trackScreenView(currentRouteName)
+      }
+
+      // Save the current route name for next comparison
+      routeNameRef.current = currentRouteName
+    },
+    []
+  )
+
+  /**
+   * Set initial route name on container ready
+   */
+  const handleReady = useCallback(() => {
+    // Track initial screen view handled in onStateChange
+  }, [])
+
   return (
-    <NavigationContainer linking={linking} fallback={<LinkingFallback />}>
+    <NavigationContainer
+      linking={linking}
+      fallback={<LinkingFallback />}
+      onStateChange={handleStateChange}
+      onReady={handleReady}
+    >
       <RootNavigator />
     </NavigationContainer>
   )

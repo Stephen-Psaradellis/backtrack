@@ -1,0 +1,64 @@
+# Back Navigation Test
+# Tests that back navigation works correctly throughout the app
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+- waitForAnimationToEnd
+
+# Navigate to Privacy Policy (a sub-screen) - it's in the Legal section near bottom
+# Use scrollUntilVisible to find it
+- scrollUntilVisible:
+    element: "Privacy Policy"
+    direction: DOWN
+    timeout: 30000
+
+- tapOn: "Privacy Policy"
+
+# Wait for Legal screen to load
+- waitForAnimationToEnd
+- assertVisible: "Privacy Policy"
+
+# Use back navigation (Android back button or iOS swipe/header back)
+- pressKey: back
+
+# Wait for navigation
+- waitForAnimationToEnd
+
+# Verify we're back on Profile screen (header)
+- assertVisible: "Profile"
+
+# Navigate to Terms of Service - use scrollUntilVisible
+- scrollUntilVisible:
+    element: "Terms of Service"
+    direction: DOWN
+    timeout: 30000
+
+- tapOn: "Terms of Service"
+
+# Wait for Legal screen to load
+- waitForAnimationToEnd
+- assertVisible: "Terms of Service"
+
+# Go back again
+- pressKey: back
+- waitForAnimationToEnd
+
+# Verify we're back on Profile screen (header)
+- assertVisible: "Profile"
+
+# Navigate back to Home tab
+- tapOn: "Explore"
+- waitForAnimationToEnd
+- assertVisible: "Backtrack"

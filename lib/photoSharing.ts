@@ -29,13 +29,11 @@
 
 import { supabase } from './supabase'
 import { getSignedUrlFromPath } from './storage'
+import { captureException } from './sentry'
+import { trackEvent, AnalyticsEvent } from './analytics'
 import type {
-  ProfilePhoto,
   PhotoShare,
   PhotoShareInsert,
-  SharedPhotoForConversation,
-  MySharedPhotoForConversation,
-  PhotoShareStatus,
 } from '../types/database'
 
 // ============================================================================
@@ -258,12 +256,16 @@ export async function sharePhotoWithMatch(
       }
     }
 
+    // Track photo share (no photo content or metadata, just the event)
+    trackEvent(AnalyticsEvent.PHOTO_SHARED)
+
     return {
       success: true,
       share: share as PhotoShare,
       error: null,
     }
   } catch (error) {
+    captureException(error, { operation: 'sharePhotoWithMatch', photoId, conversationId })
     const message = error instanceof Error ? error.message : PHOTO_SHARING_ERRORS.SHARE_FAILED
     return {
       success: false,
@@ -334,6 +336,7 @@ export async function unsharePhotoFromMatch(
       error: null,
     }
   } catch (error) {
+    captureException(error, { operation: 'unsharePhotoFromMatch', photoId, conversationId })
     const message = error instanceof Error ? error.message : PHOTO_SHARING_ERRORS.UNSHARE_FAILED
     return {
       success: false,
@@ -398,18 +401,34 @@ export async function getSharedPhotosForConversation(
       return []
     }
 
+    // Type for the Supabase query result - profile_photos can be array or object depending on join
+    type ShareResult = {
+      id: string
+      photo_id: string
+      owner_id: string
+      created_at: string
+      profile_photos: { storage_path: string; is_primary: boolean; moderation_status: string }[] | { storage_path: string; is_primary: boolean; moderation_status: string }
+    }
+
+    // Helper to get profile photo from share (handles array or object)
+    const getProfilePhoto = (share: ShareResult) => {
+      const photos = share.profile_photos
+      return Array.isArray(photos) ? photos[0] : photos
+    }
+
     // Filter to only approved photos and map to expected format with signed URLs
     const photosWithUrls: SharedPhotoWithUrl[] = await Promise.all(
-      shares
-        .filter((share: any) => share.profile_photos?.moderation_status === 'approved')
-        .map(async (share: any) => {
-          const urlResult = await getSignedUrlFromPath(share.profile_photos.storage_path)
+      (shares as ShareResult[])
+        .filter((share) => getProfilePhoto(share)?.moderation_status === 'approved')
+        .map(async (share) => {
+          const profilePhoto = getProfilePhoto(share)
+          const urlResult = await getSignedUrlFromPath(profilePhoto.storage_path)
           return {
             share_id: share.id,
             photo_id: share.photo_id,
             owner_id: share.owner_id,
-            storage_path: share.profile_photos.storage_path,
-            is_primary: share.profile_photos.is_primary,
+            storage_path: profilePhoto.storage_path,
+            is_primary: profilePhoto.is_primary,
             shared_at: share.created_at,
             signedUrl: urlResult.success ? (urlResult.signedUrl ?? undefined) : undefined,
           }
@@ -417,7 +436,7 @@ export async function getSharedPhotosForConversation(
     )
 
     return photosWithUrls
-  } catch (error) {
+  } catch {
     return []
   }
 }
@@ -461,18 +480,34 @@ export async function getMySharedPhotosForConversation(
       return []
     }
 
+    // Type for the Supabase query result - profile_photos can be array or object depending on join
+    type MyShareResult = {
+      id: string
+      photo_id: string
+      shared_with_user_id: string
+      created_at: string
+      profile_photos: { storage_path: string; is_primary: boolean; moderation_status: string }[] | { storage_path: string; is_primary: boolean; moderation_status: string }
+    }
+
+    // Helper to get profile photo from share (handles array or object)
+    const getProfilePhoto = (share: MyShareResult) => {
+      const photos = share.profile_photos
+      return Array.isArray(photos) ? photos[0] : photos
+    }
+
     // Filter to only approved photos and map to expected format with signed URLs
     const photosWithUrls: MySharedPhotoWithUrl[] = await Promise.all(
-      shares
-        .filter((share: any) => share.profile_photos?.moderation_status === 'approved')
-        .map(async (share: any) => {
-          const urlResult = await getSignedUrlFromPath(share.profile_photos.storage_path)
+      (shares as MyShareResult[])
+        .filter((share) => getProfilePhoto(share)?.moderation_status === 'approved')
+        .map(async (share) => {
+          const profilePhoto = getProfilePhoto(share)
+          const urlResult = await getSignedUrlFromPath(profilePhoto.storage_path)
           return {
             share_id: share.id,
             photo_id: share.photo_id,
             shared_with_user_id: share.shared_with_user_id,
-            storage_path: share.profile_photos.storage_path,
-            is_primary: share.profile_photos.is_primary,
+            storage_path: profilePhoto.storage_path,
+            is_primary: profilePhoto.is_primary,
             shared_at: share.created_at,
             signedUrl: urlResult.success ? (urlResult.signedUrl ?? undefined) : undefined,
           }
@@ -480,7 +515,7 @@ export async function getMySharedPhotosForConversation(
     )
 
     return photosWithUrls
-  } catch (error) {
+  } catch {
     return []
   }
 }
@@ -627,7 +662,7 @@ export function subscribeToPhotoShareChanges(
 // EXPORTS
 // ============================================================================
 
-export default {
+const photoSharingApi = {
   // Main functions
   sharePhotoWithMatch,
   unsharePhotoFromMatch,
@@ -643,3 +678,5 @@ export default {
   // Constants
   PHOTO_SHARING_ERRORS,
 }
+
+export default photoSharingApi

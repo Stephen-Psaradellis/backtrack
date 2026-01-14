@@ -1,0 +1,44 @@
+# Login Invalid Credentials Test
+# Tests error handling for invalid login attempts
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged out
+
+appId: app.backtrack.social
+---
+# Launch app with clean state
+- launchApp:
+    clearState: true
+
+# Wait for the auth screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the login screen
+- assertVisible: "Welcome Back"
+
+# Test: Wrong password
+- tapOn:
+    id: "email-input"
+- eraseText: 50
+- inputText: "s.n.psaradellis@gmail.com"
+
+- tapOn:
+    id: "password-input"
+- eraseText: 50
+- inputText: "WrongPassword123!"
+
+# Dismiss keyboard
+- pressKey: back
+
+# Tap Sign In
+- tapOn: "Sign In"
+
+# Wait for API response - should show error message (full text includes additional instructions)
+- extendedWaitUntil:
+    visible:
+      text: "Invalid email or password.*"
+    timeout: 20000
+
+# Verify we're still on the login screen
+- assertVisible: "Welcome Back"

@@ -29,6 +29,8 @@
  */
 
 import { Platform } from 'react-native'
+import * as FileSystem from 'expo-file-system/legacy'
+import { decode } from 'base64-arraybuffer'
 
 import { supabase, supabaseUrl } from './supabase'
 import { getImageMimeType, formatImageUri } from '../utils/imagePicker'
@@ -173,16 +175,65 @@ export function isAllowedMimeType(mimeType: string): boolean {
 }
 
 /**
- * Create a Blob from a local file URI (React Native)
+ * Create an upload payload from a local file URI (React Native)
  *
- * This is needed because React Native doesn't have native Blob support
- * for file:// URIs like web browsers do.
+ * Uses the new expo-file-system File class to read the file as base64,
+ * then converts to ArrayBuffer using base64-arraybuffer. This is the
+ * Supabase-recommended approach for React Native file uploads.
  *
- * @param uri - Local file URI
+ * Why this approach:
+ * - fetch() for local file:// URIs is unreliable on iOS production builds
+ * - Plain objects {uri, name, type} are not recognized by Supabase upload
+ * - ArrayBuffer is a valid upload type that Supabase handles correctly
+ *
+ * @param uri - Local file URI (file:// or content://)
  * @param mimeType - MIME type of the file
- * @returns Object suitable for Supabase upload
+ * @returns ArrayBuffer suitable for Supabase upload
  */
 async function createUploadPayload(
+  uri: string,
+  mimeType: string
+): Promise<{ arrayBuffer: ArrayBuffer; error: string | null }> {
+  try {
+    // Validate MIME type before upload
+    if (!isAllowedMimeType(mimeType)) {
+      return {
+        arrayBuffer: new ArrayBuffer(0),
+        error: STORAGE_ERRORS.INVALID_FILE_TYPE,
+      }
+    }
+
+    // Format URI for the platform
+    const formattedUri = formatImageUri(uri)
+
+    // Read file as base64 using FileSystem.readAsStringAsync
+    // This works with both file:// (iOS) and content:// (Android) URIs
+    const base64 = await FileSystem.readAsStringAsync(formattedUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+
+    // Convert base64 to ArrayBuffer
+    const arrayBuffer = decode(base64)
+
+    return { arrayBuffer, error: null }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error reading file'
+    return {
+      arrayBuffer: new ArrayBuffer(0),
+      error: message,
+    }
+  }
+}
+
+/**
+ * Create a Blob from a local file URI (React Native) - Legacy approach
+ *
+ * This method uses fetch() which doesn't work reliably on Android.
+ * Kept for reference but not used in production.
+ *
+ * @deprecated Use createUploadPayload instead
+ */
+async function createUploadPayloadLegacy(
   uri: string,
   mimeType: string
 ): Promise<{ blob: Blob; error: string | null }> {
@@ -294,24 +345,28 @@ export async function uploadSelfie(
     // Determine MIME type from URI
     const mimeType = options.contentType || getImageMimeType(imageUri)
 
-    // Create upload payload
-    const { blob, error: blobError } = await createUploadPayload(imageUri, mimeType)
-    if (blobError) {
+    // Generate storage path
+    const storagePath = getSelfieStoragePath(userId, postId)
+
+    // Create upload payload - reads file as base64, converts to ArrayBuffer
+    const { arrayBuffer, error: fileError } = await createUploadPayload(
+      imageUri,
+      mimeType
+    )
+    if (fileError) {
       return {
         success: false,
         path: null,
         fullUrl: null,
-        error: blobError,
+        error: fileError,
       }
     }
 
-    // Generate storage path
-    const storagePath = getSelfieStoragePath(userId, postId)
-
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage using ArrayBuffer
+    // contentType is required when uploading ArrayBuffer so Supabase knows the file type
     const { data, error } = await supabase.storage
       .from(SELFIES_BUCKET)
-      .upload(storagePath, blob, {
+      .upload(storagePath, arrayBuffer, {
         contentType: mimeType,
         upsert: options.upsert ?? true,
         cacheControl: options.cacheControl ?? 'public, max-age=31536000',
@@ -645,24 +700,28 @@ export async function uploadProfilePhoto(
     // Determine MIME type from URI
     const mimeType = options.contentType || getImageMimeType(imageUri)
 
-    // Create upload payload (reuse existing helper)
-    const { blob, error: blobError } = await createUploadPayload(imageUri, mimeType)
-    if (blobError) {
+    // Generate storage path for profile photo
+    const storagePath = getProfilePhotoStoragePath(userId, photoId)
+
+    // Create upload payload - reads file as base64, converts to ArrayBuffer
+    const { arrayBuffer, error: fileError } = await createUploadPayload(
+      imageUri,
+      mimeType
+    )
+    if (fileError) {
       return {
         success: false,
         path: null,
         fullUrl: null,
-        error: blobError,
+        error: fileError,
       }
     }
 
-    // Generate storage path for profile photo
-    const storagePath = getProfilePhotoStoragePath(userId, photoId)
-
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage using ArrayBuffer
+    // contentType is required when uploading ArrayBuffer so Supabase knows the file type
     const { data, error } = await supabase.storage
       .from(SELFIES_BUCKET)
-      .upload(storagePath, blob, {
+      .upload(storagePath, arrayBuffer, {
         contentType: mimeType,
         upsert: options.upsert ?? true,
         cacheControl: options.cacheControl ?? 'public, max-age=31536000',

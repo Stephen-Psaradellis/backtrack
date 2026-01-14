@@ -1,15 +1,18 @@
 /**
  * Avatar Browser Component
  *
- * Grid view for selecting from 370+ complete avatar presets.
+ * Grid view for selecting from 1000+ complete avatar presets.
  * Features:
- * - Fast thumbnail loading from CDN (<1.5s)
+ * - Multi-source avatar loading (VALID CDN, future sources)
+ * - Fast thumbnail loading with LRU cache (<1.5s initial)
+ * - Infinite scroll pagination for large collections
+ * - Gender count display (X male / Y female)
  * - Neutral style categories (not ethnicity-based)
  * - Gender and outfit filters
- * - Image caching for seamless avatar switching
+ * - Optimized FlatList for 60fps scrolling
  */
 
-import React, { useState, useCallback, useMemo, useEffect, memo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, memo, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,7 +23,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import type { AvatarPreset, AvatarStyle, AvatarGender, AvatarOutfit } from '../types';
+import type { AvatarPreset, AvatarStyle, AvatarGender, AvatarOutfit, AvatarGenderCounts } from '../types';
 import {
   LOCAL_AVATAR_PRESETS,
   fetchCdnAvatars,
@@ -28,6 +31,8 @@ import {
   getStylesFromPresets,
   getOutfitsFromPresets,
   prefetchCdnAvatars,
+  getGenderCounts,
+  DEFAULT_PAGE_SIZE,
 } from '../../../lib/avatar/defaults';
 
 // =============================================================================
@@ -52,22 +57,75 @@ interface FilterState {
 }
 
 // =============================================================================
-// IMAGE CACHE - for fast preview loading
+// LRU IMAGE CACHE - for fast preview loading with memory management
 // =============================================================================
 
-/** Set of preloaded image URLs */
-const preloadedImages = new Set<string>();
+/** Maximum number of images to keep in cache */
+const MAX_CACHE_SIZE = 200;
 
 /**
- * Preload an image into native cache
+ * Simple LRU cache for image URLs
+ * Using Map which maintains insertion order
+ */
+class ImageLRUCache {
+  private cache: Map<string, boolean>;
+  private maxSize: number;
+
+  constructor(maxSize: number = MAX_CACHE_SIZE) {
+    this.cache = new Map();
+    this.maxSize = maxSize;
+  }
+
+  has(url: string): boolean {
+    if (this.cache.has(url)) {
+      // Move to end (most recently used)
+      const value = this.cache.get(url)!;
+      this.cache.delete(url);
+      this.cache.set(url, value);
+      return true;
+    }
+    return false;
+  }
+
+  add(url: string): void {
+    if (this.cache.has(url)) {
+      // Move to end
+      this.cache.delete(url);
+      this.cache.set(url, true);
+      return;
+    }
+
+    // Evict oldest if at capacity
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) {
+        this.cache.delete(firstKey);
+      }
+    }
+
+    this.cache.set(url, true);
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+}
+
+/** Shared LRU cache for preloaded images */
+const imageCache = new ImageLRUCache(MAX_CACHE_SIZE);
+
+/**
+ * Preload an image into native cache with LRU tracking
  */
 function preloadImage(url: string): void {
-  if (preloadedImages.has(url)) return;
-  preloadedImages.add(url);
+  if (imageCache.has(url)) return;
+
+  // Add to LRU cache first (will evict old if needed)
+  imageCache.add(url);
+
   // Use Image.prefetch for RN image cache
   Image.prefetch(url).catch(() => {
     // Silently ignore prefetch errors
-    preloadedImages.delete(url);
   });
 }
 
@@ -120,6 +178,7 @@ interface FilterBarProps {
   onFilterChange: (filters: FilterState) => void;
   availableStyles: AvatarStyle[];
   availableOutfits: AvatarOutfit[];
+  genderCounts: AvatarGenderCounts;
 }
 
 function FilterBar({
@@ -127,6 +186,7 @@ function FilterBar({
   onFilterChange,
   availableStyles,
   availableOutfits,
+  genderCounts,
 }: FilterBarProps): React.JSX.Element {
   const handleStyleToggle = useCallback(
     (style: AvatarStyle) => {
@@ -166,15 +226,15 @@ function FilterBar({
 
   return (
     <View style={styles.filterBar}>
-      {/* Gender filters */}
+      {/* Gender filters with counts */}
       <View style={styles.filterRow}>
         <FilterChip
-          label="Male"
+          label={`Male (${genderCounts.male})`}
           isActive={filters.gender === 'M'}
           onPress={() => handleGenderToggle('M')}
         />
         <FilterChip
-          label="Female"
+          label={`Female (${genderCounts.female})`}
           isActive={filters.gender === 'F'}
           onPress={() => handleGenderToggle('F')}
         />
@@ -342,6 +402,9 @@ const AvatarCard = memo(function AvatarCard({
 // AVATAR BROWSER COMPONENT
 // =============================================================================
 
+/** Page size for infinite scroll */
+const PAGE_SIZE = DEFAULT_PAGE_SIZE;
+
 export function AvatarBrowser({
   selectedAvatarId,
   onSelectAvatar,
@@ -359,6 +422,12 @@ export function AvatarBrowser({
   const [isCdnLoading, setIsCdnLoading] = useState(false);
   const [cdnLoaded, setCdnLoaded] = useState(false);
 
+  // Pagination state
+  const [displayedPresets, setDisplayedPresets] = useState<AvatarPreset[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const flatListRef = useRef<FlatList<AvatarPreset>>(null);
+
   // Prefetch CDN avatars on mount
   useEffect(() => {
     if (!enableCdnAvatars || cdnLoaded) return;
@@ -374,8 +443,16 @@ export function AvatarBrowser({
         const loadTime = performance.now() - startTime;
         console.log(`[AvatarBrowser] CDN manifest loaded in ${loadTime.toFixed(0)}ms (${cdnAvatars.length} avatars)`);
 
-        // Combine local and CDN presets
-        setAllPresets([...LOCAL_AVATAR_PRESETS, ...cdnAvatars]);
+        // Combine local and CDN presets (deduped)
+        const combined = [...LOCAL_AVATAR_PRESETS];
+        const localIds = new Set(LOCAL_AVATAR_PRESETS.map(p => p.id));
+        for (const avatar of cdnAvatars) {
+          if (!localIds.has(avatar.id)) {
+            combined.push(avatar);
+          }
+        }
+
+        setAllPresets(combined);
         setCdnLoaded(true);
 
         // Preload first batch of images for fast preview
@@ -399,7 +476,13 @@ export function AvatarBrowser({
     [allPresets]
   );
 
-  // Filter available presets
+  // Get gender counts (excluding gender filter for accurate totals)
+  const genderCounts = useMemo(
+    () => getGenderCounts({ style: filters.style ?? undefined, outfit: filters.outfit ?? undefined }),
+    [allPresets, filters.style, filters.outfit]
+  );
+
+  // Filter all presets (for total count and pagination)
   const filteredPresets = useMemo(() => {
     return filterAllAvatarPresets(allPresets, {
       style: filters.style ?? undefined,
@@ -408,10 +491,42 @@ export function AvatarBrowser({
     });
   }, [allPresets, filters]);
 
-  // Preload images when filter changes
+  // Reset pagination when filters change
   useEffect(() => {
-    preloadAvatarImages(filteredPresets, 20);
+    setCurrentPage(0);
+    const initialPage = filteredPresets.slice(0, PAGE_SIZE);
+    setDisplayedPresets(initialPage);
+    preloadAvatarImages(initialPage, PAGE_SIZE);
+
+    // Scroll to top when filters change
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [filteredPresets]);
+
+  // Load more handler for infinite scroll
+  const loadMore = useCallback(() => {
+    if (isLoadingMore) return;
+
+    const nextPage = currentPage + 1;
+    const startIndex = nextPage * PAGE_SIZE;
+
+    // Check if there are more items
+    if (startIndex >= filteredPresets.length) return;
+
+    setIsLoadingMore(true);
+
+    // Simulate async to prevent UI jank
+    requestAnimationFrame(() => {
+      const nextItems = filteredPresets.slice(startIndex, startIndex + PAGE_SIZE);
+      setDisplayedPresets(prev => [...prev, ...nextItems]);
+      setCurrentPage(nextPage);
+      setIsLoadingMore(false);
+
+      // Preload next batch of thumbnails
+      const preloadStart = (nextPage + 1) * PAGE_SIZE;
+      const preloadItems = filteredPresets.slice(preloadStart, preloadStart + PAGE_SIZE);
+      preloadAvatarImages(preloadItems, PAGE_SIZE);
+    });
+  }, [currentPage, filteredPresets, isLoadingMore]);
 
   // Show combined loading state
   const isLoading = externalLoading || isCdnLoading;
@@ -434,6 +549,8 @@ export function AvatarBrowser({
   // Header with count
   const totalCount = allPresets.length;
   const filteredCount = filteredPresets.length;
+  const displayedCount = displayedPresets.length;
+  const hasMore = displayedCount < filteredCount;
 
   // Optimized FlatList settings for fast rendering
   const getItemLayout = useCallback(
@@ -445,14 +562,26 @@ export function AvatarBrowser({
     []
   );
 
+  // Footer component for loading indicator
+  const renderFooter = useCallback(() => {
+    if (!hasMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#6366F1" />
+        <Text style={styles.footerLoaderText}>Loading more...</Text>
+      </View>
+    );
+  }, [hasMore]);
+
   return (
     <View style={styles.container}>
-      {/* Filter bar */}
+      {/* Filter bar with gender counts */}
       <FilterBar
         filters={filters}
         onFilterChange={setFilters}
         availableStyles={availableStyles}
         availableOutfits={availableOutfits}
+        genderCounts={genderCounts}
       />
 
       {/* Avatar count */}
@@ -465,12 +594,12 @@ export function AvatarBrowser({
         {isCdnLoading && (
           <View style={styles.loadingInline}>
             <ActivityIndicator size="small" color="#6366F1" />
-            <Text style={styles.loadingInlineText}>Loading more...</Text>
+            <Text style={styles.loadingInlineText}>Loading sources...</Text>
           </View>
         )}
       </View>
 
-      {/* Avatar grid */}
+      {/* Avatar grid with infinite scroll */}
       {isLoading && allPresets.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6366F1" />
@@ -489,21 +618,30 @@ export function AvatarBrowser({
         </View>
       ) : (
         <FlatList
-          data={filteredPresets}
+          ref={flatListRef}
+          data={displayedPresets}
           renderItem={renderAvatarCard}
           keyExtractor={keyExtractor}
           numColumns={2}
           contentContainerStyle={styles.gridContent}
           columnWrapperStyle={styles.gridRow}
           showsVerticalScrollIndicator={false}
+          // Infinite scroll
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           // Performance optimizations
           initialNumToRender={10}
           maxToRenderPerBatch={20}
-          windowSize={7}
+          windowSize={5}
           removeClippedSubviews={true}
           getItemLayout={getItemLayout}
           // Update optimization
           extraData={selectedAvatarId}
+          // Maintain scroll position
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+          }}
         />
       )}
     </View>
@@ -713,6 +851,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6366F1',
     fontWeight: '600',
+  },
+
+  // Footer loader for infinite scroll
+  footerLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+  },
+  footerLoaderText: {
+    fontSize: 13,
+    color: '#6366F1',
   },
 });
 

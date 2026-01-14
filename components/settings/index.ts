@@ -5,3 +5,4 @@
  */
 
 export { NotificationSettings } from './NotificationSettings'
+export { LocationTrackingSettings } from './LocationTrackingSettings'

@@ -1,0 +1,49 @@
+# Home Screen Location List Test
+# Tests the favorites list functionality
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+# - Location permissions granted
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- assertVisible:
+    id: "home-screen"
+
+# Verify favorites header is visible
+- assertVisible:
+    id: "home-favorites-header"
+
+# Verify favorites section content
+- assertVisible: "Your Favorites"
+
+# Test expand/collapse functionality
+# First, click on the header to collapse
+- tapOn:
+    id: "home-favorites-header"
+
+- waitForAnimationToEnd
+
+# Click again to expand
+- tapOn:
+    id: "home-favorites-header"
+
+- waitForAnimationToEnd
+
+# If there are no favorites, check for empty state
+# This is optional since test account may or may not have favorites
+- assertVisible:
+    text: "No Favorites Yet"
+    optional: true
+
+# If there are favorites, verify list is visible
+- assertVisible:
+    id: "home-favorites-section"

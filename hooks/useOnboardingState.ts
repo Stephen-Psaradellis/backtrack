@@ -57,6 +57,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { AvatarConfig, DEFAULT_AVATAR_CONFIG } from '../types/avatar'
+import { trackEvent, AnalyticsEvent } from '../lib/analytics'
 
 // ============================================================================
 // TYPES
@@ -365,6 +366,13 @@ export function useOnboardingState(
       if (config.persistStep) {
         savePersistedState({ lastStep: next })
       }
+
+      // Track step completion (when moving to next step, the previous step was completed)
+      trackEvent(AnalyticsEvent.ONBOARDING_STEP_COMPLETED, {
+        step_number: prev,
+        step_name: `step_${prev}`,
+      })
+
       return next
     })
   }, [config.totalSteps, config.persistStep, savePersistedState])
@@ -411,6 +419,9 @@ export function useOnboardingState(
       lastStep: config.totalSteps - 1,
     })
     setIsComplete(true)
+
+    // Track onboarding completion
+    trackEvent(AnalyticsEvent.ONBOARDING_COMPLETED)
   }, [config.totalSteps, savePersistedState])
 
   /**
@@ -488,6 +499,11 @@ export function useOnboardingState(
     // Resume from last step if not complete and persistStep is enabled
     if (!persisted.isComplete && config.persistStep && persisted.lastStep > 0) {
       setCurrentStep(persisted.lastStep)
+    }
+
+    // Track onboarding started if not complete and starting fresh
+    if (!persisted.isComplete && persisted.lastStep === 0) {
+      trackEvent(AnalyticsEvent.ONBOARDING_STARTED)
     }
 
     // Load saved avatar config or use default

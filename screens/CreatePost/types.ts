@@ -14,9 +14,17 @@ import type { TimeGranularity } from '../../types/database'
 // ============================================================================
 
 /**
- * Steps in the create post flow
+ * Steps in the create post flow (legacy 6-step)
  */
-export type CreatePostStep = 'photo' | 'avatar' | 'note' | 'location' | 'time' | 'review'
+export type CreatePostStepLegacy = 'photo' | 'avatar' | 'note' | 'location' | 'time' | 'review'
+
+/**
+ * Steps in the new 3-moment create post flow
+ * - scene: Where & When (location + time)
+ * - moment: Who & What (avatar + note)
+ * - seal: Seal & Send (photo verification + review + submit)
+ */
+export type CreatePostStep = 'scene' | 'moment' | 'seal'
 
 /**
  * Form data for creating a post
@@ -51,41 +59,66 @@ export interface StepConfig {
 // ============================================================================
 
 /**
- * Step configuration for the flow
+ * Step configuration for the new 3-moment flow
  */
 export const STEPS: StepConfig[] = [
   {
-    id: 'photo',
+    id: 'scene',
+    title: 'Where & When',
+    subtitle: 'Set the scene for your missed connection',
+    icon: '📍',
+  },
+  {
+    id: 'moment',
+    title: 'Who & What',
+    subtitle: 'Describe who you saw and your message',
+    icon: '👤',
+  },
+  {
+    id: 'seal',
+    title: 'Seal & Send',
+    subtitle: 'Verify yourself and post',
+    icon: '✉️',
+  },
+]
+
+/**
+ * Legacy step configuration (for reference)
+ * Note: Uses CreatePostStepLegacy type, not the new CreatePostStep
+ */
+export const STEPS_LEGACY = [
+  {
+    id: 'photo' as CreatePostStepLegacy,
     title: 'Verify Yourself',
     subtitle: 'Select or take a photo to verify your identity',
     icon: '📸',
   },
   {
-    id: 'avatar',
+    id: 'avatar' as CreatePostStepLegacy,
     title: 'Describe Who You Saw',
     subtitle: 'Build an avatar of the person you noticed',
     icon: '👤',
   },
   {
-    id: 'note',
+    id: 'note' as CreatePostStepLegacy,
     title: 'Write a Note',
     subtitle: 'What would you like to say to them?',
     icon: '✍️',
   },
   {
-    id: 'location',
+    id: 'location' as CreatePostStepLegacy,
     title: 'Where Did You See Them?',
     subtitle: 'Select the location of your missed connection',
     icon: '📍',
   },
   {
-    id: 'time',
+    id: 'time' as CreatePostStepLegacy,
     title: 'When Did You See Them?',
     subtitle: 'Add when you saw them (optional)',
     icon: '🕐',
   },
   {
-    id: 'review',
+    id: 'review' as CreatePostStepLegacy,
     title: 'Review Your Post',
     subtitle: "Make sure everything looks right before posting",
     icon: '✅',

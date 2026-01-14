@@ -34,11 +34,14 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { Image } from 'react-native';
 import {
   LOCAL_AVATAR_PRESETS,
   AVATAR_CDN,
   getAvatarPreset,
   getAvatarUrl,
+  getAvatarThumbnailUrl,
+  fetchCdnAvatars,
 } from './defaults';
 import type {
   AvatarPreset,
@@ -804,6 +807,97 @@ export function usePreloadAvatar(
 }
 
 // =============================================================================
+// THUMBNAIL PRELOADING
+// =============================================================================
+
+/**
+ * Preload thumbnail images for fast avatar selection UI.
+ * Thumbnails are ~10-30KB JPG images that load very quickly.
+ *
+ * @param avatarIds - Array of avatar IDs to preload thumbnails for
+ * @returns Promise that resolves when all thumbnails are preloaded
+ */
+async function preloadThumbnails(avatarIds: string[]): Promise<void> {
+  const preloadPromises = avatarIds.map(async (avatarId) => {
+    const thumbnailUrl = getAvatarThumbnailUrl(avatarId);
+    if (thumbnailUrl) {
+      try {
+        await Image.prefetch(thumbnailUrl);
+      } catch {
+        // Silently ignore prefetch errors
+      }
+    }
+  });
+
+  await Promise.allSettled(preloadPromises);
+}
+
+/**
+ * Preload first N thumbnails of each gender for fast initial display.
+ * Call this on app initialization.
+ *
+ * @param countPerGender - Number of thumbnails to preload per gender (default: 5)
+ */
+async function preloadInitialThumbnails(countPerGender = 5): Promise<void> {
+  try {
+    // Fetch CDN avatars first to get all available presets
+    const cdnAvatars = await fetchCdnAvatars();
+    const allAvatars = [...LOCAL_AVATAR_PRESETS, ...cdnAvatars];
+
+    // Get first N of each gender
+    const maleAvatars = allAvatars.filter((a) => a.gender === 'M').slice(0, countPerGender);
+    const femaleAvatars = allAvatars.filter((a) => a.gender === 'F').slice(0, countPerGender);
+
+    // Preload thumbnails for both genders
+    const allThumbnailIds = [...maleAvatars, ...femaleAvatars].map((a) => a.id);
+    await preloadThumbnails(allThumbnailIds);
+
+    console.log(`[AvatarLoader] Preloaded ${allThumbnailIds.length} initial thumbnails`);
+  } catch (error) {
+    console.warn('[AvatarLoader] Failed to preload initial thumbnails:', error);
+  }
+}
+
+/**
+ * Preload thumbnails for avatars adjacent to the current selection.
+ * Call this when user navigates between avatars for smooth transitions.
+ *
+ * @param currentIndex - Current avatar index
+ * @param presets - Array of avatar presets
+ * @param count - Number of avatars to preload in each direction (default: 2)
+ */
+function preloadAdjacentThumbnails(
+  currentIndex: number,
+  presets: AvatarPreset[],
+  count = 2
+): void {
+  if (presets.length === 0) return;
+
+  const adjacentIds: string[] = [];
+
+  // Preload previous N avatars
+  for (let i = 1; i <= count; i++) {
+    const prevIndex = (currentIndex - i + presets.length) % presets.length;
+    if (presets[prevIndex]) {
+      adjacentIds.push(presets[prevIndex].id);
+    }
+  }
+
+  // Preload next N avatars
+  for (let i = 1; i <= count; i++) {
+    const nextIndex = (currentIndex + i) % presets.length;
+    if (presets[nextIndex]) {
+      adjacentIds.push(presets[nextIndex].id);
+    }
+  }
+
+  // Preload without awaiting (fire and forget for UI responsiveness)
+  preloadThumbnails(adjacentIds).catch(() => {
+    // Silently ignore
+  });
+}
+
+// =============================================================================
 // EXPORTS
 // =============================================================================
 
@@ -820,6 +914,9 @@ export const avatarLoader = {
   preloadAvatars,
   preloadLocalAvatars,
   fetchAndPreloadCDNAvatars,
+  preloadThumbnails,
+  preloadInitialThumbnails,
+  preloadAdjacentThumbnails,
 
   // Queue processing
   processPreloadQueue,

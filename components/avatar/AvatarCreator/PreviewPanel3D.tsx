@@ -109,14 +109,14 @@ function ViewToggle({ view, onViewChange }: ViewToggleProps): React.JSX.Element 
 // =============================================================================
 
 export interface PreviewPanel3DProps {
-  /** Height of the preview panel */
+  /** Height of the preview panel (optional - uses flex if not set) */
   height?: number;
   /** Enable debug logging */
   debug?: boolean;
 }
 
 export function PreviewPanel3D({
-  height = 280,
+  height,
   debug = false,
 }: PreviewPanel3DProps): React.JSX.Element {
   const avatarId = useAvatarId();
@@ -177,13 +177,15 @@ export function PreviewPanel3D({
     setAvatarLoading(false);
   }, [setAvatarLoading]);
 
-  // Calculate preview container height (minus action bar)
-  const previewHeight = height - 56;
+  // Container style - use flex if no height, otherwise fixed height
+  const containerStyle = height
+    ? [styles.container, { height }]
+    : [styles.container, styles.containerFlex];
 
   // Error state
   if (has3DError) {
     return (
-      <View style={[styles.container, { height }]}>
+      <View style={containerStyle}>
         {/* Top actions row */}
         <View style={styles.topActions}>
           <View style={styles.leftActions}>
@@ -225,7 +227,7 @@ export function PreviewPanel3D({
   }
 
   return (
-    <View style={[styles.container, { height }]}>
+    <View style={containerStyle}>
       {/* Top actions row */}
       <View style={styles.topActions}>
         <View style={styles.leftActions}>
@@ -267,7 +269,6 @@ export function PreviewPanel3D({
           key={`avatar3d-${retryKey}`}
           avatarId={avatarId}
           view={previewView}
-          height={previewHeight}
           onReady={handle3DReady}
           onError={handle3DError}
           onAvatarLoading={handleAvatarLoading}
@@ -289,6 +290,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  containerFlex: {
+    flex: 1,
   },
   topActions: {
     flexDirection: 'row',

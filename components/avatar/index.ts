@@ -36,5 +36,5 @@ export {
 // =============================================================================
 
 export { AvatarCreator, type AvatarCreatorProps } from './AvatarCreator';
-export { AvatarBrowser } from './AvatarCreator/AvatarBrowser';
+export { AvatarSelector } from './AvatarCreator/AvatarSelector';
 export { PreviewPanel3D } from './AvatarCreator/PreviewPanel3D';

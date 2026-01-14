@@ -30,7 +30,10 @@ import type { CameraPreset } from './types';
 // =============================================================================
 
 /** Timeout in milliseconds before showing loading failure message */
-const LOADING_TIMEOUT_MS = 15000; // 15 seconds
+const LOADING_TIMEOUT_MS = 8000; // 8 seconds - reduced from 15s for better UX
+
+/** Warning threshold - show "loading slowly" message after this time */
+const LOADING_SLOW_THRESHOLD_MS = 3000; // 3 seconds
 
 /** User-friendly error messages mapped from technical error codes */
 const USER_FRIENDLY_ERRORS: Record<string, string> = {
@@ -103,39 +106,61 @@ export function Avatar3DCreator({
   const webglRef = useRef<WebGL3DViewRef>(null);
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingSlow, setIsLoadingSlow] = useState(false);
+  const [loadStartTime, setLoadStartTime] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [loadAttempts, setLoadAttempts] = useState(0);
 
-  // Timeout ref for tracking loading timeout
+  // Timeout refs for tracking loading states
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slowLoadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
-   * Clear the loading timeout
+   * Clear all loading timeouts
    */
   const clearLoadingTimeout = useCallback(() => {
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
-      if (debug) {
-        console.log('[Avatar3DCreator] Cleared loading timeout');
-      }
+    }
+    if (slowLoadingTimeoutRef.current) {
+      clearTimeout(slowLoadingTimeoutRef.current);
+      slowLoadingTimeoutRef.current = null;
+    }
+    setIsLoadingSlow(false);
+    if (debug) {
+      console.log('[Avatar3DCreator] Cleared loading timeouts');
     }
   }, [debug]);
 
   /**
    * Start the loading timeout
    * If the 3D preview doesn't load within LOADING_TIMEOUT_MS, show an error
+   * Also starts slow loading detection for progressive feedback
    */
   const startLoadingTimeout = useCallback(() => {
     // Clear any existing timeout first
     clearLoadingTimeout();
 
+    // Track when loading started
+    setLoadStartTime(Date.now());
+
+    // Start slow loading detection
+    slowLoadingTimeoutRef.current = setTimeout(() => {
+      setIsLoadingSlow(true);
+      if (debug) {
+        console.log('[Avatar3DCreator] Loading is slow (>', LOADING_SLOW_THRESHOLD_MS, 'ms)');
+      }
+    }, LOADING_SLOW_THRESHOLD_MS);
+
+    // Start main timeout
     loadingTimeoutRef.current = setTimeout(() => {
       console.error('[Avatar3DCreator] Loading timeout after', LOADING_TIMEOUT_MS, 'ms');
       setError(getUserFriendlyError('TIMEOUT'));
       setErrorCode('TIMEOUT');
       setIsLoading(false);
+      setIsLoadingSlow(false);
       onError?.({ message: 'Loading timeout', code: 'TIMEOUT' });
     }, LOADING_TIMEOUT_MS);
 
@@ -260,8 +285,13 @@ export function Avatar3DCreator({
   // RENDER: Always mount WebGL3DView, overlay loading/error states
   // ==========================================================================
 
+  // Use flex when no height specified, otherwise fixed height
+  const containerStyle = height
+    ? [styles.container, { height }]
+    : [styles.container, styles.containerFlex];
+
   return (
-    <View style={[styles.container, { height }]} testID={testID}>
+    <View style={containerStyle} testID={testID}>
       {/* Always render WebGL3DView so it can initialize and send READY */}
       <WebGL3DView
         key={`webgl-${loadAttempts}`}
@@ -270,6 +300,10 @@ export function Avatar3DCreator({
         mode="r3f"
         onReady={handleReady}
         onError={handleError}
+        onAvatarLoaded={(avatarId) => {
+          console.log('[Avatar3DCreator] Avatar loaded:', avatarId);
+          onAvatarLoaded?.(avatarId);
+        }}
         showLoading={false}
         debug={debug}
       />
@@ -279,6 +313,11 @@ export function Avatar3DCreator({
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#6366F1" />
           <Text style={styles.loadingText}>Loading 3D Preview...</Text>
+          {isLoadingSlow && (
+            <Text style={styles.loadingSubtextSlow}>
+              This is taking a bit longer than usual...
+            </Text>
+          )}
           {loadAttempts > 0 && (
             <Text style={styles.loadingSubtext}>Attempt {loadAttempts + 1}</Text>
           )}
@@ -337,6 +376,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  containerFlex: {
+    flex: 1,
+  },
   webglView: {
     flex: 1,
     borderRadius: 12,
@@ -365,6 +407,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  loadingSubtextSlow: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#F59E0B',
+    textAlign: 'center',
   },
   errorTitle: {
     marginTop: 12,

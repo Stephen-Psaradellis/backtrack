@@ -1,0 +1,49 @@
+# Create Post Flow Test
+# Tests the full post creation wizard flow
+#
+# Note: This is a complex multi-step flow that requires:
+# - User logged in
+# - Location permissions (handled during login)
+# - The full wizard has steps: Location, Time, Selfie, Avatar, Note, Review
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in with test account (has seeded favorites)
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Verify map and favorites sections are showing
+- assertVisible:
+    id: "home-map-container"
+
+- assertVisible:
+    id: "home-favorites-section"
+
+# Expand favorites section if collapsed (tap on header)
+- tapOn:
+    id: "home-favorites-header"
+- waitForAnimationToEnd
+
+# Verify favorites list is visible - if user has favorites
+# The test account should have at least one favorite location
+- extendedWaitUntil:
+    visible: "Your Favorites"
+    timeout: 10000
+
+# Note: Full CreatePost flow testing requires user to have a favorite location
+# This test verifies the entry points exist
+# More comprehensive test would include:
+# 1. Tapping on a favorite's "Post Here" button
+# 2. Going through the CreatePost wizard steps

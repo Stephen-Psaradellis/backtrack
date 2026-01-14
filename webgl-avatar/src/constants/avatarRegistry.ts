@@ -218,6 +218,38 @@ export function getAvatarById(id: string): AvatarPreset | undefined {
 }
 
 /**
+ * Check if an avatar ID is valid (local or CDN)
+ * This validates that the ID can be resolved to an avatar URL
+ * @param id - Avatar ID to validate
+ * @returns true if the avatar ID is valid
+ */
+export function isValidAvatarId(id: string): boolean {
+  if (!id || typeof id !== 'string') return false;
+
+  // Check if it's a local avatar
+  if (getAvatarById(id)) return true;
+
+  // Check if it's mapped in LOCAL_TO_CDN_MAP
+  if (LOCAL_TO_CDN_MAP[id]) return true;
+
+  // Check if it's a CDN avatar with 'cdn:' prefix
+  if (id.startsWith('cdn:')) return true;
+
+  // Check if it's a CDN avatar with 'avatars_' prefix (transformed path)
+  // Format: avatars_{ethnicity}_{filename}
+  if (id.startsWith('avatars_')) {
+    const parts = id.split('_');
+    // Need at least: avatars, ethnicity, and one more part
+    return parts.length >= 3;
+  }
+
+  // Check if it's a direct path format (contains /)
+  if (id.includes('/')) return true;
+
+  return false;
+}
+
+/**
  * Get the URL for an avatar model
  * @param avatarId - Avatar ID or preset object
  * @returns Full URL to the GLB file
@@ -243,7 +275,16 @@ export function getAvatarUrl(avatarId: string | AvatarPreset): string {
 
     // Handle CDN avatar IDs that were created by replacing / with _
     // Example: avatars_Black_Black_F_3_Util -> avatars/Black/Black_F_3_Util.glb
+    // Special case: avatars_X_Non-validated_X_AIAN_M_1_Casual -> avatars/X_Non-validated/X_AIAN_M_1_Casual.glb
     if (id.startsWith('avatars_')) {
+      // Handle the special X_Non-validated folder which contains underscores
+      // The folder name is "X_Non-validated" and filenames start with "X_"
+      const xNonValidatedPrefix = 'avatars_X_Non-validated_';
+      if (id.startsWith(xNonValidatedPrefix)) {
+        const filename = id.slice(xNonValidatedPrefix.length);
+        return `${CDN_SOURCE.baseUrl}avatars/X_Non-validated/${filename}.glb`;
+      }
+
       const parts = id.split('_');
       // parts[0] = 'avatars', parts[1] = ethnicity folder, rest = filename
       if (parts.length >= 3) {
@@ -441,6 +482,7 @@ export default {
   CDN_SOURCE,
   LOCAL_BASE_PATH,
   getAvatarById,
+  isValidAvatarId,
   getAvatarUrl,
   getAvatarThumbnailUrl,
   filterAvatars,

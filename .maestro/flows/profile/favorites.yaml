@@ -1,0 +1,54 @@
+# Profile Favorites Test
+# Tests navigating from profile to view/manage favorites
+#
+# Note: Favorites are managed on the Home screen, not Profile.
+# This test navigates back to Home to verify favorites functionality.
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we start on home screen with favorites
+- assertVisible:
+    id: "home-screen"
+
+# Verify favorites section is visible
+- assertVisible:
+    id: "home-favorites-section"
+
+# Verify favorites header
+- assertVisible:
+    id: "home-favorites-header"
+
+- assertVisible: "Your Favorites"
+
+# Test adding a favorite via the Add Favorite button
+- assertVisible:
+    id: "home-add-favorite-button"
+
+# Note: Actually adding a favorite requires location interaction
+# which would navigate to an add modal
+
+# Test expand/collapse functionality
+- tapOn:
+    id: "home-favorites-header"
+
+- waitForAnimationToEnd
+
+# Toggle back
+- tapOn:
+    id: "home-favorites-header"
+
+- waitForAnimationToEnd
+
+# Verify favorites section is still functional
+- assertVisible:
+    id: "home-favorites-section"

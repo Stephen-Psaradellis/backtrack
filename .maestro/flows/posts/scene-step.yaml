@@ -1,0 +1,136 @@
+# Scene Step Test (Moment 1: Where & When)
+# Tests the location selection and time specification step in isolation
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in with test account
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Navigate to create post via favorites
+# Wait for home screen to fully load
+- extendedWaitUntil:
+    visible: "Your Favorites"
+    timeout: 15000
+
+# Tap favorites header using coordinate (at bottom of screen where header is)
+- tapOn:
+    point: 50%, 78%
+
+# Wait for expansion animation
+- waitForAnimationToEnd
+
+# Swipe up to reveal favorites cards
+- swipe:
+    direction: UP
+    duration: 500
+- waitForAnimationToEnd
+
+# Wait for favorites to appear and tap on first one
+- extendedWaitUntil:
+    visible: "Current Location"
+    timeout: 15000
+
+- tapOn: "Current Location"
+- waitForAnimationToEnd
+
+# Wait for Post Here button to appear (shown when favorite is selected)
+- extendedWaitUntil:
+    visible: "Post Here"
+    timeout: 10000
+
+- tapOn: "Post Here"
+- waitForAnimationToEnd
+
+# ============================================================================
+# TEST SCENE STEP ELEMENTS
+# ============================================================================
+
+# Verify we're on the Scene step
+- extendedWaitUntil:
+    visible: "Where & When"
+    timeout: 10000
+
+# Verify location section header
+- assertVisible: "Where did you see them?"
+
+# Verify "Required" badge is shown
+- assertVisible: "Required"
+
+# Verify time section is available
+- assertVisible: "When? (optional)"
+
+# ============================================================================
+# TEST TIME SELECTION
+# ============================================================================
+
+# Tap to add time
+- tapOn:
+    id: "create-post-add-time"
+- waitForAnimationToEnd
+
+# Verify day options are shown
+- assertVisible: "What day?"
+- assertVisible: "Today"
+- assertVisible: "Yesterday"
+- assertVisible: "This week"
+- assertVisible: "Earlier"
+
+# Verify period options are shown
+- assertVisible: "What time of day?"
+- assertVisible: "Morning"
+- assertVisible: "Afternoon"
+- assertVisible: "Evening/Night"
+
+# Test day selection
+- tapOn:
+    id: "create-post-day-yesterday"
+- waitForAnimationToEnd
+
+# Verify yesterday is selected (button should show as selected state)
+
+# Test period selection
+- tapOn:
+    id: "create-post-period-morning"
+- waitForAnimationToEnd
+
+# Verify morning is selected
+
+# ============================================================================
+# TEST SKIP TIME FUNCTIONALITY
+# ============================================================================
+
+# Tap skip to clear time selection
+- tapOn:
+    id: "create-post-skip-time"
+- waitForAnimationToEnd
+
+# Verify we're back to the "Add when you saw them" state
+- assertVisible: "Add when you saw them"
+
+# ============================================================================
+# TEST NAVIGATION
+# ============================================================================
+
+# Tap back to go back to home
+- tapOn:
+    id: "create-post-scene-back"
+- waitForAnimationToEnd
+
+# Verify we're back on home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 10000

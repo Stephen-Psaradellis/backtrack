@@ -1,0 +1,69 @@
+# Check-in Flow Test
+# Tests GPS-verified check-in at a nearby location
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+# - GPS/Location enabled on device (or mock location set)
+# - User is near a location in the database (within 200m)
+#
+# Note: For emulator testing, set mock GPS first:
+# adb -s emulator-5554 emu geo fix -122.4194 37.7749
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Look for the Check-in button
+- extendedWaitUntil:
+    visible: "Check In"
+    timeout: 10000
+
+# Tap the check-in button
+- tapOn:
+    id: "checkin-button"
+
+# Wait for location permission or check-in modal
+- waitForAnimationToEnd
+
+# Handle location permission if prompted (Android)
+- runFlow:
+    when:
+      visible: "Allow"
+    file: ../common/allow-location.yaml
+
+# Wait for check-in confirmation modal
+# The modal shows the nearby location name
+- extendedWaitUntil:
+    visible: "Check In"
+    timeout: 20000
+
+# Look for the modal with location name
+# The modal should show location name and distance
+- assertVisible: "away"
+
+# Confirm check-in
+- tapOn: "Check In"
+
+# Wait for check-in to complete
+- waitForAnimationToEnd
+
+# Verify check-in was successful
+# The button should now show the location name instead of "Check In"
+# Also may show success feedback
+- extendedWaitUntil:
+    notVisible: "Check In"
+    timeout: 15000
+
+# Take screenshot for verification
+- takeScreenshot: checkin_success

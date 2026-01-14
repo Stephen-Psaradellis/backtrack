@@ -59,6 +59,7 @@ import {
   MIN_NOTE_LENGTH,
   MAX_NOTE_LENGTH,
 } from './types'
+import { trackEvent, AnalyticsEvent } from '../../lib/analytics'
 
 // ============================================================================
 // TYPES
@@ -215,7 +216,7 @@ export function useCreatePostForm(
   // STATE
   // ---------------------------------------------------------------------------
 
-  const [currentStep, setCurrentStep] = useState<CreatePostStep>('photo')
+  const [currentStep, setCurrentStep] = useState<CreatePostStep>('scene')
   const [formData, setFormData] = useState<CreatePostFormData>(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [preselectedLocation, setPreselectedLocation] = useState<LocationEntity | null>(null)
@@ -226,8 +227,8 @@ export function useCreatePostForm(
     isLoading: loadingLocations,
     refetch: refetchVisitedLocations,
   } = useVisitedLocations({
-    // Only fetch when user reaches the location step
-    enabled: currentStep === 'location',
+    // Only fetch when user reaches the scene step (location selection)
+    enabled: currentStep === 'scene',
   })
 
   // User coordinates for check-in functionality
@@ -242,8 +243,8 @@ export function useCreatePostForm(
   const {
     locations: nearbyLocations,
   } = useNearbyLocations(userCoordinates, {
-    // Only fetch when user reaches the location step and has valid coordinates
-    enabled: currentStep === 'location' && userCoordinates !== null,
+    // Only fetch when user reaches the scene step and has valid coordinates
+    enabled: currentStep === 'scene' && userCoordinates !== null,
     // Use a smaller radius for check-in purposes (within walking distance)
     radiusMeters: 200,
     maxResults: 20,
@@ -290,27 +291,23 @@ export function useCreatePostForm(
   }, [formData])
 
   /**
-   * Validation state for current step
+   * Validation state for current step (new 3-moment flow)
    */
   const isCurrentStepValid = useMemo(() => {
     switch (currentStep) {
-      case 'photo':
-        return formData.selectedPhotoId !== null
-      case 'avatar':
-        return formData.targetAvatar !== null
-      case 'note':
-        return formData.note.trim().length >= MIN_NOTE_LENGTH
-      case 'location':
-        return formData.location !== null
-      case 'time':
-        // Time step is optional - always valid
+      case 'scene':
+        // Scene requires location, time is optional
         // If a date is set, validate it's not in the future
         if (formData.sightingDate) {
           const validation = validateSightingDate(formData.sightingDate)
-          return validation.valid
+          if (!validation.valid) return false
         }
-        return true
-      case 'review':
+        return formData.location !== null
+      case 'moment':
+        // Moment requires avatar and note (min length)
+        return formData.targetAvatar !== null && formData.note.trim().length >= MIN_NOTE_LENGTH
+      case 'seal':
+        // Seal requires photo and all other fields
         return isFormValid
       default:
         return false
@@ -346,7 +343,7 @@ export function useCreatePostForm(
   /**
    * Record check-ins for nearby locations when user views the location list.
    *
-   * When the user reaches the location step, we attempt to record visits for
+   * When the user reaches the scene step, we attempt to record visits for
    * all nearby POIs. The server-side 50m proximity check in the RPC ensures
    * only legitimate visits are recorded. After recording, we refetch visited
    * locations to update the list.
@@ -355,9 +352,9 @@ export function useCreatePostForm(
    * recording visits.
    */
   useEffect(() => {
-    // Only trigger when on location step with nearby locations available
-    if (currentStep !== 'location') {
-      // Reset the flag when leaving location step
+    // Only trigger when on scene step with nearby locations available
+    if (currentStep !== 'scene') {
+      // Reset the flag when leaving scene step
       hasTriggeredCheckIns.current = false
       return
     }
@@ -488,14 +485,11 @@ export function useCreatePostForm(
 
   /**
    * Handle avatar save
+   * In the new 3-moment flow, this just updates the avatar without advancing steps
+   * (the MomentStep component handles its own modal flow)
    */
   const handleAvatarSave = useCallback((avatar: StoredAvatar) => {
     setFormData((prev) => ({ ...prev, targetAvatar: avatar }))
-    // Advance to next step after save
-    const currentIndex = STEPS.findIndex((s) => s.id === 'avatar')
-    if (currentIndex < STEPS.length - 1) {
-      setCurrentStep(STEPS[currentIndex + 1].id)
-    }
   }, [])
 
   /**
@@ -595,8 +589,15 @@ export function useCreatePostForm(
         })
 
       if (postError) {
+        trackEvent(AnalyticsEvent.POST_CREATION_ERROR, { error_type: 'database_error' })
         throw new Error('Failed to create post')
       }
+
+      // Track successful post creation (no PII - just metadata)
+      trackEvent(AnalyticsEvent.POST_CREATED, {
+        has_time: formData.sightingDate !== null,
+        has_note: formData.note.trim().length > 0,
+      })
 
       // Success - show confirmation and navigate back
       Alert.alert(

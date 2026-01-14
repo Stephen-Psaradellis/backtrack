@@ -213,7 +213,7 @@ export function RegularsModeToggle({ style }: RegularsModeToggleProps) {
       <View style={styles.infoBox}>
         <Ionicons name="information-circle-outline" size={18} color="#6B7280" />
         <Text style={styles.infoText}>
-          You become a "regular" at a location after visiting 2+ weeks in the
+          You become a &quot;regular&quot; at a location after visiting 2+ weeks in the
           past month. Regulars can see each other based on visibility settings.
         </Text>
       </View>

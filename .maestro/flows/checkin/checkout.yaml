@@ -1,0 +1,55 @@
+# Check-out Flow Test
+# Tests checking out from a location
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+# - User is currently checked in at a location
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# The check-in button should show a location name (not "Check In")
+# meaning the user is currently checked in
+- extendedWaitUntil:
+    visible:
+      id: "checkin-button"
+    timeout: 10000
+
+# Tap the check-in button to initiate checkout
+- tapOn:
+    id: "checkin-button"
+
+# Wait for checkout confirmation alert
+- waitForAnimationToEnd
+
+# The alert should ask "Are you sure you want to check out?"
+- extendedWaitUntil:
+    visible: "Check Out"
+    timeout: 10000
+
+# Confirm checkout (destructive action)
+- tapOn: "Check Out"
+
+# Wait for checkout to complete
+- waitForAnimationToEnd
+
+# Verify we're no longer checked in
+# The button should now show "Check In" again
+- extendedWaitUntil:
+    visible: "Check In"
+    timeout: 15000
+
+# Take screenshot for verification
+- takeScreenshot: checkout_success

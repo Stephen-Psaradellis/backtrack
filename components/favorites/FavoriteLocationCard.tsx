@@ -885,7 +885,7 @@ export function createFavoriteCardRenderer(options: {
   compact?: boolean
   showActions?: boolean
 }) {
-  return ({
+  const FavoriteCardRenderer = ({
     item,
     index,
   }: {
@@ -909,6 +909,8 @@ export function createFavoriteCardRenderer(options: {
       />
     )
   }
+  FavoriteCardRenderer.displayName = 'FavoriteCardRenderer'
+  return FavoriteCardRenderer
 }
 
 // ============================================================================

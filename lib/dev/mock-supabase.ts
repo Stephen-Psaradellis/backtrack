@@ -387,6 +387,8 @@ export const devMockProfile: Profile = {
   is_verified: false,
   verified_at: null,
   terms_accepted_at: null,
+  always_on_tracking_enabled: false,
+  checkin_prompt_minutes: 5,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }

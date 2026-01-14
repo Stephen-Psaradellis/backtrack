@@ -1,0 +1,19 @@
+# Allow Location Permission
+# Helper flow to grant location permission on Android
+#
+# This flow is conditionally run when permission dialog appears
+
+appId: app.backtrack.social
+---
+# Android permission dialog - tap Allow
+- tapOn:
+    text: "While using the app"
+    optional: true
+
+# Alternative text on some Android versions
+- tapOn:
+    text: "Allow"
+    optional: true
+
+# Wait for dialog to dismiss
+- waitForAnimationToEnd

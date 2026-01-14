@@ -1,0 +1,48 @@
+# Edit Profile Test
+# Tests editing the display name in profile
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+
+# Wait for profile screen
+- waitForAnimationToEnd
+
+# Verify we're on the profile screen
+- assertVisible: "Profile"
+
+# Scroll to see Profile Information section with Edit button
+- scroll
+
+# Verify Profile Information section
+- assertVisible: "Profile Information"
+- assertVisible: "DISPLAY NAME"
+
+# Find and tap the Edit button for display name
+- tapOn: "Edit"
+
+# Wait for edit mode to activate
+- waitForAnimationToEnd
+
+# Verify we're in edit mode by looking for Save button
+- assertVisible: "Save"
+
+# Go back without saving (use back button)
+- pressKey: back
+
+# Wait for navigation back
+- waitForAnimationToEnd
+
+# Verify we're back on Profile screen
+- assertVisible: "Profile"

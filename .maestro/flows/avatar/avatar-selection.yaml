@@ -1,0 +1,64 @@
+# Avatar Selection Test
+# Tests the avatar creation/editing flow from the Profile screen
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+
+# Wait for profile screen
+- waitForAnimationToEnd
+
+# Verify we're on Profile screen
+- assertVisible: "Profile"
+
+# Scroll down to find the My Avatar section
+- scroll
+- scroll
+
+# Verify My Avatar section exists
+- assertVisible: "My Avatar"
+
+# Try to tap Edit Avatar button (using testID for reliability)
+# If user doesn't have avatar, try Create Avatar button
+- runFlow:
+    when:
+      visible:
+        id: "profile-edit-avatar-button"
+    commands:
+      - tapOn:
+          id: "profile-edit-avatar-button"
+
+- runFlow:
+    when:
+      visible:
+        id: "profile-create-avatar-button"
+    commands:
+      - tapOn:
+          id: "profile-create-avatar-button"
+
+# Wait for avatar creator screen to load
+- waitForAnimationToEnd
+
+# Verify we're in avatar creator
+- assertVisible: "Cancel"
+- assertVisible: "Save"
+
+# Cancel without saving to return to profile
+- tapOn: "Cancel"
+
+# Wait for navigation back
+- waitForAnimationToEnd
+
+# Verify we're back on profile screen
+- assertVisible: "Profile Information"

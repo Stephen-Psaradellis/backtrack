@@ -902,6 +902,7 @@ export function ChatScreen(): React.ReactNode {
             editable={!sending && conversation?.status === 'active'}
             maxLength={MAX_MESSAGE_LENGTH}
             multiline
+            testID="chat-message-input"
           />
           <TouchableOpacity
             style={[
@@ -910,6 +911,7 @@ export function ChatScreen(): React.ReactNode {
             ]}
             onPress={handleSendMessage}
             disabled={!canSend}
+            testID="chat-send-button"
           >
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
@@ -917,6 +919,7 @@ export function ChatScreen(): React.ReactNode {
             style={styles.photoButton}
             onPress={() => setSharePhotoModalVisible(true)}
             disabled={!conversation || conversation.status !== 'active'}
+            testID="chat-photo-button"
           >
             <Text style={styles.photoButtonText}>📷</Text>
           </TouchableOpacity>
@@ -942,6 +945,7 @@ export function ChatScreen(): React.ReactNode {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      testID="chat-screen"
     >
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
@@ -967,6 +971,7 @@ export function ChatScreen(): React.ReactNode {
             nestedScrollEnabled
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
+            testID="chat-message-list"
           />
 
           {renderInput()}

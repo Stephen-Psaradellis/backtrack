@@ -33,7 +33,6 @@ import type {
   FavoriteLocation,
   FavoriteLocationInsert,
   FavoriteLocationUpdate,
-  UUID,
 } from '../types/database'
 
 // ============================================================================
@@ -271,20 +270,14 @@ export function validateUpdateFavoriteRequest(
   }
 
   // Validate coordinates if being updated
-  if (updates.latitude !== undefined || updates.longitude !== undefined) {
-    const lat = updates.latitude ?? 0 // Placeholder for partial update check
-    const lng = updates.longitude ?? 0
-
-    // Only validate if both are being updated, or check individual validity
-    if (updates.latitude !== undefined) {
-      if (updates.latitude < -90 || updates.latitude > 90) {
-        return FAVORITES_ERRORS.INVALID_COORDINATES
-      }
+  if (updates.latitude !== undefined) {
+    if (updates.latitude < -90 || updates.latitude > 90) {
+      return FAVORITES_ERRORS.INVALID_COORDINATES
     }
-    if (updates.longitude !== undefined) {
-      if (updates.longitude < -180 || updates.longitude > 180) {
-        return FAVORITES_ERRORS.INVALID_COORDINATES
-      }
+  }
+  if (updates.longitude !== undefined) {
+    if (updates.longitude < -180 || updates.longitude > 180) {
+      return FAVORITES_ERRORS.INVALID_COORDINATES
     }
   }
 
@@ -758,7 +751,7 @@ export async function getFavoritesCount(
 // EXPORTS
 // ============================================================================
 
-export default {
+const favoritesApi = {
   addFavorite,
   removeFavorite,
   updateFavorite,
@@ -773,3 +766,5 @@ export default {
   MAX_CUSTOM_NAME_LENGTH,
   MAX_FAVORITES_PER_USER,
 }
+
+export default favoritesApi

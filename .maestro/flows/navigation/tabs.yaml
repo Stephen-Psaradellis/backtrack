@@ -1,0 +1,55 @@
+# Tab Navigation Test
+# Tests that all tabs are accessible and display correct content
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we start on Home tab
+- assertVisible: "Backtrack"
+
+# Test 1: Navigate to Chats tab
+- tapOn: "Chats"
+- waitForAnimationToEnd
+
+# Verify Chats screen is visible
+- assertVisible: "Conversations"
+
+# Test 2: Navigate to Profile tab
+- tapOn: "Profile"
+- waitForAnimationToEnd
+
+# Verify Profile screen is visible (Profile header is at top)
+- assertVisible: "Profile"
+# Scroll to see Profile Information section
+- scroll
+- assertVisible: "Profile Information"
+
+# Test 3: Navigate back to Home tab
+- tapOn: "Explore"
+- waitForAnimationToEnd
+
+# Verify Home screen is visible again
+- assertVisible: "Backtrack"
+
+# Test 4: Verify tab persistence - navigate away and back
+- tapOn: "Chats"
+- waitForAnimationToEnd
+- assertVisible: "Conversations"
+
+- tapOn: "Profile"
+- waitForAnimationToEnd
+- assertVisible: "Profile"
+
+# Return to Home for other tests
+- tapOn: "Explore"
+- waitForAnimationToEnd
+- assertVisible: "Backtrack"

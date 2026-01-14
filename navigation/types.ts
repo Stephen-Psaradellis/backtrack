@@ -37,6 +37,8 @@ export type MainStackParamList = {
   CreatePost: { locationId?: string }
   /** View posts at a specific location */
   Ledger: { locationId: string; locationName: string }
+  /** Favorites screen for managing saved locations */
+  Favorites: undefined
   /**
    * View details of a specific post
    * Deep-linked from match notifications: backtrack://match/:postId
@@ -83,6 +85,8 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   /** Home tab - Map view with location discovery */
   HomeTab: undefined
+  /** Favorites tab - Saved locations */
+  FavoritesTab: undefined
   /** Chat list tab - All conversations */
   ChatsTab: undefined
   /** Profile tab - User settings and avatar */
@@ -107,6 +111,11 @@ export type AvatarCreatorScreenProps = NativeStackScreenProps<MainStackParamList
 // Tab Screen Props with composite navigation (can access both tab and stack navigation)
 export type HomeTabScreenProps = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'HomeTab'>,
+  NativeStackScreenProps<MainStackParamList>
+>
+
+export type FavoritesTabScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'FavoritesTab'>,
   NativeStackScreenProps<MainStackParamList>
 >
 
@@ -178,6 +187,7 @@ export const SCREENS = {
   MainTabs: 'MainTabs' as const,
   CreatePost: 'CreatePost' as const,
   Ledger: 'Ledger' as const,
+  Favorites: 'Favorites' as const,
   PostDetail: 'PostDetail' as const,
   Chat: 'Chat' as const,
   AvatarCreator: 'AvatarCreator' as const,
@@ -186,6 +196,7 @@ export const SCREENS = {
 
   // Tabs
   HomeTab: 'HomeTab' as const,
+  FavoritesTab: 'FavoritesTab' as const,
   ChatsTab: 'ChatsTab' as const,
   ProfileTab: 'ProfileTab' as const,
 }
@@ -195,6 +206,7 @@ export const SCREENS = {
  */
 export const TAB_ICONS = {
   HomeTab: { focused: 'map', unfocused: 'map-outline' },
+  FavoritesTab: { focused: 'heart', unfocused: 'heart-outline' },
   ChatsTab: { focused: 'chatbubbles', unfocused: 'chatbubbles-outline' },
   ProfileTab: { focused: 'person', unfocused: 'person-outline' },
 } as const
@@ -204,6 +216,7 @@ export const TAB_ICONS = {
  */
 export const TAB_LABELS: Record<keyof MainTabParamList, string> = {
   HomeTab: 'Explore',
+  FavoritesTab: 'Favorites',
   ChatsTab: 'Chats',
   ProfileTab: 'Profile',
 }
@@ -270,6 +283,7 @@ export function isMainScreen(screenName: string): screenName is keyof MainStackP
     'MainTabs',
     'CreatePost',
     'Ledger',
+    'Favorites',
     'PostDetail',
     'Chat',
     'AvatarCreator',

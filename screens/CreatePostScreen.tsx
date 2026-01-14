@@ -2,13 +2,10 @@
  * CreatePostScreen
  *
  * Full producer flow screen for creating "missed connection" posts.
- * Guides users through a multi-step process:
- * 1. Photo selection - Verify identity with a photo
- * 2. Avatar building - Describe the person of interest
- * 3. Note writing - Write a message about the missed connection
- * 4. Location selection - Choose where the connection happened
- * 5. Time selection (optional) - When the connection happened
- * 6. Review and submit
+ * Uses a streamlined 3-moment flow:
+ * 1. Scene (Where & When) - Location + optional time
+ * 2. Moment (Who & What) - Avatar + note
+ * 3. Seal (Verify & Send) - Photo verification + review + submit
  *
  * This component orchestrates the step flow, delegating rendering
  * and state management to extracted components and hooks.
@@ -37,12 +34,9 @@ import { useCreatePostForm } from './CreatePost/useCreatePostForm'
 import { sharedStyles } from './CreatePost/styles'
 import { StepHeader, ProgressBar } from './CreatePost/components'
 import {
-  PhotoStep,
-  AvatarStep,
-  NoteStep,
-  LocationStep,
-  TimeStep,
-  ReviewStep,
+  SceneStep,
+  MomentStep,
+  SealStep,
 } from './CreatePost/steps'
 import type { CreatePostStep } from './CreatePost/types'
 
@@ -53,7 +47,7 @@ import type { CreatePostStep } from './CreatePost/types'
 /**
  * CreatePostScreen - Full producer flow for creating posts
  *
- * Orchestrates a 6-step wizard using extracted step components
+ * Orchestrates a 3-moment wizard using extracted step components
  * and the useCreatePostForm hook for state management.
  */
 export function CreatePostScreen(): React.ReactNode {
@@ -103,11 +97,11 @@ export function CreatePostScreen(): React.ReactNode {
   }, [form, navigation])
 
   /**
-   * Handle avatar save with selection haptic feedback
+   * Handle avatar change with selection haptic feedback
    */
-  const handleAvatarWithFeedback = useCallback((config: any) => {
+  const handleAvatarChangeWithFeedback = useCallback((avatar: any) => {
     selectionFeedback()
-    form.handleAvatarSave(config)
+    form.handleAvatarChange(avatar)
   }, [form])
 
   /**
@@ -124,17 +118,6 @@ export function CreatePostScreen(): React.ReactNode {
   const handlePhotoSelectWithFeedback = useCallback((photoId: string) => {
     selectionFeedback()
     form.handlePhotoSelect(photoId)
-  }, [form])
-
-  /**
-   * Handle time skip with selection haptic feedback
-   */
-  const handleTimeSkipWithFeedback = useCallback(() => {
-    selectionFeedback()
-    // Clear any set time data and proceed
-    form.handleSightingDateChange(null)
-    form.handleTimeGranularityChange(null)
-    form.handleNext()
   }, [form])
 
   /**
@@ -174,36 +157,39 @@ export function CreatePostScreen(): React.ReactNode {
   )
 
   /**
-   * Render current step content based on currentStep
+   * Render current step content based on currentStep (new 3-moment flow)
    */
   const renderStepContent = (): React.ReactNode => {
     switch (form.currentStep) {
-      case 'photo':
+      case 'scene':
         return (
-          <PhotoStep
-            selectedPhotoId={form.formData.selectedPhotoId}
-            onPhotoSelect={handlePhotoSelectWithFeedback}
+          <SceneStep
+            locations={form.visitedLocations.map(locationToItem)}
+            selectedLocation={form.formData.location}
+            onLocationSelect={handleLocationSelectWithFeedback}
+            userCoordinates={
+              form.userLatitude && form.userLongitude
+                ? { latitude: form.userLatitude, longitude: form.userLongitude }
+                : null
+            }
+            loadingLocations={form.loadingLocations || form.locationLoading}
+            isPreselected={form.preselectedLocation !== null}
+            sightingDate={form.formData.sightingDate}
+            timeGranularity={form.formData.timeGranularity}
+            onDateChange={form.handleSightingDateChange}
+            onGranularityChange={form.handleTimeGranularityChange}
             onNext={handleNextWithFeedback}
             onBack={handleBackWithFeedback}
             testID="create-post"
           />
         )
 
-      case 'avatar':
+      case 'moment':
         return (
-          <AvatarStep
-            avatar={form.formData.targetAvatar}
-            onSave={handleAvatarWithFeedback}
-            onBack={handleBackWithFeedback}
-            testID="create-post"
-          />
-        )
-
-      case 'note':
-        return (
-          <NoteStep
+          <MomentStep
             avatar={form.formData.targetAvatar}
             note={form.formData.note}
+            onAvatarChange={handleAvatarChangeWithFeedback}
             onNoteChange={form.handleNoteChange}
             onNext={handleNextWithFeedback}
             onBack={handleBackWithFeedback}
@@ -211,47 +197,16 @@ export function CreatePostScreen(): React.ReactNode {
           />
         )
 
-      case 'location':
+      case 'seal':
         return (
-          <LocationStep
-            locations={form.visitedLocations.map(locationToItem)}
-            selectedLocation={form.formData.location}
-            onSelect={handleLocationSelectWithFeedback}
-            userCoordinates={
-              form.userLatitude && form.userLongitude
-                ? { latitude: form.userLatitude, longitude: form.userLongitude }
-                : null
-            }
-            loading={form.loadingLocations || form.locationLoading}
-            onNext={handleNextWithFeedback}
-            onBack={handleBackWithFeedback}
-            testID="create-post"
-          />
-        )
-
-      case 'time':
-        return (
-          <TimeStep
-            date={form.formData.sightingDate}
-            granularity={form.formData.timeGranularity}
-            onDateChange={form.handleSightingDateChange}
-            onGranularityChange={form.handleTimeGranularityChange}
-            onNext={handleNextWithFeedback}
-            onSkip={handleTimeSkipWithFeedback}
-            onBack={handleBackWithFeedback}
-            testID="create-post"
-          />
-        )
-
-      case 'review':
-        return (
-          <ReviewStep
-            selectedPhotoId={form.formData.selectedPhotoId}
+          <SealStep
             avatar={form.formData.targetAvatar}
             note={form.formData.note}
             location={form.formData.location}
             sightingDate={form.formData.sightingDate}
             timeGranularity={form.formData.timeGranularity}
+            selectedPhotoId={form.formData.selectedPhotoId}
+            onPhotoSelect={handlePhotoSelectWithFeedback}
             isSubmitting={form.isSubmitting}
             isFormValid={form.isFormValid}
             onSubmit={handleSubmitWithFeedback}
@@ -282,17 +237,8 @@ export function CreatePostScreen(): React.ReactNode {
   // RENDER: MAIN
   // ---------------------------------------------------------------------------
 
-  // Full-screen steps (photo selector and avatar builder take full screen)
-  const isFullScreenStep = form.currentStep === 'photo' || form.currentStep === 'avatar'
-
-  if (isFullScreenStep) {
-    // Render without Tooltip to debug blank screen
-    return (
-      <View style={sharedStyles.fullScreenContainer} testID="create-post-screen">
-        {renderStepContent()}
-      </View>
-    )
-  }
+  // In the new 3-moment flow, no steps are full-screen
+  // All steps render within the standard container with header and progress bar
 
   // Render without Tooltip to fix Android blank screen issue
   return (

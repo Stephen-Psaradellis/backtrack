@@ -1,0 +1,205 @@
+# Create Post 3-Moment Flow Test
+# Tests the new streamlined 3-moment post creation wizard:
+# 1. Scene (Where & When) - Location + optional time
+# 2. Moment (Who & What) - Avatar + note
+# 3. Seal (Verify & Send) - Photo verification + review + submit
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in with test account (has seeded favorites and visited locations)
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Verify map and favorites sections are showing
+- assertVisible:
+    id: "home-map-container"
+
+- assertVisible:
+    id: "home-favorites-section"
+
+# Expand favorites section if collapsed
+- tapOn:
+    id: "home-favorites-header"
+- waitForAnimationToEnd
+
+# Wait for favorites list to load
+- extendedWaitUntil:
+    visible: "Your Favorites"
+    timeout: 10000
+
+# Swipe up to ensure favorites list is visible
+- swipe:
+    direction: UP
+    duration: 500
+- waitForAnimationToEnd
+
+# Tap on a favorite card to select it and show action buttons
+- extendedWaitUntil:
+    visible: "Current Location"
+    timeout: 10000
+
+- tapOn: "Current Location"
+- waitForAnimationToEnd
+
+# Look for a "Post Here" button (shown when favorite is selected)
+- extendedWaitUntil:
+    visible: "Post Here"
+    timeout: 10000
+
+- tapOn: "Post Here"
+
+# Wait for CreatePost screen to load
+- waitForAnimationToEnd
+
+# ============================================================================
+# MOMENT 1: SCENE (Where & When)
+# ============================================================================
+
+# Verify we're on the Scene step
+- extendedWaitUntil:
+    visible: "Where & When"
+    timeout: 10000
+
+# Verify we're on the create post screen
+- assertVisible:
+    id: "create-post-screen"
+
+# A location should be preselected since we came from favorites
+# The "Next" button should be enabled
+- assertVisible: "Where did you see them?"
+
+# Optionally add time - tap "Add when you saw them"
+- tapOn:
+    id: "create-post-add-time"
+- waitForAnimationToEnd
+
+# Select a day option
+- tapOn:
+    id: "create-post-day-today"
+- waitForAnimationToEnd
+
+# Select a time period
+- tapOn:
+    id: "create-post-period-afternoon"
+- waitForAnimationToEnd
+
+# Verify the time selection is shown
+- assertVisible: "Afternoon"
+
+# Tap Next to proceed to Moment step
+- tapOn:
+    id: "create-post-scene-next"
+- waitForAnimationToEnd
+
+# ============================================================================
+# MOMENT 2: MOMENT (Who & What)
+# ============================================================================
+
+# Verify we're on the Moment step
+- extendedWaitUntil:
+    visible: "Who & What"
+    timeout: 10000
+
+# Verify avatar section is visible
+- assertVisible: "Who did you see?"
+
+# Tap to open avatar creator
+- tapOn:
+    id: "create-post-avatar-preview"
+- waitForAnimationToEnd
+
+# Avatar creator modal should be open
+- extendedWaitUntil:
+    visible: "Describe Who You Saw"
+    timeout: 10000
+
+# Select an avatar from the grid (if visible)
+# The avatar creator shows a grid of preset avatars
+# Just save whatever is selected (uses accessibility label)
+- tapOn: "Save avatar"
+- waitForAnimationToEnd
+
+# Now we should be back on Moment step with avatar selected
+- extendedWaitUntil:
+    visible: "What would you say to them?"
+    timeout: 10000
+
+# Enter a note (minimum 10 characters)
+- tapOn:
+    id: "create-post-note-input"
+- inputText: "I saw you at the coffee shop today. Would love to chat!"
+
+# Dismiss keyboard
+- pressKey: back
+
+# Wait a moment for validation
+- waitForAnimationToEnd
+
+# Verify character count shows we have enough
+- assertNotVisible: "more characters needed"
+
+# Tap Next to proceed to Seal step
+- tapOn:
+    id: "create-post-moment-next"
+- waitForAnimationToEnd
+
+# ============================================================================
+# MOMENT 3: SEAL (Verify & Send)
+# ============================================================================
+
+# Verify we're on the Seal step
+- extendedWaitUntil:
+    visible: "Seal & Send"
+    timeout: 10000
+
+# Verify review card is visible
+- assertVisible: "Review Your Post"
+
+# Verify the note preview is shown
+- assertVisible: "Your message"
+
+# Verify photo selection section is visible
+- assertVisible: "Select a verification photo"
+
+# Verify privacy text is shown
+- assertVisible: "Your photo is only shown to matches"
+
+# The test user should have profile photos
+# If a photo is auto-selected, we can submit
+# If not, we need to select one
+
+# Try to tap on a photo (the first one should be selectable)
+# Photo tiles don't have individual testIDs, so we rely on visibility
+# The user's approved photos should show up
+
+# Wait for photos to load
+- extendedWaitUntil:
+    visible: "Post Missed Connection"
+    timeout: 15000
+
+# If photos loaded and one is selected, submit button should be enabled
+# Try tapping submit
+- tapOn:
+    id: "create-post-submit"
+
+# Wait for submission to complete
+# On success, we should navigate back to home screen
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+
+# Verify we're back on home screen after successful post
+- assertVisible: "Your Favorites"

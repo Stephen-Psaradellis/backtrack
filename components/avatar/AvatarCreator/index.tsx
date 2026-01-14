@@ -19,7 +19,7 @@ import type { StoredAvatar, AvatarView } from '../types';
 import { DEFAULT_AVATAR_ID } from '../types';
 import { createStoredAvatar, getRandomAvatarId } from '../../../lib/avatar/defaults';
 import { PreviewPanel3D } from './PreviewPanel3D';
-import { AvatarBrowser } from './AvatarBrowser';
+import { AvatarSelector } from './AvatarSelector';
 
 // =============================================================================
 // AVATAR CREATOR CONTEXT
@@ -119,7 +119,7 @@ export interface AvatarCreatorProps {
   onComplete: (avatar: StoredAvatar) => void;
   /** Called when user cancels */
   onCancel: () => void;
-  /** Preview panel height */
+  /** @deprecated Preview now fills available space - this prop is ignored */
   previewHeight?: number;
   /** Enable debug logging for 3D preview */
   debug3D?: boolean;
@@ -157,6 +157,7 @@ function Header({
       <View style={styles.headerTitleContainer}>
         <Text style={styles.headerTitle}>{title}</Text>
         {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
+        <Text style={styles.versionSignature}>v2.3-hookfix</Text>
       </View>
 
       <TouchableOpacity
@@ -181,7 +182,6 @@ interface AvatarCreatorInnerProps {
   subtitle?: string;
   onComplete: (avatar: StoredAvatar) => void;
   onCancel: () => void;
-  previewHeight: number;
   debug3D: boolean;
 }
 
@@ -190,7 +190,6 @@ function AvatarCreatorInner({
   subtitle,
   onComplete,
   onCancel,
-  previewHeight,
   debug3D,
 }: AvatarCreatorInnerProps): React.JSX.Element {
   const { avatarId, selectAvatar } = useAvatarCreatorContext();
@@ -221,17 +220,15 @@ function AvatarCreatorInner({
         onSave={handleSave}
       />
 
-      {/* 3D Preview */}
-      <PreviewPanel3D
-        height={previewHeight}
-        debug={debug3D}
-      />
-
-      {/* Avatar Browser */}
-      <AvatarBrowser
+      {/* Avatar Selector */}
+      <AvatarSelector
         selectedAvatarId={avatarId}
         onSelectAvatar={handleSelectAvatar}
-        isLoading={false}
+      />
+
+      {/* 3D Preview - expands to fill remaining space */}
+      <PreviewPanel3D
+        debug={debug3D}
       />
     </SafeAreaView>
   );
@@ -248,7 +245,6 @@ export function AvatarCreator({
   subtitle,
   onComplete,
   onCancel,
-  previewHeight = 280,
   debug3D = false,
 }: AvatarCreatorProps): React.JSX.Element {
   // State
@@ -339,7 +335,6 @@ export function AvatarCreator({
         subtitle={displaySubtitle}
         onComplete={onComplete}
         onCancel={onCancel}
-        previewHeight={previewHeight}
         debug3D={debug3D}
       />
     </AvatarCreatorContext.Provider>
@@ -392,13 +387,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'center',
   },
+  versionSignature: {
+    fontSize: 9,
+    color: '#D1D5DB',
+    marginTop: 2,
+  },
 });
 
 // =============================================================================
 // Exports
 // =============================================================================
 
-export { AvatarBrowser } from './AvatarBrowser';
+export { AvatarSelector } from './AvatarSelector';
 export { PreviewPanel3D } from './PreviewPanel3D';
 
 export default AvatarCreator;

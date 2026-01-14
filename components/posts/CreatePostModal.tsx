@@ -363,7 +363,7 @@ function EventSearchDropdown({
       {isOpen && searchQuery && !isLoading && events.length === 0 && debouncedQuery && (
         <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            No events found for "{searchQuery}"
+            No events found for &quot;{searchQuery}&quot;
           </p>
         </div>
       )}

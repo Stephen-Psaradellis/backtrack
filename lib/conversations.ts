@@ -24,7 +24,9 @@
  */
 
 import { supabase } from './supabase'
-import type { Conversation, ConversationInsert, Post, UUID } from '../types/database'
+import { captureException } from './sentry'
+import { trackEvent, AnalyticsEvent } from './analytics'
+import type { Conversation, ConversationInsert, UUID } from '../types/database'
 
 // ============================================================================
 // TYPES
@@ -252,6 +254,7 @@ export async function checkExistingConversation(
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'checkExistingConversation', consumerId, postId })
     const message = err instanceof Error ? err.message : CONVERSATION_ERRORS.CHECK_FAILED
     return {
       success: false,
@@ -313,6 +316,7 @@ export async function getConversation(
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'getConversation', conversationId })
     const message = err instanceof Error ? err.message : CONVERSATION_ERRORS.FETCH_FAILED
     return {
       success: false,
@@ -386,6 +390,9 @@ export async function createConversation(
       }
     }
 
+    // Track new match/conversation creation
+    trackEvent(AnalyticsEvent.MATCH_MADE)
+
     return {
       success: true,
       conversationId: data?.id || null,
@@ -393,6 +400,7 @@ export async function createConversation(
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'createConversation', consumerId, postId: post.id })
     const message = err instanceof Error ? err.message : CONVERSATION_ERRORS.CREATE_FAILED
     return {
       success: false,
@@ -474,6 +482,7 @@ export async function startConversation(
     // Create new conversation
     return await createConversation(userId, validPost)
   } catch (err) {
+    captureException(err, { operation: 'startConversation', consumerId, postId: post?.id })
     const message = err instanceof Error ? err.message : CONVERSATION_ERRORS.CREATE_FAILED
     return {
       success: false,
@@ -540,6 +549,7 @@ export async function getUserConversations(
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'getUserConversations', userId, activeOnly })
     const message = err instanceof Error ? err.message : CONVERSATION_ERRORS.FETCH_FAILED
     return {
       success: false,
@@ -616,6 +626,7 @@ export async function deactivateConversation(
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'deactivateConversation', conversationId, userId })
     const message = err instanceof Error ? err.message : 'Failed to deactivate conversation.'
     return {
       success: false,
@@ -628,7 +639,7 @@ export async function deactivateConversation(
 // EXPORTS
 // ============================================================================
 
-export default {
+const conversationsApi = {
   startConversation,
   checkExistingConversation,
   getConversation,
@@ -641,3 +652,5 @@ export default {
   getOtherUserId,
   CONVERSATION_ERRORS,
 }
+
+export default conversationsApi

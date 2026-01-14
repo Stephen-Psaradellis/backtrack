@@ -26,6 +26,7 @@
  */
 
 import { supabase } from './supabase'
+import { trackEvent, AnalyticsEvent, resetAnalytics } from './analytics'
 
 // ============================================================================
 // Types
@@ -191,6 +192,9 @@ export async function getDeletionStatus(): Promise<DeletionStatus> {
 export async function deleteAccountImmediately(
   userId: string
 ): Promise<DeleteAccountResult> {
+  // Perform deletion first
+  let deletionData: { success: boolean; message?: string; deleted_counts?: Record<string, number>; error?: string } | null = null
+
   try {
     const { data, error } = await supabase.rpc('delete_user_account', {
       p_user_id: userId,
@@ -213,11 +217,7 @@ export async function deleteAccountImmediately(
       }
     }
 
-    return {
-      success: true,
-      message: data?.message ?? 'Account deleted successfully',
-      deletedCounts: data?.deleted_counts,
-    }
+    deletionData = data
   } catch (error) {
     console.error('[AccountDeletion] Unexpected error:', error)
     return {
@@ -225,6 +225,22 @@ export async function deleteAccountImmediately(
       message: 'An unexpected error occurred',
       error: error instanceof Error ? error.message : 'Unknown error',
     }
+  }
+
+  // Analytics errors should not affect the deletion result
+  // The account is already deleted at this point
+  try {
+    trackEvent(AnalyticsEvent.ACCOUNT_DELETED)
+    await resetAnalytics()
+  } catch (analyticsError) {
+    console.warn('[AccountDeletion] Analytics failed after successful deletion:', analyticsError)
+    // Continue - deletion succeeded, analytics is non-critical
+  }
+
+  return {
+    success: true,
+    message: deletionData?.message ?? 'Account deleted successfully',
+    deletedCounts: deletionData?.deleted_counts,
   }
 }
 

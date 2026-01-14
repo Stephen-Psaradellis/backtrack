@@ -13,13 +13,13 @@ const { mockRpc, mockSignOut } = vi.hoisted(() => ({
 }))
 
 // Mock Supabase client
-vi.mock('../../lib/supabase/client', () => ({
-  createClient: () => ({
-    rpc: mockRpc,
+vi.mock('../../lib/supabase', () => ({
+  supabase: {
+    rpc: (...args: unknown[]) => mockRpc(...args),
     auth: {
-      signOut: mockSignOut,
+      signOut: () => mockSignOut(),
     },
-  }),
+  },
 }))
 
 // Import after mocking
@@ -267,6 +267,94 @@ describe('Account Deletion Service', () => {
 
       expect(result.success).toBe(false)
       expect(mockSignOut).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Exception handling', () => {
+    it('should handle thrown exceptions in scheduleAccountDeletion', async () => {
+      mockRpc.mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await scheduleAccountDeletion()
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Network error')
+      expect(result.message).toContain('unexpected error')
+    })
+
+    it('should handle non-Error exceptions in scheduleAccountDeletion', async () => {
+      mockRpc.mockRejectedValueOnce('String error')
+
+      const result = await scheduleAccountDeletion()
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Unknown error')
+    })
+
+    it('should handle thrown exceptions in cancelAccountDeletion', async () => {
+      mockRpc.mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await cancelAccountDeletion()
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Network error')
+    })
+
+    it('should handle non-Error exceptions in cancelAccountDeletion', async () => {
+      mockRpc.mockRejectedValueOnce('String error')
+
+      const result = await cancelAccountDeletion()
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Unknown error')
+    })
+
+    it('should handle RPC error in getDeletionStatus', async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Database error' },
+      })
+
+      const result = await getDeletionStatus()
+
+      expect(result.scheduled).toBe(false)
+    })
+
+    it('should handle thrown exceptions in getDeletionStatus', async () => {
+      mockRpc.mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await getDeletionStatus()
+
+      expect(result.scheduled).toBe(false)
+    })
+
+    it('should handle thrown exceptions in deleteAccountImmediately', async () => {
+      mockRpc.mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await deleteAccountImmediately('test-user-id')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Network error')
+    })
+
+    it('should handle non-Error exceptions in deleteAccountImmediately', async () => {
+      mockRpc.mockRejectedValueOnce('String error')
+
+      const result = await deleteAccountImmediately('test-user-id')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Unknown error')
+    })
+
+    it('should handle RPC error in deleteAccountImmediately', async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Unauthorized' },
+      })
+
+      const result = await deleteAccountImmediately('test-user-id')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Unauthorized')
     })
   })
 })

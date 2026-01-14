@@ -1,8 +1,8 @@
 /**
  * Avatar System - Type Definitions
  *
- * Preset-based avatar system using complete GLB 3D models.
- * Users select from 370+ pre-made, diverse avatar presets from the VALID project CDN.
+ * Multi-source preset-based avatar system using complete GLB 3D models.
+ * Supports 1000+ avatars from multiple CDN sources (VALID Project, Polygonal Mind, etc.)
  *
  * Categories use neutral descriptors (not ethnicity labels).
  */
@@ -43,13 +43,19 @@ export type AvatarGender = 'M' | 'F';
 
 /**
  * Outfit/clothing style categories.
+ * Extended to support multiple avatar sources.
  */
 export type AvatarOutfit =
   | 'Casual'
   | 'Business'
   | 'Medical'
   | 'Military'
-  | 'Utility';
+  | 'Utility'
+  | 'Fantasy'    // For RPG/fantasy avatars
+  | 'SciFi'      // For sci-fi themed avatars
+  | 'Sports'     // For athletic avatars
+  | 'Formal'     // For formal wear
+  | 'Unknown';   // Default for avatars without outfit metadata
 
 /**
  * Avatar preset definition - complete pre-made avatar model.
@@ -78,12 +84,68 @@ export interface AvatarPreset {
   thumbnailUrl?: string;
   /** License information */
   license?: string;
-  /** Source attribution */
+  /** Source identifier (e.g., 'valid', 'polygonal-mind') */
   source?: string;
+  /** Source CDN base URL for resolving avatar URLs */
+  sourceBaseUrl?: string;
   /** Descriptive tags */
   tags?: string[];
   /** Character variant number within the style */
   variant?: number;
+}
+
+// =============================================================================
+// AVATAR SOURCE CONFIGURATION
+// =============================================================================
+
+/**
+ * License types supported by avatar sources
+ */
+export type AvatarLicense = 'CC0' | 'CC-BY' | 'CC-BY-NC' | 'CC-BY-SA';
+
+/**
+ * Configuration for an avatar source (CDN)
+ */
+export interface AvatarSource {
+  /** Unique source identifier */
+  id: string;
+  /** Human-readable name */
+  name: string;
+  /** Base URL for avatar GLB files */
+  cdnBaseUrl: string;
+  /** URL to fetch avatar manifest JSON */
+  manifestUrl: string;
+  /** Base URL for thumbnail images (optional) */
+  thumbnailBaseUrl?: string;
+  /** Load priority (lower = higher priority, loaded first) */
+  priority: number;
+  /** Whether source is enabled */
+  enabled: boolean;
+  /** Source license */
+  license: AvatarLicense;
+}
+
+/**
+ * Pagination state for avatar browsing
+ */
+export interface AvatarPaginationState {
+  /** Current page (0-indexed) */
+  page: number;
+  /** Items per page */
+  pageSize: number;
+  /** Total items available (after filtering) */
+  totalCount: number;
+  /** Whether more pages are available */
+  hasMore: boolean;
+}
+
+/**
+ * Gender count for display in filter bar
+ */
+export interface AvatarGenderCounts {
+  male: number;
+  female: number;
+  total: number;
 }
 
 /**

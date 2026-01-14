@@ -29,6 +29,14 @@ vi.mock('../../utils/formatters', () => ({
   generateOptimisticId: vi.fn(() => `optimistic-${Date.now()}-mock123`),
 }))
 
+// Mock analytics
+vi.mock('../../../../lib/analytics', () => ({
+  trackEvent: vi.fn(),
+  AnalyticsEvent: {
+    MESSAGE_SENT: 'message_sent',
+  },
+}))
+
 // Mock data
 const mockConversationId: UUID = 'test-conversation-123'
 const mockCurrentUserId: UUID = 'test-user-123'
@@ -42,6 +50,8 @@ const mockSenderProfile = {
   is_verified: false,
   verified_at: null,
   terms_accepted_at: null,
+  always_on_tracking_enabled: false,
+  checkin_prompt_minutes: 5,
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
 }

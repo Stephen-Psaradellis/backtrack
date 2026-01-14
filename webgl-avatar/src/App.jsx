@@ -9,11 +9,19 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 // MESHOPT DECODER SETUP - Required for compressed GLB files from VALID project
 // =============================================================================
 
+// Track decoder state for debugging
+let meshoptReady = false;
+
 // Register MeshoptDecoder with THREE's GLTFLoader
 // This is needed because the VALID project avatars use EXT_meshopt_compression
 MeshoptDecoder.ready.then(() => {
-  console.log('[R3F Avatar] MeshoptDecoder ready');
+  console.log('[R3F Avatar] MeshoptDecoder ready - registering with GLTFLoader');
   GLTFLoader.prototype.setMeshoptDecoder(MeshoptDecoder);
+  meshoptReady = true;
+  sendToRN({ type: 'MESHOPT_READY', timestamp: Date.now() });
+}).catch((err) => {
+  console.error('[R3F Avatar] MeshoptDecoder failed to initialize:', err);
+  sendToRN({ type: 'ERROR', message: 'MeshoptDecoder init failed: ' + err.message, code: 'MESHOPT_INIT_ERROR' });
 });
 
 // Also extend drei's useGLTF loader
@@ -22,7 +30,7 @@ import { HeadSwapper, HeadSelector, HEAD_SHAPES, SKIN_TONES } from './components
 import { HairSwapper, HairSelector, HeadWithHair, HAIR_STYLES, HAIR_COLORS } from './components/HairSwapper';
 import { Avatar, AvatarWithBridge, LoadingAvatar, DEFAULT_AVATAR_CONFIG } from './components/Avatar';
 import { SKIN_COLORS as AVATAR_SKIN_COLORS, HAIR_COLORS as AVATAR_HAIR_COLORS } from './constants/assetMap';
-import { LOCAL_AVATARS, DEFAULT_AVATAR_ID, getAvatarById } from './constants/avatarRegistry';
+import { LOCAL_AVATARS, DEFAULT_AVATAR_ID, getAvatarById, isValidAvatarId } from './constants/avatarRegistry';
 import { Lighting, LIGHTING_PRESETS } from './components/Lighting';
 import { Experience, FullBodyExperience, PostProcessing, EXPERIENCE_CONFIG } from './components/Experience';
 import { CameraManager, CAMERA_PRESETS, ZOOM_LIMITS, SnapshotCameraManager } from './components/CameraManager';
@@ -1118,7 +1126,7 @@ function AppContent() {
       if (data.avatarId) {
         // Check if avatar exists in registry
         const avatar = getAvatarById(data.avatarId);
-        if (avatar || data.avatarId.startsWith('cdn:')) {
+        if (isValidAvatarId(data.avatarId)) {
           setAvatarConfig((prev) => ({
             ...prev,
             avatarId: data.avatarId,

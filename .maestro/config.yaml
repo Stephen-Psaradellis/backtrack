@@ -1,16 +1,17 @@
 # Maestro Configuration
 # https://maestro.mobile.dev/reference/configuration
 
-appId: com.loveledger.app
+appId: app.backtrack.social
 
 # Environment variables available in all flows
 env:
-  TEST_USER_EMAIL: ${TEST_USER_EMAIL}
-  TEST_USER_PASSWORD: ${TEST_USER_PASSWORD}
+  TEST_USER_EMAIL: "s.n.psaradellis@gmail.com"
+  TEST_USER_PASSWORD: "Test1234!"
+  TEST_USER2_EMAIL: "spsaradellis@gmail.com"
+  TEST_USER2_PASSWORD: "Test1234!"
 
-# Default settings
-onFlowStart:
-  - clearState # Clear app state before each flow
+# Default settings - removed clearState to preserve login between tests
+# Individual flows can still use clearState: true if needed
 
 # Screenshot on failure
 onFlowComplete:
@@ -19,8 +20,41 @@ onFlowComplete:
 # Tags for filtering tests
 tags:
   smoke: # Quick sanity tests
-    - auth-login.yaml
+    - flows/auth/login.yaml
+  auth:
+    - flows/auth/login.yaml
+    - flows/auth/login-invalid.yaml
+    - flows/auth/logout.yaml
+    - flows/auth/signup.yaml
+  navigation:
+    - flows/navigation/tabs.yaml
+    - flows/navigation/back-navigation.yaml
+  home:
+    - flows/home/map-view.yaml
+    - flows/home/location-list.yaml
+  posts:
+    - flows/posts/create-post-flow.yaml
+    - flows/posts/create-post-3-moments.yaml
+    - flows/posts/scene-step.yaml
+    - flows/posts/moment-step.yaml
+    - flows/posts/seal-step.yaml
+    - flows/posts/reply-to-post.yaml
+  avatar:
+    - flows/avatar/avatar-selection.yaml
+  chat:
+    - flows/chat/view-conversations.yaml
+    - flows/chat/send-message.yaml
+    - flows/chat/photo-sharing.yaml
+  checkin: # Check-in and checkout flows
+    - flows/checkin/checkin.yaml
+    - flows/checkin/checkout.yaml
+  matching: # Match/reply flows
+    - flows/posts/reply-to-post.yaml
+  profile:
+    - flows/profile/view-profile.yaml
+    - flows/profile/favorites.yaml
+    - flows/profile/edit-profile.yaml
+  e2e: # Full end-to-end user journeys
+    - flows/e2e/full-user-journey.yaml
   full: # All E2E tests
-    - auth-login.yaml
-    - producer-flow.yaml
-    - consumer-flow.yaml
+    - flows/**/*.yaml

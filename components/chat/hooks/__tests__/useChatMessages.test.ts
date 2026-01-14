@@ -39,6 +39,8 @@ const mockProfile = {
   is_verified: false,
   verified_at: null,
   terms_accepted_at: null,
+  always_on_tracking_enabled: false,
+  checkin_prompt_minutes: 5,
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
 }
@@ -52,6 +54,8 @@ const mockCurrentUserProfile = {
   is_verified: false,
   verified_at: null,
   terms_accepted_at: null,
+  always_on_tracking_enabled: false,
+  checkin_prompt_minutes: 5,
   created_at: '2024-01-01T00:00:00.000Z',
   updated_at: '2024-01-01T00:00:00.000Z',
 }

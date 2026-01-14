@@ -30,6 +30,7 @@ import * as Device from 'expo-device'
 import Constants from 'expo-constants'
 import { Platform } from 'react-native'
 import { supabase } from '../lib/supabase'
+import { captureException } from '../lib/sentry'
 
 // Lazy-loaded expo-notifications module
 let NotificationsModule: typeof import('expo-notifications') | null = null
@@ -247,6 +248,7 @@ export async function getNotificationPermissions(): Promise<PermissionResult> {
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'getNotificationPermissions' })
     const message = err instanceof Error ? err.message : NOTIFICATION_ERRORS.UNKNOWN_ERROR
     return {
       granted: false,
@@ -302,6 +304,7 @@ export async function requestNotificationPermissions(): Promise<PermissionResult
       error: granted ? null : NOTIFICATION_ERRORS.PERMISSION_DENIED,
     }
   } catch (err) {
+    captureException(err, { operation: 'requestNotificationPermissions' })
     const message = err instanceof Error ? err.message : NOTIFICATION_ERRORS.UNKNOWN_ERROR
     return {
       granted: false,
@@ -370,6 +373,7 @@ export async function getExpoPushTokenAsync(): Promise<{ token: string | null; e
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'getExpoPushTokenAsync' })
     const message = err instanceof Error ? err.message : NOTIFICATION_ERRORS.TOKEN_ACQUISITION_FAILED
     return {
       token: null,
@@ -424,6 +428,7 @@ export async function registerPushToken(
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'registerPushToken' })
     const message = err instanceof Error ? err.message : NOTIFICATION_ERRORS.TOKEN_REGISTRATION_FAILED
     return {
       success: false,
@@ -573,6 +578,7 @@ export async function removePushToken(token: string): Promise<TokenRemovalResult
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'removePushToken' })
     const message = err instanceof Error ? err.message : NOTIFICATION_ERRORS.TOKEN_REMOVAL_FAILED
     return {
       success: false,
@@ -615,6 +621,7 @@ export async function removeAllUserTokens(userId: string): Promise<TokenRemovalR
       error: null,
     }
   } catch (err) {
+    captureException(err, { operation: 'removeAllUserTokens' })
     const message = err instanceof Error ? err.message : NOTIFICATION_ERRORS.TOKEN_REMOVAL_FAILED
     return {
       success: false,

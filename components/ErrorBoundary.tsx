@@ -39,6 +39,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Button, OutlineButton } from './Button'
+import { reportReactError } from '../lib/sentry'
 
 // ============================================================================
 // TYPES
@@ -130,7 +131,7 @@ function ErrorFallback({
 
         {/* Error Message */}
         <Text style={styles.message} testID={`${testID}-message`}>
-          We're sorry, but an unexpected error occurred. Please try again or
+          We&apos;re sorry, but an unexpected error occurred. Please try again or
           restart the app if the problem persists.
         </Text>
 
@@ -282,11 +283,16 @@ export class ErrorBoundary extends Component<
 
   /**
    * Called after an error has been thrown by a descendant component.
-   * Used for logging error information.
+   * Used for logging error information and reporting to Sentry.
    */
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Update state with error info
     this.setState({ errorInfo })
+
+    // Report error to Sentry for crash tracking
+    reportReactError(error, {
+      componentStack: errorInfo.componentStack ?? undefined,
+    })
 
     // Call the optional error callback
     if (this.props.onError) {

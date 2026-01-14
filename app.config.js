@@ -2,8 +2,9 @@
 // Environment variables are read at build time for flexibility across environments
 
 export default ({ config }) => {
-  // Use the correct env var names that match .env file
-  const googleMapsApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_API_KEY || '';
+  // Separate API keys for iOS and Android (better for security restrictions and usage tracking)
+  const googleMapsIosApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_IOS_API_KEY || '';
+  const googleMapsAndroidApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_ANDROID_API_KEY || '';
   const easProjectId = process.env.EAS_PROJECT_ID || 'c7e1ae8a-a8e1-4010-b978-d6f52acae3c0';
 
   return {
@@ -14,7 +15,7 @@ export default ({ config }) => {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: false,
+    newArchEnabled: true,
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -30,9 +31,7 @@ export default ({ config }) => {
         policy: 'appVersion',
       },
       associatedDomains: ['applinks:backtrack.social', 'webcredentials:backtrack.social'],
-      config: {
-        googleMapsApiKey,
-      },
+      // Note: Google Maps API key is configured via react-native-maps plugin
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           'Backtrack needs your location to show nearby venues where you can post or browse missed connections.',
@@ -65,7 +64,7 @@ export default ({ config }) => {
       ],
       config: {
         googleMaps: {
-          apiKey: googleMapsApiKey,
+          apiKey: googleMapsAndroidApiKey,
         },
       },
       permissions: [
@@ -81,6 +80,13 @@ export default ({ config }) => {
       bundler: 'metro',
     },
     plugins: [
+      [
+        'react-native-maps',
+        {
+          iosGoogleMapsApiKey: googleMapsIosApiKey,
+          androidGoogleMapsApiKey: googleMapsAndroidApiKey,
+        },
+      ],
       [
         'expo-updates',
         {
@@ -127,7 +133,8 @@ export default ({ config }) => {
       // Expose environment variables to the app at runtime
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-      googleMapsApiKey,
+      googleMapsIosApiKey,
+      googleMapsAndroidApiKey,
     },
     experiments: {
       typedRoutes: true,

@@ -196,7 +196,7 @@ export function LocationRegularsList({
         <Ionicons name="people-outline" size={32} color="#9CA3AF" />
         <Text style={styles.emptyTitle}>No other regulars yet</Text>
         <Text style={styles.emptySubtitle}>
-          You're one of the first regulars here!
+          You&apos;re one of the first regulars here!
         </Text>
       </View>
     )

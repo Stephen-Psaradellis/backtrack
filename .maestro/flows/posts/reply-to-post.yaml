@@ -1,0 +1,101 @@
+# Reply to Post Flow Test
+# Tests a consumer finding a post and starting a conversation (matching)
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in as User 2 (consumer account)
+# - User 1 has created a post at a location
+# - User 2 has checked in at the same location (or is a Regular)
+#
+# This simulates the "match" flow where a consumer responds to a post
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in as User 2
+- runFlow: ../auth/login-user2.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Favorites section to find locations
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Scroll to favorites section
+- swipe:
+    direction: UP
+    duration: 500
+- waitForAnimationToEnd
+
+# Look for favorites and tap one to go to ledger
+# User 2 should have seeded favorite locations
+- extendedWaitUntil:
+    visible: "Your Favorites"
+    timeout: 10000
+
+# Tap on a favorite location card
+# This will navigate to the Ledger screen for that location
+- tapOn: "Current Location"
+- waitForAnimationToEnd
+
+# Wait for Ledger screen to load
+- extendedWaitUntil:
+    visible:
+      id: "ledger-screen"
+    timeout: 15000
+
+# Look for posts in the list
+# User 1's post should be visible
+- extendedWaitUntil:
+    visible:
+      id: "ledger-post-list"
+    timeout: 10000
+
+# Tap on the first post to view details
+# Posts have testID pattern: ledger-post-{id}
+- tapOn:
+    index: 0
+    id: "ledger-post-.*"
+    regex: true
+
+# Wait for post detail screen
+- waitForAnimationToEnd
+
+# Verify we're on post detail screen
+- extendedWaitUntil:
+    visible:
+      id: "post-detail-screen"
+    timeout: 10000
+
+# Verify post content is displayed
+- assertVisible:
+    id: "post-detail-avatar-section"
+- assertVisible:
+    id: "post-detail-note-section"
+
+# Look for the "Start Chat" button
+# This indicates we can match with this post
+- extendedWaitUntil:
+    visible: "Start Chat"
+    timeout: 10000
+
+# Tap "Start Chat" to create conversation (match)
+- tapOn:
+    id: "post-detail-start-chat"
+
+# Wait for chat to start
+- waitForAnimationToEnd
+
+# Verify we've navigated to chat screen
+- extendedWaitUntil:
+    visible: "Type a message..."
+    timeout: 15000
+
+# Verify chat input is available
+- assertVisible:
+    id: "chat-message-input"
+
+# Take screenshot of successful match
+- takeScreenshot: reply_to_post_success

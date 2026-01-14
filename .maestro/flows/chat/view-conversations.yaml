@@ -1,0 +1,40 @@
+# View Conversations Test
+# Tests the conversations list screen
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Chats tab
+- tapOn: "Chats"
+
+# Wait for chats screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the conversations screen
+- assertVisible: "Conversations"
+
+# Verify the chat list is visible
+- assertVisible:
+    id: "chat-list"
+
+# Check for empty state or conversation items
+# If no conversations, empty state shows
+# If conversations exist, list items show
+- assertVisible:
+    text: "No conversations yet"
+    optional: true
+
+# If there are conversations, verify at least one item is visible
+# The test account should have pre-seeded conversations
+- assertVisible:
+    id: "chat-list-item-*"
+    optional: true

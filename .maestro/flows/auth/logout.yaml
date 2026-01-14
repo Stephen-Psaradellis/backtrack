@@ -1,0 +1,42 @@
+# Logout Flow Test
+# Tests that a user can successfully log out
+#
+# Prerequisites:
+# - App installed and launched
+# - Depends on login.yaml for authentication
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in by running the login flow
+- runFlow: login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+
+# Wait for profile screen
+- waitForAnimationToEnd
+
+# Scroll down to find the Sign Out button in the Account section
+# Use scrollUntilVisible to ensure we find it
+- scrollUntilVisible:
+    element: "Sign Out"
+    direction: DOWN
+    timeout: 30000
+
+# Tap Sign Out button (text-based since scrollUntilVisible found it)
+- tapOn: "Sign Out"
+
+# Confirm sign out in the alert dialog
+# The dialog has "Cancel" and "Sign Out" buttons
+- tapOn: "Sign Out"
+
+# Wait for logout to complete
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+
+# Verify we're back at login screen
+- assertVisible: "Welcome Back"

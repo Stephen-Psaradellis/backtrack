@@ -26,7 +26,7 @@
  */
 
 import { supabase } from './supabase'
-import type { Block, BlockInsert, UUID, ReportedType, Report } from '../types/database'
+import type { Block, ReportedType } from '../types/database'
 
 // ============================================================================
 // TYPES
@@ -261,7 +261,7 @@ export async function unblockUser(
 
   try {
     // Call the database function to remove the block
-    const { data, error } = await supabase.rpc('unblock_user', {
+    const { error } = await supabase.rpc('unblock_user', {
       blocker: blockerId as string,
       blocked: blockedId as string,
     })
@@ -273,7 +273,6 @@ export async function unblockUser(
       }
     }
 
-    // data is a boolean indicating if a block was removed
     return {
       success: true,
       error: null,
@@ -789,7 +788,7 @@ export async function getReportCount(
 // EXPORTS
 // ============================================================================
 
-export default {
+const moderationApi = {
   blockUser,
   unblockUser,
   isUserBlocked,
@@ -805,3 +804,5 @@ export default {
   MODERATION_ERRORS,
   REPORT_REASONS,
 }
+
+export default moderationApi

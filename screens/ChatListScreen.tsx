@@ -206,6 +206,15 @@ export function ChatListScreen(): React.ReactNode {
     }
     setError(null)
 
+    // Add timeout to prevent infinite loading
+    const FETCH_TIMEOUT = 15000
+    const timeoutId = setTimeout(() => {
+      console.warn('Conversation fetch timed out')
+      setLoading(false)
+      setRefreshing(false)
+      setError('Loading took too long. Pull to refresh to try again.')
+    }, FETCH_TIMEOUT)
+
     try {
       // Get list of hidden user IDs (blocked users + users who blocked us)
       // This is optional - if it fails, we just show all conversations
@@ -338,6 +347,7 @@ export function ChatListScreen(): React.ReactNode {
       console.error('Unexpected error fetching conversations:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
+      clearTimeout(timeoutId)
       setLoading(false)
       setRefreshing(false)
     }

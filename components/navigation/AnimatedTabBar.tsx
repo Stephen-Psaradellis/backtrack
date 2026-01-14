@@ -24,6 +24,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Icon mapping for tabs
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   HomeTab: { active: 'home', inactive: 'home-outline' },
+  FavoritesTab: { active: 'heart', inactive: 'heart-outline' },
   ChatsTab: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
   ProfileTab: { active: 'person', inactive: 'person-outline' },
 };

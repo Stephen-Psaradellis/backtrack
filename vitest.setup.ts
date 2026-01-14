@@ -452,6 +452,120 @@ vi.mock('@react-native-community/netinfo', () => ({
   useNetInfo: () => ({ isConnected: true, isInternetReachable: true }),
 }))
 
+// Mock posthog-react-native
+vi.mock('posthog-react-native', () => {
+  const mockPostHog = vi.fn().mockImplementation(() => ({
+    identify: vi.fn(),
+    capture: vi.fn(),
+    screen: vi.fn(),
+    flush: vi.fn(() => Promise.resolve()),
+    reset: vi.fn(),
+    shutdown: vi.fn(() => Promise.resolve()),
+    optIn: vi.fn(),
+    optOut: vi.fn(),
+    isOptOut: vi.fn(() => false),
+    enable: vi.fn(),
+    disable: vi.fn(),
+    debug: vi.fn(),
+  }))
+  return {
+    __esModule: true,
+    default: mockPostHog,
+    PostHog: mockPostHog,
+    usePostHog: vi.fn(() => null),
+    PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
+  }
+})
+
+// Mock expo-crypto
+vi.mock('expo-crypto', () => ({
+  randomUUID: vi.fn(() => '00000000-0000-0000-0000-000000000000'),
+  getRandomBytesAsync: vi.fn(() => Promise.resolve(new Uint8Array(16))),
+  digestStringAsync: vi.fn(() => Promise.resolve('mock-hash')),
+  CryptoDigestAlgorithm: {
+    SHA256: 'SHA-256',
+    SHA384: 'SHA-384',
+    SHA512: 'SHA-512',
+    MD5: 'MD5',
+    SHA1: 'SHA-1',
+  },
+  CryptoEncoding: {
+    HEX: 'hex',
+    BASE64: 'base64',
+  },
+}))
+
+// Mock @sentry/react-native
+vi.mock('@sentry/react-native', () => ({
+  init: vi.fn(),
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+  setUser: vi.fn(),
+  addBreadcrumb: vi.fn(),
+  wrap: vi.fn((component: unknown) => component),
+  withScope: vi.fn((callback: (scope: unknown) => void) => callback({ setExtra: vi.fn() })),
+  Severity: {
+    Fatal: 'fatal',
+    Error: 'error',
+    Warning: 'warning',
+    Info: 'info',
+    Debug: 'debug',
+  },
+}))
+
+// Mock react-native-webview
+vi.mock('react-native-webview', () => ({
+  __esModule: true,
+  default: vi.fn().mockImplementation(({ onMessage, onLoad, onError, style, ...props }) => {
+    // Simulate WebView component
+    return {
+      ...props,
+      type: 'WebView',
+      style,
+      injectJavaScript: vi.fn(),
+      postMessage: vi.fn(),
+    }
+  }),
+  WebView: 'WebView',
+}))
+
+// Mock expo-file-system with new File class and legacy functions
+vi.mock('expo-file-system', () => ({
+  // New File class API (expo-file-system v19+)
+  File: class MockFile {
+    uri: string
+    constructor(...uris: string[]) {
+      this.uri = uris.join('/')
+    }
+    base64 = vi.fn(() => Promise.resolve('bW9jay1iYXNlNjQtY29udGVudA==')) // mock base64 content
+    base64Sync = vi.fn(() => 'bW9jay1iYXNlNjQtY29udGVudA==')
+    text = vi.fn(() => Promise.resolve('mock-file-content'))
+    textSync = vi.fn(() => 'mock-file-content')
+    exists = true
+  },
+  // Paths utilities
+  Paths: {
+    cache: { uri: 'file:///mock/cache/' },
+    document: { uri: 'file:///mock/documents/' },
+    join: (...paths: string[]) => paths.join('/'),
+  },
+  // Legacy functions (for backward compatibility)
+  documentDirectory: 'file:///mock/documents/',
+  cacheDirectory: 'file:///mock/cache/',
+  downloadAsync: vi.fn(() => Promise.resolve({ uri: 'file:///mock/downloaded.jpg' })),
+  getInfoAsync: vi.fn(() => Promise.resolve({ exists: true, isDirectory: false, size: 1024 })),
+  readAsStringAsync: vi.fn(() => Promise.resolve('mock-file-content')),
+  writeAsStringAsync: vi.fn(() => Promise.resolve()),
+  deleteAsync: vi.fn(() => Promise.resolve()),
+  makeDirectoryAsync: vi.fn(() => Promise.resolve()),
+  copyAsync: vi.fn(() => Promise.resolve()),
+  moveAsync: vi.fn(() => Promise.resolve()),
+  EncodingType: {
+    Base64: 'base64',
+    UTF8: 'utf8',
+  },
+}))
+
 // ============================================================================
 // Console Output Suppression
 // ============================================================================

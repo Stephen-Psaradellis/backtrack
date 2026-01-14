@@ -68,7 +68,7 @@ export function AvatarCreationStep({
   }, [selectedAvatarId, onComplete]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} testID="onboarding-avatar-step">
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
@@ -91,6 +91,7 @@ export function AvatarCreationStep({
               ]}
               onPress={() => handleSelectAvatar(preset.id)}
               activeOpacity={0.7}
+              testID={`avatar-preset-${preset.id}`}
             >
               <View style={styles.avatarPreview}>
                 <MaterialCommunityIcons
@@ -124,7 +125,7 @@ export function AvatarCreationStep({
       {/* Footer */}
       <View style={styles.footer}>
         {onSkip && (
-          <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
+          <TouchableOpacity style={styles.skipButton} onPress={onSkip} testID="onboarding-avatar-skip">
             <Text style={styles.skipButtonText}>Skip for now</Text>
           </TouchableOpacity>
         )}
@@ -132,6 +133,7 @@ export function AvatarCreationStep({
           style={styles.continueButton}
           onPress={handleContinue}
           activeOpacity={0.8}
+          testID="onboarding-avatar-continue"
         >
           <Text style={styles.continueButtonText}>Continue</Text>
           <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />

@@ -42,6 +42,7 @@ import {
   getPrimaryPhoto,
   getPhotoCount,
   subscribeToPhotoChanges,
+  retryPhotoModeration,
   MAX_PROFILE_PHOTOS,
   type ProfilePhotoWithUrl,
 } from '../lib/profilePhotos'
@@ -69,6 +70,8 @@ const TIMEOUT_CHECK_INTERVAL_MS = 5 * 1000
 export interface ProfilePhotoWithTimeout extends ProfilePhotoWithUrl {
   /** Whether this photo has timed out waiting for moderation */
   isTimedOut?: boolean
+  /** Whether this photo is in error state */
+  hasError?: boolean
 }
 
 export interface UseProfilePhotosResult {
@@ -84,6 +87,8 @@ export interface UseProfilePhotosResult {
   uploading: boolean
   /** Whether a photo is being deleted */
   deleting: boolean
+  /** Whether a retry is in progress */
+  retrying: boolean
   /** Last error message */
   error: string | null
   /** Whether user has any approved photos */
@@ -94,6 +99,10 @@ export interface UseProfilePhotosResult {
   photoCount: number
   /** Whether any photos have timed out */
   hasTimedOutPhotos: boolean
+  /** Whether any photos are in error state */
+  hasErrorPhotos: boolean
+  /** Whether any photos need attention (timed out or error) */
+  hasPhotosNeedingAttention: boolean
 
   // Actions
   /** Upload a new photo */
@@ -106,7 +115,7 @@ export interface UseProfilePhotosResult {
   refresh: () => Promise<void>
   /** Clear error */
   clearError: () => void
-  /** Retry moderation for a timed-out photo */
+  /** Retry moderation for a failed/timed-out photo */
   retryModeration: (photoId: string) => Promise<boolean>
 }
 
@@ -120,6 +129,7 @@ export function useProfilePhotos(): UseProfilePhotosResult {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [retrying, setRetrying] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Track when photos started pending (for timeout detection)
@@ -144,11 +154,12 @@ export function useProfilePhotos(): UseProfilePhotosResult {
     return Date.now() - startTime > MODERATION_TIMEOUT_MS
   }, [])
 
-  // Photos with timeout info
+  // Photos with timeout and error info
   const photosWithTimeout: ProfilePhotoWithTimeout[] = useMemo(
     () => photos.map((p) => ({
       ...p,
       isTimedOut: isPhotoTimedOut(p),
+      hasError: p.moderation_status === 'error',
     })),
     [photos, isPhotoTimedOut]
   )
@@ -170,6 +181,13 @@ export function useProfilePhotos(): UseProfilePhotosResult {
     () => photosWithTimeout.some((p) => p.isTimedOut),
     [photosWithTimeout]
   )
+
+  const hasErrorPhotos = useMemo(
+    () => photosWithTimeout.some((p) => p.hasError),
+    [photosWithTimeout]
+  )
+
+  const hasPhotosNeedingAttention = hasTimedOutPhotos || hasErrorPhotos
 
   const photoCount = useMemo(
     () => photos.filter((p) => p.moderation_status !== 'rejected' && p.moderation_status !== 'error').length,
@@ -355,25 +373,41 @@ export function useProfilePhotos(): UseProfilePhotosResult {
     setError(null)
   }, [])
 
-  // Retry moderation for a timed-out photo by deleting and re-uploading
-  // For now, this just deletes the photo - user can upload again
+  // Retry moderation for a failed or timed-out photo
   const retryModeration = useCallback(async (photoId: string): Promise<boolean> => {
-    // Reset the timeout timer for this photo
-    pendingStartTimes.current.delete(photoId)
+    setRetrying(true)
+    setError(null)
 
-    // Refresh to check if moderation completed
-    await loadPhotos()
+    try {
+      // Reset the timeout timer for this photo
+      pendingStartTimes.current.delete(photoId)
 
-    // Check if the photo is still pending after refresh
-    const photo = photos.find((p) => p.id === photoId)
-    if (photo && photo.moderation_status === 'pending') {
-      // Still pending - just let the user know to delete and retry
-      setError('Photo verification is taking too long. You can delete it and try again.')
+      // Call the library function to actually retry moderation
+      const result = await retryPhotoModeration(photoId)
+
+      if (!result.success) {
+        setError(result.error || 'Failed to retry photo verification')
+        return false
+      }
+
+      // Refresh photos to get updated status
+      await loadPhotos()
+
+      // If status is already approved or rejected, we're done
+      if (result.status === 'approved' || result.status === 'rejected') {
+        return result.status === 'approved'
+      }
+
+      // Otherwise, moderation is now pending - it should complete via realtime update
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to retry verification'
+      setError(message)
       return false
+    } finally {
+      setRetrying(false)
     }
-
-    return true
-  }, [loadPhotos, photos])
+  }, [loadPhotos])
 
   return {
     photos: photosWithTimeout,
@@ -382,11 +416,14 @@ export function useProfilePhotos(): UseProfilePhotosResult {
     loading,
     uploading,
     deleting,
+    retrying,
     error,
     hasApprovedPhotos,
     hasReachedLimit,
     photoCount,
     hasTimedOutPhotos,
+    hasErrorPhotos,
+    hasPhotosNeedingAttention,
     uploadPhoto,
     deletePhoto,
     setPrimary,

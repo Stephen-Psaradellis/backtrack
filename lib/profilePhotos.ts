@@ -101,9 +101,65 @@ async function getCurrentUserId(): Promise<string | null> {
 }
 
 /**
- * Trigger the moderation Edge Function for a photo
+ * Result from triggering moderation
  */
-async function triggerModeration(photoId: string, storagePath: string): Promise<void> {
+export interface TriggerModerationResult {
+  /** Whether the moderation was successfully triggered */
+  triggered: boolean
+  /** Final status if known (approved, rejected, error) */
+  status?: string
+  /** Error message if trigger failed */
+  error?: string
+}
+
+/**
+ * Check if we're in development mode and should skip moderation
+ */
+function shouldSkipModeration(): boolean {
+  // Check for development flag in environment
+  // This allows testing without a Vision API key
+  if (process.env.EXPO_PUBLIC_SKIP_PHOTO_MODERATION === 'true') {
+    return true
+  }
+  // Also check for __DEV__ flag (React Native development mode)
+  if (typeof __DEV__ !== 'undefined' && __DEV__ && process.env.EXPO_PUBLIC_AUTO_APPROVE_PHOTOS === 'true') {
+    return true
+  }
+  return false
+}
+
+/**
+ * Trigger the moderation Edge Function for a photo
+ *
+ * @param photoId - UUID of the photo to moderate
+ * @param storagePath - Storage path of the photo
+ * @returns Result indicating if moderation was triggered successfully
+ */
+async function triggerModeration(photoId: string, storagePath: string): Promise<TriggerModerationResult> {
+  // Development mode: auto-approve without calling Edge Function
+  if (shouldSkipModeration()) {
+    console.log('[DEV] Skipping moderation, auto-approving photo:', photoId)
+    try {
+      const { error: updateError } = await supabase
+        .from('profile_photos')
+        .update({
+          moderation_status: 'approved',
+          moderation_result: { dev_mode: true, auto_approved: true },
+        })
+        .eq('id', photoId)
+
+      if (updateError) {
+        console.error('[DEV] Failed to auto-approve:', updateError)
+        return { triggered: false, error: updateError.message }
+      }
+
+      return { triggered: true, status: 'approved' }
+    } catch (err) {
+      console.error('[DEV] Auto-approve error:', err)
+      return { triggered: false, error: String(err) }
+    }
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke<{
       success?: boolean
@@ -136,17 +192,71 @@ async function triggerModeration(photoId: string, storagePath: string): Promise<
       console.error('Full moderation error:', JSON.stringify(error, null, 2))
       console.error('Moderation error details:', errorDetails)
       console.error('Hint: Check Supabase Dashboard > Edge Functions > moderate-image > Logs for server-side errors')
-      // Don't throw - photo is still uploaded, just pending manual review
-    } else if (data) {
-      if (data.error) {
-        console.error('Moderation returned error:', data.error, data.details)
-      } else {
-        console.log('Moderation completed:', data.status)
+
+      // Update photo status to 'error' so it doesn't stay stuck in 'pending'
+      await supabase
+        .from('profile_photos')
+        .update({
+          moderation_status: 'error',
+          moderation_result: {
+            error: 'Moderation service unavailable',
+            details: error.message,
+            timestamp: new Date().toISOString(),
+          },
+        })
+        .eq('id', photoId)
+
+      return {
+        triggered: false,
+        status: 'error',
+        error: `Moderation failed: ${error.message}`,
       }
     }
+
+    if (data) {
+      if (data.error) {
+        console.error('Moderation returned error:', data.error, data.details)
+        return {
+          triggered: true,
+          status: 'error',
+          error: data.error,
+        }
+      }
+
+      console.log('Moderation completed:', data.status)
+      return {
+        triggered: true,
+        status: data.status,
+      }
+    }
+
+    // No data returned - unexpected
+    return { triggered: true }
   } catch (err) {
     console.error('Error invoking moderation function:', err)
-    // Don't throw - photo is still uploaded, just pending manual review
+
+    // Update photo status to 'error'
+    try {
+      await supabase
+        .from('profile_photos')
+        .update({
+          moderation_status: 'error',
+          moderation_result: {
+            error: 'Failed to invoke moderation',
+            details: String(err),
+            timestamp: new Date().toISOString(),
+          },
+        })
+        .eq('id', photoId)
+    } catch {
+      // Ignore update error
+    }
+
+    return {
+      triggered: false,
+      status: 'error',
+      error: String(err),
+    }
   }
 }
 
@@ -691,6 +801,112 @@ export function subscribeToPhotoChanges(
 }
 
 // ============================================================================
+// RETRY MODERATION
+// ============================================================================
+
+/**
+ * Result from retrying moderation
+ */
+export interface RetryModerationResult {
+  success: boolean
+  status?: string
+  error?: string
+}
+
+/**
+ * Retry moderation for a photo that failed or timed out
+ *
+ * This function will:
+ * 1. Reset the photo status to 'pending'
+ * 2. Re-trigger the moderation Edge Function
+ * 3. Return the result
+ *
+ * @param photoId - The photo's UUID
+ * @returns Retry result
+ */
+export async function retryPhotoModeration(
+  photoId: string
+): Promise<RetryModerationResult> {
+  const userId = await getCurrentUserId()
+  if (!userId) {
+    return {
+      success: false,
+      error: PROFILE_PHOTO_ERRORS.NOT_AUTHENTICATED,
+    }
+  }
+
+  try {
+    // Get the photo to verify ownership and get storage path
+    const { data: photo, error: fetchError } = await supabase
+      .from('profile_photos')
+      .select('*')
+      .eq('id', photoId)
+      .eq('user_id', userId)
+      .single()
+
+    if (fetchError || !photo) {
+      return {
+        success: false,
+        error: PROFILE_PHOTO_ERRORS.PHOTO_NOT_FOUND,
+      }
+    }
+
+    // Only retry if photo is in pending, error, or timed out state
+    if (photo.moderation_status === 'approved') {
+      return {
+        success: true,
+        status: 'approved',
+      }
+    }
+
+    if (photo.moderation_status === 'rejected') {
+      return {
+        success: false,
+        error: 'Photo was rejected and cannot be retried. Please upload a new photo.',
+      }
+    }
+
+    // Reset status to pending
+    const { error: updateError } = await supabase
+      .from('profile_photos')
+      .update({
+        moderation_status: 'pending',
+        moderation_result: null,
+      })
+      .eq('id', photoId)
+
+    if (updateError) {
+      return {
+        success: false,
+        error: `Failed to reset photo status: ${updateError.message}`,
+      }
+    }
+
+    // Re-trigger moderation
+    const moderationResult = await triggerModeration(photoId, photo.storage_path)
+
+    if (!moderationResult.triggered) {
+      return {
+        success: false,
+        status: moderationResult.status,
+        error: moderationResult.error || 'Failed to trigger moderation',
+      }
+    }
+
+    return {
+      success: true,
+      status: moderationResult.status,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to retry moderation'
+    return {
+      success: false,
+      error: message,
+    }
+  }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -705,6 +921,7 @@ export default {
   getPrimaryPhoto,
   getPhotoCount,
   subscribeToPhotoChanges,
+  retryPhotoModeration,
   MAX_PROFILE_PHOTOS,
   PROFILE_PHOTO_ERRORS,
 }

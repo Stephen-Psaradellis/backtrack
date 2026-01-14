@@ -1,0 +1,58 @@
+# View Profile Test
+# Tests the profile screen displays correctly
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged in
+
+appId: app.backtrack.social
+---
+# First, ensure we're logged in
+- runFlow: ../auth/login.yaml
+
+# Wait for home screen to load
+- waitForAnimationToEnd
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+
+# Wait for profile screen
+- waitForAnimationToEnd
+
+# Verify Profile header is visible at top
+- assertVisible: "Profile"
+
+# Scroll to see Profile Information section
+- scroll
+
+# Verify Profile Information section
+- assertVisible: "Profile Information"
+
+# Verify Display Name section (label is "Display Name" not uppercase)
+- assertVisible: "Display Name"
+
+# Scroll to My Avatar section
+- scroll
+
+# Verify My Avatar section
+- assertVisible: "My Avatar"
+
+# Scroll to see Legal section (near bottom of profile)
+# Use scrollUntilVisible to find Privacy Policy
+- scrollUntilVisible:
+    element: "Privacy Policy"
+    direction: DOWN
+    timeout: 30000
+
+# Verify Legal section links
+- assertVisible: "Privacy Policy"
+- assertVisible: "Terms of Service"
+
+# Scroll a bit more for Sign Out
+- scrollUntilVisible:
+    element: "Sign Out"
+    direction: DOWN
+    timeout: 20000
+
+# Verify Sign Out button
+- assertVisible: "Sign Out"

@@ -625,7 +625,8 @@ describe('getCompactTimeString', () => {
 
     it('handles exactly 1 hour', () => {
       const now = new Date()
-      const date = addHours(now, 1)
+      // Add slightly more than 1 hour to account for execution time
+      const date = new Date(now.getTime() + 61 * 60 * 1000) // 61 minutes
       const result = getCompactTimeString(date)
 
       expect(result).toMatch(/\d+h/)

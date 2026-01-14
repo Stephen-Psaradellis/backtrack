@@ -299,9 +299,9 @@ If you have any questions about this Privacy Policy or our data practices, pleas
 
 **Mailing Address**:
 Backtrack Privacy Team
-[Your Company Address]
-[City, State, ZIP Code]
-[Country]
+1332 N Vail Ave
+Arlington Heights, IL 60004
+USA
 
 **Data Protection Officer** (for EEA users):
 dpo@backtrack.social

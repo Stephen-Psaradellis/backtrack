@@ -1,0 +1,48 @@
+# Login Flow Test - User 2 (Consumer Account)
+# Tests successful authentication with User 2 credentials
+# Used for multi-user E2E testing (reply/match flows)
+#
+# Prerequisites:
+# - App installed and launched
+# - User logged out
+
+appId: app.backtrack.social
+---
+# Launch app with clean state to ensure we're on login screen
+- launchApp:
+    clearState: true
+
+# Wait for the auth screen to load
+- waitForAnimationToEnd
+
+# Verify we're on the login screen
+- assertVisible: "Welcome Back"
+
+# Enter email using testID
+- tapOn:
+    id: "email-input"
+- eraseText: 50
+- inputText: ${TEST_USER2_EMAIL}
+
+# Enter password using testID
+- tapOn:
+    id: "password-input"
+- eraseText: 50
+- inputText: ${TEST_USER2_PASSWORD}
+
+# Dismiss keyboard with back button
+- pressKey: back
+
+# Tap Sign In button
+- tapOn: "Sign In"
+
+# Wait for authentication to complete
+- extendedWaitUntil:
+    visible: "Your Favorites"
+    timeout: 25000
+
+# Verify we've navigated to the home screen
+- assertVisible: "Backtrack"
+
+# Take screenshot for verification
+- takeScreenshot: login_user2_success

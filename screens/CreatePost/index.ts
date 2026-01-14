@@ -52,7 +52,20 @@ export { StepHeader, type StepHeaderProps } from './components'
 export { ProgressBar, type ProgressBarProps } from './components'
 
 // ============================================================================
-// STEP COMPONENTS
+// STEP COMPONENTS (New 3-Moment Flow)
+// ============================================================================
+
+export {
+  SceneStep,
+  type SceneStepProps,
+  MomentStep,
+  type MomentStepProps,
+  SealStep,
+  type SealStepProps,
+} from './steps'
+
+// ============================================================================
+// LEGACY STEP COMPONENTS (kept for reference)
 // ============================================================================
 
 export {
