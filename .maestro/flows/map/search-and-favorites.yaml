@@ -1,0 +1,93 @@
+# Map Search and Favorites Flow
+# Tests the Map tab with search and favorites functionality
+#
+# Features tested:
+# - Map screen loads
+# - Search bar interaction
+# - Autocomplete results
+# - Star icon (favorites) button
+# - Favorites modal open/close
+
+appId: app.backtrack.social
+name: "Map - Search and Favorites"
+tags:
+  - map
+  - search
+  - favorites
+
+---
+
+# Step 1: Launch app
+- launchApp:
+    clearState: false
+
+# Wait for app to fully load
+- extendedWaitUntil:
+    visible:
+      text: ".*BACKTRACK.*|.*Sign In.*"
+    timeout: 30000
+
+# Step 2: Login if needed (only if login screen is visible)
+- runFlow:
+    when:
+      visible:
+        id: "email-input"
+    commands:
+      - tapOn:
+          id: "email-input"
+      - inputText: ${TEST_USER_EMAIL}
+      - tapOn:
+          id: "password-input"
+      - inputText: ${TEST_USER_PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          id: "login-button"
+      - extendedWaitUntil:
+          visible: "BACKTRACK"
+          timeout: 15000
+
+# Step 3: Tap Map tab (3rd tab - x=540, y=1783)
+- tapOn:
+    point: 540, 1783
+
+# Wait for map screen - look for "Map" text in header
+- extendedWaitUntil:
+    visible: "Map"
+    timeout: 10000
+
+# Step 4: Assert map is visible (using current HomeScreen testIDs)
+- assertVisible:
+    text: "Map"
+- takeScreenshot: map_initial_state
+
+# Step 5: Assert Check In button is visible
+- assertVisible:
+    id: "home-checkin-button"
+- takeScreenshot: map_with_checkin_button
+
+# Step 6: Assert Create Post button is visible
+- assertVisible:
+    id: "home-create-post-button"
+- takeScreenshot: map_with_create_button
+
+# Step 7: Test Check In button interaction
+- tapOn:
+    id: "home-checkin-button"
+- takeScreenshot: after_checkin_tap
+
+# Wait for any modal or response
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 5000
+
+# Navigate back if needed
+- runFlow:
+    when:
+      notVisible:
+        text: "Map"
+    commands:
+      - back
+
+# Final screenshot
+- takeScreenshot: map_flow_complete

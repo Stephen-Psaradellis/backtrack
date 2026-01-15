@@ -1,0 +1,107 @@
+# Nearby Posts Feed Flow
+# Tests the Feed screen functionality including scroll and pull-to-refresh
+#
+# The Feed tab shows posts within 50m radius of the user's location.
+# Features tested:
+# - Feed screen loads
+# - Scroll down (swipe up)
+# - Pull to refresh (swipe down)
+# - Post tap navigation (if posts exist)
+
+appId: app.backtrack.social
+name: "Feed - Nearby Posts"
+tags:
+  - feed
+  - home
+
+---
+
+# Step 1: Launch app
+- launchApp:
+    clearState: false
+
+# Wait for app to fully load
+- extendedWaitUntil:
+    visible:
+      text: ".*BACKTRACK.*|.*Sign In.*"
+    timeout: 30000
+
+# Step 2: Login if needed (only if login screen is visible)
+- runFlow:
+    when:
+      visible:
+        id: "email-input"
+    commands:
+      - tapOn:
+          id: "email-input"
+      - inputText: ${TEST_USER_EMAIL}
+      - tapOn:
+          id: "password-input"
+      - inputText: ${TEST_USER_PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          id: "login-button"
+      - extendedWaitUntil:
+          visible: "BACKTRACK"
+          timeout: 15000
+
+# Step 3: Navigate to Feed tab (first tab)
+- tapOn:
+    point: 108, 1783
+
+# Wait for feed screen to load
+- extendedWaitUntil:
+    visible: "BACKTRACK"
+    timeout: 15000
+- takeScreenshot: feed_initial_state
+
+# Step 4: Scroll down (swipe up) to test scroll
+- swipe:
+    direction: UP
+    duration: 500
+- takeScreenshot: feed_after_scroll_down
+
+# Step 5: Pull to refresh (swipe down from top using start/end)
+- swipe:
+    start: 50%, 30%
+    end: 50%, 70%
+    duration: 500
+- takeScreenshot: feed_after_refresh
+
+# Wait a moment for refresh to complete
+- extendedWaitUntil:
+    visible: "BACKTRACK"
+    timeout: 5000
+
+# Step 6: Check if posts are visible or empty state
+# If posts exist, the feed-post-list will have items
+# If no posts, feed-empty-state will be visible
+- runFlow:
+    when:
+      visible:
+        id: "feed-empty-state"
+    commands:
+      - assertVisible:
+          text: "No posts nearby"
+      - takeScreenshot: feed_empty_state
+
+# Step 7: If posts visible, try tapping the first post
+- runFlow:
+    when:
+      visible:
+        text: ".*ago"
+    commands:
+      - tapOn:
+          text: ".*ago"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "post-detail-screen"
+          timeout: 10000
+          optional: true
+      - takeScreenshot: feed_post_detail
+      # Navigate back
+      - back
+
+# Final state
+- takeScreenshot: feed_flow_complete

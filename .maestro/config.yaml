@@ -21,6 +21,7 @@ onFlowComplete:
 tags:
   smoke: # Quick sanity tests
     - flows/auth/login.yaml
+    - flows/navigation/tab-navigation.yaml
   auth:
     - flows/auth/login.yaml
     - flows/auth/login-invalid.yaml
@@ -29,9 +30,16 @@ tags:
   navigation:
     - flows/navigation/tabs.yaml
     - flows/navigation/back-navigation.yaml
+    - flows/navigation/tab-navigation.yaml
   home:
     - flows/home/map-view.yaml
     - flows/home/location-list.yaml
+  feed:
+    - flows/feed/nearby-posts.yaml
+  my-spots:
+    - flows/my-spots/notifications.yaml
+  map:
+    - flows/map/search-and-favorites.yaml
   posts:
     - flows/posts/create-post-flow.yaml
     - flows/posts/create-post-3-moments.yaml
@@ -48,13 +56,22 @@ tags:
   checkin: # Check-in and checkout flows
     - flows/checkin/checkin.yaml
     - flows/checkin/checkout.yaml
+    - flows/checkin/live-view-modal.yaml
   matching: # Match/reply flows
     - flows/posts/reply-to-post.yaml
   profile:
     - flows/profile/view-profile.yaml
     - flows/profile/favorites.yaml
     - flows/profile/edit-profile.yaml
+  favorites:
+    - flows/map/search-and-favorites.yaml
   e2e: # Full end-to-end user journeys
     - flows/e2e/full-user-journey.yaml
+  new-ui: # New UI flows (Jan 2026)
+    - flows/navigation/tab-navigation.yaml
+    - flows/feed/nearby-posts.yaml
+    - flows/my-spots/notifications.yaml
+    - flows/map/search-and-favorites.yaml
+    - flows/checkin/live-view-modal.yaml
   full: # All E2E tests
     - flows/**/*.yaml

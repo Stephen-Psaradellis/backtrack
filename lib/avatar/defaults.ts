@@ -71,6 +71,9 @@ export const AVATAR_CDN = {
  * These are immediately available without network requests.
  * Using neutral style categories.
  */
+/** CDN base URL for thumbnail images */
+const THUMBNAIL_CDN_BASE = 'https://cdn.jsdelivr.net/gh/c-frame/valid-avatars-glb@c539a28/images/';
+
 export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
   {
     id: 'avatar_asian_m',
@@ -82,6 +85,7 @@ export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
     outfit: 'Casual',
     isLocal: true,
     sizeKB: 1791,
+    thumbnailUrl: `${THUMBNAIL_CDN_BASE}Asian_M_1_Casual.jpg`,
     license: 'CC0',
     source: 'VALID Project',
     variant: 1,
@@ -97,6 +101,7 @@ export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
     outfit: 'Casual',
     isLocal: true,
     sizeKB: 1710,
+    thumbnailUrl: `${THUMBNAIL_CDN_BASE}Asian_F_1_Casual.jpg`,
     license: 'CC0',
     source: 'VALID Project',
     variant: 1,
@@ -112,6 +117,7 @@ export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
     outfit: 'Casual',
     isLocal: true,
     sizeKB: 1890,
+    thumbnailUrl: `${THUMBNAIL_CDN_BASE}Black_M_1_Casual.jpg`,
     license: 'CC0',
     source: 'VALID Project',
     variant: 1,
@@ -127,6 +133,7 @@ export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
     outfit: 'Casual',
     isLocal: true,
     sizeKB: 2095,
+    thumbnailUrl: `${THUMBNAIL_CDN_BASE}White_F_1_Casual.jpg`,
     license: 'CC0',
     source: 'VALID Project',
     variant: 1,
@@ -142,6 +149,7 @@ export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
     outfit: 'Casual',
     isLocal: true,
     sizeKB: 1897,
+    thumbnailUrl: `${THUMBNAIL_CDN_BASE}Hispanic_M_1_Casual.jpg`,
     license: 'CC0',
     source: 'VALID Project',
     variant: 1,
@@ -157,6 +165,7 @@ export const LOCAL_AVATAR_PRESETS: AvatarPreset[] = [
     outfit: 'Casual',
     isLocal: true,
     sizeKB: 1808,
+    thumbnailUrl: `${THUMBNAIL_CDN_BASE}MENA_F_1_Casual.jpg`,
     license: 'CC0',
     source: 'VALID Project',
     variant: 1,

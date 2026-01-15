@@ -33,6 +33,8 @@ import {
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
+import { GlobalHeader } from '../components/navigation/GlobalHeader'
+import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
 import { MdAvatarSnapshot } from '../components/avatar3d'
 import type { StoredAvatar } from '../components/avatar/types'
 import { VerifiedBadge } from '../components/VerifiedBadge'
@@ -574,7 +576,10 @@ export function ChatListScreen(): React.ReactNode {
   if (loading) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner />
+        <GlobalHeader />
+        <View style={styles.centerContainer}>
+          <LoadingSpinner />
+        </View>
       </View>
     )
   }
@@ -582,7 +587,10 @@ export function ChatListScreen(): React.ReactNode {
   if (error) {
     return (
       <View style={styles.container}>
-        <ErrorState onRetry={handleRetry} />
+        <GlobalHeader />
+        <View style={styles.centerContainer}>
+          <ErrorState onRetry={handleRetry} />
+        </View>
       </View>
     )
   }
@@ -590,13 +598,18 @@ export function ChatListScreen(): React.ReactNode {
   if (conversations.length === 0) {
     return (
       <View style={styles.container}>
-        <EmptyChats />
+        <GlobalHeader />
+        <View style={styles.centerContainer}>
+          <EmptyChats />
+        </View>
       </View>
     )
   }
 
   return (
     <View style={styles.container}>
+      <GlobalHeader />
+      <FloatingActionButtons testID="chats-floating-actions" />
       <FlatList
         data={conversations}
         keyExtractor={(item) => item.id}
@@ -624,6 +637,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     paddingBottom: 16,

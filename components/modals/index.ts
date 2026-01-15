@@ -1,15 +1,16 @@
 /**
- * Modals Components
+ * Modal Components
  *
- * Reusable modal components for the Backtrack app.
+ * Re-exports all modal components for easier imports.
+ *
+ * @example
+ * ```tsx
+ * import { FavoritesModal, LiveViewModal } from 'components/modals'
+ * ```
  */
 
-export {
-  PostingPermissionModal,
-  type PostingPermissionModalProps,
-} from './PostingPermissionModal'
+export { FavoritesModal } from './FavoritesModal'
+export type { FavoritesModalProps } from './FavoritesModal'
 
-export {
-  MatchingPermissionModal,
-  type MatchingPermissionModalProps,
-} from './MatchingPermissionModal'
+export { LiveViewModal } from './LiveViewModal'
+export type { LiveViewModalProps } from './LiveViewModal'

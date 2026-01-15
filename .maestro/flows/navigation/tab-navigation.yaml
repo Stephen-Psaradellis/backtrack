@@ -1,0 +1,104 @@
+# Tab Navigation Flow
+# Tests navigation between all 5 tabs in the bottom bar
+#
+# Screen: 1080x1920
+# Tab bar coordinates (from element list):
+# - FeedTab: x=0-216, y=1719-1848 → center: 108, 1783
+# - MySpotsTab: x=216-432, y=1719-1848 → center: 324, 1783
+# - MapTab: x=432-648, y=1719-1848 → center: 540, 1783
+# - ChatsTab: x=648-864, y=1719-1848 → center: 756, 1783
+# - ProfileTab: x=864-1080, y=1719-1848 → center: 972, 1783
+
+appId: app.backtrack.social
+name: "Navigation - Tab Navigation"
+tags:
+  - navigation
+  - smoke
+
+---
+
+# Step 1: Launch app
+- launchApp:
+    clearState: false
+
+# Wait for app to fully load - use regex to match any text on screen
+- extendedWaitUntil:
+    visible:
+      text: ".*BACKTRACK.*|.*Sign In.*"
+    timeout: 30000
+
+# Step 2: Login if needed (only if login screen is visible)
+- runFlow:
+    when:
+      visible:
+        id: "email-input"
+    commands:
+      - tapOn:
+          id: "email-input"
+      - inputText: ${TEST_USER_EMAIL}
+      - tapOn:
+          id: "password-input"
+      - inputText: ${TEST_USER_PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          id: "login-button"
+      - extendedWaitUntil:
+          visible: "BACKTRACK"
+          timeout: 15000
+
+# Step 3: Go to Feed tab first (ensure we're on Feed)
+- tapOn:
+    point: 108, 1783
+- extendedWaitUntil:
+    visible: "BACKTRACK"
+    timeout: 10000
+- assertVisible:
+    text: "BACKTRACK"
+- takeScreenshot: feed_tab_initial
+
+# Step 4: Tap My Spots tab (x=324, y=1783)
+- tapOn:
+    point: 324, 1783
+- extendedWaitUntil:
+    visible:
+      id: "my-spots-screen"
+    timeout: 10000
+- takeScreenshot: my_spots_tab
+
+# Step 5: Tap Map tab (x=540, y=1783)
+- tapOn:
+    point: 540, 1783
+# Wait for Map screen - look for "Map" header text
+- extendedWaitUntil:
+    visible: "Map"
+    timeout: 10000
+- takeScreenshot: map_tab
+
+# Step 6: Tap Chats tab (x=756, y=1783)
+- tapOn:
+    point: 756, 1783
+# Brief wait for screen transition - header says "Conversations"
+- extendedWaitUntil:
+    visible: "Conversations"
+    timeout: 10000
+- takeScreenshot: chats_tab
+
+# Step 7: Tap Profile tab (x=972, y=1783)
+- tapOn:
+    point: 972, 1783
+# Brief wait for screen transition - header says "Profile"
+- extendedWaitUntil:
+    visible: "Profile"
+    timeout: 10000
+- takeScreenshot: profile_tab
+
+# Step 8: Navigate back to Feed tab (x=108, 1783)
+- tapOn:
+    point: 108, 1783
+- extendedWaitUntil:
+    visible: "BACKTRACK"
+    timeout: 10000
+- assertVisible: "BACKTRACK"
+
+# Take final screenshot
+- takeScreenshot: tab_navigation_complete

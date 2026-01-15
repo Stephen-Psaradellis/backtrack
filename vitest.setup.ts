@@ -281,6 +281,26 @@ vi.mock('@dicebear/collection', () => ({
   avataaars: { meta: { title: 'Avataaars' } },
 }))
 
+// Mock @expo/vector-icons
+vi.mock('@expo/vector-icons', () => ({
+  AntDesign: 'AntDesign',
+  Entypo: 'Entypo',
+  EvilIcons: 'EvilIcons',
+  Feather: 'Feather',
+  FontAwesome: 'FontAwesome',
+  FontAwesome5: 'FontAwesome5',
+  FontAwesome6: 'FontAwesome6',
+  Fontisto: 'Fontisto',
+  Foundation: 'Foundation',
+  Ionicons: 'Ionicons',
+  MaterialCommunityIcons: 'MaterialCommunityIcons',
+  MaterialIcons: 'MaterialIcons',
+  Octicons: 'Octicons',
+  SimpleLineIcons: 'SimpleLineIcons',
+  Zocial: 'Zocial',
+  createIconSet: vi.fn(() => 'Icon'),
+}))
+
 // Mock @react-navigation/native
 vi.mock('@react-navigation/native', () => ({
   useNavigation: () => ({

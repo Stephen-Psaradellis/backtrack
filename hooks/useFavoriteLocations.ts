@@ -825,6 +825,7 @@ export function useFavoriteLocations(
   const fetchFavorites = useCallback(async () => {
     if (!isAuthenticated || !userId) {
       setFavorites([])
+      setIsLoading(false)
       setError({
         code: 'AUTH_ERROR',
         message: AUTH_ERROR_MESSAGE,
@@ -841,6 +842,7 @@ export function useFavoriteLocations(
           message: 'Unable to load favorites while offline.',
         })
       }
+      setIsLoading(false)
       return
     }
 
@@ -1555,6 +1557,7 @@ export function useFavoriteLocations(
 
     if (!isAuthenticated) {
       setFavorites([])
+      setIsLoading(false)
       return
     }
 

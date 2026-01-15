@@ -1,0 +1,102 @@
+# My Spots Notifications Flow
+# Tests the My Spots screen with its 4 sections
+#
+# Sections:
+# 1. At Your Regulars - Posts at locations where user is a regular
+# 2. At Your Favorites - Posts at user's favorite locations
+# 3. New Matches - Recent conversations where user is consumer
+# 4. Recent Places - Posts at locations from recent history
+
+appId: app.backtrack.social
+name: "My Spots - Notifications"
+tags:
+  - my-spots
+  - notifications
+
+---
+
+# Step 1: Launch app
+- launchApp:
+    clearState: false
+
+# Wait for app to fully load
+- extendedWaitUntil:
+    visible:
+      text: ".*BACKTRACK.*|.*Sign In.*"
+    timeout: 30000
+
+# Step 2: Login if needed (only if login screen is visible)
+- runFlow:
+    when:
+      visible:
+        id: "email-input"
+    commands:
+      - tapOn:
+          id: "email-input"
+      - inputText: ${TEST_USER_EMAIL}
+      - tapOn:
+          id: "password-input"
+      - inputText: ${TEST_USER_PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          id: "login-button"
+      - extendedWaitUntil:
+          visible: "BACKTRACK"
+          timeout: 15000
+
+# Step 3: Tap My Spots tab (2nd tab - x=324, y=1783)
+- tapOn:
+    point: 324, 1783
+
+# Wait for My Spots screen
+- extendedWaitUntil:
+    visible:
+      id: "my-spots-screen"
+    timeout: 10000
+
+# Step 4: Assert section headers visible
+- assertVisible:
+    text: "At Your Regulars"
+- takeScreenshot: my_spots_regulars_section
+
+- assertVisible:
+    text: "At Your Favorites"
+- takeScreenshot: my_spots_favorites_section
+
+# Step 5: Scroll through sections
+- swipe:
+    direction: UP
+    duration: 500
+- takeScreenshot: my_spots_after_scroll_1
+
+# Check for New Matches section
+- assertVisible:
+    text: "New Matches"
+    optional: true
+
+# Continue scrolling
+- swipe:
+    direction: UP
+    duration: 500
+- takeScreenshot: my_spots_after_scroll_2
+
+# Check for Recent Places section
+- assertVisible:
+    text: "Recent Places"
+    optional: true
+
+# Step 6: Assert screen loads without crash
+# If we got here, the screen loaded successfully
+- assertVisible:
+    id: "my-spots-screen"
+
+# Scroll back to top
+- swipe:
+    direction: DOWN
+    duration: 500
+- swipe:
+    direction: DOWN
+    duration: 500
+
+# Final screenshot
+- takeScreenshot: my_spots_flow_complete

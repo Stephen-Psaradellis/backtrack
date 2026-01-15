@@ -24,6 +24,8 @@ import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
 import { HomeScreen } from '../screens/HomeScreen'
+import { FeedScreen } from '../screens/FeedScreen'
+import { MySpotsScreen } from '../screens/MySpotsScreen'
 import { CreatePostScreen } from '../screens/CreatePostScreen'
 import { LedgerScreen } from '../screens/LedgerScreen'
 import { PostDetailScreen } from '../screens/PostDetailScreen'
@@ -33,7 +35,6 @@ import AvatarCreatorScreen from '../screens/AvatarCreatorScreen'
 import { LegalScreen } from '../screens/LegalScreen'
 import { WebGL3DTestScreen } from '../screens/WebGL3DTestScreen'
 import { FavoritesScreen } from '../screens/FavoritesScreen'
-import { FavoritesTabScreen } from '../screens/FavoritesTabScreen'
 import type {
   RootStackParamList,
   AuthStackParamList,
@@ -109,7 +110,7 @@ function HeaderAvatar({ onPress }: { onPress?: () => void }) {
 
 /**
  * Main tab navigator for authenticated users
- * Provides bottom navigation for core app sections
+ * 5-tab icon-only layout: Feed, MySpots, Map, Chats, Profile
  */
 function MainTabNavigator() {
   return (
@@ -120,23 +121,27 @@ function MainTabNavigator() {
       }}
     >
       <MainTabs.Screen
-        name={SCREENS.HomeTab}
-        component={HomeScreen}
+        name={SCREENS.FeedTab}
+        component={FeedScreen}
         options={{
-          title: TAB_LABELS.HomeTab,
-          headerTitle: 'Backtrack',
-          // eslint-disable-next-line react/no-unstable-nested-components
-          headerRight: () => <HeaderAvatar />,
+          title: TAB_LABELS.FeedTab,
+          headerShown: false, // Uses GlobalHeader
         }}
       />
       <MainTabs.Screen
-        name={SCREENS.FavoritesTab}
-        component={FavoritesTabScreen}
+        name={SCREENS.MySpotsTab}
+        component={MySpotsScreen}
         options={{
-          title: TAB_LABELS.FavoritesTab,
-          headerTitle: 'Favorites',
-          // eslint-disable-next-line react/no-unstable-nested-components
-          headerRight: () => <HeaderAvatar />,
+          title: TAB_LABELS.MySpotsTab,
+          headerShown: false, // Uses GlobalHeader
+        }}
+      />
+      <MainTabs.Screen
+        name={SCREENS.MapTab}
+        component={HomeScreen}
+        options={{
+          title: TAB_LABELS.MapTab,
+          headerShown: false, // Uses GlobalHeader
         }}
       />
       <MainTabs.Screen
@@ -144,9 +149,7 @@ function MainTabNavigator() {
         component={ChatListScreen}
         options={{
           title: TAB_LABELS.ChatsTab,
-          headerTitle: 'Conversations',
-          // eslint-disable-next-line react/no-unstable-nested-components
-          headerRight: () => <HeaderAvatar />,
+          headerShown: false, // Uses GlobalHeader
         }}
       />
       <MainTabs.Screen
@@ -154,7 +157,7 @@ function MainTabNavigator() {
         component={ProfileScreen}
         options={{
           title: TAB_LABELS.ProfileTab,
-          headerTitle: 'Profile',
+          headerShown: false, // Uses GlobalHeader
         }}
       />
     </MainTabs.Navigator>
@@ -338,7 +341,9 @@ const linking: LinkingOptions<RootStackParamList> = {
           // Main tabs can also be deep-linked
           MainTabs: {
             screens: {
-              HomeTab: 'home',
+              FeedTab: 'feed',
+              MySpotsTab: 'myspots',
+              MapTab: 'map',
               ChatsTab: 'chats',
               ProfileTab: 'profile',
             },

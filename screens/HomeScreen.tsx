@@ -6,17 +6,16 @@
  * Favorites are managed in the dedicated Favorites tab.
  */
 import React, { useCallback } from 'react'
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { View, StyleSheet } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useLocation } from '../hooks/useLocation'
 import { useFavoriteLocations, type FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
 import { MapView, createRegion, createMarker, type MapMarker, type PoiData } from '../components/MapView'
 import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { CheckInButton } from '../components/checkin'
+import { GlobalHeader } from '../components/navigation/GlobalHeader'
+import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
 import type { MainTabNavigationProp } from '../navigation/types'
 
 // ============================================================================
@@ -76,11 +75,6 @@ export function HomeScreen(): React.ReactNode {
     }
   }, [favorites, navigation])
 
-  const handleCreatePost = useCallback(() => {
-    selectionFeedback()
-    navigation.navigate('CreatePost', {})
-  }, [navigation])
-
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -94,9 +88,12 @@ export function HomeScreen(): React.ReactNode {
 
   if (locationLoading) {
     return (
-      <SafeAreaView style={styles.centered}>
-        <LoadingSpinner message="Getting your location..." />
-      </SafeAreaView>
+      <View style={styles.container} testID="home-screen">
+        <GlobalHeader />
+        <View style={styles.centered}>
+          <LoadingSpinner message="Getting your location..." />
+        </View>
+      </View>
     )
   }
 
@@ -105,7 +102,11 @@ export function HomeScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']} testID="home-screen">
+    <View style={styles.container} testID="home-screen">
+      {/* Global Header */}
+      <GlobalHeader />
+      <FloatingActionButtons testID="home-floating-actions" />
+
       {/* Full-screen Map */}
       <View style={styles.mapContainer} testID="home-map-container">
         <MapView
@@ -117,26 +118,7 @@ export function HomeScreen(): React.ReactNode {
           onPoiClick={handlePoiClick}
         />
       </View>
-
-      {/* Check-In Button (top right) */}
-      <View style={styles.checkinContainer}>
-        <CheckInButton testID="home-checkin-button" />
-      </View>
-
-      {/* Create Post FAB */}
-      <View style={styles.fabContainer}>
-        <TouchableOpacity
-          style={styles.createPostFab}
-          onPress={handleCreatePost}
-          activeOpacity={0.8}
-          testID="home-create-post-button"
-          accessibilityRole="button"
-          accessibilityLabel="Create a new post"
-        >
-          <Ionicons name="add" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -157,33 +139,6 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1,
-  },
-  checkinContainer: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 999,
-    elevation: 999,
-  },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 100, // Above bottom tab bar
-    right: 16,
-    zIndex: 999,
-    elevation: 999,
-  },
-  createPostFab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FF6B47',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 6,
   },
 })
 

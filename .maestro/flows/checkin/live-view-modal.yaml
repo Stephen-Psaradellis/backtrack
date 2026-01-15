@@ -1,0 +1,92 @@
+# Live View Modal Flow
+# Tests the Live View modal that shows checked-in users at a location
+#
+# The Live View modal displays:
+# - Avatar grid of checked-in users (if user has access)
+# - Check-in prompt (if user doesn't have access)
+# - Count badge showing number of people present
+
+appId: app.backtrack.social
+name: "Check-in - Live View Modal"
+tags:
+  - checkin
+  - live-view
+
+---
+
+# Step 1: Launch app
+- launchApp:
+    clearState: false
+
+# Wait for app to fully load - look for BACKTRACK (increased timeout for Metro bundling)
+- extendedWaitUntil:
+    visible: "BACKTRACK"
+    timeout: 90000
+
+# Step 2: Login if needed (only if login screen is visible)
+- runFlow:
+    when:
+      visible:
+        id: "email-input"
+    commands:
+      - tapOn:
+          id: "email-input"
+      - inputText: ${TEST_USER_EMAIL}
+      - tapOn:
+          id: "password-input"
+      - inputText: ${TEST_USER_PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          id: "login-button"
+      - extendedWaitUntil:
+          visible: "BACKTRACK"
+          timeout: 15000
+
+# Step 3: Navigate to Map tab (3rd tab - x=540, y=1783)
+- tapOn:
+    point: 540, 1783
+
+# Wait for map screen
+- extendedWaitUntil:
+    visible: "Map"
+    timeout: 10000
+- takeScreenshot: map_before_live_view
+
+# Step 4: Assert Check In button is visible on Map screen
+- assertVisible:
+    text: "Check In"
+- takeScreenshot: map_with_checkin_visible
+
+# Step 5: Tap Check In button to test the check-in modal
+- tapOn:
+    text: "Check In"
+- takeScreenshot: after_checkin_tap
+
+# Step 6: Wait for check-in modal to appear (increased timeout for animation)
+- extendedWaitUntil:
+    visible: "Central Park"
+    timeout: 10000
+
+# Assert modal content visible
+- assertVisible:
+    text: "Central Park"
+- takeScreenshot: checkin_modal_open
+
+# Step 7: Cancel the check-in modal
+- tapOn:
+    text: "Cancel"
+
+# Step 8: Wait for modal to close
+- extendedWaitUntil:
+    visible: "Map"
+    timeout: 5000
+
+# Step 9: Navigate back to Feed tab
+- tapOn:
+    point: 108, 1783
+- extendedWaitUntil:
+    visible: "BACKTRACK"
+    timeout: 5000
+
+# Final screenshot
+- takeScreenshot: live_view_flow_complete

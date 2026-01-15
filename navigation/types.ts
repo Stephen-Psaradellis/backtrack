@@ -81,12 +81,15 @@ export type RootStackParamList = {
 /**
  * Main tab navigator parameter list
  * Bottom tab navigation for authenticated users
+ * 5-tab icon-only layout: Feed, MySpots, Map, Chats, Profile
  */
 export type MainTabParamList = {
-  /** Home tab - Map view with location discovery */
-  HomeTab: undefined
-  /** Favorites tab - Saved locations */
-  FavoritesTab: undefined
+  /** Feed tab - Browse all posts */
+  FeedTab: undefined
+  /** My Spots tab - User's posts and matches with notification badges */
+  MySpotsTab: undefined
+  /** Map tab - Map view with location discovery */
+  MapTab: undefined
   /** Chat list tab - All conversations */
   ChatsTab: undefined
   /** Profile tab - User settings and avatar */
@@ -109,13 +112,18 @@ export type ChatScreenProps = NativeStackScreenProps<MainStackParamList, 'Chat'>
 export type AvatarCreatorScreenProps = NativeStackScreenProps<MainStackParamList, 'AvatarCreator'>
 
 // Tab Screen Props with composite navigation (can access both tab and stack navigation)
-export type HomeTabScreenProps = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'HomeTab'>,
+export type FeedTabScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'FeedTab'>,
   NativeStackScreenProps<MainStackParamList>
 >
 
-export type FavoritesTabScreenProps = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'FavoritesTab'>,
+export type MySpotsTabScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'MySpotsTab'>,
+  NativeStackScreenProps<MainStackParamList>
+>
+
+export type MapTabScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'MapTab'>,
   NativeStackScreenProps<MainStackParamList>
 >
 
@@ -194,29 +202,32 @@ export const SCREENS = {
   Legal: 'Legal' as const,
   WebGL3DTest: 'WebGL3DTest' as const,
 
-  // Tabs
-  HomeTab: 'HomeTab' as const,
-  FavoritesTab: 'FavoritesTab' as const,
+  // Tabs (5-tab icon-only layout)
+  FeedTab: 'FeedTab' as const,
+  MySpotsTab: 'MySpotsTab' as const,
+  MapTab: 'MapTab' as const,
   ChatsTab: 'ChatsTab' as const,
   ProfileTab: 'ProfileTab' as const,
 }
 
 /**
- * Tab icons mapping
+ * Tab icons mapping (5-tab icon-only layout)
  */
 export const TAB_ICONS = {
-  HomeTab: { focused: 'map', unfocused: 'map-outline' },
-  FavoritesTab: { focused: 'heart', unfocused: 'heart-outline' },
+  FeedTab: { focused: 'home', unfocused: 'home-outline' },
+  MySpotsTab: { focused: 'notifications', unfocused: 'notifications-outline' },
+  MapTab: { focused: 'map', unfocused: 'map-outline' },
   ChatsTab: { focused: 'chatbubbles', unfocused: 'chatbubbles-outline' },
   ProfileTab: { focused: 'person', unfocused: 'person-outline' },
 } as const
 
 /**
- * Tab labels
+ * Tab labels (kept for accessibility, not displayed in icon-only layout)
  */
 export const TAB_LABELS: Record<keyof MainTabParamList, string> = {
-  HomeTab: 'Explore',
-  FavoritesTab: 'Favorites',
+  FeedTab: 'Feed',
+  MySpotsTab: 'My Spots',
+  MapTab: 'Map',
   ChatsTab: 'Chats',
   ProfileTab: 'Profile',
 }

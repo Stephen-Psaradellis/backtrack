@@ -26,6 +26,8 @@ import {
 } from 'react-native'
 
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import { GlobalHeader } from '../components/navigation/GlobalHeader'
+import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
 import { useAuth } from '../contexts/AuthContext'
 import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { Button, DangerButton, OutlineButton } from '../components/Button'
@@ -404,8 +406,11 @@ export function ProfileScreen(): React.ReactNode {
   // Show loading if auth is still initializing
   if (authLoading) {
     return (
-      <View style={styles.loadingContainer} testID="profile-loading">
-        <LoadingSpinner message="Loading profile..." fullScreen />
+      <View style={styles.container} testID="profile-loading">
+        <GlobalHeader />
+        <View style={styles.loadingContainer}>
+          <LoadingSpinner message="Loading profile..." fullScreen />
+        </View>
       </View>
     )
   }
@@ -422,19 +427,22 @@ export function ProfileScreen(): React.ReactNode {
     : 'Unknown'
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          tintColor="#FF6B47"
-          testID="profile-refresh-control"
-        />
-      }
-      testID="profile-screen"
-    >
+    <View style={styles.container}>
+      <GlobalHeader />
+      <FloatingActionButtons testID="profile-floating-actions" />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FF6B47"
+            testID="profile-refresh-control"
+          />
+        }
+        testID="profile-screen"
+      >
       {/* Profile Header */}
       <View style={styles.headerSection}>
         {/* Avatar Placeholder */}
@@ -776,7 +784,8 @@ export function ProfileScreen(): React.ReactNode {
         <Text style={styles.footerText}>Backtrack</Text>
         <Text style={styles.footerVersion}>Version 1.0.0</Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
@@ -788,6 +797,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
   },
   contentContainer: {
     paddingBottom: 40,

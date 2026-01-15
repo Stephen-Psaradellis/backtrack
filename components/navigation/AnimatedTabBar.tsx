@@ -1,14 +1,14 @@
 /**
  * Animated Tab Bar
  *
- * Custom bottom tab bar with animated indicator and modern styling.
+ * Custom bottom tab bar with animated indicator and icon-only design.
+ * 5-tab layout: Feed, MySpots, Map, Chats, Profile
  */
 
 import React, { useEffect, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
-  Text,
   StyleSheet,
   Animated,
   Dimensions,
@@ -21,13 +21,20 @@ import { colors, shadows } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Icon mapping for tabs
+// Icon mapping for 5-tab icon-only layout
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
-  HomeTab: { active: 'home', inactive: 'home-outline' },
-  FavoritesTab: { active: 'heart', inactive: 'heart-outline' },
+  FeedTab: { active: 'home', inactive: 'home-outline' },
+  MySpotsTab: { active: 'notifications', inactive: 'notifications-outline' },
+  MapTab: { active: 'map', inactive: 'map-outline' },
   ChatsTab: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
   ProfileTab: { active: 'person', inactive: 'person-outline' },
 };
+
+// Badge configuration for tabs that support notification counts
+interface TabBadgeProps {
+  count?: number;
+  visible?: boolean;
+}
 
 export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -102,21 +109,24 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
         ]}
       />
 
-      {/* Tab buttons */}
+      {/* Tab buttons - icon only, no text labels */}
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
-        const label = options.tabBarLabel ?? options.title ?? route.name;
         const isFocused = state.index === index;
 
         const iconConfig = TAB_ICONS[route.name] || { active: 'ellipse', inactive: 'ellipse-outline' };
         const iconName = isFocused ? iconConfig.active : iconConfig.inactive;
+
+        // Get badge from route options (can be set via tabBarBadge)
+        const badge = options.tabBarBadge;
+        const showBadge = badge !== undefined && badge !== null && badge !== '' && badge !== 0;
 
         return (
           <TouchableOpacity
             key={route.key}
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel}
+            accessibilityLabel={options.tabBarAccessibilityLabel || route.name}
             onPress={() => handleTabPress(route, index, isFocused)}
             style={styles.tab}
             activeOpacity={0.7}
@@ -127,23 +137,22 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
                 { transform: [{ scale: scales[index] }] },
               ]}
             >
-              <Ionicons
-                name={iconName}
-                size={24}
-                color={isFocused ? colors.primary[500] : colors.neutral[400]}
-                style={styles.icon}
-              />
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    color: isFocused ? colors.primary[500] : colors.neutral[400],
-                    fontWeight: isFocused ? '600' : '500',
-                  },
-                ]}
-              >
-                {typeof label === 'string' ? label : route.name}
-              </Text>
+              <View style={styles.iconContainer}>
+                <Ionicons
+                  name={iconName}
+                  size={26}
+                  color={isFocused ? colors.primary[500] : colors.neutral[400]}
+                />
+                {showBadge && (
+                  <View style={styles.badge}>
+                    {typeof badge === 'number' && badge > 0 && (
+                      <Animated.Text style={styles.badgeText}>
+                        {badge > 99 ? '99+' : badge}
+                      </Animated.Text>
+                    )}
+                  </View>
+                )}
+              </View>
             </Animated.View>
           </TouchableOpacity>
         );
@@ -158,7 +167,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
-    paddingTop: 8,
+    paddingTop: 12,
     ...Platform.select({
       ios: {
         ...shadows.native.md,
@@ -180,18 +189,33 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    marginBottom: 2,
+  iconContainer: {
+    position: 'relative',
   },
-  label: {
-    fontSize: 11,
-    letterSpacing: 0.1,
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primary[500],
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
 
