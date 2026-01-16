@@ -28,6 +28,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import * as Location from 'expo-location'
 
 import type { LocationState, Coordinates } from '../lib/types'
+import { shouldUseMockExpoSupabase } from '../lib/dev'
+import { DEV_MOCK_COORDINATES } from '../lib/dev/mock-supabase'
 
 // ============================================================================
 // TYPES
@@ -108,6 +110,18 @@ const DEFAULT_OPTIONS: Required<UseLocationOptions> = {
   distanceInterval: 100, // 100 meters
   enableBackground: false,
 }
+
+/**
+ * Timeout for getCurrentPositionAsync in milliseconds
+ * This prevents indefinite hanging on iOS/Android cold starts
+ * See: https://github.com/expo/expo/issues/10756
+ */
+const LOCATION_TIMEOUT_MS = 10000 // 10 seconds
+
+/**
+ * Maximum age for cached location to be considered valid (5 minutes)
+ */
+const MAX_CACHED_LOCATION_AGE_MS = 5 * 60 * 1000
 
 /**
  * Initial location state
@@ -304,10 +318,40 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
 
   /**
    * Get current location once
+   *
+   * Uses a two-phase approach to prevent indefinite hanging:
+   * 1. First tries getLastKnownPositionAsync for instant cached location
+   * 2. If no cache or too old, calls getCurrentPositionAsync with timeout
+   *
+   * This fixes the iOS/Android cold start issue where getCurrentPositionAsync
+   * can hang indefinitely waiting for GPS lock.
+   * See: https://github.com/expo/expo/issues/10756
    */
   const getCurrentLocation = useCallback(async (): Promise<Coordinates | null> => {
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }))
+
+      // In dev mode with mock Supabase, use mock coordinates
+      if (shouldUseMockExpoSupabase()) {
+        const mockCoords: Coordinates = {
+          latitude: DEV_MOCK_COORDINATES.latitude,
+          longitude: DEV_MOCK_COORDINATES.longitude,
+        }
+        setState((prev) => ({
+          ...prev,
+          latitude: mockCoords.latitude,
+          longitude: mockCoords.longitude,
+          accuracy: 10,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          timestamp: Date.now(),
+          loading: false,
+          error: null,
+          permissionStatus: 'granted',
+        }))
+        return mockCoords
+      }
 
       // Request permission if needed
       const hasPermission = await requestPermission()
@@ -315,12 +359,40 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
         return null
       }
 
-      // Get current position
-      const location = await Location.getCurrentPositionAsync({
+      // Phase 1: Try to get cached location first (instant response)
+      // This prevents hanging on cold starts when GPS needs to warm up
+      try {
+        const cachedLocation = await Location.getLastKnownPositionAsync({
+          maxAge: MAX_CACHED_LOCATION_AGE_MS,
+          requiredAccuracy: config.highAccuracy ? 100 : 1000, // meters
+        })
+
+        if (cachedLocation) {
+          updateLocationState(cachedLocation)
+          return {
+            latitude: cachedLocation.coords.latitude,
+            longitude: cachedLocation.coords.longitude,
+          }
+        }
+      } catch {
+        // Cached location not available, continue to fresh fetch
+      }
+
+      // Phase 2: Get fresh location with timeout to prevent indefinite hang
+      const locationPromise = Location.getCurrentPositionAsync({
         accuracy: config.highAccuracy
           ? Location.Accuracy.High
           : Location.Accuracy.Balanced,
       })
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Location request timed out')),
+          LOCATION_TIMEOUT_MS
+        )
+      )
+
+      const location = await Promise.race([locationPromise, timeoutPromise])
 
       updateLocationState(location)
 
@@ -331,7 +403,7 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
     } catch (error) {
       const errorMessage =
         error instanceof Error
-          ? error.message.includes('timeout')
+          ? error.message.includes('timeout') || error.message.includes('timed out')
             ? ERROR_MESSAGES.TIMEOUT
             : ERROR_MESSAGES.UNAVAILABLE
           : ERROR_MESSAGES.UNKNOWN

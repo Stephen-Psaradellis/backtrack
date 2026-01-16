@@ -397,6 +397,18 @@ export const devMockProfile: Profile = {
  * Multiple mock locations around San Francisco for realistic POI testing
  */
 export const devMockLocations: LocationEntity[] = [
+  // Location at EXACT mock coordinates for testing nearby feed (within 50m)
+  {
+    id: 'dev-location-000',
+    google_place_id: 'ChIJdev000',
+    name: 'Union Square Coffee',
+    address: '333 Post St, San Francisco, CA 94108',
+    latitude: 37.7879,  // Same as DEV_MOCK_COORDINATES
+    longitude: -122.4074,  // Same as DEV_MOCK_COORDINATES
+    place_types: ['cafe', 'food', 'point_of_interest', 'establishment'],
+    post_count: 3,
+    created_at: new Date().toISOString(),
+  },
   {
     id: 'dev-location-001',
     google_place_id: 'ChIJdev001',
@@ -454,8 +466,8 @@ export const devMockLocations: LocationEntity[] = [
   },
 ]
 
-// Keep the original single location export for backwards compatibility
-export const devMockLocation: LocationEntity = devMockLocations[0]
+// Keep the original single location export for backwards compatibility (Blue Bottle Coffee)
+export const devMockLocation: LocationEntity = devMockLocations[1]
 
 /**
  * Multiple mock posts distributed across locations
@@ -490,6 +502,58 @@ function createMockAvatar(id: string): StoredAvatar {
 }
 
 export const devMockPosts: Post[] = [
+  // Union Square Coffee posts - at user's exact location (3)
+  {
+    id: 'dev-post-nearby-001',
+    producer_id: 'dev-producer-nearby-001',
+    location_id: 'dev-location-000',
+    target_avatar_v2: createMockAvatar('dev-target-nearby-001'),
+    target_description: 'Wearing a blue jacket, reading on their phone',
+    message: 'You were sitting by the window with a latte. We made eye contact several times!',
+    note: null,
+    selfie_url: 'https://example.com/mock-selfie-nearby-001.jpg',
+    photo_id: null,
+    seen_at: null,
+    sighting_date: new Date().toISOString().split('T')[0],
+    time_granularity: 'hour' as const,
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 mins ago
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    is_active: true,
+  },
+  {
+    id: 'dev-post-nearby-002',
+    producer_id: 'dev-producer-nearby-002',
+    location_id: 'dev-location-000',
+    target_avatar_v2: createMockAvatar('dev-target-nearby-002'),
+    target_description: 'Curly hair, working on a MacBook',
+    message: 'You helped me find a seat when it was crowded. Thanks! Would love to chat more.',
+    note: null,
+    selfie_url: 'https://example.com/mock-selfie-nearby-002.jpg',
+    photo_id: null,
+    seen_at: null,
+    sighting_date: new Date().toISOString().split('T')[0],
+    time_granularity: 'hour' as const,
+    created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // 45 mins ago
+    expires_at: new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString(),
+    is_active: true,
+  },
+  {
+    id: 'dev-post-nearby-003',
+    producer_id: 'dev-producer-nearby-003',
+    location_id: 'dev-location-000',
+    target_avatar_v2: createMockAvatar('dev-target-nearby-003'),
+    target_description: 'Had a cute corgi with them',
+    message: 'Your dog made my day! Would love to set up a doggy playdate.',
+    note: null,
+    selfie_url: 'https://example.com/mock-selfie-nearby-003.jpg',
+    photo_id: null,
+    seen_at: null,
+    sighting_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // yesterday
+    time_granularity: 'day' as const,
+    created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
+    expires_at: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(),
+    is_active: true,
+  },
   // Blue Bottle Coffee posts (3)
   {
     id: 'dev-post-001',
@@ -667,7 +731,7 @@ export const devMockPosts: Post[] = [
 ]
 
 // Keep the original single post export for backwards compatibility
-export const devMockPost: Post = devMockPosts[2]
+export const devMockPost: Post = devMockPosts[5]  // Blue Bottle Coffee post by dev user
 
 /**
  * Mock location visits (recent visits within 3-hour eligibility window)
@@ -907,6 +971,18 @@ export const devMockMessages: Message[] = [
  */
 export const devMockFavoriteLocations: FavoriteLocation[] = [
   {
+    id: 'dev-fav-000',
+    user_id: devMockUser.id,
+    custom_name: 'Current Spot',
+    place_name: 'Union Square Coffee',
+    latitude: 37.7879,
+    longitude: -122.4074,
+    address: '333 Post St, San Francisco, CA 94108',
+    place_id: 'ChIJdev000',
+    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
     id: 'dev-fav-001',
     user_id: devMockUser.id,
     custom_name: 'My Coffee Spot',
@@ -1058,6 +1134,15 @@ export const devMockUserCheckins: UserCheckin[] = [
  * Mock location streaks for regular visitors
  */
 export const devMockLocationStreaks: LocationStreak[] = [
+  {
+    id: 'dev-streak-000',
+    user_id: devMockUser.id,
+    location_id: 'dev-location-000',
+    streak_count: 8,
+    last_visit_date: new Date().toISOString(),
+    created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
   {
     id: 'dev-streak-001',
     user_id: devMockUser.id,
@@ -1483,6 +1568,33 @@ export function handleMockRpc(
     case 'get_posts_at_location': {
       const locationId = params?.location_id as string
       return getMockPostsForLocation(locationId)
+    }
+
+    case 'get_posts_within_radius': {
+      const lat = (params?.p_lat as number) ?? DEV_MOCK_COORDINATES.latitude
+      const lng = (params?.p_lng as number) ?? DEV_MOCK_COORDINATES.longitude
+      const radiusMeters = (params?.p_radius_meters as number) ?? 50
+      const limit = (params?.p_limit as number) ?? 50
+
+      // Get all posts with their location info
+      const postsWithDistance = devMockPosts
+        .filter(post => post.is_active)
+        .map(post => {
+          const location = devMockLocations.find(loc => loc.id === post.location_id)
+          if (!location) return null
+
+          const distance = calculateDistanceMeters(lat, lng, location.latitude, location.longitude)
+          return {
+            ...post,
+            locations: location,
+            distance_meters: Math.round(distance),
+          }
+        })
+        .filter(post => post !== null && post.distance_meters <= radiusMeters)
+        .sort((a, b) => new Date(b!.created_at).getTime() - new Date(a!.created_at).getTime())
+        .slice(0, limit)
+
+      return postsWithDistance
     }
 
     case 'get_user_conversations': {

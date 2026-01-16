@@ -644,6 +644,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
+    paddingTop: 8,
     paddingBottom: 16,
   },
   conversationItem: {

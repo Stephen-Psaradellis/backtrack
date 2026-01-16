@@ -937,6 +937,8 @@ export interface LocationWithDistance extends Location {
  */
 export interface LocationWithActivePosts extends Location {
   active_post_count?: number
+  /** ISO timestamp of the most recent active post at this location */
+  latest_post_at?: string
 }
 
 /**

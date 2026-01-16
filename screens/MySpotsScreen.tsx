@@ -393,7 +393,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primary[500],
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingLeft: 16,
+    paddingRight: 140, // Extra padding to avoid overlap with FloatingActionButtons
     gap: 6,
   },
   badgeText: {
@@ -402,6 +403,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   listContent: {
+    paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
   },
   sectionHeader: {

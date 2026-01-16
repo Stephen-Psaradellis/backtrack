@@ -155,6 +155,10 @@ export interface MapMarker {
   anchor?: { x: number; y: number }
   /** Optional callback when marker is pressed */
   onPress?: () => void
+  /** Optional custom React element to render as the marker (replaces default pin) */
+  customView?: React.ReactNode
+  /** Whether to track view changes (set true for animated markers, false for static) */
+  tracksViewChanges?: boolean
 }
 
 /**
@@ -546,14 +550,17 @@ export function MapView({
               latitude: marker.latitude,
               longitude: marker.longitude,
             }}
-            title={marker.title}
-            description={marker.description}
-            pinColor={marker.pinColor || MARKER_COLORS.default}
-            image={marker.image}
-            anchor={marker.anchor}
+            title={marker.customView ? undefined : marker.title}
+            description={marker.customView ? undefined : marker.description}
+            pinColor={marker.customView ? undefined : (marker.pinColor || MARKER_COLORS.default)}
+            image={marker.customView ? undefined : marker.image}
+            anchor={marker.anchor ?? (marker.customView ? { x: 0.5, y: 0.5 } : undefined)}
+            tracksViewChanges={marker.tracksViewChanges ?? false}
             onPress={() => handleMarkerPress(marker)}
             testID={`${testID}-marker-${marker.id}`}
-          />
+          >
+            {marker.customView}
+          </Marker>
         ))}
       </RNMapView>
     </View>

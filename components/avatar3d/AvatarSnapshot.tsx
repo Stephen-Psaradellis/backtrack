@@ -35,6 +35,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAvatarSnapshot } from '../../hooks/useAvatarSnapshot';
 import { AVATAR_SIZES, type AvatarSize, type AvatarConfig, type StoredAvatar } from '../avatar/types';
 import { SNAPSHOT_SIZES, type SnapshotSizePreset } from '../../lib/avatar/snapshotService';
+import { getAvatarThumbnailUrl } from '../../lib/avatar/defaults';
 
 // =============================================================================
 // TYPES
@@ -177,15 +178,23 @@ export const AvatarSnapshot = memo(function AvatarSnapshot({
   // Get snapshot preset based on size
   const snapshotPreset = SIZE_TO_SNAPSHOT_PRESET[size];
 
-  // Fetch snapshot URL
+  // Fetch snapshot URL from storage
   const {
-    url,
+    url: generatedUrl,
     isLoading,
     error,
   } = useAvatarSnapshot(config, {
     skip: !config,
     preset: snapshotPreset,
   });
+
+  // Get preset thumbnail URL as fallback (from CDN)
+  const presetThumbnailUrl = config?.avatarId
+    ? getAvatarThumbnailUrl(config.avatarId)
+    : undefined;
+
+  // Use generated snapshot URL if available, otherwise fall back to preset thumbnail
+  const url = generatedUrl || presetThumbnailUrl || null;
 
   // Resolve pixel size
   const pixelSize = AVATAR_SIZES[size];
@@ -217,10 +226,10 @@ export const AvatarSnapshot = memo(function AvatarSnapshot({
   }
 
   // ---------------------------------------------------------------------------
-  // Render: Loading state
+  // Render: Loading state (only show if no URL available yet)
   // ---------------------------------------------------------------------------
 
-  if (isLoading && !url) {
+  if (isLoading && !generatedUrl && !presetThumbnailUrl) {
     return (
       <View
         style={[
@@ -246,7 +255,7 @@ export const AvatarSnapshot = memo(function AvatarSnapshot({
   // Render: Error or no URL - show placeholder
   // ---------------------------------------------------------------------------
 
-  if (error || !url || imageError) {
+  if (!url || imageError) {
     return (
       <AvatarPlaceholder
         size={size}

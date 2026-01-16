@@ -4,12 +4,13 @@
  * The Map tab shows a full-screen map for discovering locations.
  * Features:
  * - Full-screen map with POI click → Ledger navigation
- * - Search bar at top for venue search
+ * - Search bar with Google Places autocomplete
+ * - Search results animate map to location and open posts
  * - Star icon to open Favorites modal
  * - My location FAB (bottom right)
  * - Favorite location markers on map
  */
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useRef, useMemo } from 'react'
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
@@ -17,16 +18,44 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useLocation } from '../hooks/useLocation'
 import { useFavoriteLocations, type FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
-import { MapView, createRegion, createMarker, type MapMarker, type PoiData } from '../components/MapView'
+import { useLocationSearch } from '../hooks/useLocationSearch'
+import { useNearbyLocations } from '../hooks/useNearbyLocations'
+import { MapView, createRegion, createMarker, type MapMarker, type PoiData, type MapViewProps } from '../components/MapView'
+import { LocationMarker, getActivityState } from '../components/map/LocationMarker'
 import { SearchBar } from '../components/LocationSearch'
 import { GlobalHeader } from '../components/navigation/GlobalHeader'
 import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { colors, shadows } from '../constants/theme'
 import type { MainTabNavigationProp } from '../navigation/types'
+import type { VenuePreview, Venue } from '../types/location'
+import type { MapRegion } from '../lib/types'
 
 // ============================================================================
 // MapSearchScreen Component
+// ============================================================================
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Convert a Venue to VenuePreview for SearchBar suggestions
+ */
+function venueToPreview(venue: Venue): VenuePreview {
+  return {
+    id: venue.id || venue.google_place_id, // Use google_place_id as fallback if not cached
+    google_place_id: venue.google_place_id,
+    name: venue.name,
+    address: venue.address,
+    primary_type: venue.place_types?.[0] ?? null,
+    post_count: venue.post_count ?? 0,
+    distance_meters: venue.distance_meters,
+  }
+}
+
+// ============================================================================
+// Component
 // ============================================================================
 
 export function MapSearchScreen(): React.ReactNode {
@@ -41,28 +70,109 @@ export function MapSearchScreen(): React.ReactNode {
   } = useFavoriteLocations({ userCoordinates })
 
   // ---------------------------------------------------------------------------
+  // Nearby Locations with Active Posts Hook (for activity markers)
+  // ---------------------------------------------------------------------------
+
+  const {
+    locations: nearbyLocations,
+    refetch: refetchNearbyLocations,
+  } = useNearbyLocations(userCoordinates, {
+    withActivePosts: true,
+    radiusMeters: 5000,
+    minPostCount: 1,
+  })
+
+  // ---------------------------------------------------------------------------
+  // Location Search Hook
+  // ---------------------------------------------------------------------------
+
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+    isLoading: isSearching,
+    error: searchError,
+    clearSearch,
+  } = useLocationSearch({
+    userLocation: userCoordinates,
+    enableGpsOnMount: false, // Already using useLocation hook
+    debounceMs: 300,
+    maxResults: 10,
+  })
+
+  // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [isSearching, setIsSearching] = useState(false)
+  // Map region state for controlling map position
+  const [mapRegion, setMapRegion] = useState<MapRegion | undefined>(undefined)
+
+  // Track if we should show selected venue marker
+  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null)
 
   // ---------------------------------------------------------------------------
-  // Map Configuration
+  // Memoized Values
   // ---------------------------------------------------------------------------
 
-  const initialRegion = userCoordinates
-    ? createRegion(userCoordinates, 'medium')
-    : undefined
+  // Convert search results to VenuePreview for suggestions
+  const suggestions: VenuePreview[] = useMemo(() => {
+    return searchResults.map(venueToPreview)
+  }, [searchResults])
 
-  // Create markers for favorites (shown on the map as reference)
-  const favoriteMarkers: MapMarker[] = favorites.map((fav) =>
-    createMarker(
-      fav.id,
-      { latitude: fav.latitude, longitude: fav.longitude },
-      { title: fav.custom_name }
-    )
-  )
+  // Initial map region based on user location
+  const initialRegion = useMemo(() => {
+    if (userCoordinates) {
+      return createRegion(userCoordinates, 'medium')
+    }
+    return undefined
+  }, [userCoordinates])
+
+  // Track selected location for marker highlighting
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
+
+  // Create activity markers for nearby locations with posts using custom LocationMarker
+  const activityMarkers: MapMarker[] = useMemo(() => {
+    return nearbyLocations.map((location) => {
+      const postCount = location.active_post_count ?? 0
+      const latestPostAt = location.latest_post_at
+        ? new Date(location.latest_post_at)
+        : null
+      const activityState = getActivityState(postCount, latestPostAt)
+      const isHot = activityState === 'hot'
+      const isSelected = selectedLocationId === location.id
+
+      return {
+        id: location.id,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        // Only track view changes for animated hot markers (performance optimization)
+        tracksViewChanges: isHot,
+        customView: (
+          <LocationMarker
+            postCount={postCount}
+            latestPostAt={latestPostAt}
+            size="medium"
+            selected={isSelected}
+          />
+        ),
+      }
+    })
+  }, [nearbyLocations, selectedLocationId])
+
+  // Add selected venue as a marker if it exists (uses default pin style)
+  const allMarkers: MapMarker[] = useMemo(() => {
+    const markers = [...activityMarkers]
+    if (selectedVenue && selectedVenue.latitude && selectedVenue.longitude) {
+      markers.push(
+        createMarker(
+          `selected-${selectedVenue.google_place_id}`,
+          { latitude: selectedVenue.latitude, longitude: selectedVenue.longitude },
+          { title: selectedVenue.name, pinColor: colors.primary[500] }
+        )
+      )
+    }
+    return markers
+  }, [activityMarkers, selectedVenue])
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -70,24 +180,39 @@ export function MapSearchScreen(): React.ReactNode {
 
   const handlePoiClick = useCallback((poi: PoiData) => {
     selectionFeedback()
+    // Clear search when tapping a POI
+    clearSearch()
+    setSelectedVenue(null)
     // Navigate to posts for this POI location
     navigation.navigate('Ledger', {
       locationId: poi.placeId ?? '',
       locationName: poi.name,
     })
-  }, [navigation])
+  }, [navigation, clearSearch])
 
   const handleMarkerPress = useCallback((marker: MapMarker) => {
-    const fav = favorites.find(f => f.id === marker.id)
-    if (fav) {
+    // Check if it's the selected venue marker
+    if (marker.id.startsWith('selected-') && selectedVenue) {
       selectionFeedback()
-      // Navigate to posts for this favorite location
       navigation.navigate('Ledger', {
-        locationId: fav.place_id ?? '',
-        locationName: fav.place_name,
+        locationId: selectedVenue.id || selectedVenue.google_place_id,
+        locationName: selectedVenue.name,
+      })
+      return
+    }
+
+    // Check if it's an activity marker (from nearby locations with posts)
+    const location = nearbyLocations.find(loc => loc.id === marker.id)
+    if (location) {
+      selectionFeedback()
+      setSelectedLocationId(marker.id)
+      // Navigate to posts for this location
+      navigation.navigate('Ledger', {
+        locationId: location.google_place_id ?? location.id,
+        locationName: location.name,
       })
     }
-  }, [favorites, navigation])
+  }, [nearbyLocations, navigation, selectedVenue])
 
   const handleStarPress = useCallback(() => {
     selectionFeedback()
@@ -97,25 +222,73 @@ export function MapSearchScreen(): React.ReactNode {
 
   const handleMyLocationPress = useCallback(() => {
     lightFeedback()
-    // The map will center on user location when re-rendered
-    // In a full implementation, this would animate to user location
-  }, [])
+    // Animate to user location
+    if (userCoordinates) {
+      setMapRegion(createRegion(userCoordinates, 'medium'))
+      setSelectedVenue(null)
+    }
+  }, [userCoordinates])
 
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text)
-    // In a full implementation, this would trigger venue search
-    if (text.length > 0) {
-      setIsSearching(true)
-      // Simulate search delay
-      setTimeout(() => setIsSearching(false), 500)
+    // Clear selected venue when search changes
+    if (text.length === 0) {
+      setSelectedVenue(null)
     }
-  }, [])
+  }, [setSearchQuery])
+
+  /**
+   * Handle venue selection from search results
+   * - Animates map to the selected venue location
+   * - Navigates to the Ledger screen for that location
+   */
+  const handleVenueSelect = useCallback((venuePreview: VenuePreview) => {
+    selectionFeedback()
+
+    // Find the full venue data from search results
+    const venue = searchResults.find(v =>
+      v.google_place_id === venuePreview.google_place_id
+    )
+
+    if (venue && venue.latitude && venue.longitude) {
+      // Set the selected venue for marker display
+      setSelectedVenue(venue)
+
+      // Animate map to the venue location
+      const newRegion = createRegion(
+        { latitude: venue.latitude, longitude: venue.longitude },
+        'close' // Zoom in close to show the venue
+      )
+      setMapRegion(newRegion)
+
+      // Clear the search query to hide suggestions
+      clearSearch()
+
+      // Navigate to the Ledger for this location after a brief delay
+      // This allows the user to see the map animate to the location
+      setTimeout(() => {
+        navigation.navigate('Ledger', {
+          locationId: venue.id || venue.google_place_id,
+          locationName: venue.name,
+        })
+      }, 500)
+    }
+  }, [searchResults, clearSearch, navigation])
+
+  // Handle search submission (Enter key)
+  const handleSearchSubmit = useCallback(() => {
+    // If there's at least one result, select it
+    if (searchResults.length > 0) {
+      handleVenueSelect(venueToPreview(searchResults[0]))
+    }
+  }, [searchResults, handleVenueSelect])
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       refetchFavorites()
-    }, [refetchFavorites])
+      refetchNearbyLocations()
+    }, [refetchFavorites, refetchNearbyLocations])
   )
 
   // ---------------------------------------------------------------------------
@@ -158,6 +331,11 @@ export function MapSearchScreen(): React.ReactNode {
             onChangeText={handleSearchChange}
             loading={isSearching}
             placeholder="Search for a venue..."
+            suggestions={suggestions}
+            onSuggestionPress={handleVenueSelect}
+            onSubmit={handleSearchSubmit}
+            error={searchError}
+            maxSuggestions={6}
             testID="map-search-bar"
           />
         </View>
@@ -168,7 +346,8 @@ export function MapSearchScreen(): React.ReactNode {
         <MapView
           showsUserLocation
           initialRegion={initialRegion}
-          markers={favoriteMarkers}
+          region={mapRegion}
+          markers={allMarkers}
           onMapReady={() => lightFeedback()}
           onMarkerPress={handleMarkerPress}
           onPoiClick={handlePoiClick}

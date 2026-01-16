@@ -28,12 +28,30 @@ import {
   StyleSheet,
   type ViewStyle,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 
 import { CheckInButton } from '../checkin/CheckInButton'
 import { LiveViewModal } from '../modals/LiveViewModal'
 import { useCheckin } from '../../hooks/useCheckin'
 import { selectionFeedback } from '../../lib/haptics'
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/**
+ * GlobalHeader height calculation (must match GlobalHeader.tsx):
+ * - topRow: paddingVertical (12) + button height (40) + paddingVertical (12) = 64
+ * - border: 1px
+ * Total fixed header height (excluding safe area): 65px
+ */
+const HEADER_FIXED_HEIGHT = 65
+
+/**
+ * Gap between header and floating buttons
+ */
+const HEADER_GAP = 8
 
 // ============================================================================
 // TYPES
@@ -54,8 +72,12 @@ export function FloatingActionButtons({
   style,
   testID = 'floating-action-buttons',
 }: FloatingActionButtonsProps): React.ReactNode {
+  const insets = useSafeAreaInsets()
   const { activeCheckin } = useCheckin()
   const [showLiveView, setShowLiveView] = useState(false)
+
+  // Calculate dynamic top position based on header height + safe area
+  const dynamicTop = insets.top + HEADER_FIXED_HEIGHT + HEADER_GAP
 
   /**
    * Handle Live View button press
@@ -74,7 +96,7 @@ export function FloatingActionButtons({
 
   return (
     <>
-      <View style={[styles.container, style]} testID={testID}>
+      <View style={[styles.container, { top: dynamicTop }, style]} testID={testID}>
         {/* Check In Button */}
         <CheckInButton testID={`${testID}-checkin`} />
 
@@ -129,7 +151,7 @@ export function FloatingActionButtons({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 120,
+    // top is set dynamically based on safe area insets
     right: 16,
     zIndex: 100,
     gap: 8,
