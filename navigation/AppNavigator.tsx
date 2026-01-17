@@ -23,7 +23,6 @@ import { SmAvatarSnapshot } from '../components/avatar3d'
 import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
-import { HomeScreen } from '../screens/HomeScreen'
 import { FeedScreen } from '../screens/FeedScreen'
 import { MySpotsScreen } from '../screens/MySpotsScreen'
 import { CreatePostScreen } from '../screens/CreatePostScreen'
@@ -35,6 +34,7 @@ import AvatarCreatorScreen from '../screens/AvatarCreatorScreen'
 import { LegalScreen } from '../screens/LegalScreen'
 import { WebGL3DTestScreen } from '../screens/WebGL3DTestScreen'
 import { FavoritesScreen } from '../screens/FavoritesScreen'
+import { MapSearchScreen } from '../screens/MapSearchScreen'
 import type {
   RootStackParamList,
   AuthStackParamList,
@@ -138,7 +138,7 @@ function MainTabNavigator() {
       />
       <MainTabs.Screen
         name={SCREENS.MapTab}
-        component={HomeScreen}
+        component={MapSearchScreen}
         options={{
           title: TAB_LABELS.MapTab,
           headerShown: false, // Uses GlobalHeader

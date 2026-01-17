@@ -12,19 +12,24 @@ vi.mock('../supabase', () => {
   const mockEq = vi.fn()
   const mockOrder = vi.fn()
   const mockOr = vi.fn()
+  const mockRange = vi.fn()
   const mockSelect = vi.fn()
   const mockInsert = vi.fn()
   const mockUpdate = vi.fn()
   const mockUpdateEq = vi.fn()
+  const mockRpc = vi.fn()
 
   // Set up default chain
   mockSelect.mockReturnValue({ eq: mockEq, or: mockOr, single: mockSingle })
   mockInsert.mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) })
   mockUpdate.mockReturnValue({ eq: mockUpdateEq })
-  mockEq.mockReturnValue({ eq: mockEq, single: mockSingle })
+  mockEq.mockReturnValue({ eq: mockEq, single: mockSingle, range: mockRange })
   mockOr.mockReturnValue({ order: mockOrder, eq: mockEq })
-  mockOrder.mockReturnValue({ eq: mockEq })
+  mockOrder.mockReturnValue({ eq: mockEq, range: mockRange })
+  mockRange.mockResolvedValue({ data: [], error: null })
   mockUpdateEq.mockResolvedValue({ error: null })
+  // Default RPC mock - returns RPC not found to use legacy path
+  mockRpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'Function not found' } })
 
   return {
     supabase: {
@@ -33,16 +38,19 @@ vi.mock('../supabase', () => {
         insert: mockInsert,
         update: mockUpdate,
       })),
+      rpc: mockRpc,
       // Expose mocks for test access
       __mocks: {
         mockSingle,
         mockEq,
         mockOrder,
         mockOr,
+        mockRange,
         mockSelect,
         mockInsert,
         mockUpdate,
         mockUpdateEq,
+        mockRpc,
       },
     },
   }
@@ -66,7 +74,7 @@ import type { Conversation } from '../../types/database'
 
 // Get mocks from the supabase mock
 const { __mocks } = supabase as unknown as { __mocks: Record<string, ReturnType<typeof vi.fn>> }
-const { mockSingle, mockEq, mockOrder, mockOr, mockSelect, mockInsert, mockUpdate, mockUpdateEq } = __mocks
+const { mockSingle, mockEq, mockOrder, mockOr, mockRange, mockSelect, mockInsert, mockUpdate, mockUpdateEq, mockRpc } = __mocks
 
 // Helper to create mock conversation
 function createMockConversation(overrides: Partial<Conversation> = {}): Conversation {
@@ -91,13 +99,17 @@ describe('conversations', () => {
     vi.clearAllMocks()
 
     // Reset default chain behavior
+    // Chain: select -> or -> eq -> order -> range
     mockSelect.mockReturnValue({ eq: mockEq, or: mockOr, single: mockSingle })
     mockInsert.mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) })
     mockUpdate.mockReturnValue({ eq: mockUpdateEq })
-    mockEq.mockReturnValue({ eq: mockEq, single: mockSingle })
+    mockEq.mockReturnValue({ eq: mockEq, single: mockSingle, order: mockOrder })
     mockOr.mockReturnValue({ order: mockOrder, eq: mockEq })
-    mockOrder.mockReturnValue({ eq: mockEq })
+    mockOrder.mockReturnValue({ range: mockRange })
+    mockRange.mockResolvedValue({ data: [], error: null })
     mockUpdateEq.mockResolvedValue({ error: null })
+    // Default RPC mock - returns RPC not found to use legacy path
+    mockRpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'Function not found' } })
   })
 
   describe('CONVERSATION_ERRORS', () => {
@@ -397,7 +409,12 @@ describe('conversations', () => {
       expect(result.error).toBe(CONVERSATION_ERRORS.MISSING_USER_ID)
     })
 
-    it('should return existing conversation if found', async () => {
+    it('should return existing conversation if found (via legacy path)', async () => {
+      // RPC returns not found, triggering legacy path
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST202', message: 'Function not found' },
+      })
       // Check existing returns found
       mockSingle.mockResolvedValueOnce({
         data: { id: 'existing-conv' },
@@ -411,7 +428,12 @@ describe('conversations', () => {
       expect(result.isNew).toBe(false)
     })
 
-    it('should create new conversation if none exists', async () => {
+    it('should create new conversation if none exists (via legacy path)', async () => {
+      // RPC returns not found, triggering legacy path
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST202', message: 'Function not found' },
+      })
       // Check existing returns not found
       mockSingle.mockResolvedValueOnce({
         data: null,
@@ -430,20 +452,61 @@ describe('conversations', () => {
       expect(result.isNew).toBe(true)
     })
 
-    it('should handle check failure', async () => {
-      mockSingle.mockResolvedValueOnce({
-        data: null,
-        error: { code: '42000', message: 'Check failed' },
+    it('should use upsert RPC when available', async () => {
+      // RPC succeeds with new conversation
+      mockRpc.mockResolvedValueOnce({
+        data: [{ conversation_id: 'new-conv-rpc', is_new: true }],
+        error: null,
+      })
+
+      const result = await startConversation('consumer-123', { id: 'post-456', producer_id: 'producer-789' })
+
+      expect(result.success).toBe(true)
+      expect(result.conversationId).toBe('new-conv-rpc')
+      expect(result.isNew).toBe(true)
+    })
+
+    it('should return existing via upsert RPC', async () => {
+      // RPC succeeds with existing conversation
+      mockRpc.mockResolvedValueOnce({
+        data: [{ conversation_id: 'existing-conv-rpc', is_new: false }],
+        error: null,
+      })
+
+      const result = await startConversation('consumer-123', { id: 'post-456', producer_id: 'producer-789' })
+
+      expect(result.success).toBe(true)
+      expect(result.conversationId).toBe('existing-conv-rpc')
+      expect(result.isNew).toBe(false)
+    })
+
+    it('should handle RPC returning null conversation_id', async () => {
+      // RPC succeeds but returns null/undefined conversation_id
+      mockRpc.mockResolvedValueOnce({
+        data: [{ conversation_id: null, is_new: false }],
+        error: null,
       })
 
       const result = await startConversation('consumer-123', { id: 'post-456', producer_id: 'producer-789' })
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Check failed')
+      expect(result.error).toBe(CONVERSATION_ERRORS.CREATE_FAILED)
+    })
+
+    it('should handle RPC errors', async () => {
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: { code: '42000', message: 'RPC failed' },
+      })
+
+      const result = await startConversation('consumer-123', { id: 'post-456', producer_id: 'producer-789' })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('RPC failed')
     })
 
     it('should handle exceptions', async () => {
-      mockSingle.mockRejectedValueOnce(new Error('Network error'))
+      mockRpc.mockRejectedValueOnce(new Error('Network error'))
 
       const result = await startConversation('consumer-123', { id: 'post-456', producer_id: 'producer-789' })
 
@@ -457,14 +520,15 @@ describe('conversations', () => {
       const result = await getUserConversations('')
       expect(result.success).toBe(false)
       expect(result.error).toBe(CONVERSATION_ERRORS.MISSING_USER_ID)
+      expect(result.hasMore).toBe(false)
     })
 
-    it('should return conversations for user', async () => {
+    it('should return conversations for user with pagination', async () => {
       const mockConversations = [
         createMockConversation({ id: 'conv-1' }),
         createMockConversation({ id: 'conv-2' }),
       ]
-      mockEq.mockResolvedValueOnce({
+      mockRange.mockResolvedValueOnce({
         data: mockConversations,
         error: null,
       })
@@ -473,10 +537,11 @@ describe('conversations', () => {
 
       expect(result.success).toBe(true)
       expect(result.conversations).toHaveLength(2)
+      expect(result.hasMore).toBe(false)
     })
 
     it('should filter by active only by default', async () => {
-      mockEq.mockResolvedValueOnce({
+      mockRange.mockResolvedValueOnce({
         data: [],
         error: null,
       })
@@ -488,17 +553,19 @@ describe('conversations', () => {
     })
 
     it('should return all conversations when activeOnly is false', async () => {
-      mockOrder.mockReturnValueOnce({
-        then: vi.fn((cb) => cb({ data: [], error: null })),
+      mockRange.mockResolvedValueOnce({
+        data: [],
+        error: null,
       })
 
       await getUserConversations('user-123', false)
 
-      // When activeOnly is false, eq('is_active', true) should not be called after order
+      // When activeOnly is false, we use range directly from order
+      expect(mockRange).toHaveBeenCalled()
     })
 
     it('should handle database error', async () => {
-      mockEq.mockResolvedValueOnce({
+      mockRange.mockResolvedValueOnce({
         data: null,
         error: { message: 'Query failed' },
       })
@@ -507,15 +574,28 @@ describe('conversations', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Query failed')
+      expect(result.hasMore).toBe(false)
     })
 
     it('should handle exceptions', async () => {
-      mockEq.mockRejectedValueOnce(new Error('Network error'))
+      mockRange.mockRejectedValueOnce(new Error('Network error'))
 
       const result = await getUserConversations('user-123')
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Network error')
+      expect(result.hasMore).toBe(false)
+    })
+
+    it('should support custom pagination options', async () => {
+      mockRange.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      })
+
+      await getUserConversations('user-123', true, { limit: 20, offset: 40 })
+
+      expect(mockRange).toHaveBeenCalled()
     })
   })
 

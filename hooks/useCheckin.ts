@@ -43,6 +43,20 @@ import type { ActiveCheckin } from '../types/database'
 // ============================================================================
 
 /**
+ * GPS accuracy information from dynamic radius verification
+ */
+export interface AccuracyInfo {
+  /** Reported GPS accuracy in meters */
+  reported: number
+  /** Accuracy status: 'excellent' | 'good' | 'fair' | 'poor' | 'suspicious' | 'defaulted' */
+  status: 'excellent' | 'good' | 'fair' | 'poor' | 'suspicious' | 'defaulted' | 'unknown'
+  /** Calculated accuracy buffer in meters */
+  buffer: number
+  /** Formula used for calculation (only on new check-ins) */
+  formula?: string
+}
+
+/**
  * Result of a check-in operation
  */
 export interface CheckinResult {
@@ -51,6 +65,10 @@ export interface CheckinResult {
   verified: boolean
   alreadyCheckedIn: boolean
   distanceMeters: number | null
+  /** Effective verification radius used (dynamic based on accuracy) */
+  effectiveRadius: number | null
+  /** GPS accuracy information */
+  accuracyInfo: AccuracyInfo | null
   error: string | null
 }
 
@@ -159,6 +177,8 @@ export function useCheckin(): UseCheckinResult {
           verified: false,
           alreadyCheckedIn: false,
           distanceMeters: null,
+          effectiveRadius: null,
+          accuracyInfo: null,
           error: 'Location permission required to check in',
         }
         setError(result.error)
@@ -185,6 +205,8 @@ export function useCheckin(): UseCheckinResult {
           verified: false,
           alreadyCheckedIn: false,
           distanceMeters: null,
+          effectiveRadius: null,
+          accuracyInfo: null,
           error: rpcError.message,
         }
         setError(result.error)
@@ -198,6 +220,8 @@ export function useCheckin(): UseCheckinResult {
           verified: false,
           alreadyCheckedIn: false,
           distanceMeters: null,
+          effectiveRadius: null,
+          accuracyInfo: data.accuracy_info || null,
           error: data.error || 'Check-in failed',
         }
         setError(result.error)
@@ -213,6 +237,8 @@ export function useCheckin(): UseCheckinResult {
         verified: data.verified,
         alreadyCheckedIn: data.already_checked_in || false,
         distanceMeters: data.distance_meters,
+        effectiveRadius: data.effective_radius || null,
+        accuracyInfo: data.accuracy_info || null,
         error: null,
       }
     } catch (err) {
@@ -224,6 +250,8 @@ export function useCheckin(): UseCheckinResult {
         verified: false,
         alreadyCheckedIn: false,
         distanceMeters: null,
+        effectiveRadius: null,
+        accuracyInfo: null,
         error: errorMessage,
       }
     } finally {

@@ -52,7 +52,7 @@ interface ExpoPushTicket {
 // ============================================================================
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SECRET_KEY')!
+const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 

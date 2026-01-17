@@ -22,7 +22,9 @@
         "NSCameraUsageDescription": "Backtrack needs camera access for selfie verification when posting missed connections.",
         "NSPhotoLibraryUsageDescription": "Backtrack needs photo library access to select photos for your profile.",
         "UIBackgroundModes": [
-          "remote-notification"
+          "remote-notification",
+          "location",
+          "fetch"
         ]
       }
     },
@@ -42,7 +44,8 @@
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "web": {
@@ -54,7 +57,8 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Backtrack uses your location to discover nearby venues and help you find missed connections.",
-          "locationWhenInUsePermission": "Backtrack needs your location to show nearby venues where you can post or browse missed connections."
+          "locationWhenInUsePermission": "Backtrack needs your location to show nearby venues where you can post or browse missed connections.",
+          "isBackgroundLocationEnabled": true
         }
       ],
       [
@@ -76,7 +80,8 @@
           "color": "#FF6B6B",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-task-manager"
     ],
     "extra": {
       "eas": {

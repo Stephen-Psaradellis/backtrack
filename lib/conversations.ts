@@ -415,8 +415,9 @@ export async function createConversation(
  * Start a conversation with a post - either returns existing or creates new
  *
  * This is the main entry point for initiating a conversation.
- * It handles all validation, checks for existing conversations,
- * and creates a new one if needed.
+ * It handles all validation and uses an atomic upsert to avoid race conditions.
+ *
+ * OPTIMIZATION: Uses upsert_conversation RPC function to reduce 2-3 queries to 1.
  *
  * @param consumerId - The consumer's user ID
  * @param post - The post to start a conversation about
@@ -457,30 +458,64 @@ export async function startConversation(
   const validPost = post as PostForConversation
 
   try {
-    // First, check if conversation already exists
-    const existingResult = await checkExistingConversation(userId, validPost.id)
+    // Use atomic upsert to avoid race conditions and reduce queries
+    // This replaces the previous check-then-insert pattern (2-3 queries → 1)
+    const { data, error } = await supabase.rpc('upsert_conversation', {
+      p_post_id: validPost.id,
+      p_producer_id: validPost.producer_id,
+      p_consumer_id: userId,
+    })
 
-    if (!existingResult.success) {
+    if (error) {
+      // Fall back to legacy approach if RPC doesn't exist yet
+      if (error.code === 'PGRST202') {
+        // RPC function not found - use legacy approach
+        const existingResult = await checkExistingConversation(userId, validPost.id)
+
+        if (existingResult.exists && existingResult.conversationId) {
+          return {
+            success: true,
+            conversationId: existingResult.conversationId,
+            isNew: false,
+            error: null,
+          }
+        }
+
+        return await createConversation(userId, validPost)
+      }
+
       return {
         success: false,
         conversationId: null,
         isNew: false,
-        error: existingResult.error,
+        error: error.message || CONVERSATION_ERRORS.CREATE_FAILED,
       }
     }
 
-    if (existingResult.exists && existingResult.conversationId) {
-      // Return existing conversation
+    const result = data?.[0] || data
+    const conversationId = result?.conversation_id
+    const isNew = result?.is_new ?? false
+
+    if (!conversationId) {
       return {
-        success: true,
-        conversationId: existingResult.conversationId,
+        success: false,
+        conversationId: null,
         isNew: false,
-        error: null,
+        error: CONVERSATION_ERRORS.CREATE_FAILED,
       }
     }
 
-    // Create new conversation
-    return await createConversation(userId, validPost)
+    // Track new match/conversation creation
+    if (isNew) {
+      trackEvent(AnalyticsEvent.MATCH_MADE)
+    }
+
+    return {
+      success: true,
+      conversationId,
+      isNew,
+      error: null,
+    }
   } catch (err) {
     captureException(err, { operation: 'startConversation', consumerId, postId: post?.id })
     const message = err instanceof Error ? err.message : CONVERSATION_ERRORS.CREATE_FAILED
@@ -494,59 +529,83 @@ export async function startConversation(
 }
 
 /**
- * Get all conversations for a user
+ * Pagination options for conversation queries
+ */
+export interface PaginationOptions {
+  /** Number of items per page (default: 50) */
+  limit?: number
+  /** Page offset (default: 0) */
+  offset?: number
+}
+
+/**
+ * Get all conversations for a user with pagination
  *
  * @param userId - The user's ID
  * @param activeOnly - Only return active conversations (default: true)
- * @returns Array of conversations
+ * @param pagination - Pagination options (limit: 50, offset: 0 by default)
+ * @returns Array of conversations with pagination info
  *
  * @example
- * const result = await getUserConversations(userId)
+ * const result = await getUserConversations(userId, true, { limit: 20, offset: 0 })
  * if (result.success) {
  *   setConversations(result.conversations)
  * }
  */
 export async function getUserConversations(
   userId: string,
-  activeOnly: boolean = true
+  activeOnly: boolean = true,
+  pagination: PaginationOptions = {}
 ): Promise<{
   success: boolean
   conversations: Conversation[]
   error: string | null
+  hasMore: boolean
 }> {
   if (!userId) {
     return {
       success: false,
       conversations: [],
       error: CONVERSATION_ERRORS.MISSING_USER_ID,
+      hasMore: false,
     }
   }
 
+  const { limit = 50, offset = 0 } = pagination
+
   try {
+    // Build query with filters first, then pagination last
     let query = supabase
       .from('conversations')
       .select('*')
       .or(`producer_id.eq.${userId},consumer_id.eq.${userId}`)
-      .order('updated_at', { ascending: false })
 
     if (activeOnly) {
       query = query.eq('is_active', true)
     }
 
+    // Apply ordering and pagination last
     const { data, error } = await query
+      .order('updated_at', { ascending: false })
+      .range(offset, offset + limit)
 
     if (error) {
       return {
         success: false,
         conversations: [],
         error: error.message || CONVERSATION_ERRORS.FETCH_FAILED,
+        hasMore: false,
       }
     }
 
+    const conversations = (data as Conversation[]) || []
+
     return {
       success: true,
-      conversations: (data as Conversation[]) || [],
+      conversations,
       error: null,
+      // If we got exactly limit+1 results, there's more data
+      hasMore: conversations.length > limit,
     }
   } catch (err) {
     captureException(err, { operation: 'getUserConversations', userId, activeOnly })
@@ -555,6 +614,7 @@ export async function getUserConversations(
       success: false,
       conversations: [],
       error: message,
+      hasMore: false,
     }
   }
 }

@@ -227,6 +227,8 @@ export interface MapViewProps {
   style?: StyleProp<ViewStyle>
   /** Custom map style */
   mapStyle?: StyleProp<ViewStyle>
+  /** Padding for map controls (pushes Google Maps buttons away from edges) */
+  mapPadding?: { top?: number; right?: number; bottom?: number; left?: number }
   /** Test ID for testing purposes */
   testID?: string
 }
@@ -313,6 +315,7 @@ export function MapView({
   pitchEnabled = true,
   style,
   mapStyle,
+  mapPadding,
   testID = 'map-view',
 }: MapViewProps): JSX.Element {
   // ---------------------------------------------------------------------------
@@ -534,6 +537,7 @@ export function MapView({
         zoomEnabled={zoomEnabled}
         rotateEnabled={rotateEnabled}
         pitchEnabled={pitchEnabled}
+        mapPadding={mapPadding}
         onRegionChange={handleRegionChange}
         onRegionChangeComplete={handleRegionChangeComplete}
         onPress={handleMapPress}

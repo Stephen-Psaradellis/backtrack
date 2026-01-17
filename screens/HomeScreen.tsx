@@ -113,6 +113,7 @@ export function HomeScreen(): React.ReactNode {
           showsUserLocation
           initialRegion={initialRegion}
           markers={favoriteMarkers}
+          mapPadding={{ bottom: 120 }}
           onMapReady={() => lightFeedback()}
           onMarkerPress={handleMarkerPress}
           onPoiClick={handlePoiClick}

@@ -86,8 +86,9 @@ COMMENT ON FUNCTION get_posts_within_radius(double precision, double precision, 
 -- First check if the geography column needs to be added for indexing
 -- Note: We use the existing lat/lng columns with on-the-fly point creation
 -- For better performance, we create an expression index
+-- Using geography() function syntax for compatibility
 
 CREATE INDEX IF NOT EXISTS idx_locations_geography
   ON locations USING gist (
-    ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
+    geography(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326))
   );

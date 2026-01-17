@@ -1,121 +1,73 @@
 /**
  * useCheckinSettings Hook
  *
- * Custom hook for managing user's check-in/tracking settings.
- * Handles always-on location tracking toggle and check-in prompt timing.
- *
- * @example
- * ```tsx
- * function TrackingSettings() {
- *   const {
- *     settings,
- *     isLoading,
- *     updateSettings,
- *     toggleAlwaysOn,
- *   } = useCheckinSettings()
- *
- *   return (
- *     <View>
- *       <Switch
- *         value={settings.always_on_tracking_enabled}
- *         onValueChange={toggleAlwaysOn}
- *       />
- *       <Picker
- *         selectedValue={settings.checkin_prompt_minutes}
- *         onValueChange={(mins) => updateSettings({ checkin_prompt_minutes: mins })}
- *       >
- *         {[1, 5, 10, 15, 30, 60].map(m => (
- *           <Picker.Item key={m} label={`${m} min`} value={m} />
- *         ))}
- *       </Picker>
- *     </View>
- *   )
- * }
- * ```
+ * Custom hook for managing user check-in/tracking settings.
+ * Integrates with background location tracking service.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from "react"
 
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
-import type { TrackingSettings } from '../types/database'
+import { supabase } from "../lib/supabase"
+import { useAuth } from "../contexts/AuthContext"
+import {
+  startBackgroundLocationTracking,
+  stopBackgroundLocationTracking,
+  updateTrackingSettings as updateBackgroundSettings,
+  isBackgroundLocationRunning,
+} from "../services/backgroundLocation"
+import type { TrackingSettings } from "../types/database"
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-/**
- * Error type for tracking settings operations
- */
 export interface TrackingSettingsError {
-  code: 'AUTH_ERROR' | 'FETCH_ERROR' | 'UPDATE_ERROR'
+  code: "AUTH_ERROR" | "FETCH_ERROR" | "UPDATE_ERROR" | "BACKGROUND_ERROR"
   message: string
 }
 
-/**
- * Options for useCheckinSettings hook
- */
 export interface UseCheckinSettingsOptions {
-  /** Whether to fetch settings on mount (default: true) */
   enabled?: boolean
 }
 
-/**
- * Return value from useCheckinSettings hook
- */
 export interface UseCheckinSettingsResult {
-  /** Current tracking settings */
   settings: TrackingSettings
-  /** Whether settings are loading */
   isLoading: boolean
-  /** Whether an update is in progress */
   isUpdating: boolean
-  /** Any error that occurred */
   error: TrackingSettingsError | null
-  /** Update tracking settings */
+  isBackgroundTrackingActive: boolean
   updateSettings: (updates: Partial<TrackingSettings>) => Promise<boolean>
-  /** Toggle always-on tracking */
   toggleAlwaysOn: () => Promise<boolean>
-  /** Refresh settings from server */
   refresh: () => Promise<void>
-  /** Clear any error */
   clearError: () => void
 }
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
 
 const DEFAULT_SETTINGS: TrackingSettings = {
   always_on_tracking_enabled: false,
   checkin_prompt_minutes: 5,
 }
 
-// ============================================================================
-// HOOK IMPLEMENTATION
-// ============================================================================
-
-/**
- * Hook for managing user's check-in/tracking settings
- */
 export function useCheckinSettings(
   options: UseCheckinSettingsOptions = {}
 ): UseCheckinSettingsResult {
   const { enabled = true } = options
   const { userId, isAuthenticated } = useAuth()
 
-  // State
   const [settings, setSettings] = useState<TrackingSettings>(DEFAULT_SETTINGS)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<TrackingSettingsError | null>(null)
+  const [isBackgroundTrackingActive, setIsBackgroundTrackingActive] = useState(false)
 
-  // Refs to prevent state updates after unmount
   const isMountedRef = useRef(true)
 
-  /**
-   * Fetch settings from server
-   */
+  const checkBackgroundStatus = useCallback(async () => {
+    try {
+      const isRunning = await isBackgroundLocationRunning()
+      if (isMountedRef.current) {
+        setIsBackgroundTrackingActive(isRunning)
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, [])
+
   const fetchSettings = useCallback(async () => {
     if (!isAuthenticated || !userId) {
       setSettings(DEFAULT_SETTINGS)
@@ -125,27 +77,37 @@ export function useCheckinSettings(
 
     try {
       setError(null)
-
-      const { data, error: rpcError } = await supabase.rpc('get_tracking_settings')
+      const { data, error: rpcError } = await supabase.rpc("get_tracking_settings")
 
       if (rpcError) {
         if (isMountedRef.current) {
-          setError({ code: 'FETCH_ERROR', message: rpcError.message })
+          setError({ code: "FETCH_ERROR", message: rpcError.message })
         }
         return
       }
 
       if (isMountedRef.current && data?.success) {
-        setSettings({
+        const newSettings = {
           always_on_tracking_enabled: data.always_on_tracking_enabled ?? false,
           checkin_prompt_minutes: data.checkin_prompt_minutes ?? 5,
-        })
+        }
+        setSettings(newSettings)
+
+        // Sync background tracking state with settings
+        if (newSettings.always_on_tracking_enabled) {
+          const isRunning = await isBackgroundLocationRunning()
+          if (!isRunning) {
+            await startBackgroundLocationTracking(userId, newSettings.checkin_prompt_minutes)
+          }
+        }
       }
+
+      await checkBackgroundStatus()
     } catch (err) {
       if (isMountedRef.current) {
         setError({
-          code: 'FETCH_ERROR',
-          message: err instanceof Error ? err.message : 'Failed to fetch settings',
+          code: "FETCH_ERROR",
+          message: err instanceof Error ? err.message : "Failed to fetch settings",
         })
       }
     } finally {
@@ -153,15 +115,12 @@ export function useCheckinSettings(
         setIsLoading(false)
       }
     }
-  }, [isAuthenticated, userId])
+  }, [isAuthenticated, userId, checkBackgroundStatus])
 
-  /**
-   * Update tracking settings
-   */
   const updateSettings = useCallback(
     async (updates: Partial<TrackingSettings>): Promise<boolean> => {
       if (!isAuthenticated || !userId) {
-        setError({ code: 'AUTH_ERROR', message: 'Not authenticated' })
+        setError({ code: "AUTH_ERROR", message: "Not authenticated" })
         return false
       }
 
@@ -171,19 +130,44 @@ export function useCheckinSettings(
       try {
         const newSettings = { ...settings, ...updates }
 
-        const { data, error: rpcError } = await supabase.rpc('update_tracking_settings', {
+        const { data, error: rpcError } = await supabase.rpc("update_tracking_settings", {
           p_always_on_enabled: newSettings.always_on_tracking_enabled,
           p_prompt_minutes: newSettings.checkin_prompt_minutes,
         })
 
         if (rpcError) {
-          setError({ code: 'UPDATE_ERROR', message: rpcError.message })
+          setError({ code: "UPDATE_ERROR", message: rpcError.message })
           return false
         }
 
         if (!data?.success) {
-          setError({ code: 'UPDATE_ERROR', message: data?.error ?? 'Update failed' })
+          setError({ code: "UPDATE_ERROR", message: data?.error ?? "Update failed" })
           return false
+        }
+
+        const wasEnabled = settings.always_on_tracking_enabled
+        const isNowEnabled = data.always_on_tracking_enabled
+
+        if (isNowEnabled && !wasEnabled) {
+          const started = await startBackgroundLocationTracking(
+            userId,
+            data.checkin_prompt_minutes
+          )
+          if (!started) {
+            setError({
+              code: "BACKGROUND_ERROR",
+              message: "Could not start background tracking. Please grant location permissions.",
+            })
+            await supabase.rpc("update_tracking_settings", {
+              p_always_on_enabled: false,
+              p_prompt_minutes: data.checkin_prompt_minutes,
+            })
+            return false
+          }
+        } else if (!isNowEnabled && wasEnabled) {
+          await stopBackgroundLocationTracking()
+        } else if (isNowEnabled && updates.checkin_prompt_minutes !== undefined) {
+          await updateBackgroundSettings(data.checkin_prompt_minutes)
         }
 
         if (isMountedRef.current) {
@@ -193,11 +177,12 @@ export function useCheckinSettings(
           })
         }
 
+        await checkBackgroundStatus()
         return true
       } catch (err) {
         setError({
-          code: 'UPDATE_ERROR',
-          message: err instanceof Error ? err.message : 'Failed to update settings',
+          code: "UPDATE_ERROR",
+          message: err instanceof Error ? err.message : "Failed to update settings",
         })
         return false
       } finally {
@@ -206,41 +191,29 @@ export function useCheckinSettings(
         }
       }
     },
-    [isAuthenticated, userId, settings]
+    [isAuthenticated, userId, settings, checkBackgroundStatus]
   )
 
-  /**
-   * Toggle always-on tracking
-   */
   const toggleAlwaysOn = useCallback(async (): Promise<boolean> => {
     return updateSettings({
       always_on_tracking_enabled: !settings.always_on_tracking_enabled,
     })
   }, [settings.always_on_tracking_enabled, updateSettings])
 
-  /**
-   * Refresh settings from server
-   */
   const refresh = useCallback(async () => {
     setIsLoading(true)
     await fetchSettings()
   }, [fetchSettings])
 
-  /**
-   * Clear error
-   */
   const clearError = useCallback(() => {
     setError(null)
   }, [])
 
-  // Fetch settings on mount
   useEffect(() => {
     isMountedRef.current = true
-
     if (enabled) {
       fetchSettings()
     }
-
     return () => {
       isMountedRef.current = false
     }
@@ -251,6 +224,7 @@ export function useCheckinSettings(
     isLoading,
     isUpdating,
     error,
+    isBackgroundTrackingActive,
     updateSettings,
     toggleAlwaysOn,
     refresh,

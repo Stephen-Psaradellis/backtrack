@@ -1,13 +1,13 @@
 /**
  * FloatingActionButtons
  *
- * A floating button container positioned below the GlobalHeader on the right side.
+ * A floating button container positioned above the tab bar on the right side.
  * Contains Check In and Live View buttons stacked vertically.
  *
  * Features:
  * - Check In button (top) - Opens check-in flow
  * - Live View button (bottom) - Shows who's checked in at current location
- * - Positioned absolutely on top-right, below header
+ * - Positioned absolutely on bottom-right, above tab bar
  * - Consistent across all tab screens
  *
  * @example
@@ -41,17 +41,17 @@ import { selectionFeedback } from '../../lib/haptics'
 // ============================================================================
 
 /**
- * GlobalHeader height calculation (must match GlobalHeader.tsx):
- * - topRow: paddingVertical (12) + button height (40) + paddingVertical (12) = 64
- * - border: 1px
- * Total fixed header height (excluding safe area): 65px
+ * Tab bar height calculation (must match AnimatedTabBar.tsx):
+ * - paddingTop: 12
+ * - icon + paddingVertical: ~36
+ * Total fixed tab bar height (excluding safe area bottom): ~50px
  */
-const HEADER_FIXED_HEIGHT = 65
+const TAB_BAR_HEIGHT = 50
 
 /**
- * Gap between header and floating buttons
+ * Gap between FABs and tab bar
  */
-const HEADER_GAP = 8
+const TAB_BAR_GAP = 16
 
 // ============================================================================
 // TYPES
@@ -76,8 +76,8 @@ export function FloatingActionButtons({
   const { activeCheckin } = useCheckin()
   const [showLiveView, setShowLiveView] = useState(false)
 
-  // Calculate dynamic top position based on header height + safe area
-  const dynamicTop = insets.top + HEADER_FIXED_HEIGHT + HEADER_GAP
+  // Calculate dynamic bottom position above tab bar + safe area
+  const dynamicBottom = TAB_BAR_HEIGHT + Math.max(insets.bottom, 8) + TAB_BAR_GAP
 
   /**
    * Handle Live View button press
@@ -96,7 +96,7 @@ export function FloatingActionButtons({
 
   return (
     <>
-      <View style={[styles.container, { top: dynamicTop }, style]} testID={testID}>
+      <View style={[styles.container, { bottom: dynamicBottom }, style]} testID={testID}>
         {/* Check In Button */}
         <CheckInButton testID={`${testID}-checkin`} />
 
@@ -151,7 +151,7 @@ export function FloatingActionButtons({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    // top is set dynamically based on safe area insets
+    // bottom is set dynamically based on tab bar height + safe area
     right: 16,
     zIndex: 100,
     gap: 8,

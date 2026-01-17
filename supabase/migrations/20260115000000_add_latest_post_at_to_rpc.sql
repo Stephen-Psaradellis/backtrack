@@ -4,6 +4,11 @@
 -- The latest_post_at timestamp is used to determine marker "hotness" (hot/active/historical)
 
 -- ============================================================================
+-- DROP EXISTING FUNCTION (return type changed - must drop first)
+-- ============================================================================
+DROP FUNCTION IF EXISTS get_locations_with_active_posts(DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, INTEGER, INTEGER);
+
+-- ============================================================================
 -- UPDATED GET_LOCATIONS_WITH_ACTIVE_POSTS FUNCTION
 -- ============================================================================
 -- Now returns latest_post_at to enable activity-based marker styling.
