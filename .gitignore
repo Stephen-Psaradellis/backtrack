@@ -120,3 +120,11 @@ supabase/.temp/
 
 # Strawberry-Claude (separate project, not part of main app)
 strawberry-claude/
+
+# Test screenshots and artifacts in root (generated during Maestro/testing)
+/*.png
+report.xml
+coverage-report.json
+
+# Claude Code local settings (user-specific)
+.claude/settings.local.json
