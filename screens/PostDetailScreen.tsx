@@ -34,6 +34,7 @@ import {
   RefreshControl,
   Platform,
   Alert,
+  StatusBar,
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 
@@ -47,6 +48,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { startConversation } from '../lib/conversations'
 import { blockUser, MODERATION_ERRORS } from '../lib/moderation'
 import { formatRelativeTime } from '../components/PostCard'
+import { darkTheme } from '../constants/glassStyles'
 import type { PostDetailRouteProp, MainStackNavigationProp } from '../navigation/types'
 import type { Post, Location } from '../types/database'
 
@@ -66,17 +68,17 @@ interface PostWithLocation extends Post {
 // ============================================================================
 
 /**
- * Colors used in the PostDetailScreen
+ * Colors used in the PostDetailScreen - Dark theme
  */
 const COLORS = {
-  primary: '#FF6B47',
-  background: '#F2F2F7',
-  cardBackground: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  textTertiary: '#C7C7CC',
-  border: '#E5E5EA',
-  success: '#34C759',
+  primary: darkTheme.accent,
+  background: darkTheme.background,
+  cardBackground: darkTheme.cardBackground,
+  textPrimary: darkTheme.textPrimary,
+  textSecondary: darkTheme.textSecondary,
+  textTertiary: darkTheme.textMuted,
+  border: darkTheme.cardBorder,
+  success: darkTheme.success,
   warning: '#FF9500',
 } as const
 
@@ -292,6 +294,7 @@ export function PostDetailScreen(): React.ReactNode {
   if (loading && !refreshing) {
     return (
       <View style={styles.centeredContainer} testID="post-detail-loading">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <LoadingSpinner message="Loading post..." />
       </View>
     )
@@ -304,6 +307,7 @@ export function PostDetailScreen(): React.ReactNode {
   if (error || !post) {
     return (
       <View style={styles.centeredContainer} testID="post-detail-error">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <ErrorState
           error={error || "Post not found"}
           onRetry={handleRetry}
@@ -330,11 +334,13 @@ export function PostDetailScreen(): React.ReactNode {
           onRefresh={handleRefresh}
           tintColor={COLORS.primary}
           colors={[COLORS.primary]}
+          progressBackgroundColor={darkTheme.cardBackground}
           testID="post-detail-refresh-control"
         />
       }
       testID="post-detail-screen"
     >
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       {/* Avatar Section */}
       <View style={styles.avatarSection} testID="post-detail-avatar-section">
         {post.target_avatar_v2 && (

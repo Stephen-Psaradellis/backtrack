@@ -54,6 +54,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native'
 import Tooltip from 'react-native-walkthrough-tooltip'
 
+import { darkTheme } from '../constants/glassStyles'
 import {
   successFeedback,
   errorFeedback,
@@ -120,16 +121,16 @@ interface SharePhotoModalProps {
 // ============================================================================
 
 const COLORS = {
-  primary: '#FF6B47',
-  background: '#F2F2F7',
-  inputBackground: '#FFFFFF',
-  inputBorder: '#E5E5EA',
-  inputText: '#000000',
-  inputPlaceholder: '#8E8E93',
-  sendButtonActive: '#FF6B47',
-  sendButtonDisabled: '#FFD0C2',
-  textSecondary: '#8E8E93',
-  error: '#FF3B30',
+  primary: darkTheme.accent,
+  background: darkTheme.background,
+  inputBackground: darkTheme.cardBackground,
+  inputBorder: darkTheme.cardBorder,
+  inputText: darkTheme.textPrimary,
+  inputPlaceholder: darkTheme.textMuted,
+  sendButtonActive: darkTheme.accent,
+  sendButtonDisabled: 'rgba(255, 107, 71, 0.3)',
+  textSecondary: darkTheme.textSecondary,
+  error: darkTheme.error,
 } as const
 
 const MAX_MESSAGE_LENGTH = 10000
@@ -947,7 +948,7 @@ export function ChatScreen(): React.ReactNode {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       testID="chat-screen"
     >
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
 
       {messagesLoading && messages.length === 0 ? (
         <View style={styles.loadingContainer}>

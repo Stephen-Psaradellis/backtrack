@@ -28,6 +28,7 @@ import { CheckInButton } from '../checkin';
 import { BacktrackLogo } from '../ui/BacktrackLogo';
 import { selectionFeedback } from '../../lib/haptics';
 import { colors, shadows } from '../../constants/theme';
+import { darkTheme } from '../../constants/glassStyles';
 import type { MainTabNavigationProp } from '../../navigation/types';
 
 // ============================================================================
@@ -112,7 +113,7 @@ export function GlobalHeader({
           accessibilityRole="button"
           accessibilityLabel="Create a new post"
         >
-          <Ionicons name="add" size={24} color={colors.white} />
+          <Ionicons name="add" size={24} color={darkTheme.textPrimary} />
         </TouchableOpacity>
 
         {/* Logo */}
@@ -136,7 +137,7 @@ export function GlobalHeader({
             />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={20} color={colors.neutral[400]} />
+              <Ionicons name="person" size={20} color={darkTheme.textMuted} />
             </View>
           )}
         </TouchableOpacity>
@@ -157,7 +158,7 @@ export function GlobalHeader({
               accessibilityRole="button"
               accessibilityLabel="Open live view"
             >
-              <Ionicons name="radio" size={18} color={colors.primary[500]} />
+              <Ionicons name="radio" size={18} color={darkTheme.accent} />
             </TouchableOpacity>
           )}
         </View>
@@ -172,10 +173,9 @@ export function GlobalHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[200],
-    ...shadows.native.sm,
+    borderBottomColor: darkTheme.cardBorder,
   },
   topRow: {
     flexDirection: 'row',
@@ -188,10 +188,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary[500],
+    backgroundColor: darkTheme.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.native.md,
   },
   logoContainer: {
     flex: 1,
@@ -207,11 +206,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: darkTheme.background,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.neutral[200],
+    borderColor: darkTheme.cardBorder,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -227,11 +226,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     borderWidth: 1,
-    borderColor: colors.primary[500],
+    borderColor: darkTheme.accent,
     gap: 6,
-    ...shadows.native.sm,
   },
 });
 

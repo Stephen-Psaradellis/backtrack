@@ -6,10 +6,11 @@
  * for tab-based navigation.
  */
 import React, { useState, useCallback } from 'react'
-import { View, StyleSheet } from 'react-native'
+import { View, StyleSheet, StatusBar } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { darkTheme } from '../constants/glassStyles'
 import { useLocation } from '../hooks/useLocation'
 import { useFavoriteLocations, type FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
 import { selectionFeedback } from '../lib/haptics'
@@ -138,6 +139,7 @@ export function FavoritesTabScreen(): React.ReactNode {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']} testID="favorites-tab-screen">
+      <StatusBar barStyle="light-content" />
       <View style={styles.content}>
         <FavoritesList
           favorites={favorites}
@@ -177,7 +179,7 @@ export function FavoritesTabScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAF9',
+    backgroundColor: darkTheme.background,
   },
   content: {
     flex: 1,

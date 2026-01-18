@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows } from '../../constants/theme';
+import { darkTheme } from '../../constants/glassStyles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -141,7 +142,7 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
                 <Ionicons
                   name={iconName}
                   size={26}
-                  color={isFocused ? colors.primary[500] : colors.neutral[400]}
+                  color={isFocused ? darkTheme.accent : darkTheme.textMuted}
                 />
                 {showBadge && (
                   <View style={styles.badge}>
@@ -164,24 +165,16 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral[200],
+    borderTopColor: darkTheme.cardBorder,
     paddingTop: 12,
-    ...Platform.select({
-      ios: {
-        ...shadows.native.md,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
   indicator: {
     position: 'absolute',
     top: 0,
     height: 3,
-    backgroundColor: colors.primary[500],
+    backgroundColor: darkTheme.accent,
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },
@@ -205,15 +198,15 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: colors.primary[500],
+    backgroundColor: darkTheme.accent,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: darkTheme.cardBackground,
   },
   badgeText: {
-    color: colors.white,
+    color: darkTheme.textPrimary,
     fontSize: 10,
     fontWeight: '700',
   },

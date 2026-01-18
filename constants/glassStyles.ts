@@ -19,6 +19,10 @@ export const darkTheme = {
   surface: '#1C1C24',
   surfaceElevated: '#242430',
 
+  // Card styles (aliases for common UI patterns)
+  cardBackground: '#1C1C24',
+  cardBorder: 'rgba(255, 255, 255, 0.08)',
+
   // Glass effects
   glass: 'rgba(255, 255, 255, 0.05)',
   glassBorder: 'rgba(255, 255, 255, 0.08)',

@@ -23,8 +23,12 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Linking,
+  StatusBar,
 } from 'react-native'
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { darkTheme } from '../constants/glassStyles'
+import { colors } from '../constants/theme'
 import type { MainStackParamList } from '../navigation/types'
 
 // ============================================================================
@@ -274,13 +278,14 @@ export function LegalScreen(): React.ReactNode {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           testID="legal-back-button"
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Ionicons name="arrow-back" size={24} color={colors.primary[400]} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{title}</Text>
         <View style={styles.headerSpacer} />
@@ -364,7 +369,7 @@ export function LegalScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.background,
   },
   header: {
     flexDirection: 'row',
@@ -373,24 +378,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: darkTheme.cardBorder,
   },
   backButton: {
-    paddingVertical: 8,
-    paddingRight: 16,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#FF6B47',
-    fontWeight: '600',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: darkTheme.cardBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
   },
   headerSpacer: {
-    width: 60,
+    width: 40,
   },
   scrollView: {
     flex: 1,
@@ -402,40 +406,40 @@ const styles = StyleSheet.create({
   heading1: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#333333',
+    color: darkTheme.textPrimary,
     marginTop: 16,
     marginBottom: 12,
   },
   heading2: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
     marginTop: 20,
     marginBottom: 8,
   },
   heading3: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#444444',
+    color: darkTheme.textSecondary,
     marginTop: 16,
     marginBottom: 6,
   },
   boldText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
     marginVertical: 4,
   },
   paragraph: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#555555',
+    color: darkTheme.textSecondary,
     marginVertical: 2,
   },
   listItem: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#555555',
+    color: darkTheme.textSecondary,
     marginLeft: 8,
     marginVertical: 2,
   },
@@ -443,8 +447,8 @@ const styles = StyleSheet.create({
     height: 8,
   },
   contactButton: {
-    backgroundColor: '#FF6B47',
-    borderRadius: 8,
+    backgroundColor: colors.primary[500],
+    borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 24,
     alignItems: 'center',
@@ -458,7 +462,7 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },

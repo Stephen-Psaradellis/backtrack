@@ -52,6 +52,8 @@ import { Button, GhostButton } from '../../../components/Button'
 import { useProfilePhotos, type ProfilePhotoWithTimeout } from '../../../hooks/useProfilePhotos'
 import { pickSelfieFromCamera, pickSelfieFromGallery } from '../../../utils/imagePicker'
 import { lightFeedback, successFeedback, errorFeedback } from '../../../lib/haptics'
+import { darkTheme } from '../../../constants/glassStyles'
+import { colors } from '../../../constants/theme'
 import type { LocationItem } from '../../../components/LocationPicker'
 import type { TimeGranularity } from '../../../types/database'
 import { formatSightingTime } from '../../../utils/dateTime'
@@ -608,7 +610,7 @@ const styles = StyleSheet.create({
     height: PHOTO_SIZE,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#E5E5EA',
+    backgroundColor: darkTheme.cardBackground,
   },
 
   photoTileSelected: {
@@ -630,14 +632,14 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: darkTheme.background,
   },
 
   selectedBadge: {
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.background,
     borderRadius: 10,
   },
 
@@ -653,16 +655,16 @@ const styles = StyleSheet.create({
     height: PHOTO_SIZE,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#FF6B47',
+    borderColor: colors.primary[500],
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF8F6',
+    backgroundColor: 'rgba(255, 107, 71, 0.1)',
   },
 
   addTileDisabled: {
-    borderColor: '#FFD0C2',
-    backgroundColor: '#F2F2F7',
+    borderColor: 'rgba(255, 107, 71, 0.3)',
+    backgroundColor: darkTheme.background,
   },
 
   uploadingBanner: {

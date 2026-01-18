@@ -30,11 +30,13 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  StatusBar,
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
 import { GlobalHeader } from '../components/navigation/GlobalHeader'
 import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
+import { darkTheme } from '../constants/glassStyles'
 import { MdAvatarSnapshot } from '../components/avatar3d'
 import type { StoredAvatar } from '../components/avatar/types'
 import { VerifiedBadge } from '../components/VerifiedBadge'
@@ -78,17 +80,17 @@ interface ConversationItem extends Conversation {
 // ============================================================================
 
 /**
- * Colors used in the ChatListScreen
+ * Colors used in the ChatListScreen - Dark theme
  */
 const COLORS = {
-  primary: '#FF6B47',
-  background: '#F2F2F7',
-  cardBackground: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  border: '#E5E5EA',
-  unreadBadge: '#FF3B30',
-  unreadBadgeText: '#FFFFFF',
+  primary: darkTheme.accent,
+  background: darkTheme.background,
+  cardBackground: darkTheme.cardBackground,
+  textPrimary: darkTheme.textPrimary,
+  textSecondary: darkTheme.textSecondary,
+  border: darkTheme.cardBorder,
+  unreadBadge: darkTheme.accent,
+  unreadBadgeText: darkTheme.textPrimary,
 } as const
 
 /**
@@ -576,6 +578,7 @@ export function ChatListScreen(): React.ReactNode {
   if (loading) {
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <GlobalHeader />
         <View style={styles.centerContainer}>
           <LoadingSpinner />
@@ -587,6 +590,7 @@ export function ChatListScreen(): React.ReactNode {
   if (error) {
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <GlobalHeader />
         <View style={styles.centerContainer}>
           <ErrorState onRetry={handleRetry} />
@@ -598,6 +602,7 @@ export function ChatListScreen(): React.ReactNode {
   if (conversations.length === 0) {
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <GlobalHeader />
         <View style={styles.centerContainer}>
           <EmptyChats />
@@ -608,6 +613,7 @@ export function ChatListScreen(): React.ReactNode {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       <GlobalHeader />
       <FloatingActionButtons testID="chats-floating-actions" />
       <FlatList
@@ -619,6 +625,7 @@ export function ChatListScreen(): React.ReactNode {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={COLORS.primary}
+            progressBackgroundColor={darkTheme.cardBackground}
           />
         }
         contentContainerStyle={styles.listContent}

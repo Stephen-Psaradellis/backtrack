@@ -11,6 +11,7 @@
  * - SectionList with collapsible sections
  * - Notification badge via useNotificationCounts
  * - Marks notifications as seen when screen is viewed
+ * - Modern dark theme with glassmorphism
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -22,6 +23,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  StatusBar,
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
@@ -38,6 +40,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { selectionFeedback } from '../lib/haptics'
 import { colors, shadows } from '../constants/theme'
+import { darkTheme, glassStyles } from '../constants/glassStyles'
 import type { MainTabNavigationProp } from '../navigation/types'
 import type { Post, Conversation } from '../types/database'
 
@@ -243,7 +246,7 @@ export function MySpotsScreen(): React.ReactNode {
       <Ionicons
         name={section.icon as keyof typeof Ionicons.glyphMap}
         size={20}
-        color={colors.primary[500]}
+        color={darkTheme.accent}
       />
       <Text style={styles.sectionTitle}>{section.title}</Text>
     </View>
@@ -271,7 +274,7 @@ export function MySpotsScreen(): React.ReactNode {
           testID={`myspots-conversation-${item.id}`}
         >
           <View style={styles.conversationContent}>
-            <Ionicons name="chatbubble" size={24} color={colors.primary[500]} />
+            <Ionicons name="chatbubble" size={24} color={darkTheme.accent} />
             <View style={styles.conversationText}>
               <Text style={styles.conversationTitle}>New Match</Text>
               <Text style={styles.conversationSubtitle}>
@@ -279,7 +282,7 @@ export function MySpotsScreen(): React.ReactNode {
               </Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.neutral[400]} />
+          <Ionicons name="chevron-forward" size={20} color={darkTheme.textMuted} />
         </TouchableOpacity>
       )
     }
@@ -317,9 +320,10 @@ export function MySpotsScreen(): React.ReactNode {
   if (isLoading && !refreshing) {
     return (
       <View style={styles.container} testID="my-spots-screen">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <GlobalHeader />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary[500]} />
+          <ActivityIndicator size="large" color={darkTheme.accent} />
           <Text style={styles.loadingText}>Loading your spots...</Text>
         </View>
       </View>
@@ -332,13 +336,14 @@ export function MySpotsScreen(): React.ReactNode {
 
   return (
     <View style={styles.container} testID="my-spots-screen">
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       <GlobalHeader />
       <FloatingActionButtons testID="myspots-floating-actions" />
 
       {/* Notification Badge Summary */}
       {counts.total > 0 && (
         <View style={styles.badgeSummary}>
-          <Ionicons name="notifications" size={16} color={colors.white} />
+          <Ionicons name="notifications" size={16} color={darkTheme.textPrimary} />
           <Text style={styles.badgeText}>
             {counts.total} new {counts.total === 1 ? 'update' : 'updates'}
           </Text>
@@ -357,8 +362,9 @@ export function MySpotsScreen(): React.ReactNode {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.primary[500]}
-            colors={[colors.primary[500]]}
+            tintColor={darkTheme.accent}
+            colors={[darkTheme.accent]}
+            progressBackgroundColor={darkTheme.cardBackground}
             testID="myspots-refresh-control"
           />
         }
@@ -375,7 +381,7 @@ export function MySpotsScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: darkTheme.background,
   },
   loadingContainer: {
     flex: 1,
@@ -385,13 +391,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: colors.neutral[500],
+    color: darkTheme.textSecondary,
   },
   badgeSummary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary[500],
+    backgroundColor: darkTheme.accent,
     paddingVertical: 8,
     paddingLeft: 16,
     paddingRight: 140, // Extra padding to avoid overlap with FloatingActionButtons
@@ -400,7 +406,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.white,
+    color: darkTheme.textPrimary,
   },
   listContent: {
     paddingTop: 8,
@@ -412,13 +418,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 12,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: darkTheme.background,
     gap: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: darkTheme.textPrimary,
   },
   postItem: {
     marginHorizontal: 16,
@@ -428,14 +434,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     paddingVertical: 24,
     paddingHorizontal: 16,
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     borderRadius: 12,
     alignItems: 'center',
-    ...shadows.native.sm,
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
   },
   emptySectionText: {
     fontSize: 14,
-    color: colors.neutral[400],
+    color: darkTheme.textMuted,
     textAlign: 'center',
   },
   conversationItem: {
@@ -445,9 +452,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 8,
     padding: 16,
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     borderRadius: 12,
-    ...shadows.native.sm,
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
   },
   conversationContent: {
     flexDirection: 'row',
@@ -460,11 +468,11 @@ const styles = StyleSheet.create({
   conversationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.neutral[900],
+    color: darkTheme.textPrimary,
   },
   conversationSubtitle: {
     fontSize: 14,
-    color: colors.neutral[500],
+    color: darkTheme.textSecondary,
     marginTop: 2,
   },
 })

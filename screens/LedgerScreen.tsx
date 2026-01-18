@@ -33,6 +33,7 @@ import {
   FlatList,
   RefreshControl,
   Platform,
+  StatusBar,
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 
@@ -48,6 +49,7 @@ import { supabase, sortPostsWithDeprioritization } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { getHiddenUserIds } from '../lib/moderation'
 import { TimeFilterOption, getFilterCutoffDate } from '../utils/dateTime'
+import { darkTheme } from '../constants/glassStyles'
 import type { LedgerRouteProp, MainStackNavigationProp } from '../navigation/types'
 import type { Post, PostWithDetails } from '../types/database'
 
@@ -70,15 +72,15 @@ type SortOption = 'newest' | 'oldest'
 const PAGE_SIZE = 20
 
 /**
- * Colors used in the LedgerScreen
+ * Colors used in the LedgerScreen - Dark theme
  */
 const COLORS = {
-  primary: '#FF6B47',
-  background: '#F2F2F7',
-  cardBackground: '#FFFFFF',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  border: '#E5E5EA',
+  primary: darkTheme.accent,
+  background: darkTheme.background,
+  cardBackground: darkTheme.cardBackground,
+  textPrimary: darkTheme.textPrimary,
+  textSecondary: darkTheme.textSecondary,
+  border: darkTheme.cardBorder,
 } as const
 
 // ============================================================================
@@ -434,6 +436,7 @@ export function LedgerScreen(): React.ReactNode {
   if ((resolvedLocationId === null || loading) && !refreshing) {
     return (
       <View style={styles.centeredContainer} testID="ledger-loading">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <LoadingSpinner message="Loading posts..." />
       </View>
     )
@@ -446,6 +449,7 @@ export function LedgerScreen(): React.ReactNode {
   if (error && posts.length === 0) {
     return (
       <View style={styles.centeredContainer} testID="ledger-error">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <ErrorState
           error={error || 'Failed to load posts'}
           onRetry={handleRetry}
@@ -462,6 +466,7 @@ export function LedgerScreen(): React.ReactNode {
   if (!loading && posts.length === 0) {
     return (
       <View style={styles.container} testID="ledger-screen">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         {renderHeader()}
         <EmptyLedger
           onCreatePost={handleCreatePost}
@@ -475,6 +480,7 @@ export function LedgerScreen(): React.ReactNode {
   // (same fix applied to CreatePostScreen)
   return (
     <View style={styles.container} testID="ledger-screen">
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       <FlatList
         style={{ flex: 1 }}
         data={posts}
@@ -494,6 +500,7 @@ export function LedgerScreen(): React.ReactNode {
             onRefresh={handleRefresh}
             tintColor={COLORS.primary}
             colors={[COLORS.primary]}
+            progressBackgroundColor={darkTheme.cardBackground}
             testID="ledger-refresh-control"
           />
         }

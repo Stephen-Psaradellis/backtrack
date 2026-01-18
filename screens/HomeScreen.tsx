@@ -6,9 +6,10 @@
  * Favorites are managed in the dedicated Favorites tab.
  */
 import React, { useCallback } from 'react'
-import { View, StyleSheet } from 'react-native'
+import { View, StyleSheet, StatusBar } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 
+import { darkTheme } from '../constants/glassStyles'
 import { useLocation } from '../hooks/useLocation'
 import { useFavoriteLocations, type FavoriteLocationWithDistance } from '../hooks/useFavoriteLocations'
 import { MapView, createRegion, createMarker, type MapMarker, type PoiData } from '../components/MapView'
@@ -89,6 +90,7 @@ export function HomeScreen(): React.ReactNode {
   if (locationLoading) {
     return (
       <View style={styles.container} testID="home-screen">
+        <StatusBar barStyle="light-content" />
         <GlobalHeader />
         <View style={styles.centered}>
           <LoadingSpinner message="Getting your location..." />
@@ -103,6 +105,7 @@ export function HomeScreen(): React.ReactNode {
 
   return (
     <View style={styles.container} testID="home-screen">
+      <StatusBar barStyle="light-content" />
       {/* Global Header */}
       <GlobalHeader />
       <FloatingActionButtons testID="home-floating-actions" />
@@ -130,13 +133,13 @@ export function HomeScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAF9',
+    backgroundColor: darkTheme.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAF9',
+    backgroundColor: darkTheme.background,
   },
   mapContainer: {
     flex: 1,

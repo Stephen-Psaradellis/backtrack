@@ -1,0 +1,30 @@
+#!/usr/bin/expect -f
+set timeout 120
+set host "74.91.11.165"
+set user "user289978"
+set password "cnd77867fdh"
+
+spawn ssh -tt -o StrictHostKeyChecking=no -o PreferredAuthentications=keyboard-interactive,password -o PubkeyAuthentication=no $user@$host
+
+expect {
+    -re ".*assword.*" {
+        send "$password\r"
+        exp_continue
+    }
+    -re ".*\\\$ $" {
+        # Shell prompt reached
+    }
+    -re ".*% $" {
+        # Shell prompt reached
+    }
+    timeout {
+        puts "Timeout waiting for prompt"
+        exit 1
+    }
+}
+
+send "echo CONNECTED && pwd\r"
+expect -re {[$%]}
+
+send "exit\r"
+expect eof

@@ -7,6 +7,7 @@
  * - Pull-to-refresh
  * - Empty state when no posts nearby
  * - Loading state with ActivityIndicator
+ * - Modern dark theme with glassmorphism
  */
 import React, { useCallback } from 'react'
 import {
@@ -17,6 +18,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Platform,
+  StatusBar,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
@@ -27,6 +29,7 @@ import { PostCard } from '../components/PostCard'
 import { useNearbyPosts } from '../hooks/useNearbyPosts'
 import { selectionFeedback } from '../lib/haptics'
 import { colors } from '../constants/theme'
+import { darkTheme } from '../constants/glassStyles'
 import type { MainTabNavigationProp } from '../navigation/types'
 import type { Post } from '../types/database'
 
@@ -89,7 +92,7 @@ export function FeedScreen(): React.ReactNode {
 
     return (
       <View style={styles.emptyContainer} testID="feed-empty-state">
-        <Ionicons name="location-outline" size={64} color={colors.neutral[300]} />
+        <Ionicons name="location-outline" size={64} color={darkTheme.textMuted} />
         <Text style={styles.emptyTitle}>No posts nearby</Text>
         <Text style={styles.emptySubtitle}>Be the first!</Text>
         <Text style={styles.emptyDescription}>
@@ -101,7 +104,7 @@ export function FeedScreen(): React.ReactNode {
 
   const renderErrorState = useCallback(() => (
     <View style={styles.emptyContainer} testID="feed-error-state">
-      <Ionicons name="warning-outline" size={64} color={colors.error.main} />
+      <Ionicons name="warning-outline" size={64} color={darkTheme.error} />
       <Text style={styles.emptyTitle}>Unable to load posts</Text>
       <Text style={styles.emptyDescription}>{error}</Text>
     </View>
@@ -114,9 +117,10 @@ export function FeedScreen(): React.ReactNode {
   if (isLoading && !refreshing && posts.length === 0) {
     return (
       <View style={styles.container} testID="feed-screen">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <GlobalHeader />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary[500]} />
+          <ActivityIndicator size="large" color={darkTheme.accent} />
           <Text style={styles.loadingText}>Finding nearby posts...</Text>
         </View>
       </View>
@@ -130,6 +134,7 @@ export function FeedScreen(): React.ReactNode {
   if (error && posts.length === 0) {
     return (
       <View style={styles.container} testID="feed-screen">
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <GlobalHeader />
         {renderErrorState()}
       </View>
@@ -142,6 +147,7 @@ export function FeedScreen(): React.ReactNode {
 
   return (
     <View style={styles.container} testID="feed-screen">
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       <GlobalHeader />
       <FloatingActionButtons testID="feed-floating-actions" />
       <FlatList
@@ -158,8 +164,9 @@ export function FeedScreen(): React.ReactNode {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.primary[500]}
-            colors={[colors.primary[500]]}
+            tintColor={darkTheme.accent}
+            colors={[darkTheme.accent]}
+            progressBackgroundColor={darkTheme.cardBackground}
             testID="feed-refresh-control"
           />
         }
@@ -176,7 +183,7 @@ export function FeedScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: darkTheme.background,
   },
   loadingContainer: {
     flex: 1,
@@ -186,7 +193,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: colors.neutral[500],
+    color: darkTheme.textSecondary,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -209,20 +216,20 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: darkTheme.textPrimary,
     marginTop: 16,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.primary[500],
+    color: darkTheme.accent,
     marginTop: 4,
     textAlign: 'center',
   },
   emptyDescription: {
     fontSize: 14,
-    color: colors.neutral[500],
+    color: darkTheme.textSecondary,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20,

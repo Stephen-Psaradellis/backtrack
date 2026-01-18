@@ -6,11 +6,12 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View, StatusBar } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AvatarCreator } from '../components/avatar/index';
 import type { StoredAvatar } from '../components/avatar/types';
 import { saveCurrentUserAvatar } from '../lib/avatar/storage';
+import { darkTheme } from '../constants/glassStyles';
 import type { MainStackParamList } from '../navigation/types';
 
 // =============================================================================
@@ -70,6 +71,7 @@ export default function AvatarCreatorScreen({
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
       <AvatarCreator
         initialAvatarId={initialAvatarId}
         mode="self"
@@ -87,6 +89,6 @@ export default function AvatarCreatorScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.background,
   },
 });

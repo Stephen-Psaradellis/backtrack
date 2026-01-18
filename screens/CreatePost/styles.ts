@@ -12,6 +12,7 @@
  */
 
 import { StyleSheet, Platform, Dimensions } from 'react-native'
+import { darkTheme } from '../../constants/glassStyles'
 
 // ============================================================================
 // CONSTANTS
@@ -23,27 +24,27 @@ import { StyleSheet, Platform, Dimensions } from 'react-native'
 export const SCREEN_WIDTH = Dimensions.get('window').width
 
 /**
- * Common colors used throughout the CreatePost flow
+ * Common colors used throughout the CreatePost flow - Dark theme
  */
 export const COLORS = {
   /** Primary brand color */
-  primary: '#FF6B47',
+  primary: darkTheme.accent,
   /** Primary color for disabled states */
-  primaryDisabled: '#FFD0C2',
+  primaryDisabled: 'rgba(255, 107, 71, 0.3)',
   /** Primary color darker shade */
   primaryDark: '#F04E2A',
   /** Background color for screens */
-  background: '#FFFFFF',
+  background: darkTheme.background,
   /** Secondary background (cards, inputs) */
-  backgroundSecondary: '#F2F2F7',
+  backgroundSecondary: darkTheme.cardBackground,
   /** Border and divider color */
-  border: '#E5E5EA',
+  border: darkTheme.cardBorder,
   /** Primary text color */
-  textPrimary: '#000000',
+  textPrimary: darkTheme.textPrimary,
   /** Secondary/muted text color */
-  textSecondary: '#8E8E93',
+  textSecondary: darkTheme.textSecondary,
   /** Error/danger color */
-  error: '#FF3B30',
+  error: darkTheme.error,
   /** Full screen background (camera, etc.) */
   fullScreenBackground: '#000000',
 } as const

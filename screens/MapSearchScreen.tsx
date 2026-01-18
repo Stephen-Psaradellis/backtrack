@@ -9,9 +9,10 @@
  * - Star icon to open Favorites modal
  * - My location FAB (bottom right)
  * - Favorite location markers on map
+ * - Modern dark theme with glassmorphism
  */
 import React, { useCallback, useState, useRef, useMemo } from 'react'
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, StyleSheet, TouchableOpacity, StatusBar } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -27,6 +28,7 @@ import { GlobalHeader } from '../components/navigation/GlobalHeader'
 import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { colors, shadows } from '../constants/theme'
+import { darkTheme } from '../constants/glassStyles'
 import type { MainTabNavigationProp } from '../navigation/types'
 import type { VenuePreview, Venue } from '../types/location'
 import type { MapRegion } from '../lib/types'
@@ -298,6 +300,7 @@ export function MapSearchScreen(): React.ReactNode {
   if (locationLoading) {
     return (
       <SafeAreaView style={styles.centered} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <LoadingSpinner message="Getting your location..." />
       </SafeAreaView>
     )
@@ -309,6 +312,7 @@ export function MapSearchScreen(): React.ReactNode {
 
   return (
     <View style={styles.container} testID="map-search-screen">
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       {/* Global Header */}
       <GlobalHeader />
 
@@ -322,7 +326,7 @@ export function MapSearchScreen(): React.ReactNode {
           accessibilityRole="button"
           accessibilityLabel="Open favorites"
         >
-          <Ionicons name="star" size={24} color={colors.primary[500]} />
+          <Ionicons name="star" size={24} color={darkTheme.accent} />
         </TouchableOpacity>
 
         <View style={styles.searchBarContainer}>
@@ -364,7 +368,7 @@ export function MapSearchScreen(): React.ReactNode {
           accessibilityRole="button"
           accessibilityLabel="Center on my location"
         >
-          <Ionicons name="locate" size={24} color={colors.primary[500]} />
+          <Ionicons name="locate" size={24} color={darkTheme.accent} />
         </TouchableOpacity>
       </View>
     </View>
@@ -378,34 +382,33 @@ export function MapSearchScreen(): React.ReactNode {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: darkTheme.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.neutral[50],
+    backgroundColor: darkTheme.background,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[200],
+    borderBottomColor: darkTheme.cardBorder,
     gap: 12,
   },
   starButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.neutral[200],
-    ...shadows.native.sm,
+    borderColor: darkTheme.cardBorder,
   },
   searchBarContainer: {
     flex: 1,
@@ -424,12 +427,11 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.white,
+    backgroundColor: darkTheme.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.neutral[200],
-    ...shadows.native.md,
+    borderColor: darkTheme.cardBorder,
   },
 })
 

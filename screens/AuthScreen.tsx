@@ -27,6 +27,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 
@@ -36,6 +37,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner'
 import { TermsModal } from '../components/TermsModal'
 import { successFeedback, errorFeedback } from '../lib/haptics'
 import { trackEvent, AnalyticsEvent } from '../lib/analytics'
+import { darkTheme } from '../constants/glassStyles'
 import type { AuthStackNavigationProp } from '../navigation/types'
 
 // ============================================================================
@@ -349,6 +351,7 @@ export function AuthScreen(): React.ReactNode {
   if (authLoading) {
     return (
       <View style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
         <LoadingSpinner message="Loading..." fullScreen />
       </View>
     )
@@ -360,6 +363,7 @@ export function AuthScreen(): React.ReactNode {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
+      <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -425,7 +429,7 @@ export function AuthScreen(): React.ReactNode {
                   clearFieldError('email')
                 }}
                 placeholder="Enter your email"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={darkTheme.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
@@ -452,7 +456,7 @@ export function AuthScreen(): React.ReactNode {
                   clearFieldError('password')
                 }}
                 placeholder={mode === 'login' ? 'Enter your password' : 'Create a password'}
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={darkTheme.textMuted}
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete={mode === 'login' ? 'password' : 'new-password'}
@@ -480,7 +484,7 @@ export function AuthScreen(): React.ReactNode {
                     clearFieldError('confirmPassword')
                   }}
                   placeholder="Confirm your password"
-                  placeholderTextColor="#8E8E93"
+                  placeholderTextColor={darkTheme.textMuted}
                   secureTextEntry
                   autoCapitalize="none"
                   autoComplete="new-password"
@@ -554,7 +558,7 @@ const styles = StyleSheet.create({
   // Layout
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -565,6 +569,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: darkTheme.background,
   },
 
   // Header
@@ -575,13 +580,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#000000',
+    color: darkTheme.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     fontWeight: '400',
-    color: '#666666',
+    color: darkTheme.textSecondary,
     lineHeight: 22,
   },
 
@@ -597,42 +602,42 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000000',
+    color: darkTheme.textPrimary,
     marginBottom: 8,
   },
   input: {
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: darkTheme.cardBorder,
     borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#000000',
-    backgroundColor: '#F9F9F9',
+    color: darkTheme.textPrimary,
+    backgroundColor: darkTheme.cardBackground,
   },
   inputError: {
-    borderColor: '#FF3B30',
-    backgroundColor: '#FFF5F5',
+    borderColor: darkTheme.error,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
   },
 
   // Error Messages
   errorText: {
     fontSize: 13,
-    color: '#FF3B30',
+    color: darkTheme.error,
     marginTop: 6,
     fontWeight: '500',
   },
   errorBanner: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
     borderLeftWidth: 4,
-    borderLeftColor: '#FF3B30',
+    borderLeftColor: darkTheme.error,
     padding: 12,
     borderRadius: 4,
     marginBottom: 20,
   },
   errorBannerText: {
     fontSize: 14,
-    color: '#FF3B30',
+    color: darkTheme.error,
     fontWeight: '500',
   },
 
@@ -643,9 +648,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   successBanner: {
-    backgroundColor: '#F0FFF4',
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
     borderLeftWidth: 4,
-    borderLeftColor: '#34C759',
+    borderLeftColor: darkTheme.success,
     padding: 20,
     borderRadius: 8,
     marginBottom: 24,
@@ -653,22 +658,22 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#34C759',
+    color: darkTheme.success,
     marginBottom: 8,
   },
   successText: {
     fontSize: 14,
-    color: '#333333',
+    color: darkTheme.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
   successEmail: {
     fontWeight: '600',
-    color: '#000000',
+    color: darkTheme.textPrimary,
   },
   successSubtext: {
     fontSize: 13,
-    color: '#666666',
+    color: darkTheme.textMuted,
     lineHeight: 18,
   },
 
@@ -680,16 +685,16 @@ const styles = StyleSheet.create({
   },
   toggleModeText: {
     fontSize: 14,
-    color: '#666666',
+    color: darkTheme.textSecondary,
   },
   toggleModeLink: {
     fontSize: 14,
-    color: '#FF6B47',
+    color: darkTheme.accent,
     fontWeight: '600',
   },
   forgotPasswordLink: {
     fontSize: 14,
-    color: '#FF6B47',
+    color: darkTheme.accent,
     fontWeight: '600',
     marginTop: 16,
     textAlign: 'center',
