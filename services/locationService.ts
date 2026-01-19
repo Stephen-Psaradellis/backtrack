@@ -72,6 +72,134 @@ export const LOCATION_SERVICE_ERRORS = {
 } as const
 
 /**
+ * Place types that should be excluded from search results (residential addresses)
+ * These are typically not venues where people would have missed connections
+ */
+export const EXCLUDED_PLACE_TYPES = [
+  'street_address',
+  'route',
+  'intersection',
+  'political',
+  'country',
+  'administrative_area_level_1',
+  'administrative_area_level_2',
+  'administrative_area_level_3',
+  'administrative_area_level_4',
+  'administrative_area_level_5',
+  'colloquial_area',
+  'locality',
+  'sublocality',
+  'sublocality_level_1',
+  'sublocality_level_2',
+  'sublocality_level_3',
+  'sublocality_level_4',
+  'sublocality_level_5',
+  'neighborhood',
+  'premise',
+  'subpremise',
+  'plus_code',
+  'postal_code',
+  'postal_code_prefix',
+  'postal_code_suffix',
+  'postal_town',
+  'geocode',
+  'floor',
+  'room',
+  'post_box',
+  'street_number',
+  'natural_feature',
+] as const
+
+/**
+ * Place types that are considered valid venues (establishments/businesses)
+ * Used to filter search results to show only places where missed connections can happen
+ */
+export const ESTABLISHMENT_PLACE_TYPES = [
+  'establishment',
+  'point_of_interest',
+  'food',
+  'restaurant',
+  'cafe',
+  'coffee_shop',
+  'bar',
+  'night_club',
+  'bakery',
+  'meal_delivery',
+  'meal_takeaway',
+  'gym',
+  'fitness_center',
+  'health',
+  'spa',
+  'beauty_salon',
+  'hair_care',
+  'store',
+  'shopping_mall',
+  'clothing_store',
+  'shoe_store',
+  'electronics_store',
+  'furniture_store',
+  'home_goods_store',
+  'hardware_store',
+  'jewelry_store',
+  'pet_store',
+  'convenience_store',
+  'supermarket',
+  'grocery_or_supermarket',
+  'book_store',
+  'library',
+  'movie_theater',
+  'museum',
+  'art_gallery',
+  'amusement_park',
+  'aquarium',
+  'bowling_alley',
+  'casino',
+  'zoo',
+  'stadium',
+  'park',
+  'campground',
+  'tourist_attraction',
+  'lodging',
+  'hotel',
+  'airport',
+  'bus_station',
+  'train_station',
+  'subway_station',
+  'transit_station',
+  'light_rail_station',
+  'taxi_stand',
+  'car_rental',
+  'gas_station',
+  'parking',
+  'hospital',
+  'pharmacy',
+  'doctor',
+  'dentist',
+  'veterinary_care',
+  'bank',
+  'atm',
+  'post_office',
+  'laundry',
+  'car_wash',
+  'car_repair',
+  'university',
+  'school',
+  'primary_school',
+  'secondary_school',
+  'church',
+  'hindu_temple',
+  'mosque',
+  'synagogue',
+  'place_of_worship',
+  'city_hall',
+  'courthouse',
+  'embassy',
+  'fire_station',
+  'police',
+  'local_government_office',
+] as const
+
+/**
  * Default search radius in meters (5km)
  */
 export const DEFAULT_SEARCH_RADIUS_METERS = LOCATION_CONSTANTS.DEFAULT_RADIUS_METERS
@@ -185,6 +313,43 @@ export function isValidLongitude(longitude: number): boolean {
  */
 export function isValidCoordinates(latitude: number, longitude: number): boolean {
   return isValidLatitude(latitude) && isValidLongitude(longitude)
+}
+
+/**
+ * Checks if a place is a valid establishment (not a residential address)
+ *
+ * Returns true if the place has at least one establishment type and
+ * does not have any excluded residential/geographic types as its primary type.
+ *
+ * @param types - Array of place types from Google Places API
+ * @param primaryType - Primary type of the place (optional)
+ * @returns true if the place is a valid establishment, false otherwise
+ */
+export function isValidEstablishment(types: string[], primaryType?: string): boolean {
+  // If no types provided, consider it invalid
+  if (!types || types.length === 0) {
+    return false
+  }
+
+  // Check if the primary type is in the excluded list
+  if (primaryType && EXCLUDED_PLACE_TYPES.includes(primaryType as typeof EXCLUDED_PLACE_TYPES[number])) {
+    return false
+  }
+
+  // Check if any of the types are excluded residential/geographic types
+  const hasExcludedType = types.some(type =>
+    EXCLUDED_PLACE_TYPES.includes(type as typeof EXCLUDED_PLACE_TYPES[number])
+  )
+
+  // Check if any of the types are valid establishment types
+  const hasEstablishmentType = types.some(type =>
+    ESTABLISHMENT_PLACE_TYPES.includes(type as typeof ESTABLISHMENT_PLACE_TYPES[number])
+  )
+
+  // Valid if it has establishment types and doesn't have excluded types as primary
+  // We allow places that have both (e.g., a cafe at a street address) as long as
+  // the primary purpose is a venue
+  return hasEstablishmentType || !hasExcludedType
 }
 
 /**
@@ -435,14 +600,26 @@ export function transformGooglePlace(place: GooglePlace): GooglePlaceTransformed
 /**
  * Transform multiple Google Places to flat schema
  *
+ * Filters out residential addresses and non-establishment places.
+ * Only includes venues where missed connections could happen.
+ *
  * @param places - Array of Google Place objects
- * @returns Array of transformed places (skips invalid places)
+ * @param filterEstablishments - Whether to filter out non-establishments (default: true)
+ * @returns Array of transformed places (skips invalid and non-establishment places)
  */
-export function transformGooglePlaces(places: GooglePlace[]): GooglePlaceTransformed[] {
+export function transformGooglePlaces(
+  places: GooglePlace[],
+  filterEstablishments: boolean = true
+): GooglePlaceTransformed[] {
   const transformed: GooglePlaceTransformed[] = []
 
   for (const place of places) {
     try {
+      // Filter out residential addresses and non-establishments
+      if (filterEstablishments && !isValidEstablishment(place.types ?? [], place.primaryType)) {
+        continue
+      }
+
       transformed.push(transformGooglePlace(place))
     } catch {
       // Skip invalid places silently
@@ -1235,12 +1412,15 @@ export default {
   toLocationInsert,
   // Filtering functions
   filterVenuesByType,
+  isValidEstablishment,
   // Validation functions
   isValidLatitude,
   isValidLongitude,
   isValidCoordinates,
   // Constants
   LOCATION_SERVICE_ERRORS,
+  EXCLUDED_PLACE_TYPES,
+  ESTABLISHMENT_PLACE_TYPES,
   DEFAULT_SEARCH_RADIUS_METERS,
   DEFAULT_POPULAR_VENUES_COUNT,
   DEFAULT_MIN_POST_COUNT,

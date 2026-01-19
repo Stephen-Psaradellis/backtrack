@@ -46,8 +46,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { SmAvatarSnapshot } from '../../../components/avatar3d'
-import type { StoredAvatar } from '../../../components/avatar/types'
+import { Avatar2DDisplay } from '../../../components/avatar2d'
+import type { StoredAvatar2D } from '../../../components/avatar2d/types'
 import { Button, GhostButton } from '../../../components/Button'
 import { useProfilePhotos, type ProfilePhotoWithTimeout } from '../../../hooks/useProfilePhotos'
 import { pickSelfieFromCamera, pickSelfieFromGallery } from '../../../utils/imagePicker'
@@ -75,7 +75,7 @@ export interface SealStepProps {
   /**
    * Avatar for the target person
    */
-  avatar: StoredAvatar | null
+  avatar: StoredAvatar2D | null
 
   /**
    * The note/message written by the user
@@ -387,7 +387,7 @@ export const SealStep = memo(function SealStep({
           testID={`${testID}-edit-moment`}
         >
           <View style={styles.avatarThumbnail}>
-            {avatar && <SmAvatarSnapshot avatar={avatar} />}
+            {avatar && <Avatar2DDisplay avatar={avatar} size="sm" />}
           </View>
           <View style={styles.reviewRowContent}>
             <Text style={styles.reviewRowLabel}>Your message</Text>

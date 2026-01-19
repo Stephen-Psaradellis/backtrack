@@ -69,7 +69,7 @@ import {
   Alert,
 } from 'react-native'
 import { ReportPostModal } from './ReportModal'
-import { MdAvatarSnapshot } from './avatar3d'
+import { Avatar2DDisplay } from './avatar2d'
 import { VerifiedBadge } from './VerifiedBadge'
 import { formatSightingTime, parseDate } from '../utils/dateTime'
 import type { Post, PostWithDetails, Location, Profile } from '../types/database'
@@ -440,9 +440,9 @@ export const PostCard = memo(function PostCard({
       >
       {/* Avatar Section */}
       <View style={styles.avatarContainer} testID={`${testID}-avatar`}>
-        <MdAvatarSnapshot
+        <Avatar2DDisplay
           avatar={post.target_avatar_v2}
-          testID={`${testID}-avatar-preview`}
+          size="md"
         />
         {/* Match Badge */}
         {showMatchIndicator && isMatch && (

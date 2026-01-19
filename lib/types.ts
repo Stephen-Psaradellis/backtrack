@@ -42,8 +42,8 @@ export type {
   Database,
 } from '../types/database'
 
-// Avatar types (3D preset-based avatar system)
-export type { AvatarConfig, StoredAvatar } from '../components/avatar/types'
+// Avatar types (2D component-based avatar system)
+export type { Avatar2DConfig, StoredAvatar2D } from '../components/avatar2d/types'
 
 // ============================================================================
 // APPLICATION-SPECIFIC TYPES
@@ -147,7 +147,7 @@ export interface AuthFormData {
  */
 export interface CreatePostFormData {
   locationId: string
-  targetAvatar: import('../components/avatar/types').StoredAvatar | null
+  targetAvatar: import('../components/avatar2d/types').StoredAvatar2D | null
   note: string
   selfieUri: string | null
 }

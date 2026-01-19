@@ -36,6 +36,8 @@ import { pickSelfieFromCamera, pickSelfieFromGallery } from '../utils/imagePicke
 import { lightFeedback, warningFeedback, successFeedback } from '../lib/haptics'
 import { getPhotoShareCount } from '../lib/photoSharing'
 import type { ProfilePhotoWithUrl } from '../lib/profilePhotos'
+import { darkTheme } from '../constants/glassStyles'
+import { colors } from '../constants/theme'
 
 // ============================================================================
 // TYPES
@@ -476,7 +478,7 @@ export function ProfilePhotoGallery({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: GRID_PADDING,
+    paddingHorizontal: 0,
   },
   loadingContainer: {
     padding: 32,
@@ -486,7 +488,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
   },
   emptyContainer: {
     padding: 32,
@@ -497,18 +499,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
+    color: darkTheme.textPrimary,
   },
   emptyMessage: {
     marginTop: 8,
     fontSize: 14,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     textAlign: 'center',
     lineHeight: 20,
   },
   emptyButton: {
     marginTop: 20,
-    backgroundColor: '#FF6B47',
+    backgroundColor: colors.primary[500],
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 10,
@@ -522,7 +524,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -536,7 +538,7 @@ const styles = StyleSheet.create({
     height: TILE_SIZE,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#E5E5EA',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   photoImage: {
     width: '100%',
@@ -547,7 +549,7 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   statusBadge: {
     position: 'absolute',
@@ -578,7 +580,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#FF6B47',
+    backgroundColor: colors.primary[500],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -627,30 +629,30 @@ const styles = StyleSheet.create({
     height: TILE_SIZE,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#FF6B47',
+    borderColor: colors.primary[400],
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF8F6',
+    backgroundColor: 'rgba(255, 107, 71, 0.1)',
   },
   addTileDisabled: {
-    borderColor: '#C7C7CC',
-    backgroundColor: '#F2F2F7',
+    borderColor: darkTheme.textMuted,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   addText: {
     marginTop: 4,
     fontSize: 12,
-    color: '#FF6B47',
+    color: colors.primary[400],
     fontWeight: '500',
   },
   addTextDisabled: {
-    color: '#C7C7CC',
+    color: darkTheme.textMuted,
   },
   uploadingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF6B47',
+    backgroundColor: colors.primary[500],
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -665,7 +667,7 @@ const styles = StyleSheet.create({
   countText: {
     marginTop: 12,
     fontSize: 13,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     textAlign: 'center',
   },
 })

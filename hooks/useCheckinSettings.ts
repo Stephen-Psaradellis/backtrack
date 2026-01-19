@@ -158,10 +158,18 @@ export function useCheckinSettings(
               code: "BACKGROUND_ERROR",
               message: "Could not start background tracking. Please grant location permissions.",
             })
+            // Revert in database
             await supabase.rpc("update_tracking_settings", {
               p_always_on_enabled: false,
               p_prompt_minutes: data.checkin_prompt_minutes,
             })
+            // Also update local state to reflect the reverted setting
+            if (isMountedRef.current) {
+              setSettings({
+                always_on_tracking_enabled: false,
+                checkin_prompt_minutes: data.checkin_prompt_minutes,
+              })
+            }
             return false
           }
         } else if (!isNowEnabled && wasEnabled) {

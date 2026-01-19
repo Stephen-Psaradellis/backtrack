@@ -883,14 +883,17 @@ export function ChatScreen(): React.ReactNode {
       <Tooltip
         isVisible={tutorial.isVisible}
         content={
-          <View>
-            <Text style={{ color: 'white', fontSize: 14 }}>
-              Type your message here
+          <View style={{ padding: 8 }}>
+            <Text style={{ color: 'white', fontSize: 16, fontWeight: '600', marginBottom: 4 }}>
+              Start Chatting
+            </Text>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 14 }}>
+              Type a message below and tap Send to start your conversation. Your identity stays anonymous until you both decide to share photos.
             </Text>
           </View>
         }
         placement="top"
-        onClose={() => tutorial.hide()}
+        onClose={() => tutorial.markComplete()}
       >
         <View style={styles.inputContainer}>
           <TextInput

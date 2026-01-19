@@ -25,7 +25,7 @@ import { LocationPermissionStep } from '@/components/onboarding/LocationPermissi
 import { ProducerDemoScreen } from '@/components/onboarding/ProducerDemoScreen';
 import { ConsumerDemoScreen } from '@/components/onboarding/ConsumerDemoScreen';
 import { ONBOARDING_STEPS } from '@/lib/onboarding/onboardingConfig';
-import type { StoredAvatar } from '@/components/avatar/types';
+import type { StoredAvatar2D } from '@/components/avatar2d/types';
 import type { LocationPermissionStatus } from '@/hooks/useLocation';
 
 // ============================================================================
@@ -133,7 +133,7 @@ export default function OnboardingPage() {
    * Saves the avatar and advances to next step
    */
   const handleAvatarComplete = useCallback(
-    (avatar: StoredAvatar) => {
+    (avatar: StoredAvatar2D) => {
       setAvatar(avatar.config);
       nextStep();
     },
@@ -243,7 +243,6 @@ export default function OnboardingPage() {
           <AvatarCreationStep
             onComplete={handleAvatarComplete}
             onSkip={handleSkip}
-            initialAvatarId={avatarConfig?.avatarId}
           />
         )}
 

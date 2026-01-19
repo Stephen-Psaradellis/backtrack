@@ -52,12 +52,9 @@ import {
   type TutorialFeature,
 } from '../utils/tutorialStorage'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { LgAvatarSnapshot } from '../components/avatar3d'
-import type { StoredAvatar } from '../components/avatar/types'
+import { Avatar2DDisplay, type StoredAvatar2D } from '../components/avatar2d'
 import { ProfilePhotoGallery } from '../components/ProfilePhotoGallery'
-import {
-  loadCurrentUserAvatar,
-} from '../lib/avatar/storage'
+import { loadCurrentUserAvatar } from '../lib/avatar2d/storage'
 import {
   deleteAccountAndSignOut,
   getDeletionStatus,
@@ -118,7 +115,7 @@ export function ProfileScreen(): React.ReactNode {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
-  const [userAvatar, setUserAvatar] = useState<StoredAvatar | null>(null)
+  const [userAvatar, setUserAvatar] = useState<StoredAvatar2D | null>(null)
   const [isLoadingAvatar, setIsLoadingAvatar] = useState(true)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
@@ -136,7 +133,7 @@ export function ProfileScreen(): React.ReactNode {
       async function loadAvatar() {
         setIsLoadingAvatar(true)
         const result = await loadCurrentUserAvatar()
-        setUserAvatar(result.avatar)
+        setUserAvatar(result)
         setIsLoadingAvatar(false)
       }
       loadAvatar()
@@ -643,7 +640,7 @@ export function ProfileScreen(): React.ReactNode {
               </View>
             ) : userAvatar ? (
               <View style={styles.avatarConfigured} testID="profile-avatar-preview">
-                <LgAvatarSnapshot avatar={userAvatar} />
+                <Avatar2DDisplay avatar={userAvatar} size="lg" />
                 <TouchableOpacity
                   style={styles.editAvatarButton}
                   onPress={handleOpenAvatarCreator}

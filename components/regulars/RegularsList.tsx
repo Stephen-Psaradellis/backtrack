@@ -29,6 +29,8 @@ import {
   FellowRegular,
   LocationRegular,
 } from '../../hooks/useRegulars'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // Types
@@ -321,12 +323,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: darkTheme.textSecondary,
   },
   emptySubtitle: {
     marginTop: 4,
     fontSize: 14,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     textAlign: 'center',
     paddingHorizontal: 24,
   },
@@ -344,37 +346,39 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   moreCountText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: darkTheme.textMuted,
   },
   countOnlyContainer: {
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     borderRadius: 12,
     margin: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.2)',
   },
   countOnlyText: {
     marginTop: 8,
     fontSize: 15,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: '#6366F1',
   },
   countOnlyHint: {
     marginTop: 4,
     fontSize: 13,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     textAlign: 'center',
   },
   totalCountText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -389,12 +393,12 @@ const styles = StyleSheet.create({
   },
   previewAvatarWrapper: {
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: darkTheme.background,
     borderRadius: 14,
   },
   previewText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     fontWeight: '500',
   },
 })

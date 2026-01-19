@@ -378,20 +378,57 @@ export async function isBackgroundLocationAvailable(): Promise<boolean> {
 }
 
 /**
+ * Check if background location permissions are already granted
+ */
+export async function hasBackgroundLocationPermission(): Promise<boolean> {
+  try {
+    const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync()
+    const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync()
+    return foregroundStatus === 'granted' && backgroundStatus === 'granted'
+  } catch {
+    return false
+  }
+}
+
+/**
  * Request background location permissions
+ * First checks if already granted to avoid re-request issues on iOS
  */
 export async function requestBackgroundLocationPermission(): Promise<boolean> {
   try {
-    // First request foreground
-    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync()
-    if (foregroundStatus !== 'granted') {
-      return false
+    // First check if permissions are already granted
+    const alreadyGranted = await hasBackgroundLocationPermission()
+    if (alreadyGranted) {
+      return true
     }
 
-    // Then request background
-    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync()
-    return backgroundStatus === 'granted'
-  } catch {
+    // Check current foreground status
+    const { status: currentForeground } = await Location.getForegroundPermissionsAsync()
+
+    // Only request foreground if not already granted
+    if (currentForeground !== 'granted') {
+      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync()
+      if (foregroundStatus !== 'granted') {
+        console.warn('[BackgroundLocation] Foreground permission denied')
+        return false
+      }
+    }
+
+    // Check current background status
+    const { status: currentBackground } = await Location.getBackgroundPermissionsAsync()
+
+    // Only request background if not already granted
+    if (currentBackground !== 'granted') {
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync()
+      if (backgroundStatus !== 'granted') {
+        console.warn('[BackgroundLocation] Background permission denied')
+        return false
+      }
+    }
+
+    return true
+  } catch (error) {
+    console.error('[BackgroundLocation] Permission request error:', error)
     return false
   }
 }
@@ -516,6 +553,7 @@ export async function updateTrackingSettings(promptMinutes: number): Promise<voi
 export default {
   BACKGROUND_LOCATION_TASK,
   isBackgroundLocationAvailable,
+  hasBackgroundLocationPermission,
   requestBackgroundLocationPermission,
   startBackgroundLocationTracking,
   stopBackgroundLocationTracking,

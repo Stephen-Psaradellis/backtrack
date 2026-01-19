@@ -2,15 +2,14 @@
  * AvatarCreatorScreen
  *
  * Full-screen avatar creator for editing the user's own avatar.
- * Uses the 3D preset-based avatar system.
+ * Uses the 2D component-based avatar system.
  */
 
 import React, { useCallback, useState } from 'react';
 import { Alert, StyleSheet, View, StatusBar } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { AvatarCreator } from '../components/avatar/index';
-import type { StoredAvatar } from '../components/avatar/types';
-import { saveCurrentUserAvatar } from '../lib/avatar/storage';
+import { Avatar2DCreator, type StoredAvatar2D } from '../components/avatar2d';
+import { saveCurrentUserAvatar } from '../lib/avatar2d/storage';
 import { darkTheme } from '../constants/glassStyles';
 import type { MainStackParamList } from '../navigation/types';
 
@@ -30,28 +29,20 @@ export default function AvatarCreatorScreen({
 }: Props): React.JSX.Element {
   const [isSaving, setIsSaving] = useState(false);
 
-  // Get initial avatar ID from route params or use default
-  const initialAvatarId = route.params?.initialAvatarId;
-
   /**
    * Handle avatar save
    */
   const handleComplete = useCallback(
-    async (avatar: StoredAvatar) => {
+    async (avatar: StoredAvatar2D) => {
       if (isSaving) return;
 
       setIsSaving(true);
 
       try {
-        // Save to profile
-        const result = await saveCurrentUserAvatar(avatar);
-
-        if (result.success) {
-          // Navigate back
-          navigation.goBack();
-        } else {
-          Alert.alert('Error', result.error || 'Failed to save avatar');
-        }
+        // Save to local storage
+        await saveCurrentUserAvatar(avatar);
+        // Navigate back
+        navigation.goBack();
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         Alert.alert('Error', `Failed to save avatar: ${message}`);
@@ -72,9 +63,7 @@ export default function AvatarCreatorScreen({
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <AvatarCreator
-        initialAvatarId={initialAvatarId}
-        mode="self"
+      <Avatar2DCreator
         onComplete={handleComplete}
         onCancel={handleCancel}
       />

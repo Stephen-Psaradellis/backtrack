@@ -15,7 +15,8 @@
 
 import type { User, Session, SupabaseClient } from '@supabase/supabase-js'
 import type { Profile, Post, Location as LocationEntity } from '../../types/database'
-import type { StoredAvatar } from '../../components/avatar/types'
+import type { StoredAvatar2D } from '../../components/avatar2d/types'
+import { DEFAULT_AVATAR_CONFIG } from '../../components/avatar2d/types'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -473,28 +474,29 @@ export const devMockLocation: LocationEntity = devMockLocations[1]
  * Multiple mock posts distributed across locations
  */
 /**
- * Helper to create a mock custom avatar for posts
+ * Helper to create a mock 2D avatar for posts
  */
-function createMockAvatar(id: string): StoredAvatar {
-  // Avatar presets for mock data
-  const presets = [
-    { avatarId: 'avatar_asian_m', ethnicity: 'Asian', gender: 'M', outfit: 'Casual' },
-    { avatarId: 'avatar_asian_f', ethnicity: 'Asian', gender: 'F', outfit: 'Casual' },
-    { avatarId: 'avatar_black_m', ethnicity: 'Black', gender: 'M', outfit: 'Casual' },
-    { avatarId: 'avatar_white_f', ethnicity: 'White', gender: 'F', outfit: 'Casual' },
-    { avatarId: 'avatar_hispanic_m', ethnicity: 'Hispanic', gender: 'M', outfit: 'Casual' },
-    { avatarId: 'avatar_mena_f', ethnicity: 'MENA', gender: 'F', outfit: 'Casual' },
+function createMockAvatar(id: string): StoredAvatar2D {
+  // 2D avatar config variations for mock data
+  const variations = [
+    { gender: 'male' as const, skinTone: '#f5d7c3', hairStyle: 'shortHairShortFlat', hairColor: '#2c1810' },
+    { gender: 'female' as const, skinTone: '#f5d7c3', hairStyle: 'longHairStraight', hairColor: '#2c1810' },
+    { gender: 'male' as const, skinTone: '#8d5524', hairStyle: 'shortHairDreads01', hairColor: '#090806' },
+    { gender: 'female' as const, skinTone: '#eac086', hairStyle: 'longHairCurly', hairColor: '#4e3328' },
+    { gender: 'male' as const, skinTone: '#d4a574', hairStyle: 'shortHairShortWaved', hairColor: '#090806' },
+    { gender: 'female' as const, skinTone: '#c99d77', hairStyle: 'longHairBob', hairColor: '#2c1810' },
   ];
-  const preset = presets[Math.floor(Math.random() * presets.length)];
+  const variation = variations[Math.floor(Math.random() * variations.length)];
 
   return {
     id,
-    version: 2,
+    type: '2d',
     config: {
-      avatarId: preset.avatarId,
-      ethnicity: preset.ethnicity as 'Asian' | 'Black' | 'White' | 'Hispanic' | 'MENA',
-      gender: preset.gender as 'M' | 'F',
-      outfit: preset.outfit as 'Casual',
+      ...DEFAULT_AVATAR_CONFIG,
+      gender: variation.gender,
+      skinTone: variation.skinTone,
+      hairStyle: variation.hairStyle,
+      hairColor: variation.hairColor,
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

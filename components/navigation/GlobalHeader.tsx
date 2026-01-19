@@ -23,7 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { SmAvatarSnapshot } from '../avatar3d';
+import { Avatar2DDisplay } from '../avatar2d';
 import { CheckInButton } from '../checkin';
 import { BacktrackLogo } from '../ui/BacktrackLogo';
 import { selectionFeedback } from '../../lib/haptics';
@@ -131,9 +131,9 @@ export function GlobalHeader({
           accessibilityLabel="View profile"
         >
           {hasAvatar ? (
-            <SmAvatarSnapshot
+            <Avatar2DDisplay
               avatar={profile.avatar}
-              testID="global-header-avatar-preview"
+              size="sm"
             />
           ) : (
             <View style={styles.avatarPlaceholder}>

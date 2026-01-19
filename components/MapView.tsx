@@ -227,6 +227,8 @@ export interface MapViewProps {
   style?: StyleProp<ViewStyle>
   /** Custom map style */
   mapStyle?: StyleProp<ViewStyle>
+  /** Custom Google Maps JSON styling (for dark mode, etc.) */
+  customMapStyle?: object[]
   /** Padding for map controls (pushes Google Maps buttons away from edges) */
   mapPadding?: { top?: number; right?: number; bottom?: number; left?: number }
   /** Test ID for testing purposes */
@@ -255,6 +257,100 @@ const ZOOM_DELTAS = {
   medium: { latitudeDelta: 0.02, longitudeDelta: 0.02 },
   far: { latitudeDelta: 0.1, longitudeDelta: 0.1 },
 } as const
+
+/**
+ * Dark mode map style for Google Maps
+ * Matches the app's dark theme with neutral grays
+ */
+const DARK_MAP_STYLE = [
+  {
+    elementType: 'geometry',
+    stylers: [{ color: '#1C1917' }], // neutral.900
+  },
+  {
+    elementType: 'labels.text.stroke',
+    stylers: [{ color: '#1C1917' }],
+  },
+  {
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#78716C' }], // neutral.500
+  },
+  {
+    featureType: 'administrative.locality',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#A8A29E' }], // neutral.400
+  },
+  {
+    featureType: 'poi',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#A8A29E' }],
+  },
+  {
+    featureType: 'poi.park',
+    elementType: 'geometry',
+    stylers: [{ color: '#292524' }], // neutral.800
+  },
+  {
+    featureType: 'poi.park',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#57534E' }], // neutral.600
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry',
+    stylers: [{ color: '#292524' }], // neutral.800
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#1C1917' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#78716C' }],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'geometry',
+    stylers: [{ color: '#44403C' }], // neutral.700
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#292524' }],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#A8A29E' }],
+  },
+  {
+    featureType: 'transit',
+    elementType: 'geometry',
+    stylers: [{ color: '#292524' }],
+  },
+  {
+    featureType: 'transit.station',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#A8A29E' }],
+  },
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: [{ color: '#0C0A09' }], // neutral.950
+  },
+  {
+    featureType: 'water',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#44403C' }],
+  },
+  {
+    featureType: 'water',
+    elementType: 'labels.text.stroke',
+    stylers: [{ color: '#0C0A09' }],
+  },
+]
 
 /**
  * iOS Maps colors for markers
@@ -315,6 +411,7 @@ export function MapView({
   pitchEnabled = true,
   style,
   mapStyle,
+  customMapStyle = DARK_MAP_STYLE,
   mapPadding,
   testID = 'map-view',
 }: MapViewProps): JSX.Element {
@@ -498,10 +595,10 @@ export function MapView({
   if (mapsLoadError || !RNMapView || !Marker) {
     return (
       <View style={[styles.container, styles.centered, style]} testID={testID}>
-        <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 16, color: '#A8A29E', textAlign: 'center', padding: 20 }}>
           {mapsLoadError || 'Map module not available'}
         </Text>
-        <Text style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
+        <Text style={{ fontSize: 12, color: '#78716C', textAlign: 'center' }}>
           Platform: {Platform.OS}
         </Text>
       </View>
@@ -519,6 +616,7 @@ export function MapView({
         ref={mapRef}
         style={[styles.map, mapStyle]}
         provider={PROVIDER_GOOGLE}
+        customMapStyle={customMapStyle}
         initialRegion={initialRegion}
         region={region}
         showsUserLocation={showsUserLocation}
@@ -721,7 +819,7 @@ const styles = StyleSheet.create({
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#1C1917', // neutral.900 - dark mode
   },
   map: {
     ...StyleSheet.absoluteFillObject,
@@ -733,4 +831,4 @@ const styles = StyleSheet.create({
 // ============================================================================
 
 export default MapView
-export { DEFAULT_REGION, ZOOM_DELTAS, MARKER_COLORS }
+export { DEFAULT_REGION, ZOOM_DELTAS, MARKER_COLORS, DARK_MAP_STYLE }

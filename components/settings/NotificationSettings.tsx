@@ -21,6 +21,8 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useNotificationSettings } from '../../hooks/useNotificationSettings'
 import { useSparkNotificationSettings } from '../../hooks/useSparkNotificationSettings'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // Types
@@ -92,8 +94,8 @@ export function NotificationSettings({ style }: NotificationSettingsProps) {
           value={matchNotificationsEnabled}
           onValueChange={() => { toggleMatchNotifications() }}
           disabled={isSaving}
-          trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-          thumbColor={matchNotificationsEnabled ? '#FF6B47' : '#F3F4F6'}
+          trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: colors.primary[400] }}
+          thumbColor={matchNotificationsEnabled ? colors.primary[500] : darkTheme.textMuted}
         />
       </View>
 
@@ -114,8 +116,8 @@ export function NotificationSettings({ style }: NotificationSettingsProps) {
           value={messageNotificationsEnabled}
           onValueChange={() => { toggleMessageNotifications() }}
           disabled={isSaving}
-          trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-          thumbColor={messageNotificationsEnabled ? '#FF6B47' : '#F3F4F6'}
+          trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: colors.accent[400] }}
+          thumbColor={messageNotificationsEnabled ? colors.accent[500] : darkTheme.textMuted}
         />
       </View>
 
@@ -136,8 +138,8 @@ export function NotificationSettings({ style }: NotificationSettingsProps) {
           value={sparkNotificationsEnabled}
           onValueChange={() => { toggleSparkNotifications() }}
           disabled={isSaving}
-          trackColor={{ false: '#D1D5DB', true: '#FCD34D' }}
-          thumbColor={sparkNotificationsEnabled ? '#F59E0B' : '#F3F4F6'}
+          trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: '#FCD34D' }}
+          thumbColor={sparkNotificationsEnabled ? '#F59E0B' : darkTheme.textMuted}
         />
       </View>
 
@@ -158,7 +160,6 @@ export function NotificationSettings({ style }: NotificationSettingsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   headerIcon: {
     marginRight: 12,
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: darkTheme.textPrimary,
   },
   settingRow: {
     flexDirection: 'row',
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   settingInfo: {
     flex: 1,
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -211,11 +212,11 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#1F2937',
+    color: darkTheme.textPrimary,
   },
   settingDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     marginTop: 2,
   },
   savingIndicator: {
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   },
   savingText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
   },
 })
 

@@ -4,10 +4,10 @@
  * Provides realistic mock posts and location data for the producer and
  * consumer demo screens during onboarding.
  *
- * Uses the preset-based avatar system with avatarId references.
+ * Uses 2D avatar system for avatar display.
  */
 
-import type { AvatarConfig } from '../../components/avatar/types';
+import type { Avatar2DConfig } from '../../components/avatar2d/types';
 
 // ============================================================================
 // TYPES

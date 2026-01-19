@@ -39,9 +39,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { LgAvatarSnapshot } from '../../../components/avatar3d'
-import { AvatarCreator } from '../../../components/avatar/index'
-import type { StoredAvatar } from '../../../components/avatar/types'
+import { Avatar2DDisplay, Avatar2DCreator } from '../../../components/avatar2d'
+import type { StoredAvatar2D } from '../../../components/avatar2d/types'
 import { Button, OutlineButton } from '../../../components/Button'
 import { lightFeedback, successFeedback } from '../../../lib/haptics'
 import { MIN_NOTE_LENGTH, MAX_NOTE_LENGTH } from '../types'
@@ -58,7 +57,7 @@ export interface MomentStepProps {
   /**
    * Current avatar (null if not yet selected)
    */
-  avatar: StoredAvatar | null
+  avatar: StoredAvatar2D | null
 
   /**
    * Current note text value
@@ -68,7 +67,7 @@ export interface MomentStepProps {
   /**
    * Callback when avatar is changed
    */
-  onAvatarChange: (avatar: StoredAvatar) => void
+  onAvatarChange: (avatar: StoredAvatar2D) => void
 
   /**
    * Callback when note text changes
@@ -154,7 +153,7 @@ export const MomentStep = memo(function MomentStep({
     setShowAvatarCreator(true)
   }, [])
 
-  const handleAvatarComplete = useCallback(async (newAvatar: StoredAvatar) => {
+  const handleAvatarComplete = useCallback(async (newAvatar: StoredAvatar2D) => {
     await successFeedback()
     onAvatarChange(newAvatar)
     setShowAvatarCreator(false)
@@ -191,7 +190,7 @@ export const MomentStep = memo(function MomentStep({
             testID={`${testID}-avatar-preview`}
           >
             {avatar ? (
-              <LgAvatarSnapshot avatar={avatar} />
+              <Avatar2DDisplay avatar={avatar} size="lg" />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Ionicons name="person-outline" size={64} color={COLORS.textSecondary} />
@@ -281,13 +280,10 @@ export const MomentStep = memo(function MomentStep({
         presentationStyle="fullScreen"
         onRequestClose={handleAvatarCancel}
       >
-        <AvatarCreator
-          initialAvatarId={avatar?.config?.avatarId}
-          mode="target"
+        <Avatar2DCreator
+          initialConfig={avatar?.config}
           onComplete={handleAvatarComplete}
           onCancel={handleAvatarCancel}
-          title="Describe Who You Saw"
-          subtitle="Select an avatar that resembles them"
         />
       </Modal>
     </KeyboardAvoidingView>

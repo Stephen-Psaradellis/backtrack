@@ -17,6 +17,8 @@ import { Picker } from '@react-native-picker/picker'
 import { useCheckinSettings } from '../../hooks/useCheckinSettings'
 import { LoadingSpinner } from '../LoadingSpinner'
 import { successFeedback, errorFeedback } from '../../lib/haptics'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // TYPES
@@ -155,8 +157,8 @@ export function LocationTrackingSettings({
           value={settings.always_on_tracking_enabled}
           onValueChange={handleToggleAlwaysOn}
           disabled={isUpdating}
-          trackColor={{ false: '#E0E0E0', true: '#FF6B47' }}
-          thumbColor="#FFFFFF"
+          trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: colors.primary[400] }}
+          thumbColor={settings.always_on_tracking_enabled ? colors.primary[500] : darkTheme.textMuted}
           testID={`${testID}-toggle`}
         />
       </View>
@@ -206,11 +208,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
   },
   description: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     marginBottom: 8,
   },
   loadingContainer: {
@@ -218,15 +220,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorBanner: {
-    backgroundColor: '#FFE5E5',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: 8,
     padding: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF3B30',
+    borderLeftColor: '#EF4444',
   },
   errorText: {
     fontSize: 14,
-    color: '#FF3B30',
+    color: '#EF4444',
   },
   settingRow: {
     flexDirection: 'row',
@@ -234,7 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   settingInfo: {
     flex: 1,
@@ -242,12 +244,12 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    color: '#333333',
+    color: darkTheme.textPrimary,
     fontWeight: '500',
   },
   settingHint: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     marginTop: 4,
   },
   pickerContainer: {
@@ -255,22 +257,23 @@ const styles = StyleSheet.create({
   },
   pickerLabel: {
     fontSize: 14,
-    color: '#333333',
+    color: darkTheme.textSecondary,
     marginBottom: 8,
   },
   pickerWrapper: {
     borderWidth: 1,
-    borderColor: '#D0D0D0',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     overflow: 'hidden',
   },
   picker: {
     height: 50,
+    color: darkTheme.textPrimary,
   },
   infoText: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     marginTop: 8,
     lineHeight: 18,
   },

@@ -43,6 +43,8 @@ import {
   transformGooglePlaces,
   cacheVenueToSupabase,
 } from '../../services/locationService'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // TYPES
@@ -413,7 +415,7 @@ export function CheckInButton({
             {item.fromGooglePlaces && ' • New venue'}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+        <Ionicons name="chevron-forward" size={20} color={darkTheme.textMuted} />
       </View>
     </TouchableOpacity>
   ), [handleSelectLocation])
@@ -523,7 +525,7 @@ export function CheckInButton({
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Select a Venue</Text>
               <TouchableOpacity onPress={handleCancel} style={styles.pickerCloseButton}>
-                <Ionicons name="close" size={24} color="#333333" />
+                <Ionicons name="close" size={24} color={darkTheme.textPrimary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.pickerSubtitle}>
@@ -558,19 +560,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     gap: 6,
-    shadowColor: '#000',
+    shadowColor: colors.primary[500],
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     elevation: 4,
   },
   buttonDefault: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.surface,
     borderWidth: 1,
-    borderColor: '#FF6B47',
+    borderColor: colors.primary[500],
   },
   buttonCheckedIn: {
-    backgroundColor: '#FF6B47',
+    backgroundColor: colors.primary[500],
   },
   buttonText: {
     fontSize: 14,
@@ -578,31 +580,33 @@ const styles = StyleSheet.create({
     maxWidth: 120,
   },
   buttonTextDefault: {
-    color: '#FF6B47',
+    color: colors.primary[500],
   },
   buttonTextCheckedIn: {
     color: '#FFFFFF',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.surface,
     borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 320,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: darkTheme.glassBorder,
   },
   modalIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FFF0EB',
+    backgroundColor: 'rgba(255, 107, 71, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -610,25 +614,25 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
     marginBottom: 8,
   },
   modalLocation: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FF6B47',
+    color: colors.primary[500],
     textAlign: 'center',
     marginBottom: 4,
   },
   modalAddress: {
     fontSize: 14,
-    color: '#666666',
+    color: darkTheme.textSecondary,
     textAlign: 'center',
     marginBottom: 4,
   },
   modalDistance: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     marginBottom: 24,
   },
   modalButtons: {
@@ -640,19 +644,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: darkTheme.surfaceElevated,
     alignItems: 'center',
   },
   modalButtonCancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666666',
+    color: darkTheme.textSecondary,
   },
   modalButtonConfirm: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#FF6B47',
+    backgroundColor: colors.primary[500],
     alignItems: 'center',
   },
   modalButtonConfirmText: {
@@ -663,7 +667,7 @@ const styles = StyleSheet.create({
   newVenueBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -672,21 +676,24 @@ const styles = StyleSheet.create({
   },
   newVenueBadgeText: {
     fontSize: 12,
-    color: '#4CAF50',
+    color: darkTheme.success,
     fontWeight: '500',
   },
   // Location Picker Modal Styles
   pickerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
   },
   pickerContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '70%',
     paddingBottom: 34, // Safe area
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: darkTheme.glassBorder,
   },
   pickerHeader: {
     flexDirection: 'row',
@@ -699,14 +706,14 @@ const styles = StyleSheet.create({
   pickerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
   },
   pickerCloseButton: {
     padding: 4,
   },
   pickerSubtitle: {
     fontSize: 14,
-    color: '#666666',
+    color: darkTheme.textSecondary,
     paddingHorizontal: 20,
     marginBottom: 16,
   },
@@ -715,7 +722,7 @@ const styles = StyleSheet.create({
   },
   pickerSeparator: {
     height: 1,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: darkTheme.glassBorder,
     marginLeft: 68,
   },
   locationItem: {
@@ -730,7 +737,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFF0EB',
+    backgroundColor: 'rgba(255, 107, 71, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -741,17 +748,17 @@ const styles = StyleSheet.create({
   locationItemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
     marginBottom: 2,
   },
   locationItemAddress: {
     fontSize: 13,
-    color: '#666666',
+    color: darkTheme.textSecondary,
     marginBottom: 2,
   },
   locationItemDistance: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
   },
 })
 

@@ -35,6 +35,8 @@ import { CheckInButton } from '../checkin/CheckInButton'
 import { LiveViewModal } from '../modals/LiveViewModal'
 import { useCheckin } from '../../hooks/useCheckin'
 import { selectionFeedback } from '../../lib/haptics'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // CONSTANTS
@@ -119,7 +121,7 @@ export function FloatingActionButtons({
           <Ionicons
             name="people"
             size={20}
-            color={activeCheckin ? '#FFFFFF' : '#5856D6'}
+            color={activeCheckin ? '#FFFFFF' : colors.accent[500]}
           />
           <Text
             style={[
@@ -164,26 +166,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     gap: 6,
-    shadowColor: '#000',
+    shadowColor: colors.accent[500],
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     elevation: 4,
   },
   liveViewButtonDefault: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.surface,
     borderWidth: 1,
-    borderColor: '#5856D6',
+    borderColor: colors.accent[500],
   },
   liveViewButtonActive: {
-    backgroundColor: '#5856D6',
+    backgroundColor: colors.accent[500],
   },
   liveViewText: {
     fontSize: 14,
     fontWeight: '600',
   },
   liveViewTextDefault: {
-    color: '#5856D6',
+    color: colors.accent[500],
   },
   liveViewTextActive: {
     color: '#FFFFFF',

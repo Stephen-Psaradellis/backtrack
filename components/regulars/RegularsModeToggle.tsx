@@ -21,6 +21,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRegularsMode, RegularsVisibility } from '../../hooks/useRegulars'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // Types
@@ -130,8 +132,8 @@ export function RegularsModeToggle({ style }: RegularsModeToggleProps) {
           value={isEnabled}
           onValueChange={handleToggle}
           disabled={isUpdating}
-          trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
-          thumbColor={isEnabled ? '#6366F1' : '#F3F4F6'}
+          trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: 'rgba(99, 102, 241, 0.6)' }}
+          thumbColor={isEnabled ? '#6366F1' : darkTheme.textMuted}
         />
       </View>
 
@@ -276,8 +278,8 @@ export function RegularsModeCompactToggle({
         value={isEnabled}
         onValueChange={() => { toggleMode() }}
         disabled={isUpdating}
-        trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
-        thumbColor={isEnabled ? '#6366F1' : '#F3F4F6'}
+        trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: 'rgba(99, 102, 241, 0.6)' }}
+        thumbColor={isEnabled ? '#6366F1' : darkTheme.textMuted}
       />
     </TouchableOpacity>
   )
@@ -289,14 +291,8 @@ export function RegularsModeCompactToggle({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: 0,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -312,7 +308,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -323,11 +319,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: darkTheme.textPrimary,
   },
   subtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     marginTop: 2,
   },
   toggleRow: {
@@ -335,7 +331,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
   toggleInfo: {
     flex: 1,
@@ -344,23 +340,23 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: darkTheme.textPrimary,
   },
   toggleDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     marginTop: 2,
   },
   visibilitySection: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -368,9 +364,11 @@ const styles = StyleSheet.create({
   visibilitySelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 12,
     padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   visibilityCurrent: {
     flex: 1,
@@ -384,18 +382,20 @@ const styles = StyleSheet.create({
   visibilityCurrentLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: darkTheme.textPrimary,
   },
   visibilityCurrentDescription: {
     fontSize: 12,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     marginTop: 1,
   },
   visibilityOptions: {
     marginTop: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 12,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   visibilityOption: {
     flexDirection: 'row',
@@ -403,10 +403,10 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   visibilityOptionSelected: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
   },
   visibilityOptionText: {
     flex: 1,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   visibilityOptionLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#374151',
+    color: darkTheme.textSecondary,
   },
   visibilityOptionLabelSelected: {
     color: '#6366F1',
@@ -422,32 +422,36 @@ const styles = StyleSheet.create({
   },
   visibilityOptionDescription: {
     fontSize: 12,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     marginTop: 1,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 8,
     padding: 12,
     marginTop: 16,
     gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   infoText: {
     flex: 1,
     fontSize: 12,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     lineHeight: 18,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: 8,
     padding: 10,
     marginTop: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
   errorText: {
     flex: 1,
@@ -460,7 +464,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(15, 15, 19, 0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16,
@@ -469,7 +473,6 @@ const styles = StyleSheet.create({
   compactContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
@@ -477,7 +480,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -488,11 +491,11 @@ const styles = StyleSheet.create({
   compactLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#1F2937',
+    color: darkTheme.textPrimary,
   },
   compactDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     marginTop: 1,
   },
 })

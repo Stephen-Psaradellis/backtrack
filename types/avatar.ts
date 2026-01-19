@@ -1,12 +1,10 @@
 /**
  * Avatar Types - Re-exports
  *
- * This file provides re-exports from the main avatar types module.
- * The avatar system is in components/avatar/types.
+ * This file provides re-exports from the 2D avatar types module.
+ * The primary avatar system is in components/avatar2d/types.
  */
 
-// Re-export types for backward compatibility
-export type { AvatarConfig, StoredAvatar } from '../components/avatar/types';
-
-// Re-export the default config from lib/avatar/defaults
-export { DEFAULT_AVATAR_CONFIG } from '../lib/avatar/defaults';
+// 2D Avatar types
+export type { Avatar2DConfig, StoredAvatar2D, Avatar2DSize } from '../components/avatar2d/types';
+export { DEFAULT_AVATAR_CONFIG, AVATAR_SIZES } from '../components/avatar2d/types';

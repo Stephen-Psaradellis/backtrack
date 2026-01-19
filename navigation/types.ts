@@ -9,7 +9,7 @@ import type { NativeStackScreenProps, NativeStackNavigationProp } from '@react-n
 import type { BottomTabScreenProps, BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { CompositeScreenProps, CompositeNavigationProp, NavigatorScreenParams } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
-import type { AvatarConfig } from '../types/avatar'
+import type { Avatar2DConfig } from '../types/avatar'
 
 // ============================================================================
 // STACK NAVIGATOR PARAM LISTS
@@ -51,16 +51,14 @@ export type MainStackParamList = {
   Chat: { conversationId: string }
   /** Avatar creator screen */
   AvatarCreator: {
-    /** Initial avatar ID to edit */
-    initialAvatarId?: string
+    /** Initial avatar config to edit */
+    initialConfig?: Avatar2DConfig
   }
   /** Legal documents screen (privacy policy, terms of service) */
   Legal: {
     /** Type of legal document to display */
     type: 'privacy' | 'terms'
   }
-  /** WebGL 3D Test screen (development only) */
-  WebGL3DTest: undefined
 }
 
 /**
@@ -200,7 +198,6 @@ export const SCREENS = {
   Chat: 'Chat' as const,
   AvatarCreator: 'AvatarCreator' as const,
   Legal: 'Legal' as const,
-  WebGL3DTest: 'WebGL3DTest' as const,
 
   // Tabs (5-tab icon-only layout)
   FeedTab: 'FeedTab' as const,

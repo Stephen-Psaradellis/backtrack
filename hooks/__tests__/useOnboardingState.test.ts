@@ -291,7 +291,7 @@ describe('useOnboardingState', () => {
 
       const newAvatar = {
         ...DEFAULT_AVATAR_CONFIG,
-        avatarId: 'avatar_asian_m',
+        hairColor: '#8d3121',
       }
 
       act(() => {
@@ -306,7 +306,7 @@ describe('useOnboardingState', () => {
 
       const newAvatar = {
         ...DEFAULT_AVATAR_CONFIG,
-        avatarId: 'avatar_black_f',
+        skinTone: '#6b4423',
       }
 
       act(() => {
@@ -314,13 +314,13 @@ describe('useOnboardingState', () => {
       })
 
       const stored = JSON.parse(localStorageMock.store[ONBOARDING_STORAGE_KEY])
-      expect(stored.avatarConfig.avatarId).toBe('avatar_black_f')
+      expect(stored.avatarConfig.skinTone).toBe('#6b4423')
     })
 
     it('should load persisted avatar config', () => {
       const savedAvatar = {
         ...DEFAULT_AVATAR_CONFIG,
-        avatarId: 'avatar_hispanic_m',
+        hairStyle: 'longHairBob',
       }
 
       localStorageMock.store[ONBOARDING_STORAGE_KEY] = JSON.stringify({
@@ -333,7 +333,7 @@ describe('useOnboardingState', () => {
 
       const { result } = renderHook(() => useOnboardingState())
 
-      expect(result.current.avatarConfig.avatarId).toBe('avatar_hispanic_m')
+      expect(result.current.avatarConfig.hairStyle).toBe('longHairBob')
     })
   })
 
@@ -450,7 +450,7 @@ describe('utility functions', () => {
     })
 
     it('should return stored config', () => {
-      const storedAvatar = { ...DEFAULT_AVATAR_CONFIG, avatarId: 'avatar_white_f' }
+      const storedAvatar = { ...DEFAULT_AVATAR_CONFIG, gender: 'female' as const }
 
       localStorageMock.store[ONBOARDING_STORAGE_KEY] = JSON.stringify({
         isComplete: false,
@@ -460,18 +460,18 @@ describe('utility functions', () => {
         locationPermissionStatus: 'pending',
       })
 
-      expect(getOnboardingAvatarConfig().avatarId).toBe('avatar_white_f')
+      expect(getOnboardingAvatarConfig().gender).toBe('female')
     })
   })
 
   describe('setOnboardingAvatarConfig', () => {
     it('should set avatar config', () => {
-      const newAvatar = { ...DEFAULT_AVATAR_CONFIG, avatarId: 'avatar_mena_f' }
+      const newAvatar = { ...DEFAULT_AVATAR_CONFIG, mouthType: 'tongue' }
 
       setOnboardingAvatarConfig(newAvatar)
 
       const stored = JSON.parse(localStorageMock.store[ONBOARDING_STORAGE_KEY])
-      expect(stored.avatarConfig.avatarId).toBe('avatar_mena_f')
+      expect(stored.avatarConfig.mouthType).toBe('tongue')
     })
 
     it('should preserve other state', () => {
@@ -483,7 +483,7 @@ describe('utility functions', () => {
         locationPermissionStatus: 'granted',
       })
 
-      const newAvatar = { ...DEFAULT_AVATAR_CONFIG, avatarId: 'avatar_asian_f' }
+      const newAvatar = { ...DEFAULT_AVATAR_CONFIG, eyeType: 'happy' }
       setOnboardingAvatarConfig(newAvatar)
 
       const stored = JSON.parse(localStorageMock.store[ONBOARDING_STORAGE_KEY])

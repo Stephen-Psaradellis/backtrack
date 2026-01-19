@@ -16,7 +16,8 @@ import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FellowRegular, LocationRegular } from '../../hooks/useRegulars'
-import { MdAvatarSnapshot } from '../avatar3d'
+import { Avatar2DDisplay } from '../avatar2d'
+import { darkTheme } from '../../constants/glassStyles'
 
 // ============================================================================
 // Types
@@ -102,7 +103,7 @@ export function RegularCard({
       {/* Avatar */}
       <View style={styles.avatarContainer}>
         {avatar ? (
-          <MdAvatarSnapshot avatar={avatar} />
+          <Avatar2DDisplay avatar={avatar} size="md" />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={24} color="#9CA3AF" />
@@ -175,7 +176,7 @@ export function RegularAvatar({ regular, size = 40, onPress }: RegularAvatarProp
     >
       <View style={[styles.avatarOnlyContainer, { width: size, height: size }]}>
         {avatar ? (
-          <MdAvatarSnapshot avatar={avatar} />
+          <Avatar2DDisplay avatar={avatar} size="sm" />
         ) : (
           <View
             style={[
@@ -204,15 +205,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 12,
     padding: 12,
     marginVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   avatarContainer: {
     position: 'relative',
@@ -222,13 +220,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   avatarPlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -236,7 +234,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -2,
     bottom: -2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.background,
     borderRadius: 10,
   },
   infoContainer: {
@@ -251,7 +249,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: darkTheme.textPrimary,
     flex: 1,
   },
   locationRow: {
@@ -262,7 +260,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: darkTheme.textMuted,
     flex: 1,
   },
   streakRow: {
@@ -281,16 +279,16 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarOnly: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   avatarOnlyPlaceholder: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   verifiedBadgeSmall: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.background,
     borderRadius: 8,
   },
 })

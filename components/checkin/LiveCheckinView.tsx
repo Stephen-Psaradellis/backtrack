@@ -30,10 +30,12 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { useLiveCheckins } from '../../hooks/useLiveCheckins'
 import { useCheckin } from '../../hooks/useCheckin'
-import { SmAvatarSnapshot } from '../avatar3d'
+import { Avatar2DDisplay } from '../avatar2d'
 import { LoadingSpinner } from '../LoadingSpinner'
 import { selectionFeedback } from '../../lib/haptics'
 import type { LiveCheckinUser } from '../../types/database'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // TYPES
@@ -94,10 +96,10 @@ export function LiveCheckinView({
     <View style={styles.userItem}>
       <View style={styles.userAvatar}>
         {item.avatar ? (
-          <SmAvatarSnapshot avatar={item.avatar} />
+          <Avatar2DDisplay avatar={item.avatar} size="sm" />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={20} color="#8E8E93" />
+            <Ionicons name="person" size={20} color={darkTheme.textMuted} />
           </View>
         )}
       </View>
@@ -117,7 +119,7 @@ export function LiveCheckinView({
     return (
       <View style={[styles.container, style]} testID={testID}>
         <View style={styles.header}>
-          <Ionicons name="people" size={20} color="#FF6B47" />
+          <Ionicons name="people" size={20} color={colors.primary[500]} />
           <Text style={styles.title}>Live View</Text>
         </View>
         <View style={styles.loadingContainer}>
@@ -135,7 +137,7 @@ export function LiveCheckinView({
     return (
       <View style={[styles.container, styles.containerNoAccess, style]} testID={testID}>
         <View style={styles.header}>
-          <Ionicons name="people" size={20} color="#8E8E93" />
+          <Ionicons name="people" size={20} color={darkTheme.textMuted} />
           <Text style={[styles.title, styles.titleNoAccess]}>Live View</Text>
           {count > 0 && (
             <View style={styles.countBadge}>
@@ -145,7 +147,7 @@ export function LiveCheckinView({
         </View>
 
         <View style={styles.noAccessContent}>
-          <Ionicons name="lock-closed-outline" size={32} color="#C0C0C0" />
+          <Ionicons name="lock-closed-outline" size={32} color={darkTheme.textMuted} />
           <Text style={styles.noAccessText}>
             Check into {locationName} or become a Regular to see who else is here
           </Text>
@@ -177,7 +179,7 @@ export function LiveCheckinView({
   return (
     <View style={[styles.container, style]} testID={testID}>
       <View style={styles.header}>
-        <Ionicons name="people" size={20} color="#FF6B47" />
+        <Ionicons name="people" size={20} color={colors.primary[500]} />
         <Text style={styles.title}>Live View</Text>
         <View style={[styles.countBadge, styles.countBadgeActive]}>
           <Text style={[styles.countBadgeText, styles.countBadgeTextActive]}>
@@ -216,20 +218,20 @@ export function LiveCheckinView({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: darkTheme.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000',
+    borderColor: darkTheme.glassBorder,
+    shadowColor: colors.primary[500],
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   containerNoAccess: {
-    backgroundColor: '#F8F8F8',
-    borderColor: '#E0E0E0',
+    backgroundColor: darkTheme.surfaceElevated,
+    borderColor: darkTheme.glassBorder,
   },
   header: {
     flexDirection: 'row',
@@ -240,31 +242,31 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: darkTheme.textPrimary,
     flex: 1,
   },
   titleNoAccess: {
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
   },
   countBadge: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: darkTheme.glass,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   countBadgeActive: {
-    backgroundColor: '#FFF0EB',
+    backgroundColor: 'rgba(255, 107, 71, 0.15)',
   },
   countBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666666',
+    color: darkTheme.textSecondary,
   },
   countBadgeTextActive: {
-    color: '#FF6B47',
+    color: colors.primary[500],
   },
   regularBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
   regularBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: darkTheme.success,
   },
   loadingContainer: {
     paddingVertical: 24,
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
   },
   noAccessText: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 8,
@@ -293,7 +295,7 @@ const styles = StyleSheet.create({
   checkInCTA: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF6B47',
+    backgroundColor: colors.primary[500],
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: darkTheme.textMuted,
   },
   userList: {
     paddingVertical: 8,
@@ -326,7 +328,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: darkTheme.glass,
     marginBottom: 4,
   },
   avatarPlaceholder: {
@@ -334,11 +336,11 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: darkTheme.glass,
   },
   userName: {
     fontSize: 12,
-    color: '#666666',
+    color: darkTheme.textSecondary,
     textAlign: 'center',
   },
 })

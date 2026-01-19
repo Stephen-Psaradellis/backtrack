@@ -42,10 +42,12 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { useLiveCheckins } from '../../hooks/useLiveCheckins'
 import { CheckInButton } from '../checkin/CheckInButton'
-import { SmAvatarSnapshot } from '../avatar3d'
+import { Avatar2DDisplay } from '../avatar2d'
 import { LoadingSpinner } from '../LoadingSpinner'
 import { lightFeedback } from '../../lib/haptics'
 import type { LiveCheckinUser } from '../../types/database'
+import { darkTheme } from '../../constants/glassStyles'
+import { colors } from '../../constants/theme'
 
 // ============================================================================
 // TYPES
@@ -86,20 +88,20 @@ export interface LiveViewModalProps {
 // ============================================================================
 
 /**
- * Colors used in the LiveViewModal component
+ * Colors used in the LiveViewModal component - using centralized dark theme
  */
 const COLORS = {
-  primary: '#FF6B47',
-  background: '#FFFFFF',
+  primary: colors.primary[500],
+  background: darkTheme.background,
   overlay: 'rgba(0, 0, 0, 0.9)',
-  border: '#E5E5EA',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#8E8E93',
-  textDark: '#333333',
-  cardBackground: '#1C1C1E',
-  avatarBackground: '#2C2C2E',
-  badgeBackground: '#FF6B47',
-  regularBadge: '#2E7D32',
+  border: darkTheme.glassBorder,
+  textPrimary: darkTheme.textPrimary,
+  textSecondary: darkTheme.textSecondary,
+  textDark: darkTheme.textPrimary,
+  cardBackground: darkTheme.surface,
+  avatarBackground: darkTheme.surfaceElevated,
+  badgeBackground: colors.primary[500],
+  regularBadge: darkTheme.success,
 } as const
 
 // ============================================================================
@@ -122,7 +124,7 @@ const AvatarItem = memo(function AvatarItem({
     <View style={styles.avatarItem} testID={testID}>
       <View style={styles.avatarContainer}>
         {user.avatar ? (
-          <SmAvatarSnapshot avatar={user.avatar} />
+          <Avatar2DDisplay avatar={user.avatar} size="md" />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={24} color={COLORS.textSecondary} />
@@ -346,7 +348,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: darkTheme.glassBorder,
   },
   closeButton: {
     padding: 8,
@@ -383,7 +385,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 8,
-    backgroundColor: '#2C2C2E',
+    backgroundColor: darkTheme.surfaceElevated,
   },
   accessBadgeText: {
     fontSize: 12,
@@ -453,7 +455,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#2C2C2E',
+    backgroundColor: darkTheme.surfaceElevated,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,

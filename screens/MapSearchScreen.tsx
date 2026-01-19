@@ -349,6 +349,7 @@ export function MapSearchScreen(): React.ReactNode {
       <View style={styles.mapContainer} testID="map-container">
         <MapView
           showsUserLocation
+          showsMyLocationButton={false}
           initialRegion={initialRegion}
           region={mapRegion}
           markers={allMarkers}

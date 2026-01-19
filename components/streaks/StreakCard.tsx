@@ -29,6 +29,7 @@ import { View, Text, StyleSheet, TouchableOpacity, type ViewStyle } from 'react-
 import type { LocationStreakWithDetails, StreakType } from '../../types/streaks'
 import { STREAK_TYPE_LABELS } from '../../types/streaks'
 import { StreakBadge } from './StreakBadge'
+import { darkTheme } from '../../constants/glassStyles'
 
 // ============================================================================
 // Types
@@ -153,7 +154,7 @@ const rowStyles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   labelContainer: {
     flexDirection: 'row',
@@ -163,7 +164,7 @@ const rowStyles = StyleSheet.create({
   typeLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151', // Gray-700
+    color: darkTheme.textSecondary,
     minWidth: 60,
   },
   statsContainer: {
@@ -176,11 +177,11 @@ const rowStyles = StyleSheet.create({
   statValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827', // Gray-900
+    color: darkTheme.textPrimary,
   },
   statLabel: {
     fontSize: 10,
-    color: '#6B7280', // Gray-500
+    color: darkTheme.textMuted,
     textTransform: 'uppercase',
   },
 })
@@ -348,14 +349,11 @@ export function LocationStreaksCard({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   containerCompact: {
     padding: 12,
@@ -372,11 +370,11 @@ const styles = StyleSheet.create({
   locationName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827', // Gray-900
+    color: darkTheme.textPrimary,
   },
   locationAddress: {
     fontSize: 13,
-    color: '#6B7280', // Gray-500
+    color: darkTheme.textMuted,
     marginTop: 2,
   },
   stats: {
@@ -385,7 +383,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
   statItem: {
     alignItems: 'center',
@@ -394,18 +392,18 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827', // Gray-900
+    color: darkTheme.textPrimary,
   },
   statLabel: {
     fontSize: 11,
-    color: '#6B7280', // Gray-500
+    color: darkTheme.textMuted,
     marginTop: 2,
     textTransform: 'uppercase',
   },
   statDivider: {
     width: 1,
     height: 32,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   streakRows: {
     marginTop: 12,

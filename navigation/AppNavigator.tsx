@@ -19,7 +19,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { trackScreenView } from '../lib/analytics'
 
 import { useAuth } from '../contexts/AuthContext'
-import { SmAvatarSnapshot } from '../components/avatar3d'
+import { Avatar2DDisplay } from '../components/avatar2d'
 import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
@@ -32,7 +32,6 @@ import { ChatScreen } from '../screens/ChatScreen'
 import { ChatListScreen } from '../screens/ChatListScreen'
 import AvatarCreatorScreen from '../screens/AvatarCreatorScreen'
 import { LegalScreen } from '../screens/LegalScreen'
-import { WebGL3DTestScreen } from '../screens/WebGL3DTestScreen'
 import { FavoritesScreen } from '../screens/FavoritesScreen'
 import { MapSearchScreen } from '../screens/MapSearchScreen'
 import type {
@@ -91,9 +90,9 @@ function HeaderAvatar({ onPress }: { onPress?: () => void }) {
       activeOpacity={0.7}
     >
       {hasAvatar ? (
-        <SmAvatarSnapshot
+        <Avatar2DDisplay
           avatar={profile.avatar}
-          testID="header-avatar-preview"
+          size="sm"
         />
       ) : (
         <View style={styles.headerAvatarPlaceholder} testID="header-avatar-placeholder">
@@ -199,6 +198,13 @@ function MainStackNavigator() {
         headerShown: true,
         headerBackTitle: '',
         headerTintColor: '#FF6B47',
+        headerStyle: {
+          backgroundColor: '#0F0F13',
+        },
+        headerTitleStyle: {
+          color: '#FFFFFF',
+        },
+        headerShadowVisible: false,
       }}
     >
       <MainStack.Screen
@@ -255,14 +261,6 @@ function MainStackNavigator() {
         component={LegalScreen}
         options={{
           headerShown: false, // LegalScreen has its own header
-        }}
-      />
-      <MainStack.Screen
-        name={SCREENS.WebGL3DTest}
-        component={WebGL3DTestScreen}
-        options={{
-          headerShown: false, // WebGL3DTestScreen has its own header
-          presentation: 'modal',
         }}
       />
     </MainStack.Navigator>
@@ -442,12 +440,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAF9',
+    backgroundColor: '#0F0F13',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#78716C',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   headerAvatarContainer: {
     marginRight: 12,
@@ -460,14 +458,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#E7E5E4',
+    backgroundColor: '#1C1C24',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerAvatarPlaceholderText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#78716C',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
 })
 

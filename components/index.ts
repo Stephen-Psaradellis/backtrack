@@ -63,32 +63,17 @@ export {
   type LocationItem,
 } from './LocationPicker'
 
-// 3D Avatar System
+// 2D Avatar System (primary)
 export {
-  // 3D Avatar Snapshot Components
-  AvatarSnapshot,
-  XSAvatarSnapshot,
-  SmAvatarSnapshot,
-  MdAvatarSnapshot,
-  LgAvatarSnapshot,
-  XLAvatarSnapshot,
-  type AvatarSnapshotProps,
-} from './avatar3d'
+  Avatar2DDisplay,
+  Avatar2DCreator,
+} from './avatar2d'
 
-// Avatar Creator
-export { AvatarCreator } from './avatar/index'
-
-// Avatar types
 export type {
-  AvatarConfig,
-  StoredAvatar,
-  AvatarPreset,
-  AvatarEthnicity,
-  AvatarGender,
-  AvatarOutfit,
-  AvatarSize,
-  AvatarView,
-} from './avatar/index'
+  Avatar2DConfig,
+  StoredAvatar2D,
+  AvatarMatchCriteria,
+} from './avatar2d/types'
 
 // Selfie Camera
 export {

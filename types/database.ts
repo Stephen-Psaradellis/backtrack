@@ -5,7 +5,10 @@
  * These types mirror the Supabase PostgreSQL schema defined in migrations.
  */
 
-import type { StoredAvatar } from '../components/avatar/types'
+import type { StoredAvatar2D } from '../components/avatar2d/types'
+
+// Type alias for backward compatibility during migration
+type StoredAvatar = StoredAvatar2D
 
 // ============================================================================
 // COMMON TYPES
@@ -322,7 +325,7 @@ export interface LiveCheckinUser {
   user_id: UUID
   checkin_id: UUID
   checked_in_at: Timestamp
-  avatar: import('../components/avatar/types').StoredAvatar | null
+  avatar: import('../components/avatar2d/types').StoredAvatar2D | null
   display_name: string | null
   is_verified: boolean
 }
