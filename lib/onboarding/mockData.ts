@@ -7,7 +7,7 @@
  * Uses 2D avatar system for avatar display.
  */
 
-import type { Avatar2DConfig } from '../../components/avatar2d/types';
+import type { AvatarConfig } from 'react-native-bitmoji';
 
 // ============================================================================
 // TYPES

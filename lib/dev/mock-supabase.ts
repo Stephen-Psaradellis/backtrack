@@ -15,8 +15,8 @@
 
 import type { User, Session, SupabaseClient } from '@supabase/supabase-js'
 import type { Profile, Post, Location as LocationEntity } from '../../types/database'
-import type { StoredAvatar2D } from '../../components/avatar2d/types'
-import { DEFAULT_AVATAR_CONFIG } from '../../components/avatar2d/types'
+import type { StoredAvatar } from 'react-native-bitmoji'
+import { DEFAULT_MALE_CONFIG } from 'react-native-bitmoji'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -476,7 +476,7 @@ export const devMockLocation: LocationEntity = devMockLocations[1]
 /**
  * Helper to create a mock 2D avatar for posts
  */
-function createMockAvatar(id: string): StoredAvatar2D {
+function createMockAvatar(id: string): StoredAvatar {
   // 2D avatar config variations for mock data
   const variations = [
     { gender: 'male' as const, skinTone: '#f5d7c3', hairStyle: 'shortHairShortFlat', hairColor: '#2c1810' },
@@ -490,16 +490,14 @@ function createMockAvatar(id: string): StoredAvatar2D {
 
   return {
     id,
-    type: '2d',
     config: {
-      ...DEFAULT_AVATAR_CONFIG,
-      gender: variation.gender,
+      ...DEFAULT_MALE_CONFIG,
       skinTone: variation.skinTone,
-      hairStyle: variation.hairStyle,
+      hairStyle: variation.hairStyle as any,
       hairColor: variation.hairColor,
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
   }
 }
 

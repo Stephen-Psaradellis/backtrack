@@ -16,7 +16,7 @@ import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FellowRegular, LocationRegular } from '../../hooks/useRegulars'
-import { Avatar2DDisplay } from '../avatar2d'
+import { Avatar } from 'react-native-bitmoji'
 import { darkTheme } from '../../constants/glassStyles'
 
 // ============================================================================
@@ -103,7 +103,7 @@ export function RegularCard({
       {/* Avatar */}
       <View style={styles.avatarContainer}>
         {avatar ? (
-          <Avatar2DDisplay avatar={avatar} size="md" />
+          <Avatar config={avatar.config} size="md" />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={24} color="#9CA3AF" />
@@ -176,7 +176,7 @@ export function RegularAvatar({ regular, size = 40, onPress }: RegularAvatarProp
     >
       <View style={[styles.avatarOnlyContainer, { width: size, height: size }]}>
         {avatar ? (
-          <Avatar2DDisplay avatar={avatar} size="sm" />
+          <Avatar config={avatar.config} size="sm" />
         ) : (
           <View
             style={[

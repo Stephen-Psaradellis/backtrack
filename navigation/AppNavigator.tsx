@@ -19,7 +19,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { trackScreenView } from '../lib/analytics'
 
 import { useAuth } from '../contexts/AuthContext'
-import { Avatar2DDisplay } from '../components/avatar2d'
+import { Avatar } from 'react-native-bitmoji'
 import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
@@ -89,9 +89,9 @@ function HeaderAvatar({ onPress }: { onPress?: () => void }) {
       testID="header-avatar"
       activeOpacity={0.7}
     >
-      {hasAvatar ? (
-        <Avatar2DDisplay
-          avatar={profile.avatar}
+      {hasAvatar && profile?.avatar ? (
+        <Avatar
+          config={profile.avatar.config}
           size="sm"
         />
       ) : (

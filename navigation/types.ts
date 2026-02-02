@@ -9,7 +9,7 @@ import type { NativeStackScreenProps, NativeStackNavigationProp } from '@react-n
 import type { BottomTabScreenProps, BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { CompositeScreenProps, CompositeNavigationProp, NavigatorScreenParams } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
-import type { Avatar2DConfig } from '../types/avatar'
+import type { AvatarConfig } from '../types/avatar'
 
 // ============================================================================
 // STACK NAVIGATOR PARAM LISTS
@@ -52,7 +52,7 @@ export type MainStackParamList = {
   /** Avatar creator screen */
   AvatarCreator: {
     /** Initial avatar config to edit */
-    initialConfig?: Avatar2DConfig
+    initialConfig?: AvatarConfig
   }
   /** Legal documents screen (privacy policy, terms of service) */
   Legal: {

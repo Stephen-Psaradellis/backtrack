@@ -45,7 +45,7 @@ import { useLocation } from '../../hooks/useLocation'
 import { useVisitedLocations, useNearbyLocations } from '../../hooks/useNearbyLocations'
 import { supabase } from '../../lib/supabase'
 import { recordLocationVisit } from '../../lib/utils/geo'
-import type { StoredAvatar2D } from '../../components/avatar2d/types'
+import type { StoredAvatar } from 'react-native-bitmoji'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../../navigation/types'
 import type { Location as LocationEntity, LocationWithVisit } from '../../lib/types'
 import type { TimeGranularity } from '../../types/database'
@@ -138,9 +138,9 @@ export interface UseCreatePostFormResult {
   /** Handle next step navigation */
   handleNext: () => void
   /** Handle avatar save */
-  handleAvatarSave: (avatar: StoredAvatar2D) => void
+  handleAvatarSave: (avatar: StoredAvatar) => void
   /** Handle avatar change (without advancing step) */
-  handleAvatarChange: (avatar: StoredAvatar2D) => void
+  handleAvatarChange: (avatar: StoredAvatar) => void
   /** Handle location selection */
   handleLocationSelect: (location: LocationItem) => void
   /** Handle note text change */
@@ -479,7 +479,7 @@ export function useCreatePostForm(
   /**
    * Handle avatar change (without advancing step)
    */
-  const handleAvatarChange = useCallback((avatar: StoredAvatar2D) => {
+  const handleAvatarChange = useCallback((avatar: StoredAvatar) => {
     setFormData((prev) => ({ ...prev, targetAvatar: avatar }))
   }, [])
 
@@ -488,7 +488,7 @@ export function useCreatePostForm(
    * In the new 3-moment flow, this just updates the avatar without advancing steps
    * (the MomentStep component handles its own modal flow)
    */
-  const handleAvatarSave = useCallback((avatar: StoredAvatar2D) => {
+  const handleAvatarSave = useCallback((avatar: StoredAvatar) => {
     setFormData((prev) => ({ ...prev, targetAvatar: avatar }))
   }, [])
 

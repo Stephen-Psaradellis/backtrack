@@ -37,8 +37,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { GlobalHeader } from '../components/navigation/GlobalHeader'
 import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
 import { darkTheme } from '../constants/glassStyles'
-import { Avatar2DDisplay } from '../components/avatar2d'
-import type { StoredAvatar2D } from '../components/avatar2d/types'
+import { Avatar, type StoredAvatar } from 'react-native-bitmoji'
 import { VerifiedBadge } from '../components/VerifiedBadge'
 import { lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
@@ -60,7 +59,7 @@ import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/s
  */
 interface ConversationItem extends Conversation {
   /** The post's target avatar for display */
-  target_avatar_v2: StoredAvatar2D | null
+  target_avatar_v2: StoredAvatar | null
   /** Preview of the most recent message */
   last_message_content: string | null
   /** Timestamp of the most recent message */
@@ -294,7 +293,7 @@ export function ChatListScreen(): React.ReactNode {
           // Fetch post data separately to avoid nested join issues
           let postData: {
             id: string
-            target_avatar_v2: StoredAvatar2D | null
+            target_avatar_v2: StoredAvatar | null
             note: string
             location_id: string
           } | null = null
@@ -310,7 +309,7 @@ export function ChatListScreen(): React.ReactNode {
             if (post) {
               postData = post as {
                 id: string
-                target_avatar_v2: StoredAvatar2D | null
+                target_avatar_v2: StoredAvatar | null
                 note: string
                 location_id: string
               }
@@ -505,7 +504,7 @@ export function ChatListScreen(): React.ReactNode {
           <View style={styles.avatarContainer}>
             {item.target_avatar_v2 ? (
               <>
-                <Avatar2DDisplay avatar={item.target_avatar_v2} size="md" />
+                <Avatar config={item.target_avatar_v2.config} size="md" />
                 {item.other_user_is_verified && (
                   <View style={styles.verifiedBadgeContainer}>
                     <VerifiedBadge />

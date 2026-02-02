@@ -29,21 +29,21 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { darkTheme } from '@/constants/glassStyles';
 import { colors } from '@/constants/theme';
-import { saveCurrentUserAvatar } from '@/lib/avatar2d/storage';
 import type { MainStackParamList } from '@/navigation/types';
-import type { StoredAvatar2D, Avatar2DConfig } from '@/components/avatar2d/types';
-
-// Import editor components
-import { CategoryTabs, type CategoryTab } from '../avatar/editor/CategoryTabs';
-import { OptionGrid } from '../avatar/editor/OptionGrid';
-import { ColorPicker } from '../avatar/editor/ColorPicker';
-import { PreviewPanel } from '../avatar/editor/PreviewPanel';
 import {
+  saveCurrentAvatar,
+  CategoryTabs,
+  OptionGrid,
+  ColorPicker,
+  PreviewPanel,
   useAvatarEditor,
   EDITOR_CATEGORIES,
+  type StoredAvatar,
+  type AvatarConfig,
+  type CategoryTab,
   type EditorCategory,
   type SubcategoryConfig,
-} from '../avatar/hooks/useAvatarEditor';
+} from 'react-native-bitmoji';
 
 // =============================================================================
 // TYPES
@@ -114,10 +114,10 @@ function SubcategoryTabs({
 // =============================================================================
 
 interface EditorContentProps {
-  config: Avatar2DConfig;
+  config: AvatarConfig;
   activeCategory: EditorCategory;
   activeSubcategory: string | null;
-  onUpdateConfig: (updates: Partial<Avatar2DConfig>) => void;
+  onUpdateConfig: (updates: Partial<AvatarConfig>) => void;
   isDark: boolean;
 }
 
@@ -268,7 +268,7 @@ export default function AvatarEditorScreen({ navigation, route }: Props) {
     setIsSaving(true);
     try {
       const avatar = editor.getStoredAvatar();
-      await saveCurrentUserAvatar(avatar);
+      await saveCurrentAvatar(avatar.config);
       navigation.goBack();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';

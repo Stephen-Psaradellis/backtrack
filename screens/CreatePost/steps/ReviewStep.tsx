@@ -43,8 +43,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { Avatar2DDisplay } from '../../../components/avatar2d'
-import type { StoredAvatar2D } from '../../../components/avatar2d/types'
+import { Avatar, type StoredAvatar } from 'react-native-bitmoji'
 import { Button, GhostButton } from '../../../components/Button'
 import { COLORS, sharedStyles } from '../styles'
 import type { LocationItem } from '../../../components/LocationPicker'
@@ -69,7 +68,7 @@ export interface ReviewStepProps {
   /**
    * Avatar for the target person
    */
-  avatar: StoredAvatar2D | null
+  avatar: StoredAvatar | null
 
   /**
    * The note/message written by the user
@@ -233,7 +232,7 @@ export const ReviewStep = memo(function ReviewStep({
       <View style={styles.reviewSection}>
         <Text style={styles.reviewSectionTitle}>Who You're Looking For</Text>
         <View style={styles.reviewAvatarContainer}>
-          {avatar && <Avatar2DDisplay avatar={avatar} size="lg" />}
+          {avatar && <Avatar config={avatar.config} size="lg" />}
           <TouchableOpacity
             style={sharedStyles.editButton}
             onPress={() => goToStep('avatar')}

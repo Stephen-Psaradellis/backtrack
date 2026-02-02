@@ -39,10 +39,9 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { Avatar2DDisplay } from './avatar2d'
+import { Avatar, type StoredAvatar } from 'react-native-bitmoji'
 import { Button, OutlineButton } from './Button'
 import { lightFeedback } from '../lib/haptics'
-import type { StoredAvatar2D } from './avatar2d/types'
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -90,7 +89,7 @@ export interface LocationCardProps {
   /**
    * Recent target avatars to display as peek (up to 3)
    */
-  recentAvatars?: StoredAvatar2D[]
+  recentAvatars?: StoredAvatar[]
 
   /**
    * Whether the card is initially expanded
@@ -308,7 +307,7 @@ export const LocationCard = memo(function LocationCard({
                     key={index}
                     style={[styles.avatarThumb, { marginLeft: index > 0 ? -8 : 0 }]}
                   >
-                    <Avatar2DDisplay avatar={avatar} size="sm" />
+                    <Avatar config={avatar.config} size="sm" />
                   </View>
                 ))}
                 {recentAvatars.length > 3 && (

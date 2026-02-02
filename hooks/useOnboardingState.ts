@@ -56,7 +56,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Avatar2DConfig, DEFAULT_AVATAR_CONFIG } from '../types/avatar'
+import { AvatarConfig, DEFAULT_MALE_CONFIG } from '../types/avatar'
 import { trackEvent, AnalyticsEvent } from '../lib/analytics'
 
 // ============================================================================
@@ -111,7 +111,7 @@ export interface OnboardingPersistedState {
   /** Timestamp when onboarding was completed */
   completedAt: string | null
   /** User's avatar configuration */
-  avatarConfig: Avatar2DConfig | null
+  avatarConfig: AvatarConfig | null
   /** Location permission status during onboarding */
   locationPermissionStatus: OnboardingLocationPermissionStatus
 }
@@ -134,8 +134,8 @@ export interface UseOnboardingStateResult {
   isLastStep: boolean
   /** Progress percentage (0-100) */
   progress: number
-  /** Current avatar configuration (uses DEFAULT_AVATAR_CONFIG as fallback) */
-  avatarConfig: Avatar2DConfig
+  /** Current avatar configuration (uses DEFAULT_MALE_CONFIG as fallback) */
+  avatarConfig: AvatarConfig
   /** Location permission status during onboarding */
   locationPermissionStatus: OnboardingLocationPermissionStatus
 
@@ -152,7 +152,7 @@ export interface UseOnboardingStateResult {
   /** Reset onboarding state (for testing/debugging) */
   resetOnboarding: () => void
   /** Set the avatar configuration */
-  setAvatar: (config: Avatar2DConfig) => void
+  setAvatar: (config: AvatarConfig) => void
   /** Set the location permission status */
   setLocationPermission: (status: OnboardingLocationPermissionStatus) => void
 }
@@ -311,7 +311,7 @@ export function useOnboardingState(
   const [currentStep, setCurrentStep] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [avatarConfig, setAvatarConfigState] = useState<Avatar2DConfig>(DEFAULT_AVATAR_CONFIG)
+  const [avatarConfig, setAvatarConfigState] = useState<AvatarConfig>(DEFAULT_MALE_CONFIG)
   const [locationPermissionStatus, setLocationPermissionStatusState] =
     useState<OnboardingLocationPermissionStatus>('pending')
 
@@ -438,7 +438,7 @@ export function useOnboardingState(
     removeFromStorage(config.storageKey)
     setCurrentStep(0)
     setIsComplete(false)
-    setAvatarConfigState(DEFAULT_AVATAR_CONFIG)
+    setAvatarConfigState(DEFAULT_MALE_CONFIG)
     setLocationPermissionStatusState('pending')
   }, [config.storageKey])
 
@@ -450,7 +450,7 @@ export function useOnboardingState(
    * Set avatar configuration and persist to localStorage
    */
   const setAvatar = useCallback(
-    (newAvatarConfig: Avatar2DConfig) => {
+    (newAvatarConfig: AvatarConfig) => {
       setAvatarConfigState(newAvatarConfig)
       savePersistedState({ avatarConfig: newAvatarConfig })
     },
@@ -598,16 +598,16 @@ export function getLastOnboardingStep(
  * Get the stored avatar configuration
  *
  * Utility function for getting avatar config without using the hook.
- * Returns DEFAULT_AVATAR_CONFIG if no stored config exists.
+ * Returns DEFAULT_MALE_CONFIG if no stored config exists.
  *
  * @param storageKey - Optional custom storage key
  * @returns Avatar configuration
  */
 export function getOnboardingAvatarConfig(
   storageKey: string = ONBOARDING_STORAGE_KEY
-): Avatar2DConfig {
+): AvatarConfig {
   const stored = getFromStorage<OnboardingPersistedState>(storageKey)
-  return stored?.avatarConfig ?? DEFAULT_AVATAR_CONFIG
+  return stored?.avatarConfig ?? DEFAULT_MALE_CONFIG
 }
 
 /**
@@ -620,7 +620,7 @@ export function getOnboardingAvatarConfig(
  * @param storageKey - Optional custom storage key
  */
 export function setOnboardingAvatarConfig(
-  avatarConfig: Avatar2DConfig,
+  avatarConfig: AvatarConfig,
   storageKey: string = ONBOARDING_STORAGE_KEY
 ): void {
   const stored = getFromStorage<OnboardingPersistedState>(storageKey)

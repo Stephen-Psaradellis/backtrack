@@ -5,7 +5,7 @@
  * Defines step configuration, form data structure, and validation constants.
  */
 
-import type { StoredAvatar2D } from '../../components/avatar2d/types'
+import type { StoredAvatar } from 'react-native-bitmoji'
 import type { LocationItem } from '../../components/LocationPicker'
 import type { TimeGranularity } from '../../types/database'
 
@@ -33,7 +33,7 @@ export interface CreatePostFormData {
   /** Selected profile photo ID for verification */
   selectedPhotoId: string | null
   /** Avatar describing the person seen */
-  targetAvatar: StoredAvatar2D | null
+  targetAvatar: StoredAvatar | null
   /** Message/note to the person */
   note: string
   /** Location where the connection happened */

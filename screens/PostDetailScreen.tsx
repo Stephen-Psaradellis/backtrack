@@ -38,7 +38,7 @@ import {
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 
-import { Avatar2DDisplay } from '../components/avatar2d'
+import { Avatar } from 'react-native-bitmoji'
 import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { ErrorState } from '../components/EmptyState'
@@ -344,8 +344,8 @@ export function PostDetailScreen(): React.ReactNode {
       {/* Avatar Section */}
       <View style={styles.avatarSection} testID="post-detail-avatar-section">
         {post.target_avatar_v2 && (
-          <Avatar2DDisplay
-            avatar={post.target_avatar_v2}
+          <Avatar
+            config={post.target_avatar_v2.config}
             size="lg"
           />
         )}

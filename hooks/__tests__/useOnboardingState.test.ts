@@ -44,7 +44,7 @@ import {
   ONBOARDING_STORAGE_KEY,
   DEFAULT_TOTAL_STEPS,
 } from '../useOnboardingState'
-import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar'
+import { DEFAULT_MALE_CONFIG } from '../../types/avatar'
 
 describe('useOnboardingState', () => {
   beforeEach(() => {
@@ -68,7 +68,7 @@ describe('useOnboardingState', () => {
     it('should have default avatar config', () => {
       const { result } = renderHook(() => useOnboardingState())
 
-      expect(result.current.avatarConfig).toEqual(DEFAULT_AVATAR_CONFIG)
+      expect(result.current.avatarConfig).toEqual(DEFAULT_MALE_CONFIG)
     })
 
     it('should have location permission status as pending', () => {
@@ -290,7 +290,7 @@ describe('useOnboardingState', () => {
       const { result } = renderHook(() => useOnboardingState())
 
       const newAvatar = {
-        ...DEFAULT_AVATAR_CONFIG,
+        ...DEFAULT_MALE_CONFIG,
         hairColor: '#8d3121',
       }
 
@@ -305,7 +305,7 @@ describe('useOnboardingState', () => {
       const { result } = renderHook(() => useOnboardingState())
 
       const newAvatar = {
-        ...DEFAULT_AVATAR_CONFIG,
+        ...DEFAULT_MALE_CONFIG,
         skinTone: '#6b4423',
       }
 
@@ -319,7 +319,7 @@ describe('useOnboardingState', () => {
 
     it('should load persisted avatar config', () => {
       const savedAvatar = {
-        ...DEFAULT_AVATAR_CONFIG,
+        ...DEFAULT_MALE_CONFIG,
         hairStyle: 'longHairBob',
       }
 
@@ -446,11 +446,11 @@ describe('utility functions', () => {
 
   describe('getOnboardingAvatarConfig', () => {
     it('should return default when no config stored', () => {
-      expect(getOnboardingAvatarConfig()).toEqual(DEFAULT_AVATAR_CONFIG)
+      expect(getOnboardingAvatarConfig()).toEqual(DEFAULT_MALE_CONFIG)
     })
 
     it('should return stored config', () => {
-      const storedAvatar = { ...DEFAULT_AVATAR_CONFIG, gender: 'female' as const }
+      const storedAvatar = { ...DEFAULT_MALE_CONFIG, gender: 'female' as const }
 
       localStorageMock.store[ONBOARDING_STORAGE_KEY] = JSON.stringify({
         isComplete: false,
@@ -466,7 +466,7 @@ describe('utility functions', () => {
 
   describe('setOnboardingAvatarConfig', () => {
     it('should set avatar config', () => {
-      const newAvatar = { ...DEFAULT_AVATAR_CONFIG, mouthType: 'tongue' }
+      const newAvatar = { ...DEFAULT_MALE_CONFIG, mouthType: 'tongue' }
 
       setOnboardingAvatarConfig(newAvatar)
 
@@ -483,7 +483,7 @@ describe('utility functions', () => {
         locationPermissionStatus: 'granted',
       })
 
-      const newAvatar = { ...DEFAULT_AVATAR_CONFIG, eyeType: 'happy' }
+      const newAvatar = { ...DEFAULT_MALE_CONFIG, eyeType: 'happy' }
       setOnboardingAvatarConfig(newAvatar)
 
       const stored = JSON.parse(localStorageMock.store[ONBOARDING_STORAGE_KEY])

@@ -52,9 +52,8 @@ import {
   type TutorialFeature,
 } from '../utils/tutorialStorage'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { Avatar2DDisplay, type StoredAvatar2D } from '../components/avatar2d'
+import { Avatar, loadCurrentAvatar, type StoredAvatar } from 'react-native-bitmoji'
 import { ProfilePhotoGallery } from '../components/ProfilePhotoGallery'
-import { loadCurrentUserAvatar } from '../lib/avatar2d/storage'
 import {
   deleteAccountAndSignOut,
   getDeletionStatus,
@@ -115,7 +114,7 @@ export function ProfileScreen(): React.ReactNode {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
-  const [userAvatar, setUserAvatar] = useState<StoredAvatar2D | null>(null)
+  const [userAvatar, setUserAvatar] = useState<StoredAvatar | null>(null)
   const [isLoadingAvatar, setIsLoadingAvatar] = useState(true)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
@@ -132,8 +131,14 @@ export function ProfileScreen(): React.ReactNode {
     useCallback(() => {
       async function loadAvatar() {
         setIsLoadingAvatar(true)
-        const result = await loadCurrentUserAvatar()
-        setUserAvatar(result)
+        const config = await loadCurrentAvatar()
+        // Wrap config in StoredAvatar structure
+        setUserAvatar({
+          id: 'current-avatar',
+          config,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        })
         setIsLoadingAvatar(false)
       }
       loadAvatar()
@@ -640,7 +645,7 @@ export function ProfileScreen(): React.ReactNode {
               </View>
             ) : userAvatar ? (
               <View style={styles.avatarConfigured} testID="profile-avatar-preview">
-                <Avatar2DDisplay avatar={userAvatar} size="lg" />
+                <Avatar config={userAvatar.config} size="lg" />
                 <TouchableOpacity
                   style={styles.editAvatarButton}
                   onPress={handleOpenAvatarCreator}
@@ -873,35 +878,6 @@ export function ProfileScreen(): React.ReactNode {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Developer Tools Section (Dev Only) */}
-      {__DEV__ && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="code-slash-outline" size={20} color={colors.accent[400]} />
-            <Text style={styles.sectionTitle}>Developer Tools</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.devButton}
-            onPress={() => navigation.navigate('WebGL3DTest')}
-            testID="profile-webgl-test-button"
-          >
-            <LinearGradient
-              colors={[colors.accent[600], colors.accent[800]]}
-              style={styles.devButtonGradient}
-            >
-              <View style={styles.devButtonContent}>
-                <Ionicons name="cube-outline" size={22} color={colors.accent[300]} />
-                <View style={styles.devButtonTextContainer}>
-                  <Text style={styles.devButtonText}>Test 3D WebGL</Text>
-                  <Text style={styles.devButtonHint}>Task 1: WebView POC</Text>
-                </View>
-              </View>
-              <Ionicons name="arrow-forward" size={18} color={colors.accent[300]} />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* Account Actions Section */}
       <View style={styles.section}>

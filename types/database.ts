@@ -5,10 +5,7 @@
  * These types mirror the Supabase PostgreSQL schema defined in migrations.
  */
 
-import type { StoredAvatar2D } from '../components/avatar2d/types'
-
-// Type alias for backward compatibility during migration
-type StoredAvatar = StoredAvatar2D
+import type { StoredAvatar } from 'react-native-bitmoji'
 
 // ============================================================================
 // COMMON TYPES
@@ -325,7 +322,7 @@ export interface LiveCheckinUser {
   user_id: UUID
   checkin_id: UUID
   checked_in_at: Timestamp
-  avatar: import('../components/avatar2d/types').StoredAvatar2D | null
+  avatar: StoredAvatar | null
   display_name: string | null
   is_verified: boolean
 }

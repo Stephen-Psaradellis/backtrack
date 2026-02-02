@@ -34,7 +34,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { StoredAvatar2D } from '../components/avatar2d/types'
+import type { StoredAvatar } from 'react-native-bitmoji'
 
 // ============================================================================
 // Types
@@ -51,7 +51,7 @@ export type RegularsVisibility = 'public' | 'mutual' | 'hidden'
 export interface FellowRegular {
   fellow_user_id: string
   display_name: string | null
-  avatar: StoredAvatar2D | null
+  avatar: StoredAvatar | null
   is_verified: boolean
   location_id: string
   location_name: string
@@ -65,7 +65,7 @@ export interface FellowRegular {
 export interface LocationRegular {
   user_id: string
   display_name: string | null
-  avatar: StoredAvatar2D | null
+  avatar: StoredAvatar | null
   is_verified: boolean
   weekly_visit_count: number
   visibility: RegularsVisibility

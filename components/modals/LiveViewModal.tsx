@@ -42,7 +42,7 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { useLiveCheckins } from '../../hooks/useLiveCheckins'
 import { CheckInButton } from '../checkin/CheckInButton'
-import { Avatar2DDisplay } from '../avatar2d'
+import { Avatar } from 'react-native-bitmoji'
 import { LoadingSpinner } from '../LoadingSpinner'
 import { lightFeedback } from '../../lib/haptics'
 import type { LiveCheckinUser } from '../../types/database'
@@ -124,7 +124,7 @@ const AvatarItem = memo(function AvatarItem({
     <View style={styles.avatarItem} testID={testID}>
       <View style={styles.avatarContainer}>
         {user.avatar ? (
-          <Avatar2DDisplay avatar={user.avatar} size="md" />
+          <Avatar config={user.avatar.config} size="md" />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={24} color={COLORS.textSecondary} />

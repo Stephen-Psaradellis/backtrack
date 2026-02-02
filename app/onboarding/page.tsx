@@ -25,7 +25,7 @@ import { LocationPermissionStep } from '@/components/onboarding/LocationPermissi
 import { ProducerDemoScreen } from '@/components/onboarding/ProducerDemoScreen';
 import { ConsumerDemoScreen } from '@/components/onboarding/ConsumerDemoScreen';
 import { ONBOARDING_STEPS } from '@/lib/onboarding/onboardingConfig';
-import type { StoredAvatar2D } from '@/components/avatar2d/types';
+import type { StoredAvatar } from 'react-native-bitmoji';
 import type { LocationPermissionStatus } from '@/hooks/useLocation';
 
 // ============================================================================
@@ -133,7 +133,7 @@ export default function OnboardingPage() {
    * Saves the avatar and advances to next step
    */
   const handleAvatarComplete = useCallback(
-    (avatar: StoredAvatar2D) => {
+    (avatar: StoredAvatar) => {
       setAvatar(avatar.config);
       nextStep();
     },

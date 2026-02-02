@@ -63,11 +63,6 @@ export default defineConfig({
         // Barrel files (just re-exports, no logic to test)
         '**/index.ts',
         '**/index.tsx',
-        // WebView communication bridges (can't unit test, need integration tests)
-        'components/avatar3d/useBridge.ts',
-        'components/avatar3d/useSnapshot.ts',
-        'components/avatar3d/r3fBundle.ts',
-        'components/avatar3d/types.ts',
         // Type-only files with no runtime code
         'types/avatar.ts',
         'types/database.ts',
@@ -77,10 +72,6 @@ export default defineConfig({
         // Complex React Native UI components requiring E2E/integration testing
         // These contain primarily JSX rendering code with heavy native dependencies
         // Excluded because unit testing JSX with native deps provides low value vs effort
-        'components/avatar3d/Avatar3DCreator.tsx',
-        'components/avatar3d/AvatarSnapshot.tsx',
-        'components/avatar3d/WebGL3DView.tsx',
-        'components/avatar/AvatarCreator/*.tsx',
         'components/LocationSearch/*.tsx',
         'components/chat/ChatInputToolbar.tsx',
         'components/chat/PhotoShareModal.tsx',

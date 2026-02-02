@@ -24,7 +24,7 @@
  * ```
  */
 
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback, useState, useMemo } from 'react'
 import {
   View,
   Text,
@@ -33,16 +33,27 @@ import {
   KeyboardAvoidingView,
   TouchableOpacity,
   Modal,
+  SafeAreaView,
   StyleSheet,
   Platform,
   ViewStyle,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { Avatar2DDisplay, Avatar2DCreator } from '../../../components/avatar2d'
-import type { StoredAvatar2D } from '../../../components/avatar2d/types'
+import {
+  Avatar,
+  useAvatarEditor,
+  EDITOR_CATEGORIES,
+  CategoryTabs,
+  OptionGrid,
+  ColorPicker,
+  type StoredAvatar,
+  type CategoryTab,
+} from 'react-native-bitmoji'
 import { Button, OutlineButton } from '../../../components/Button'
 import { lightFeedback, successFeedback } from '../../../lib/haptics'
+import { darkTheme } from '../../../constants/glassStyles'
+import { colors } from '../../../constants/theme'
 import { MIN_NOTE_LENGTH, MAX_NOTE_LENGTH } from '../types'
 import { COLORS } from '../styles'
 
@@ -57,7 +68,7 @@ export interface MomentStepProps {
   /**
    * Current avatar (null if not yet selected)
    */
-  avatar: StoredAvatar2D | null
+  avatar: StoredAvatar | null
 
   /**
    * Current note text value
@@ -67,7 +78,7 @@ export interface MomentStepProps {
   /**
    * Callback when avatar is changed
    */
-  onAvatarChange: (avatar: StoredAvatar2D) => void
+  onAvatarChange: (avatar: StoredAvatar) => void
 
   /**
    * Callback when note text changes
@@ -99,6 +110,203 @@ const NOTE_PLACEHOLDERS = [
   'What would you say if you saw them again?',
   'What made this moment memorable?',
 ]
+
+// ============================================================================
+// AVATAR CREATOR MODAL COMPONENT
+// ============================================================================
+
+interface AvatarCreatorModalProps {
+  visible: boolean
+  initialConfig?: StoredAvatar['config']
+  onComplete: (avatar: StoredAvatar) => void
+  onCancel: () => void
+}
+
+const AvatarCreatorModal = memo(function AvatarCreatorModal({
+  visible,
+  initialConfig,
+  onComplete,
+  onCancel,
+}: AvatarCreatorModalProps) {
+  // Initialize editor with existing config or default
+  const editor = useAvatarEditor({
+    initialConfig,
+  })
+
+  // Convert categories for tabs
+  const categoryTabs: CategoryTab[] = useMemo(
+    () =>
+      EDITOR_CATEGORIES.map((cat) => ({
+        key: cat.key,
+        label: cat.label,
+        icon: cat.key,
+      })),
+    []
+  )
+
+  // Get current category config
+  const currentCategoryConfig = useMemo(
+    () => EDITOR_CATEGORIES.find((c) => c.key === editor.activeCategory),
+    [editor.activeCategory]
+  )
+
+  // Get active subcategory config
+  const activeSubcategoryConfig = currentCategoryConfig?.subcategories.find(
+    (s) => s.key === editor.activeSubcategory
+  )
+
+  const handleSave = useCallback(() => {
+    const storedAvatar = editor.getStoredAvatar()
+    onComplete(storedAvatar)
+  }, [editor, onComplete])
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onCancel}
+    >
+      <SafeAreaView style={modalStyles.container}>
+        {/* Header */}
+        <View style={modalStyles.header}>
+          <TouchableOpacity
+            style={modalStyles.headerButton}
+            onPress={onCancel}
+            activeOpacity={0.7}
+          >
+            <Text style={modalStyles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <Text style={modalStyles.headerTitle}>Create Avatar</Text>
+
+          <TouchableOpacity
+            style={[modalStyles.headerButton, modalStyles.saveButton]}
+            onPress={handleSave}
+            activeOpacity={0.7}
+          >
+            <Text style={modalStyles.saveText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Avatar Preview */}
+        <View style={modalStyles.previewContainer}>
+          <View style={modalStyles.avatarWrapper}>
+            <Avatar config={editor.config} size="xl" />
+          </View>
+          <View style={modalStyles.actionButtons}>
+            <TouchableOpacity
+              style={modalStyles.actionButton}
+              onPress={editor.randomize}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="shuffle" size={20} color={colors.primary[500]} />
+              <Text style={modalStyles.actionButtonText}>Random</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={modalStyles.actionButton}
+              onPress={editor.undo}
+              disabled={!editor.canUndo}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="arrow-undo"
+                size={20}
+                color={editor.canUndo ? colors.primary[500] : darkTheme.textMuted}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={modalStyles.actionButton}
+              onPress={editor.redo}
+              disabled={!editor.canRedo}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="arrow-redo"
+                size={20}
+                color={editor.canRedo ? colors.primary[500] : darkTheme.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Category Tabs */}
+        <CategoryTabs
+          categories={categoryTabs}
+          activeCategory={editor.activeCategory}
+          onSelectCategory={editor.setCategory}
+        />
+
+        {/* Subcategory Tabs */}
+        {currentCategoryConfig && currentCategoryConfig.subcategories.length > 0 && (
+          <View style={modalStyles.subcategoryContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={modalStyles.subcategoryContent}
+            >
+              {currentCategoryConfig.subcategories.map((sub) => {
+                const isActive = sub.key === editor.activeSubcategory
+                return (
+                  <TouchableOpacity
+                    key={sub.key}
+                    style={[
+                      modalStyles.subcategoryTab,
+                      isActive && modalStyles.subcategoryTabActive,
+                    ]}
+                    onPress={() => editor.setSubcategory(sub.key)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        modalStyles.subcategoryLabel,
+                        isActive && modalStyles.subcategoryLabelActive,
+                      ]}
+                    >
+                      {sub.label}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Editor Content */}
+        <View style={modalStyles.editorContent}>
+          {activeSubcategoryConfig?.type === 'colors' && activeSubcategoryConfig.colors && (
+            <ScrollView
+              style={modalStyles.contentScroll}
+              contentContainerStyle={modalStyles.contentScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <ColorPicker
+                colors={activeSubcategoryConfig.colors}
+                selectedColor={editor.config[activeSubcategoryConfig.configKey] as string}
+                onSelect={(color) =>
+                  editor.updateConfig({ [activeSubcategoryConfig.configKey]: color })
+                }
+                columns={5}
+                size="medium"
+              />
+            </ScrollView>
+          )}
+          {activeSubcategoryConfig?.type === 'options' && activeSubcategoryConfig.options && (
+            <OptionGrid
+              options={activeSubcategoryConfig.options}
+              selectedId={editor.config[activeSubcategoryConfig.configKey] as string}
+              onSelect={(value) =>
+                editor.updateConfig({ [activeSubcategoryConfig.configKey]: value })
+              }
+              columns={4}
+              showLabels
+            />
+          )}
+        </View>
+      </SafeAreaView>
+    </Modal>
+  )
+})
 
 // ============================================================================
 // COMPONENT
@@ -153,7 +361,7 @@ export const MomentStep = memo(function MomentStep({
     setShowAvatarCreator(true)
   }, [])
 
-  const handleAvatarComplete = useCallback(async (newAvatar: StoredAvatar2D) => {
+  const handleAvatarComplete = useCallback(async (newAvatar: StoredAvatar) => {
     await successFeedback()
     onAvatarChange(newAvatar)
     setShowAvatarCreator(false)
@@ -190,7 +398,7 @@ export const MomentStep = memo(function MomentStep({
             testID={`${testID}-avatar-preview`}
           >
             {avatar ? (
-              <Avatar2DDisplay avatar={avatar} size="lg" />
+              <Avatar config={avatar.config} size="lg" />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Ionicons name="person-outline" size={64} color={COLORS.textSecondary} />
@@ -274,18 +482,12 @@ export const MomentStep = memo(function MomentStep({
       </View>
 
       {/* Avatar Creator Modal */}
-      <Modal
+      <AvatarCreatorModal
         visible={showAvatarCreator}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={handleAvatarCancel}
-      >
-        <Avatar2DCreator
-          initialConfig={avatar?.config}
-          onComplete={handleAvatarComplete}
-          onCancel={handleAvatarCancel}
-        />
-      </Modal>
+        initialConfig={avatar?.config}
+        onComplete={handleAvatarComplete}
+        onCancel={handleAvatarCancel}
+      />
     </KeyboardAvoidingView>
   )
 })
@@ -450,6 +652,112 @@ const styles = StyleSheet.create({
 
   nextButton: {
     flex: 2,
+  },
+})
+
+const modalStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: darkTheme.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: darkTheme.glassBorder,
+    backgroundColor: darkTheme.surface,
+  },
+  headerButton: {
+    minWidth: 60,
+    paddingVertical: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+  },
+  cancelText: {
+    fontSize: 16,
+    color: darkTheme.textSecondary,
+  },
+  saveButton: {
+    alignItems: 'flex-end',
+  },
+  saveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary[500],
+  },
+  previewContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    backgroundColor: darkTheme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: darkTheme.glassBorder,
+  },
+  avatarWrapper: {
+    marginBottom: 12,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 8,
+    backgroundColor: darkTheme.surfaceElevated,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.primary[500],
+  },
+  subcategoryContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: darkTheme.glassBorder,
+    backgroundColor: darkTheme.surface,
+  },
+  subcategoryContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  subcategoryTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: darkTheme.surfaceElevated,
+    marginRight: 8,
+  },
+  subcategoryTabActive: {
+    backgroundColor: colors.primary[500],
+  },
+  subcategoryLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: darkTheme.textSecondary,
+  },
+  subcategoryLabelActive: {
+    color: colors.white,
+    fontWeight: '600',
+  },
+  editorContent: {
+    flex: 1,
+    backgroundColor: darkTheme.background,
+  },
+  contentScroll: {
+    flex: 1,
+  },
+  contentScrollContent: {
+    paddingVertical: 16,
   },
 })
 
