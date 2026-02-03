@@ -80,6 +80,7 @@ export default ({ config }) => {
       bundler: 'metro',
     },
     plugins: [
+      'expo-font',
       [
         'react-native-maps',
         {
