@@ -337,9 +337,7 @@ async function loadFromCache(userId: string): Promise<FavoriteLocation[] | null>
     }
 
     return parsed.favorites
-  } catch (error) {
-    // Log cache read errors for debugging
-    console.warn('[useFavoriteLocations] Failed to load from cache:', error)
+  } catch {
     return null
   }
 }
@@ -358,9 +356,8 @@ async function saveToCache(userId: string, favorites: FavoriteLocation[]): Promi
       cachedAt: Date.now(),
     }
     await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData))
-  } catch (error) {
-    // Log cache write errors for debugging (non-blocking)
-    console.warn('[useFavoriteLocations] Failed to save to cache:', error)
+  } catch {
+    // Non-blocking - cache write errors are silent
   }
 }
 
@@ -384,9 +381,8 @@ async function updateCacheItem(
       f.id === favoriteId ? { ...f, ...updates } : f
     )
     await saveToCache(userId, updatedFavorites)
-  } catch (error) {
-    // Log cache update errors for debugging (non-blocking)
-    console.warn('[useFavoriteLocations] Failed to update cache item:', error)
+  } catch {
+    // Non-blocking - cache update errors are silent
   }
 }
 
@@ -403,9 +399,8 @@ async function removeCacheItem(userId: string, favoriteId: string): Promise<void
 
     const filteredFavorites = cached.filter((f) => f.id !== favoriteId)
     await saveToCache(userId, filteredFavorites)
-  } catch (error) {
-    // Log cache remove errors for debugging (non-blocking)
-    console.warn('[useFavoriteLocations] Failed to remove cache item:', error)
+  } catch {
+    // Non-blocking - cache remove errors are silent
   }
 }
 
@@ -420,9 +415,8 @@ async function addCacheItem(userId: string, favorite: FavoriteLocation): Promise
     const cached = await loadFromCache(userId) || []
     const updatedFavorites = [favorite, ...cached]
     await saveToCache(userId, updatedFavorites)
-  } catch (error) {
-    // Log cache add errors for debugging (non-blocking)
-    console.warn('[useFavoriteLocations] Failed to add cache item:', error)
+  } catch {
+    // Non-blocking - cache add errors are silent
   }
 }
 
@@ -435,9 +429,8 @@ async function clearCache(userId: string): Promise<void> {
   try {
     const cacheKey = getCacheKey(userId)
     await AsyncStorage.removeItem(cacheKey)
-  } catch (error) {
-    // Log cache clear errors for debugging (non-blocking)
-    console.warn('[useFavoriteLocations] Failed to clear cache:', error)
+  } catch {
+    // Non-blocking - cache clear errors are silent
   }
 }
 
@@ -475,9 +468,7 @@ async function loadQueue(userId: string): Promise<QueuedOperation[]> {
     }
 
     return JSON.parse(queueData)
-  } catch (error) {
-    // Log queue load errors for debugging
-    console.warn('[useFavoriteLocations] Failed to load offline queue:', error)
+  } catch {
     return []
   }
 }
@@ -492,9 +483,8 @@ async function saveQueue(userId: string, queue: QueuedOperation[]): Promise<void
   try {
     const queueKey = getQueueKey(userId)
     await AsyncStorage.setItem(queueKey, JSON.stringify(queue))
-  } catch (error) {
-    // Log queue save errors for debugging (non-blocking, will retry on next operation)
-    console.warn('[useFavoriteLocations] Failed to save offline queue:', error)
+  } catch {
+    // Non-blocking - will retry on next operation
   }
 }
 
@@ -534,9 +524,8 @@ async function clearQueue(userId: string): Promise<void> {
   try {
     const queueKey = getQueueKey(userId)
     await AsyncStorage.removeItem(queueKey)
-  } catch (error) {
-    // Log queue clear errors for debugging (non-blocking)
-    console.warn('[useFavoriteLocations] Failed to clear offline queue:', error)
+  } catch {
+    // Non-blocking - queue clear errors are silent
   }
 }
 

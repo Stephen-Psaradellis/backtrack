@@ -154,9 +154,6 @@ export async function initializeAnalytics(): Promise<boolean> {
 
   // If no API key, analytics is disabled (development mode)
   if (!apiKey) {
-    if (__DEV__) {
-      console.log('[Analytics] No PostHog API key configured, analytics disabled');
-    }
     isInitialized = true;
     return false;
   }
@@ -175,15 +172,8 @@ export async function initializeAnalytics(): Promise<boolean> {
 
     isInitialized = true;
 
-    if (__DEV__) {
-      console.log('[Analytics] PostHog initialized with anonymous ID');
-    }
-
     return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[Analytics] Failed to initialize PostHog:', error);
-    }
+  } catch {
     isInitialized = true;
     return false;
   }
@@ -219,22 +209,13 @@ export function trackEvent(
   properties?: EventProperties
 ): void {
   if (!posthogClient || isOptedOut) {
-    if (__DEV__ && !isOptedOut) {
-      console.log(`[Analytics] Would track: ${event}`, properties);
-    }
     return;
   }
 
   try {
     posthogClient.capture(event, sanitizeProperties(properties));
-
-    if (__DEV__) {
-      console.log(`[Analytics] Tracked: ${event}`, properties);
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[Analytics] Failed to track event:', error);
-    }
+  } catch {
+    // Silent failure - analytics errors should not affect app functionality
   }
 }
 
@@ -250,22 +231,13 @@ export function trackScreenView(
   properties?: EventProperties
 ): void {
   if (!posthogClient || isOptedOut) {
-    if (__DEV__ && !isOptedOut) {
-      console.log(`[Analytics] Would track screen: ${screenName}`, properties);
-    }
     return;
   }
 
   try {
     posthogClient.screen(screenName, sanitizeProperties(properties));
-
-    if (__DEV__) {
-      console.log(`[Analytics] Screen view: ${screenName}`, properties);
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[Analytics] Failed to track screen view:', error);
-    }
+  } catch {
+    // Silent failure - analytics errors should not affect app functionality
   }
 }
 
@@ -286,14 +258,8 @@ export async function setAnalyticsOptOut(optOut: boolean): Promise<void> {
       // Reset the client to clear any stored data
       posthogClient.reset();
     }
-
-    if (__DEV__) {
-      console.log(`[Analytics] Opt-out set to: ${optOut}`);
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[Analytics] Failed to set opt-out preference:', error);
-    }
+  } catch {
+    // Silent failure - opt-out preference errors are non-critical
   }
 }
 
@@ -317,10 +283,8 @@ export async function flushAnalytics(): Promise<void> {
 
   try {
     await posthogClient.flush();
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[Analytics] Failed to flush events:', error);
-    }
+  } catch {
+    // Silent failure - flush errors are non-critical
   }
 }
 
@@ -341,14 +305,8 @@ export async function resetAnalytics(): Promise<void> {
     if (posthogClient && !isOptedOut) {
       posthogClient.identify(newId);
     }
-
-    if (__DEV__) {
-      console.log('[Analytics] Reset with new anonymous ID');
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[Analytics] Failed to reset:', error);
-    }
+  } catch {
+    // Silent failure - reset errors are non-critical
   }
 }
 
@@ -366,14 +324,8 @@ export async function shutdownAnalytics(): Promise<void> {
     await posthogClient.shutdown();
     posthogClient = null;
     isInitialized = false;
-
-    if (__DEV__) {
-      console.log('[Analytics] Shutdown complete');
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.error('[Analytics] Failed to shutdown:', error);
-    }
+  } catch {
+    // Silent failure - shutdown errors are non-critical
   }
 }
 

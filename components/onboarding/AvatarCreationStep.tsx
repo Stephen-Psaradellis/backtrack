@@ -86,7 +86,7 @@ export function AvatarCreationStep({
       await saveCurrentAvatar(storedAvatar.config);
       onComplete(storedAvatar);
     } catch (error) {
-      console.error('Failed to save avatar:', error);
+      // Error is silently handled - saving continues on retry
     } finally {
       setIsSaving(false);
     }

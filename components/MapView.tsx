@@ -73,7 +73,6 @@ try {
   PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE
 } catch (error) {
   mapsLoadError = error instanceof Error ? error.message : 'Unknown error loading maps'
-  console.error('[MapView] Failed to load react-native-maps:', error)
 }
 
 // Define types inline to avoid importing from react-native-maps on iOS

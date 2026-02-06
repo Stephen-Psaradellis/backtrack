@@ -5,7 +5,11 @@ export default ({ config }) => {
   // Separate API keys for iOS and Android (better for security restrictions and usage tracking)
   const googleMapsIosApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_IOS_API_KEY || '';
   const googleMapsAndroidApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_ANDROID_API_KEY || '';
-  const easProjectId = process.env.EAS_PROJECT_ID || 'c7e1ae8a-a8e1-4010-b978-d6f52acae3c0';
+  const easProjectId = process.env.EAS_PROJECT_ID;
+
+  if (!easProjectId) {
+    throw new Error('EAS_PROJECT_ID environment variable is required. Set it in your .env or eas.json.');
+  }
 
   return {
     ...config,
@@ -34,14 +38,14 @@ export default ({ config }) => {
       // Note: Google Maps API key is configured via react-native-maps plugin
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
-          'Backtrack needs your location to show nearby venues where you can post or browse missed connections.',
+          'Backtrack uses your location to show missed connections at nearby venues like cafes, gyms, and parks you visit.',
         NSLocationAlwaysAndWhenInUseUsageDescription:
-          'Backtrack uses your location to discover nearby venues and help you find missed connections.',
+          'Backtrack uses background location to notify you when someone posts a missed connection at a venue you\'re visiting. You can disable this anytime in Settings.',
         NSCameraUsageDescription:
           'Backtrack needs camera access for selfie verification when posting missed connections.',
         NSPhotoLibraryUsageDescription:
           'Backtrack needs photo library access to select photos for your profile.',
-        UIBackgroundModes: ['remote-notification'],
+        UIBackgroundModes: ['remote-notification', 'location', 'fetch'],
         ITSAppUsesNonExemptEncryption: false,
       },
     },
@@ -70,6 +74,7 @@ export default ({ config }) => {
       permissions: [
         'ACCESS_FINE_LOCATION',
         'ACCESS_COARSE_LOCATION',
+        'ACCESS_BACKGROUND_LOCATION',
         'CAMERA',
         'READ_EXTERNAL_STORAGE',
         'WRITE_EXTERNAL_STORAGE',
@@ -98,9 +103,10 @@ export default ({ config }) => {
         'expo-location',
         {
           locationAlwaysAndWhenInUsePermission:
-            'Backtrack uses your location to discover nearby venues and help you find missed connections.',
+            'Backtrack uses background location to notify you when someone posts a missed connection at a venue you\'re visiting. You can disable this anytime in Settings.',
           locationWhenInUsePermission:
-            'Backtrack needs your location to show nearby venues where you can post or browse missed connections.',
+            'Backtrack uses your location to show missed connections at nearby venues like cafes, gyms, and parks you visit.',
+          isBackgroundLocationEnabled: true,
         },
       ],
       [

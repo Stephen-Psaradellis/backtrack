@@ -38,9 +38,8 @@ const SecureStoreAdapter = {
   getItem: async (key: string): Promise<string | null> => {
     try {
       return await SecureStore.getItemAsync(key)
-    } catch (error) {
+    } catch {
       // SecureStore may not be available in all environments (e.g., web)
-      console.warn('SecureStore getItem failed:', error)
       return null
     }
   },
@@ -51,9 +50,8 @@ const SecureStoreAdapter = {
   setItem: async (key: string, value: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(key, value)
-    } catch (error) {
+    } catch {
       // SecureStore may not be available in all environments (e.g., web)
-      console.warn('SecureStore setItem failed:', error)
     }
   },
 
@@ -63,9 +61,8 @@ const SecureStoreAdapter = {
   removeItem: async (key: string): Promise<void> => {
     try {
       await SecureStore.deleteItemAsync(key)
-    } catch (error) {
+    } catch {
       // SecureStore may not be available in all environments (e.g., web)
-      console.warn('SecureStore removeItem failed:', error)
     }
   },
 }
@@ -290,10 +287,22 @@ export async function removePushToken(token: string): Promise<PushTokenResult> {
       }
     }
 
+    // Verify authenticated user owns this token before deleting
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return {
+        success: false,
+        error: 'User must be authenticated to remove push token.',
+      }
+    }
+
+    // Only delete tokens belonging to the authenticated user
     const { error } = await supabase
       .from('expo_push_tokens')
       .delete()
       .eq('token', token.trim())
+      .eq('user_id', user.id)
 
     if (error) {
       return {

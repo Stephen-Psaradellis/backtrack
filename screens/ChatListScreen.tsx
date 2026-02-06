@@ -212,7 +212,6 @@ export function ChatListScreen(): React.ReactNode {
     // Add timeout to prevent infinite loading
     const FETCH_TIMEOUT = 15000
     const timeoutId = setTimeout(() => {
-      console.warn('Conversation fetch timed out')
       setLoading(false)
       setRefreshing(false)
       setError('Loading took too long. Pull to refresh to try again.')
@@ -229,7 +228,6 @@ export function ChatListScreen(): React.ReactNode {
         }
       } catch {
         // Silently ignore - getHiddenUserIds RPC may not exist yet
-        console.warn('getHiddenUserIds failed, showing all conversations')
       }
 
       // Fetch conversations where user is producer or consumer
@@ -242,7 +240,6 @@ export function ChatListScreen(): React.ReactNode {
         .order('updated_at', { ascending: false })
 
       if (fetchError) {
-        console.error('Failed to fetch conversations:', fetchError)
         setError('Failed to load conversations. Please try again.')
         return
       }
@@ -346,8 +343,7 @@ export function ChatListScreen(): React.ReactNode {
       })
 
       setConversations(conversationItems)
-    } catch (err) {
-      console.error('Unexpected error fetching conversations:', err)
+    } catch {
       setError('An unexpected error occurred. Please try again.')
     } finally {
       clearTimeout(timeoutId)

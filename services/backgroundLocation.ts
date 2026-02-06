@@ -29,6 +29,7 @@ import * as Notifications from 'expo-notifications'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { supabase } from '../lib/supabase'
+import { captureException } from '../lib/sentry'
 import { BACKGROUND_GPS_CONFIG } from '../lib/utils/gpsConfig'
 
 // ============================================================================
@@ -73,10 +74,6 @@ const TIME_INTERVAL_MS = BACKGROUND_GPS_CONFIG.TIME_INTERVAL_MS
  */
 const DEFAULT_PROMPT_MINUTES = 5
 
-// Log debug mode status on import
-if (BACKGROUND_GPS_CONFIG.DEBUG_MODE) {
-  console.log('[BackgroundLocation] DEBUG MODE ENABLED - Using 10-second intervals')
-}
 
 // ============================================================================
 // TYPES
@@ -125,8 +122,8 @@ async function getDwellState(): Promise<DwellState> {
     if (stored) {
       return JSON.parse(stored)
     }
-  } catch {
-    // Ignore errors, return default
+  } catch (err) {
+    captureException(err, { operation: 'getDwellState', key: DWELL_STATE_KEY })
   }
   return {
     currentLocation: null,
@@ -142,8 +139,8 @@ async function getDwellState(): Promise<DwellState> {
 async function saveDwellState(state: DwellState): Promise<void> {
   try {
     await AsyncStorage.setItem(DWELL_STATE_KEY, JSON.stringify(state))
-  } catch {
-    // Ignore storage errors
+  } catch (err) {
+    captureException(err, { operation: 'saveDwellState' })
   }
 }
 
@@ -156,8 +153,8 @@ async function getTrackingSettings(): Promise<TrackingSettings | null> {
     if (stored) {
       return JSON.parse(stored)
     }
-  } catch {
-    // Ignore errors
+  } catch (err) {
+    captureException(err, { operation: 'getTrackingSettings' })
   }
   return null
 }
@@ -168,14 +165,24 @@ async function getTrackingSettings(): Promise<TrackingSettings | null> {
 async function saveTrackingSettings(settings: TrackingSettings): Promise<void> {
   try {
     await AsyncStorage.setItem(TRACKING_SETTINGS_KEY, JSON.stringify(settings))
-  } catch {
-    // Ignore storage errors
+  } catch (err) {
+    captureException(err, { operation: 'saveTrackingSettings' })
   }
 }
 
 // ============================================================================
 // LOCATION HELPERS
 // ============================================================================
+
+/**
+ * Reduce coordinate precision to ~50m resolution for privacy.
+ * Truncates to 3 decimal places (~111m at equator, ~50-80m at mid-latitudes).
+ * This prevents storing exact GPS coordinates while still enabling
+ * meaningful proximity detection.
+ */
+function reduceCoordinatePrecision(value: number): number {
+  return Math.round(value * 1000) / 1000
+}
 
 /**
  * Calculate distance between two points using Haversine formula
@@ -209,9 +216,13 @@ async function findNearbyLocation(
   lon: number
 ): Promise<NearbyLocation | null> {
   try {
+    // Reduce coordinate precision before sending to server (~50m resolution)
+    const reducedLat = reduceCoordinatePrecision(lat)
+    const reducedLon = reduceCoordinatePrecision(lon)
+
     const { data, error } = await supabase.rpc('get_locations_near_point', {
-      p_lat: lat,
-      p_lon: lon,
+      p_lat: reducedLat,
+      p_lon: reducedLon,
       p_radius_meters: 200, // Search within 200m
       p_limit: 1,
     })
@@ -221,7 +232,8 @@ async function findNearbyLocation(
     }
 
     return data[0] as NearbyLocation
-  } catch {
+  } catch (err) {
+    captureException(err, { operation: 'findNearbyLocation' })
     return null
   }
 }
@@ -250,7 +262,7 @@ async function sendCheckinPromptNotification(locationName: string, locationId: s
       trigger: null, // Send immediately
     })
   } catch (error) {
-    console.error('[BackgroundLocation] Failed to send notification:', error)
+    captureException(error, { operation: 'sendCheckinPromptNotification', locationName, locationId })
   }
 }
 
@@ -264,7 +276,7 @@ async function sendCheckinPromptNotification(locationName: string, locationId: s
  */
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
-    console.error('[BackgroundLocation] Task error:', error)
+    captureException(error, { operation: 'backgroundLocationTask' })
     return
   }
 
@@ -372,7 +384,8 @@ export async function isBackgroundLocationAvailable(): Promise<boolean> {
       foregroundStatus === 'granted' &&
       backgroundStatus === 'granted'
     )
-  } catch {
+  } catch (err) {
+    captureException(err, { operation: 'isBackgroundLocationAvailable' })
     return false
   }
 }
@@ -385,7 +398,8 @@ export async function hasBackgroundLocationPermission(): Promise<boolean> {
     const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync()
     const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync()
     return foregroundStatus === 'granted' && backgroundStatus === 'granted'
-  } catch {
+  } catch (err) {
+    captureException(err, { operation: 'hasBackgroundLocationPermission' })
     return false
   }
 }
@@ -409,7 +423,6 @@ export async function requestBackgroundLocationPermission(): Promise<boolean> {
     if (currentForeground !== 'granted') {
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync()
       if (foregroundStatus !== 'granted') {
-        console.warn('[BackgroundLocation] Foreground permission denied')
         return false
       }
     }
@@ -421,14 +434,13 @@ export async function requestBackgroundLocationPermission(): Promise<boolean> {
     if (currentBackground !== 'granted') {
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync()
       if (backgroundStatus !== 'granted') {
-        console.warn('[BackgroundLocation] Background permission denied')
         return false
       }
     }
 
     return true
   } catch (error) {
-    console.error('[BackgroundLocation] Permission request error:', error)
+    captureException(error, { operation: 'requestBackgroundLocationPermission' })
     return false
   }
 }
@@ -447,7 +459,6 @@ export async function startBackgroundLocationTracking(
     // Request permissions
     const hasPermission = await requestBackgroundLocationPermission()
     if (!hasPermission) {
-      console.warn('[BackgroundLocation] Background location permission not granted')
       return false
     }
 
@@ -487,10 +498,9 @@ export async function startBackgroundLocationTracking(
       activityType: Location.ActivityType.Other,
     })
 
-    console.log('[BackgroundLocation] Started background location tracking')
     return true
   } catch (error) {
-    console.error('[BackgroundLocation] Failed to start tracking:', error)
+    captureException(error, { operation: 'startBackgroundLocationTracking', userId })
     return false
   }
 }
@@ -500,32 +510,17 @@ export async function startBackgroundLocationTracking(
  */
 export async function stopBackgroundLocationTracking(): Promise<void> {
   try {
-    // Update settings
-    const settings = await getTrackingSettings()
-    if (settings) {
-      await saveTrackingSettings({ ...settings, enabled: false })
-    }
-
     // Check if running
     const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
-    if (!isRunning) {
-      return
+    if (isRunning) {
+      // Stop updates
+      await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
     }
 
-    // Stop updates
-    await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
-
-    // Clear dwell state
-    await saveDwellState({
-      currentLocation: null,
-      arrivedAt: null,
-      notificationSent: false,
-      userId: null,
-    })
-
-    console.log('[BackgroundLocation] Stopped background location tracking')
+    // Purge all stored location data for privacy
+    await AsyncStorage.multiRemove([DWELL_STATE_KEY, TRACKING_SETTINGS_KEY])
   } catch (error) {
-    console.error('[BackgroundLocation] Failed to stop tracking:', error)
+    captureException(error, { operation: 'stopBackgroundLocationTracking' })
   }
 }
 
@@ -535,7 +530,8 @@ export async function stopBackgroundLocationTracking(): Promise<void> {
 export async function isBackgroundLocationRunning(): Promise<boolean> {
   try {
     return await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
-  } catch {
+  } catch (err) {
+    captureException(err, { operation: 'isBackgroundLocationRunning' })
     return false
   }
 }
@@ -550,6 +546,107 @@ export async function updateTrackingSettings(promptMinutes: number): Promise<voi
   }
 }
 
+// ============================================================================
+// ERROR RECOVERY MECHANISM
+// ============================================================================
+
+export interface LocationHealthStatus {
+  isRunning: boolean
+  hasPermission: boolean
+  permissionStatus: 'granted' | 'denied' | 'undetermined'
+  needsRecovery: boolean
+  recoveryReason?: string
+}
+
+/**
+ * Check the health status of background location tracking.
+ * Returns detailed status to help diagnose and recover from issues.
+ */
+export async function getLocationHealthStatus(): Promise<LocationHealthStatus> {
+  try {
+    const isRunning = await isBackgroundLocationRunning()
+    const settings = await getTrackingSettings()
+    const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync()
+    const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync()
+
+    const hasPermission = foregroundStatus === 'granted' && backgroundStatus === 'granted'
+    const permissionStatus = !hasPermission
+      ? (backgroundStatus === 'denied' ? 'denied' : 'undetermined')
+      : 'granted'
+
+    let needsRecovery = false
+    let recoveryReason: string | undefined
+
+    if (settings?.enabled && !isRunning) {
+      needsRecovery = true
+      recoveryReason = 'Tracking enabled but not running'
+    } else if (settings?.enabled && !hasPermission) {
+      needsRecovery = true
+      recoveryReason = 'Permissions revoked while tracking enabled'
+    }
+
+    return { isRunning, hasPermission, permissionStatus, needsRecovery, recoveryReason }
+  } catch (err) {
+    captureException(err, { operation: 'getLocationHealthStatus' })
+    return {
+      isRunning: false,
+      hasPermission: false,
+      permissionStatus: 'undetermined',
+      needsRecovery: true,
+      recoveryReason: 'Health check failed',
+    }
+  }
+}
+
+/**
+ * Attempt to recover background location tracking.
+ * Call this when the app comes to foreground or on a periodic basis.
+ */
+export async function recoverLocationTracking(): Promise<{
+  success: boolean
+  action?: 'none' | 'request_permission' | 'open_settings' | 'restart_tracking'
+  message?: string
+}> {
+  try {
+    const health = await getLocationHealthStatus()
+
+    if (!health.needsRecovery) {
+      return { success: true, action: 'none' }
+    }
+
+    const settings = await getTrackingSettings()
+    if (!settings?.enabled) {
+      return { success: true, action: 'none', message: 'Tracking not enabled' }
+    }
+
+    if (!health.hasPermission) {
+      if (health.permissionStatus === 'denied') {
+        return {
+          success: false,
+          action: 'open_settings',
+          message: 'Location permission was denied. Please enable it in Settings.',
+        }
+      }
+      const granted = await requestBackgroundLocationPermission()
+      if (!granted) {
+        return {
+          success: false,
+          action: 'request_permission',
+          message: 'Location permission is required for background tracking.',
+        }
+      }
+    }
+
+    const started = await startBackgroundLocationTracking(settings.userId, settings.promptMinutes)
+    return started
+      ? { success: true, action: 'restart_tracking', message: 'Background location tracking restored.' }
+      : { success: false, action: 'restart_tracking', message: 'Failed to restart location tracking.' }
+  } catch (err) {
+    captureException(err, { operation: 'recoverLocationTracking' })
+    return { success: false, message: 'Recovery failed due to an unexpected error.' }
+  }
+}
+
 export default {
   BACKGROUND_LOCATION_TASK,
   isBackgroundLocationAvailable,
@@ -559,4 +656,6 @@ export default {
   stopBackgroundLocationTracking,
   isBackgroundLocationRunning,
   updateTrackingSettings,
+  getLocationHealthStatus,
+  recoverLocationTracking,
 }

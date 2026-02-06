@@ -164,7 +164,6 @@ export function useLocationStreaks(
       })
 
       if (rpcError) {
-        console.error('Error fetching streaks:', rpcError)
         setError({
           code: 'FETCH_ERROR',
           message: rpcError.message || 'Failed to fetch streaks',
@@ -191,7 +190,6 @@ export function useLocationStreaks(
       setStreaks(streakData)
       setLastFetchedAt(Date.now())
     } catch (err) {
-      console.error('Error fetching streaks:', err)
       setError({
         code: 'FETCH_ERROR',
         message: err instanceof Error ? err.message : 'Failed to fetch streaks',
@@ -217,7 +215,6 @@ export function useLocationStreaks(
       })
 
       if (rpcError) {
-        console.error('Error fetching milestones:', rpcError)
         return
       }
 
@@ -232,8 +229,8 @@ export function useLocationStreaks(
       }))
 
       setMilestones(milestoneData)
-    } catch (err) {
-      console.error('Error fetching milestones:', err)
+    } catch {
+      // Silent failure - milestone fetch errors are non-critical
     }
   }, [supabase, userId, isAuthenticated])
 

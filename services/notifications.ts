@@ -51,11 +51,6 @@ async function getNotificationsModule(): Promise<typeof import('expo-notificatio
     notificationsLoadError = error instanceof Error
       ? error.message
       : 'Failed to load notifications module'
-    if (__DEV__) {
-      console.warn('[notifications] Failed to load expo-notifications:', error)
-      console.warn('[notifications] Push notifications will be disabled.')
-      console.warn('[notifications] To fix this, rebuild your development client.')
-    }
     return null
   }
 }

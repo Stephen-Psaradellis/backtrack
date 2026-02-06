@@ -24,6 +24,7 @@
 import * as Crypto from 'expo-crypto'
 
 import { supabase, supabaseUrl } from './supabase'
+import { captureException } from './sentry'
 import {
   uploadProfilePhoto as uploadToStorage,
   deletePhotoByPath,
@@ -138,7 +139,6 @@ function shouldSkipModeration(): boolean {
 async function triggerModeration(photoId: string, storagePath: string): Promise<TriggerModerationResult> {
   // Development mode: auto-approve without calling Edge Function
   if (shouldSkipModeration()) {
-    console.log('[DEV] Skipping moderation, auto-approving photo:', photoId)
     try {
       const { error: updateError } = await supabase
         .from('profile_photos')
@@ -149,13 +149,12 @@ async function triggerModeration(photoId: string, storagePath: string): Promise<
         .eq('id', photoId)
 
       if (updateError) {
-        console.error('[DEV] Failed to auto-approve:', updateError)
         return { triggered: false, error: updateError.message }
       }
 
       return { triggered: true, status: 'approved' }
     } catch (err) {
-      console.error('[DEV] Auto-approve error:', err)
+      captureException(err, { operation: 'triggerModeration', photoId, mode: 'dev-auto-approve' })
       return { triggered: false, error: String(err) }
     }
   }
@@ -174,24 +173,7 @@ async function triggerModeration(photoId: string, storagePath: string): Promise<
     })
 
     if (error) {
-      // Log detailed error info for debugging
-      console.error('Failed to trigger moderation:', error)
-
-      // FunctionsHttpError contains response details
-      const errorDetails: Record<string, unknown> = {
-        name: error.name,
-        message: error.message,
-      }
-
-      // Try to extract more details from the error
-      if ('context' in error) {
-        errorDetails.context = (error as { context?: unknown }).context
-      }
-
-      // Log the full error object for debugging
-      console.error('Full moderation error:', JSON.stringify(error, null, 2))
-      console.error('Moderation error details:', errorDetails)
-      console.error('Hint: Check Supabase Dashboard > Edge Functions > moderate-image > Logs for server-side errors')
+      captureException(error, { operation: 'triggerModeration', photoId, storagePath })
 
       // Update photo status to 'error' so it doesn't stay stuck in 'pending'
       await supabase
@@ -215,7 +197,7 @@ async function triggerModeration(photoId: string, storagePath: string): Promise<
 
     if (data) {
       if (data.error) {
-        console.error('Moderation returned error:', data.error, data.details)
+        captureException(new Error(data.error), { operation: 'triggerModeration', photoId, details: data.details })
         return {
           triggered: true,
           status: 'error',
@@ -223,7 +205,6 @@ async function triggerModeration(photoId: string, storagePath: string): Promise<
         }
       }
 
-      console.log('Moderation completed:', data.status)
       return {
         triggered: true,
         status: data.status,
@@ -233,7 +214,7 @@ async function triggerModeration(photoId: string, storagePath: string): Promise<
     // No data returned - unexpected
     return { triggered: true }
   } catch (err) {
-    console.error('Error invoking moderation function:', err)
+    captureException(err, { operation: 'triggerModeration', photoId, storagePath })
 
     // Update photo status to 'error'
     try {
@@ -296,7 +277,7 @@ export async function uploadProfilePhoto(
       .in('moderation_status', ['pending', 'approved'])
 
     if (countError) {
-      console.error('Error checking photo count:', countError)
+      captureException(countError, { operation: 'uploadProfilePhoto', step: 'checkPhotoCount' })
     } else if (count !== null && count >= MAX_PROFILE_PHOTOS) {
       return {
         success: false,
@@ -393,7 +374,7 @@ export async function getProfilePhotos(): Promise<ProfilePhotoWithUrl[]> {
       .order('created_at', { ascending: false })
 
     if (error || !photos) {
-      console.error('Error fetching profile photos:', error)
+      if (error) captureException(error, { operation: 'getProfilePhotos' })
       return []
     }
 
@@ -410,7 +391,7 @@ export async function getProfilePhotos(): Promise<ProfilePhotoWithUrl[]> {
 
     return photosWithUrls
   } catch (error) {
-    console.error('Error getting profile photos:', error)
+    captureException(error, { operation: 'getProfilePhotos' })
     return []
   }
 }
@@ -439,7 +420,7 @@ export async function getApprovedPhotos(): Promise<ProfilePhotoWithUrl[]> {
       .order('created_at', { ascending: false })
 
     if (error || !photos) {
-      console.error('Error fetching approved photos:', error)
+      if (error) captureException(error, { operation: 'getApprovedPhotos' })
       return []
     }
 
@@ -456,7 +437,7 @@ export async function getApprovedPhotos(): Promise<ProfilePhotoWithUrl[]> {
 
     return photosWithUrls
   } catch (error) {
-    console.error('Error getting approved photos:', error)
+    captureException(error, { operation: 'getApprovedPhotos' })
     return []
   }
 }
@@ -491,7 +472,7 @@ export async function getPhotoById(photoId: string): Promise<ProfilePhotoWithUrl
       signedUrl: urlResult.success ? urlResult.signedUrl : null,
     } as ProfilePhotoWithUrl
   } catch (error) {
-    console.error('Error getting photo by ID:', error)
+    captureException(error, { operation: 'getPhotoById', photoId })
     return null
   }
 }
@@ -670,13 +651,13 @@ export async function hasApprovedPhoto(): Promise<boolean> {
       .eq('moderation_status', 'approved')
 
     if (error) {
-      console.error('Error checking for approved photos:', error)
+      captureException(error, { operation: 'hasApprovedPhoto' })
       return false
     }
 
     return (count ?? 0) > 0
   } catch (error) {
-    console.error('Error checking for approved photos:', error)
+    captureException(error, { operation: 'hasApprovedPhoto' })
     return false
   }
 }
@@ -730,7 +711,7 @@ export async function getPrimaryPhoto(): Promise<ProfilePhotoWithUrl | null> {
       signedUrl: urlResult.success ? urlResult.signedUrl : null,
     } as ProfilePhotoWithUrl
   } catch (error) {
-    console.error('Error getting primary photo:', error)
+    captureException(error, { operation: 'getPrimaryPhoto' })
     return null
   }
 }
@@ -756,13 +737,13 @@ export async function getPhotoCount(): Promise<number> {
       .in('moderation_status', ['pending', 'approved'])
 
     if (error) {
-      console.error('Error getting photo count:', error)
+      captureException(error, { operation: 'getPhotoCount' })
       return 0
     }
 
     return count ?? 0
   } catch (error) {
-    console.error('Error getting photo count:', error)
+    captureException(error, { operation: 'getPhotoCount' })
     return 0
   }
 }

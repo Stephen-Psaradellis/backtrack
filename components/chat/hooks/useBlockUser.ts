@@ -138,8 +138,7 @@ export function useBlockUser({
         .eq('id', conversationId)
 
       if (updateError) {
-        // Log but don't fail - the user is blocked even if conversation update fails
-        console.warn('Failed to update conversation status:', updateError)
+        // Don't fail - the user is blocked even if conversation update fails
       }
 
       // Step 3: Call success callback

@@ -302,12 +302,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           // Success - exit retry loop
           setIsLoading(false)
           return
-        } catch (error) {
-          console.warn(`Auth initialization attempt ${attempt}/${MAX_RETRIES} failed:`, error)
-          if (attempt === MAX_RETRIES) {
-            // All retries exhausted - proceed without session
-            console.warn('Auth initialization failed after all retries')
-          }
+        } catch {
           // Wait briefly before retry (exponential backoff)
           if (attempt < MAX_RETRIES) {
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt))

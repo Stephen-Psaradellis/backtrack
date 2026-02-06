@@ -27,6 +27,7 @@
 
 import { supabase } from './supabase'
 import { trackEvent, AnalyticsEvent, resetAnalytics } from './analytics'
+import { captureException } from './sentry'
 
 // ============================================================================
 // Types
@@ -96,7 +97,7 @@ export async function scheduleAccountDeletion(
     })
 
     if (error) {
-      console.error('[AccountDeletion] Failed to schedule deletion:', error)
+      captureException(error, { operation: 'scheduleAccountDeletion' })
       return {
         success: false,
         message: 'Failed to schedule account deletion',
@@ -111,7 +112,7 @@ export async function scheduleAccountDeletion(
       graceDays: data?.grace_days,
     }
   } catch (error) {
-    console.error('[AccountDeletion] Unexpected error:', error)
+    captureException(error, { operation: 'scheduleAccountDeletion' })
     return {
       success: false,
       message: 'An unexpected error occurred',
@@ -131,7 +132,7 @@ export async function cancelAccountDeletion(): Promise<DeletionResult> {
     const { data, error } = await supabase.rpc('cancel_account_deletion')
 
     if (error) {
-      console.error('[AccountDeletion] Failed to cancel deletion:', error)
+      captureException(error, { operation: 'cancelAccountDeletion' })
       return {
         success: false,
         message: 'Failed to cancel account deletion',
@@ -144,7 +145,7 @@ export async function cancelAccountDeletion(): Promise<DeletionResult> {
       message: data?.message ?? 'Account deletion cancelled',
     }
   } catch (error) {
-    console.error('[AccountDeletion] Unexpected error:', error)
+    captureException(error, { operation: 'cancelAccountDeletion' })
     return {
       success: false,
       message: 'An unexpected error occurred',
@@ -163,7 +164,7 @@ export async function getDeletionStatus(): Promise<DeletionStatus> {
     const { data, error } = await supabase.rpc('get_deletion_status')
 
     if (error) {
-      console.error('[AccountDeletion] Failed to get status:', error)
+      captureException(error, { operation: 'getDeletionStatus' })
       return { scheduled: false }
     }
 
@@ -174,7 +175,7 @@ export async function getDeletionStatus(): Promise<DeletionStatus> {
       reason: data?.reason,
     }
   } catch (error) {
-    console.error('[AccountDeletion] Unexpected error:', error)
+    captureException(error, { operation: 'getDeletionStatus' })
     return { scheduled: false }
   }
 }
@@ -192,7 +193,26 @@ export async function getDeletionStatus(): Promise<DeletionStatus> {
 export async function deleteAccountImmediately(
   userId: string
 ): Promise<DeleteAccountResult> {
-  // Perform deletion first
+  // Verify the authenticated user matches the userId being deleted
+  // This prevents any user from deleting another user's account
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user || user.id !== userId) {
+      return {
+        success: false,
+        message: 'You can only delete your own account.',
+        error: 'Authentication mismatch: user ID does not match authenticated user.',
+      }
+    }
+  } catch {
+    return {
+      success: false,
+      message: 'Failed to verify authentication.',
+      error: 'Could not verify user identity.',
+    }
+  }
+
+  // Perform deletion
   let deletionData: { success: boolean; message?: string; deleted_counts?: Record<string, number>; error?: string } | null = null
 
   try {
@@ -201,7 +221,7 @@ export async function deleteAccountImmediately(
     })
 
     if (error) {
-      console.error('[AccountDeletion] Failed to delete account:', error)
+      captureException(error, { operation: 'deleteAccountImmediately', userId })
       return {
         success: false,
         message: 'Failed to delete account',
@@ -219,7 +239,7 @@ export async function deleteAccountImmediately(
 
     deletionData = data
   } catch (error) {
-    console.error('[AccountDeletion] Unexpected error:', error)
+    captureException(error, { operation: 'deleteAccountImmediately', userId })
     return {
       success: false,
       message: 'An unexpected error occurred',
@@ -232,8 +252,7 @@ export async function deleteAccountImmediately(
   try {
     trackEvent(AnalyticsEvent.ACCOUNT_DELETED)
     await resetAnalytics()
-  } catch (analyticsError) {
-    console.warn('[AccountDeletion] Analytics failed after successful deletion:', analyticsError)
+  } catch {
     // Continue - deletion succeeded, analytics is non-critical
   }
 
@@ -264,8 +283,7 @@ export async function deleteAccountAndSignOut(
   // Then sign out
   try {
     await supabase.auth.signOut()
-  } catch (error) {
-    console.warn('[AccountDeletion] Sign out failed after deletion:', error)
+  } catch {
     // Don't fail the overall operation - data is already deleted
   }
 
