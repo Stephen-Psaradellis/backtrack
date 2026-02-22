@@ -10,8 +10,8 @@
  * ```
  */
 
-import React, { useCallback } from 'react'
-import { View, Text, StyleSheet, Switch, Alert } from 'react-native'
+import React, { useCallback, useState } from 'react'
+import { View, Text, StyleSheet, Switch, Alert, Modal, TouchableOpacity, Platform } from 'react-native'
 import { Picker } from '@react-native-picker/picker'
 
 import { useCheckinSettings } from '../../hooks/useCheckinSettings'
@@ -63,8 +63,26 @@ export function LocationTrackingSettings({
     clearError,
   } = useCheckinSettings()
 
+  const [showDisclosure, setShowDisclosure] = useState(false)
+
   /**
-   * Handle toggle with feedback and confirmation
+   * Proceed with enabling background location after user acknowledges disclosure
+   */
+  const handleConfirmEnable = useCallback(async () => {
+    setShowDisclosure(false)
+    const success = await toggleAlwaysOn()
+    if (success) {
+      await successFeedback()
+    } else {
+      await errorFeedback()
+    }
+  }, [toggleAlwaysOn])
+
+  /**
+   * Handle toggle with feedback and confirmation.
+   * On Android, Google Play requires a prominent in-app disclosure before
+   * requesting ACCESS_BACKGROUND_LOCATION. We show a full-screen modal.
+   * On iOS, Alert.alert is sufficient since Apple handles this via the system dialog.
    */
   const handleToggleAlwaysOn = useCallback(async () => {
     if (settings.always_on_tracking_enabled) {
@@ -75,31 +93,21 @@ export function LocationTrackingSettings({
       } else {
         await errorFeedback()
       }
+    } else if (Platform.OS === 'android') {
+      // Android: Show full-screen disclosure modal (Google Play requirement)
+      setShowDisclosure(true)
     } else {
-      // Turning on - show explanation
+      // iOS: Alert is sufficient
       Alert.alert(
-        'Enable Location Tracking',
-        'When enabled, the app will track your location in the background and prompt you to check in when you\'ve been at a location for the specified time.\n\nThis helps you easily check in to locations you visit regularly.',
+        'Enable Background Location',
+        'Backtrack will use your location in the background to notify you when someone posts a missed connection at a venue you\'re visiting.\n\nYou can disable this anytime in Settings.',
         [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Enable',
-            onPress: async () => {
-              const success = await toggleAlwaysOn()
-              if (success) {
-                await successFeedback()
-              } else {
-                await errorFeedback()
-              }
-            },
-          },
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Enable', onPress: handleConfirmEnable },
         ]
       )
     }
-  }, [settings.always_on_tracking_enabled, toggleAlwaysOn])
+  }, [settings.always_on_tracking_enabled, toggleAlwaysOn, handleConfirmEnable])
 
   /**
    * Handle prompt minutes change
@@ -193,6 +201,55 @@ export function LocationTrackingSettings({
       <Text style={styles.infoText}>
         Check-ins help you connect with others at the same location and unlock features like posting and live views.
       </Text>
+
+      {/* Android background location disclosure modal (Google Play compliance) */}
+      <Modal
+        visible={showDisclosure}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowDisclosure(false)}
+        testID={`${testID}-disclosure-modal`}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Background Location Access</Text>
+
+            <Text style={styles.modalBody}>
+              Backtrack collects your location in the background to detect when
+              you&apos;re at a venue (like a cafe, gym, or park) and prompt you
+              to check in. This powers missed-connection matching at that location.
+            </Text>
+
+            <Text style={styles.modalBody}>
+              Your location is never shared with other users. It is only used to
+              trigger check-in prompts and is not stored after each session.
+            </Text>
+
+            <Text style={styles.modalBody}>
+              You can disable background location at any time from this settings
+              screen or from your device&apos;s system settings.
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButtonCancel}
+                onPress={() => setShowDisclosure(false)}
+                testID={`${testID}-disclosure-cancel`}
+              >
+                <Text style={styles.modalButtonCancelText}>No Thanks</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalButtonConfirm}
+                onPress={handleConfirmEnable}
+                testID={`${testID}-disclosure-confirm`}
+              >
+                <Text style={styles.modalButtonConfirmText}>Allow Background Location</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -276,6 +333,60 @@ const styles = StyleSheet.create({
     color: darkTheme.textMuted,
     marginTop: 8,
     lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: darkTheme.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalBody: {
+    fontSize: 15,
+    color: darkTheme.textSecondary,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  modalButtons: {
+    marginTop: 16,
+    gap: 12,
+  },
+  modalButtonConfirm: {
+    backgroundColor: colors.primary[500],
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalButtonConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonCancel: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  modalButtonCancelText: {
+    color: darkTheme.textMuted,
+    fontSize: 16,
+    fontWeight: '500',
   },
 })
 

@@ -3,13 +3,12 @@
 
 export default ({ config }) => {
   // Separate API keys for iOS and Android (better for security restrictions and usage tracking)
-  const googleMapsIosApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_IOS_API_KEY || '';
-  const googleMapsAndroidApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_ANDROID_API_KEY || '';
-  const easProjectId = process.env.EAS_PROJECT_ID;
-
-  if (!easProjectId) {
-    throw new Error('EAS_PROJECT_ID environment variable is required. Set it in your .env or eas.json.');
-  }
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_API_KEY || '';
+  const googleMapsIosApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_IOS_API_KEY || googleMapsApiKey;
+  const googleMapsAndroidApiKey = process.env.EXPO_PUBLIC_GCP_MAPS_ANDROID_API_KEY || googleMapsApiKey;
+  const easProjectId = process.env.EAS_PROJECT_ID || 'c7e1ae8a-a8e1-4010-b978-d6f52acae3c0';
+  const sentryOrg = process.env.SENTRY_ORG || '';
+  const sentryProject = process.env.SENTRY_PROJECT || '';
 
   return {
     ...config,
@@ -19,7 +18,7 @@ export default ({ config }) => {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+    newArchEnabled: false,
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -34,8 +33,10 @@ export default ({ config }) => {
       runtimeVersion: {
         policy: 'appVersion',
       },
-      associatedDomains: ['applinks:backtrack.social', 'webcredentials:backtrack.social'],
-      // Note: Google Maps API key is configured via react-native-maps plugin
+      associatedDomains: ['applinks:backtrack.social'],
+      config: {
+        googleMapsApiKey: googleMapsIosApiKey,
+      },
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           'Backtrack uses your location to show missed connections at nearby venues like cafes, gyms, and parks you visit.',
@@ -89,10 +90,15 @@ export default ({ config }) => {
       [
         'react-native-maps',
         {
-          iosGoogleMapsApiKey: googleMapsIosApiKey,
-          androidGoogleMapsApiKey: googleMapsAndroidApiKey,
+          googleMapsApiKey: googleMapsIosApiKey,
         },
       ],
+      ...(sentryOrg && sentryProject ? [
+        ['@sentry/react-native/expo', {
+          organization: sentryOrg,
+          project: sentryProject,
+        }],
+      ] : []),
       [
         'expo-updates',
         {

@@ -32,6 +32,7 @@ import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
 // Mock Supabase client
 const mockSupabaseAuth = {
   getUser: vi.fn(),
+  getSession: vi.fn(),
 }
 
 const mockSupabaseRpc = vi.fn()
@@ -50,6 +51,7 @@ const mockSupabaseOn = vi.fn()
 const mockSupabaseSubscribe = vi.fn()
 const mockSupabaseUnsubscribe = vi.fn()
 const mockSupabaseFunctionsInvoke = vi.fn()
+const mockCreateSignedUrls = vi.fn()
 
 // Mock storage
 const mockUploadProfilePhoto = vi.fn()
@@ -200,6 +202,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: {
       getUser: () => mockSupabaseAuth.getUser(),
+      getSession: () => mockSupabaseAuth.getSession(),
     },
     rpc: (fnName: string, params: unknown) => mockSupabaseRpc(fnName, params),
     from: (table: string) => mockSupabaseFrom(table),
@@ -222,6 +225,13 @@ vi.mock('../../lib/supabase', () => ({
     },
     functions: {
       invoke: (fnName: string, opts: unknown) => mockSupabaseFunctionsInvoke(fnName, opts),
+    },
+    storage: {
+      from: () => ({
+        createSignedUrls: (...args: unknown[]) => mockCreateSignedUrls(...args),
+        upload: vi.fn().mockResolvedValue({ data: { path: 'photos/test-user-123/photo.jpg' }, error: null }),
+        remove: vi.fn().mockResolvedValue({ error: null }),
+      }),
     },
   },
   supabaseUrl: 'https://test.supabase.co',
@@ -279,10 +289,22 @@ describe('Profile Photos Service', () => {
       error: null,
     })
 
-    // Default: successful signed URL generation
+    // Default: authenticated session (used by getSession in profilePhotos.ts)
+    mockSupabaseAuth.getSession.mockResolvedValue({
+      data: { session: { user: { id: TEST_USER_ID } } },
+      error: null,
+    })
+
+    // Default: successful signed URL generation (for lib/storage)
     mockGetSignedUrlFromPath.mockResolvedValue({
       success: true,
       signedUrl: TEST_SIGNED_URL,
+      error: null,
+    })
+
+    // Default: successful createSignedUrls for supabase.storage
+    mockCreateSignedUrls.mockResolvedValue({
+      data: [{ signedUrl: TEST_SIGNED_URL }],
       error: null,
     })
 
@@ -370,6 +392,10 @@ describe('Profile Photos Service', () => {
     it('returns error when user is not authenticated', async () => {
       mockSupabaseAuth.getUser.mockResolvedValue({
         data: { user: null },
+        error: null,
+      })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       })
 
@@ -540,6 +566,10 @@ describe('Profile Photos Service', () => {
         data: { user: null },
         error: null,
       })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      })
 
       const result = await getProfilePhotos()
 
@@ -602,6 +632,10 @@ describe('Profile Photos Service', () => {
         data: { user: null },
         error: null,
       })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      })
 
       const result = await getApprovedPhotos()
 
@@ -649,6 +683,10 @@ describe('Profile Photos Service', () => {
         data: { user: null },
         error: null,
       })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      })
 
       const result = await getPhotoById(TEST_PHOTO_ID)
 
@@ -694,6 +732,10 @@ describe('Profile Photos Service', () => {
     it('returns error when user is not authenticated', async () => {
       mockSupabaseAuth.getUser.mockResolvedValue({
         data: { user: null },
+        error: null,
+      })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       })
 
@@ -787,6 +829,10 @@ describe('Profile Photos Service', () => {
         data: { user: null },
         error: null,
       })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      })
 
       const result = await setPrimaryPhoto(TEST_PHOTO_ID)
 
@@ -858,6 +904,10 @@ describe('Profile Photos Service', () => {
         data: { user: null },
         error: null,
       })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      })
 
       const result = await hasApprovedPhoto()
 
@@ -901,6 +951,10 @@ describe('Profile Photos Service', () => {
     it('returns null when user is not authenticated', async () => {
       mockSupabaseAuth.getUser.mockResolvedValue({
         data: { user: null },
+        error: null,
+      })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       })
 
@@ -947,6 +1001,10 @@ describe('Profile Photos Service', () => {
     it('returns 0 when user is not authenticated', async () => {
       mockSupabaseAuth.getUser.mockResolvedValue({
         data: { user: null },
+        error: null,
+      })
+      mockSupabaseAuth.getSession.mockResolvedValue({
+        data: { session: null },
         error: null,
       })
 

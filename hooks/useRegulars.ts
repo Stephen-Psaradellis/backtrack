@@ -32,8 +32,10 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { queryKeys } from './useQueryConfig'
 import type { StoredAvatar } from 'react-native-bitmoji'
 
 // ============================================================================
@@ -133,153 +135,146 @@ export function useRegularsMode(
 ): UseRegularsModeResult {
   const { enabled = true } = options
   const { userId, isAuthenticated } = useAuth()
-  // supabase imported from lib/supabase
+  const queryClient = useQueryClient()
 
-  const [isEnabled, setIsEnabled] = useState(true)
-  const [visibility, setVisibilityState] = useState<RegularsVisibility>('mutual')
-  const [isLoading, setIsLoading] = useState(true)
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [error, setError] = useState<RegularsError | null>(null)
+  // Fetch settings with TanStack Query
+  const {
+    data: settings,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.regulars.mode(userId || ''),
+    queryFn: async () => {
+      if (!isAuthenticated || !userId) {
+        return { regulars_mode_enabled: true, regulars_visibility: 'mutual' as RegularsVisibility }
+      }
 
-  // Load settings
-  const loadSettings = useCallback(async () => {
-    if (!isAuthenticated || !userId) {
-      setIsEnabled(true)
-      setVisibilityState('mutual')
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      setError(null)
-      const { data, error: queryError } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('profiles')
         .select('regulars_mode_enabled, regulars_visibility')
         .eq('id', userId)
         .single()
 
-      if (queryError) {
-        setError({ code: 'FETCH_ERROR', message: queryError.message })
-        return
+      if (fetchError) {
+        throw new Error(fetchError.message)
       }
 
-      setIsEnabled(data?.regulars_mode_enabled ?? true)
-      setVisibilityState(data?.regulars_visibility ?? 'mutual')
-    } catch (err) {
-      setError({
-        code: 'FETCH_ERROR',
-        message: err instanceof Error ? err.message : ERROR_MESSAGES.UNKNOWN,
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [supabase, userId, isAuthenticated])
+      return {
+        regulars_mode_enabled: data?.regulars_mode_enabled ?? true,
+        regulars_visibility: (data?.regulars_visibility ?? 'mutual') as RegularsVisibility,
+      }
+    },
+    enabled: enabled && !!userId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - settings don't change frequently
+    gcTime: 10 * 60 * 1000,
+  })
 
-  // Toggle mode
-  const toggleMode = useCallback(async (): Promise<boolean> => {
-    if (!isAuthenticated || !userId) return false
+  const isEnabled = settings?.regulars_mode_enabled ?? true
+  const visibility = settings?.regulars_visibility ?? 'mutual'
+  const error: RegularsError | null = queryError
+    ? { code: 'FETCH_ERROR', message: queryError.message }
+    : null
 
-    setIsUpdating(true)
-    try {
+  // Toggle mode mutation
+  const toggleModeMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error('Not authenticated')
+
       const { data, error: rpcError } = await supabase.rpc('toggle_regulars_mode', {
         p_user_id: userId,
         p_enabled: null, // Toggle
       })
 
-      if (rpcError) {
-        setError({ code: 'UPDATE_ERROR', message: rpcError.message })
-        return false
-      }
+      if (rpcError) throw new Error(rpcError.message)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.regulars.mode(userId || '') })
+    },
+  })
 
-      setIsEnabled(data)
+  const toggleMode = useCallback(async (): Promise<boolean> => {
+    if (!isAuthenticated || !userId) return false
+    try {
+      await toggleModeMutation.mutateAsync()
       return true
-    } catch (err) {
-      setError({
-        code: 'UPDATE_ERROR',
-        message: err instanceof Error ? err.message : ERROR_MESSAGES.UNKNOWN,
-      })
+    } catch {
       return false
-    } finally {
-      setIsUpdating(false)
     }
-  }, [supabase, userId, isAuthenticated])
+  }, [isAuthenticated, userId, toggleModeMutation])
 
-  // Set mode
+  // Set mode mutation
+  const setModeMutation = useMutation({
+    mutationFn: async (newEnabled: boolean) => {
+      if (!userId) throw new Error('Not authenticated')
+
+      const { data, error: rpcError } = await supabase.rpc('toggle_regulars_mode', {
+        p_user_id: userId,
+        p_enabled: newEnabled,
+      })
+
+      if (rpcError) throw new Error(rpcError.message)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.regulars.mode(userId || '') })
+    },
+  })
+
   const setMode = useCallback(
     async (newEnabled: boolean): Promise<boolean> => {
       if (!isAuthenticated || !userId) return false
       if (newEnabled === isEnabled) return true
 
-      setIsUpdating(true)
       try {
-        const { data, error: rpcError } = await supabase.rpc('toggle_regulars_mode', {
-          p_user_id: userId,
-          p_enabled: newEnabled,
-        })
-
-        if (rpcError) {
-          setError({ code: 'UPDATE_ERROR', message: rpcError.message })
-          return false
-        }
-
-        setIsEnabled(data)
+        await setModeMutation.mutateAsync(newEnabled)
         return true
-      } catch (err) {
-        setError({
-          code: 'UPDATE_ERROR',
-          message: err instanceof Error ? err.message : ERROR_MESSAGES.UNKNOWN,
-        })
+      } catch {
         return false
-      } finally {
-        setIsUpdating(false)
       }
     },
-    [supabase, userId, isAuthenticated, isEnabled]
+    [isAuthenticated, userId, isEnabled, setModeMutation]
   )
 
-  // Set visibility
+  // Set visibility mutation
+  const setVisibilityMutation = useMutation({
+    mutationFn: async (newVisibility: RegularsVisibility) => {
+      if (!userId) throw new Error('Not authenticated')
+
+      const { error: rpcError } = await supabase.rpc('set_regulars_visibility', {
+        p_user_id: userId,
+        p_visibility: newVisibility,
+      })
+
+      if (rpcError) throw new Error(rpcError.message)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.regulars.mode(userId || '') })
+    },
+  })
+
   const setVisibility = useCallback(
     async (newVisibility: RegularsVisibility): Promise<boolean> => {
       if (!isAuthenticated || !userId) return false
       if (newVisibility === visibility) return true
 
-      setIsUpdating(true)
       try {
-        const { error: rpcError } = await supabase.rpc('set_regulars_visibility', {
-          p_user_id: userId,
-          p_visibility: newVisibility,
-        })
-
-        if (rpcError) {
-          setError({ code: 'UPDATE_ERROR', message: rpcError.message })
-          return false
-        }
-
-        setVisibilityState(newVisibility)
+        await setVisibilityMutation.mutateAsync(newVisibility)
         return true
-      } catch (err) {
-        setError({
-          code: 'UPDATE_ERROR',
-          message: err instanceof Error ? err.message : ERROR_MESSAGES.UNKNOWN,
-        })
+      } catch {
         return false
-      } finally {
-        setIsUpdating(false)
       }
     },
-    [supabase, userId, isAuthenticated, visibility]
+    [isAuthenticated, userId, visibility, setVisibilityMutation]
   )
 
   const refresh = useCallback(async () => {
-    setIsLoading(true)
-    await loadSettings()
-  }, [loadSettings])
+    await refetch()
+  }, [refetch])
 
-  useEffect(() => {
-    if (enabled) {
-      loadSettings()
-    }
-  }, [enabled, loadSettings])
+  const isUpdating =
+    toggleModeMutation.isPending || setModeMutation.isPending || setVisibilityMutation.isPending
 
   return {
     isEnabled,
@@ -328,53 +323,44 @@ export function useFellowRegulars(
 ): UseFellowRegularsResult {
   const { enabled = true, locationId } = options
   const { userId, isAuthenticated } = useAuth()
-  // supabase imported from lib/supabase
 
-  const [regulars, setRegulars] = useState<FellowRegular[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<RegularsError | null>(null)
+  const {
+    data: regulars = [],
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.regulars.fellows(userId || '', locationId),
+    queryFn: async () => {
+      if (!isAuthenticated || !userId) {
+        return []
+      }
 
-  const fetchRegulars = useCallback(async () => {
-    if (!isAuthenticated || !userId) {
-      setRegulars([])
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      setError(null)
       const { data, error: rpcError } = await supabase.rpc('get_fellow_regulars', {
         p_user_id: userId,
         p_location_id: locationId || null,
       })
 
       if (rpcError) {
-        setError({ code: 'FETCH_ERROR', message: rpcError.message })
-        return
+        throw new Error(rpcError.message)
       }
 
-      setRegulars(data || [])
-    } catch (err) {
-      setError({
-        code: 'FETCH_ERROR',
-        message: err instanceof Error ? err.message : ERROR_MESSAGES.UNKNOWN,
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [supabase, userId, isAuthenticated, locationId])
+      return (data || []) as FellowRegular[]
+    },
+    enabled: enabled && !!userId && isAuthenticated,
+    staleTime: 60 * 1000, // 1 minute - fairly dynamic data
+    gcTime: 10 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    if (enabled) {
-      fetchRegulars()
-    }
-  }, [enabled, fetchRegulars])
+  const error: RegularsError | null = queryError
+    ? { code: 'FETCH_ERROR', message: queryError.message }
+    : null
 
   return {
     regulars,
     isLoading,
     error,
-    refetch: fetchRegulars,
+    refetch,
   }
 }
 
@@ -417,90 +403,110 @@ export function useLocationRegulars(
 ): UseLocationRegularsResult {
   const { enabled = true, limit = 20 } = options
   const { userId, isAuthenticated } = useAuth()
-  // supabase imported from lib/supabase
 
-  const [regulars, setRegulars] = useState<LocationRegular[]>([])
-  const [totalCount, setTotalCount] = useState(0)
-  const [isUserRegular, setIsUserRegular] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<RegularsError | null>(null)
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.regulars.location(locationId, userId),
+    queryFn: async () => {
+      if (!locationId) {
+        return { regulars: [], totalCount: 0, isUserRegular: false }
+      }
 
-  const fetchData = useCallback(async () => {
-    if (!locationId) {
-      setRegulars([])
-      setTotalCount(0)
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      setError(null)
-
-      // Get count (always available)
-      const { data: countData, error: countError } = await supabase.rpc(
-        'get_location_regulars_count',
-        { p_location_id: locationId }
+      // P-017: Combine 3 round-trips into single RPC
+      // Try optimized RPC first (combines count, is_regular check, and regulars list)
+      const { data: combinedData, error: combinedError } = await supabase.rpc(
+        'get_location_regulars_with_status',
+        {
+          p_location_id: locationId,
+          p_user_id: userId || null,
+          p_limit: limit,
+        }
       )
 
-      if (countError) {
-        setError({ code: 'FETCH_ERROR', message: countError.message })
-        return
-      }
-
-      setTotalCount(countData || 0)
-
-      // Check if user is a regular
-      if (isAuthenticated && userId) {
-        const { data: userRegularData } = await supabase
-          .from('location_regulars')
-          .select('is_regular')
-          .eq('location_id', locationId)
-          .eq('user_id', userId)
-          .single()
-
-        setIsUserRegular(userRegularData?.is_regular ?? false)
-
-        // If user is a regular, get the list
-        if (userRegularData?.is_regular) {
-          const { data: regularsData, error: regularsError } = await supabase.rpc(
-            'get_location_regulars',
-            {
-              p_location_id: locationId,
-              p_limit: limit,
-            }
+      if (combinedError) {
+        // If RPC doesn't exist yet, fall back to legacy approach
+        if (combinedError.code === 'PGRST202') {
+          // Legacy: Get count (always available)
+          const { data: countData, error: countError } = await supabase.rpc(
+            'get_location_regulars_count',
+            { p_location_id: locationId }
           )
 
-          if (regularsError) {
-            setError({ code: 'FETCH_ERROR', message: regularsError.message })
-            return
+          if (countError) {
+            throw new Error(countError.message)
           }
 
-          setRegulars(regularsData || [])
+          const totalCount = countData || 0
+          let isUserRegular = false
+          let regulars: LocationRegular[] = []
+
+          // Check if user is a regular
+          if (isAuthenticated && userId) {
+            const { data: userRegularData } = await supabase
+              .from('location_regulars')
+              .select('is_regular')
+              .eq('location_id', locationId)
+              .eq('user_id', userId)
+              .single()
+
+            isUserRegular = userRegularData?.is_regular ?? false
+
+            // If user is a regular, get the list
+            if (userRegularData?.is_regular) {
+              const { data: regularsData, error: regularsError } = await supabase.rpc(
+                'get_location_regulars',
+                {
+                  p_location_id: locationId,
+                  p_limit: limit,
+                }
+              )
+
+              if (regularsError) {
+                throw new Error(regularsError.message)
+              }
+
+              regulars = regularsData || []
+            }
+          }
+
+          return { regulars, totalCount, isUserRegular }
+        } else {
+          throw new Error(combinedError.message)
         }
       }
-    } catch (err) {
-      setError({
-        code: 'FETCH_ERROR',
-        message: err instanceof Error ? err.message : ERROR_MESSAGES.UNKNOWN,
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [supabase, locationId, userId, isAuthenticated, limit])
 
-  useEffect(() => {
-    if (enabled) {
-      fetchData()
-    }
-  }, [enabled, fetchData])
+      // Optimized path: single RPC returns all data
+      if (combinedData && combinedData.length > 0) {
+        const result = combinedData[0]
+        return {
+          regulars: (result.regulars || []) as LocationRegular[],
+          totalCount: result.total_count ?? 0,
+          isUserRegular: result.is_user_regular ?? false,
+        }
+      }
+
+      return { regulars: [], totalCount: 0, isUserRegular: false }
+    },
+    enabled: enabled && !!locationId,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 10 * 60 * 1000,
+  })
+
+  const error: RegularsError | null = queryError
+    ? { code: 'FETCH_ERROR', message: queryError.message }
+    : null
 
   return {
-    regulars,
-    totalCount,
-    isUserRegular,
+    regulars: data?.regulars || [],
+    totalCount: data?.totalCount || 0,
+    isUserRegular: data?.isUserRegular || false,
     isLoading,
     error,
-    refetch: fetchData,
+    refetch,
   }
 }
 

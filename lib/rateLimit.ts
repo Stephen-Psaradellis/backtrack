@@ -1,5 +1,10 @@
 /**
- * Rate Limiting Service
+ * Client-Side Rate Limiting (UX-only)
+ *
+ * IMPORTANT: This module provides CLIENT-SIDE rate limiting for user experience
+ * purposes only. It is trivially bypassable (in-memory Map, cleared on restart,
+ * clearRateLimitStore() exported). All critical rate limits MUST be enforced
+ * server-side via Supabase RLS policies or Edge Function middleware.
  *
  * Provides in-memory rate limiting for API routes to prevent abuse.
  * Uses a sliding window algorithm for fair rate limiting.

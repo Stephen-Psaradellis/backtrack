@@ -36,6 +36,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import * as Location from 'expo-location'
 
 import { supabase } from '../lib/supabase'
+import { reduceCoordinatePrecision } from '../lib/utils/geoPrivacy'
 import type { ActiveCheckin } from '../types/database'
 
 // ============================================================================
@@ -190,11 +191,17 @@ export function useCheckin(): UseCheckinResult {
         accuracy: Location.Accuracy.High,
       })
 
-      // Call the RPC function
+      // Reduce coordinate precision for privacy (GDPR compliance)
+      // 4 decimal places = ~11m resolution for check-in verification
+      // Note: Different from background tracking which uses 2 decimals (~1.1km)
+      const reducedLat = reduceCoordinatePrecision(location.coords.latitude, 4)
+      const reducedLon = reduceCoordinatePrecision(location.coords.longitude, 4)
+
+      // Call the RPC function with reduced precision coordinates
       const { data, error: rpcError } = await supabase.rpc('checkin_to_location', {
         p_location_id: locationId,
-        p_user_lat: location.coords.latitude,
-        p_user_lon: location.coords.longitude,
+        p_user_lat: reducedLat,
+        p_user_lon: reducedLon,
         p_accuracy: location.coords.accuracy,
       })
 

@@ -68,6 +68,12 @@ export interface Profile {
   always_on_tracking_enabled: boolean
   /** Minutes to wait before prompting user to check in when at same location (1-60) */
   checkin_prompt_minutes: number
+  /** Timestamp until which ghost mode is active (null or past = visible, future = hidden) */
+  ghost_mode_until: Timestamp | null
+  /** Trust level (1-5): 1=Newcomer, 2=Regular, 3=Trusted, 4=Verified, 5=Ambassador */
+  trust_level: number
+  /** Accumulated trust points based on engagement metrics */
+  trust_points: number
   /** Timestamp when the profile was created */
   created_at: Timestamp
   /** Timestamp when the profile was last updated */
@@ -88,6 +94,9 @@ export interface ProfileInsert {
   terms_accepted_at?: Timestamp | null
   always_on_tracking_enabled?: boolean
   checkin_prompt_minutes?: number
+  ghost_mode_until?: Timestamp | null
+  trust_level?: number
+  trust_points?: number
   created_at?: Timestamp
   updated_at?: Timestamp
 }
@@ -103,6 +112,9 @@ export interface ProfileUpdate {
   terms_accepted_at?: Timestamp | null
   always_on_tracking_enabled?: boolean
   checkin_prompt_minutes?: number
+  ghost_mode_until?: Timestamp | null
+  trust_level?: number
+  trust_points?: number
   updated_at?: Timestamp
 }
 
@@ -813,6 +825,177 @@ export interface BlockedUserInsert {
 }
 
 // ============================================================================
+// VENUE STORIES
+// ============================================================================
+
+/**
+ * Venue story - ephemeral (4-hour) story about what's happening at a venue
+ *
+ * Users can post stories about venues they have checked in to.
+ * Stories expire after 4 hours and are visible to all users.
+ */
+export interface VenueStory {
+  /** Unique identifier for the story */
+  id: UUID
+  /** Location where the story was posted */
+  location_id: UUID
+  /** User who posted the story */
+  user_id: UUID
+  /** Story content (max 140 characters) */
+  content: string
+  /** Timestamp when the story was created */
+  created_at: Timestamp
+  /** Timestamp when the story expires (4 hours after creation) */
+  expires_at: Timestamp
+}
+
+// ============================================================================
+// GROUP HANGOUTS (M-054)
+// ============================================================================
+
+/**
+ * Vibe/mood for a hangout
+ */
+export type HangoutVibe = 'chill' | 'party' | 'adventure' | 'food' | 'creative' | 'active'
+
+/**
+ * Status of a hangout
+ */
+export type HangoutStatus = 'open' | 'full' | 'cancelled' | 'completed'
+
+/**
+ * Attendee status for a hangout
+ */
+export type AttendeeStatus = 'going' | 'maybe' | 'declined'
+
+/**
+ * Group hangout - coordinated meetup at a specific location and time
+ */
+export interface Hangout {
+  /** Unique identifier for the hangout */
+  id: UUID
+  /** User who created the hangout */
+  creator_id: UUID
+  /** Location where the hangout will take place */
+  location_id: UUID
+  /** Title of the hangout */
+  title: string
+  /** Optional description */
+  description: string | null
+  /** When the hangout is scheduled */
+  scheduled_for: Timestamp
+  /** Maximum number of attendees */
+  max_attendees: number
+  /** Current status */
+  status: HangoutStatus
+  /** Vibe/mood of the hangout */
+  vibe: HangoutVibe | null
+  /** Whether the hangout is active */
+  is_active: boolean
+  /** When the hangout was created */
+  created_at: Timestamp
+  /** When the hangout was last updated */
+  updated_at: Timestamp
+}
+
+/**
+ * Fields required when inserting a new hangout
+ */
+export interface HangoutInsert {
+  id?: UUID
+  creator_id: UUID
+  location_id: UUID
+  title: string
+  description?: string | null
+  scheduled_for: Timestamp
+  max_attendees?: number
+  status?: HangoutStatus
+  vibe?: HangoutVibe | null
+  is_active?: boolean
+  created_at?: Timestamp
+  updated_at?: Timestamp
+}
+
+/**
+ * Fields that can be updated on a hangout
+ */
+export interface HangoutUpdate {
+  title?: string
+  description?: string | null
+  scheduled_for?: Timestamp
+  max_attendees?: number
+  status?: HangoutStatus
+  vibe?: HangoutVibe | null
+  is_active?: boolean
+  updated_at?: Timestamp
+}
+
+/**
+ * Hangout attendee record
+ */
+export interface HangoutAttendee {
+  /** Unique identifier */
+  id: UUID
+  /** Hangout being attended */
+  hangout_id: UUID
+  /** User attending */
+  user_id: UUID
+  /** Attendance status */
+  status: AttendeeStatus
+  /** When the user joined */
+  joined_at: Timestamp
+}
+
+/**
+ * Fields required when inserting a new attendee
+ */
+export interface HangoutAttendeeInsert {
+  id?: UUID
+  hangout_id: UUID
+  user_id: UUID
+  status?: AttendeeStatus
+  joined_at?: Timestamp
+}
+
+/**
+ * Hangout with location and attendee details (from get_nearby_hangouts RPC)
+ */
+export interface HangoutWithDetails extends Hangout {
+  /** Location name */
+  location_name: string
+  /** Number of attendees */
+  attendee_count: number
+  /** Creator's avatar */
+  creator_avatar: StoredAvatar | null
+  /** Attendee avatars (up to 3) */
+  attendee_avatars: (StoredAvatar | null)[]
+}
+
+/**
+ * Fields required when inserting a new venue story
+ */
+export interface VenueStoryInsert {
+  id?: UUID
+  location_id: UUID
+  user_id: UUID
+  content: string
+  created_at?: Timestamp
+  expires_at?: Timestamp
+}
+
+/**
+ * Venue story with user profile details (from get_venue_stories RPC)
+ */
+export interface VenueStoryWithProfile extends VenueStory {
+  /** User's display name */
+  display_name: string | null
+  /** User's avatar */
+  avatar: StoredAvatar | null
+  /** Whether the user is verified */
+  is_verified: boolean
+}
+
+// ============================================================================
 // REPORTS
 // ============================================================================
 
@@ -1166,6 +1349,11 @@ export interface Database {
         Row: Report
         Insert: ReportInsert
         Update: ReportUpdate
+      }
+      venue_stories: {
+        Row: VenueStory
+        Insert: VenueStoryInsert
+        Update: never
       }
     }
     Views: Record<string, never>

@@ -86,6 +86,32 @@ export const colors = {
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
+
+  // Dark mode surfaces
+  surface: {
+    background: '#0F0F13',
+    card: '#16161D',
+    cardElevated: '#1C1C24',
+    overlay: '#242430',
+    border: 'rgba(255, 255, 255, 0.06)',
+    borderFocused: 'rgba(255, 255, 255, 0.12)',
+  },
+
+  // Dark mode text
+  text: {
+    primary: '#FFFFFF',
+    secondary: 'rgba(255, 255, 255, 0.7)',
+    muted: 'rgba(255, 255, 255, 0.5)',
+    disabled: 'rgba(255, 255, 255, 0.45)',
+    inverse: '#0F0F13',
+  },
+
+  // Glass effects
+  glass: {
+    background: 'rgba(22, 22, 29, 0.85)',
+    border: 'rgba(255, 255, 255, 0.06)',
+    blur: 20,
+  },
 } as const;
 
 // ============================================================================
@@ -130,6 +156,8 @@ export const typography = {
   fontFamily: {
     sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
+    display: 'PlusJakartaSans_700Bold',
+    displayMedium: 'PlusJakartaSans_600SemiBold',
   },
   fontSize: {
     xs: 12,
@@ -440,3 +468,18 @@ export const theme = {
 } as const;
 
 export default theme;
+
+// Note: darkTheme is in constants/glassStyles (not re-exported here to avoid circular dependency)
+
+// ============================================================================
+// UPPERCASE ALIASES (for compatibility with existing components)
+// ============================================================================
+
+/**
+ * Uppercase aliases for components that use uppercase imports
+ * These are references to the lowercase versions above
+ */
+export const COLORS = colors;
+export const SPACING = spacing;
+export const BORDER_RADIUS = borderRadius;
+export const SHADOWS = shadows.native;

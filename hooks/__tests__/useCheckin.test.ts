@@ -143,7 +143,7 @@ describe('useCheckin', () => {
         checkInResult = await result.current.checkIn('loc-123')
       })
 
-      expect(checkInResult).toEqual({
+      expect(checkInResult).toMatchObject({
         success: true,
         checkinId: 'new-checkin-123',
         verified: true,

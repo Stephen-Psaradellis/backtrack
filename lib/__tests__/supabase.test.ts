@@ -51,7 +51,13 @@ vi.mock('../dev/shared-mock-client', () => ({
     },
     from: vi.fn(() => ({
       delete: vi.fn(() => ({
-        eq: mockDeleteEq,
+        // Both single and double .eq() chains resolve via mockDeleteEq
+        eq: vi.fn(() => ({
+          eq: mockDeleteEq,
+          // Make single-eq also awaitable (removeAllUserPushTokens)
+          then: (resolve: (v: any) => void) => mockDeleteEq().then(resolve),
+          catch: (reject: (e: any) => void) => mockDeleteEq().catch(reject),
+        })),
       })),
     })),
     rpc: mockRpc,
@@ -446,6 +452,8 @@ describe('savePushToken', () => {
 describe('removePushToken', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // removePushToken now requires authentication before deleting
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null })
     mockDeleteEq.mockResolvedValue({ error: null })
   })
 

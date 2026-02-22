@@ -39,12 +39,10 @@ vi.mock('react-native', () => ({
   },
 }))
 
-// Mock expo-file-system with new File class
-vi.mock('expo-file-system', () => ({
-  File: class MockFile {
-    constructor(public uri: string) {}
-    base64 = vi.fn(() => Promise.resolve('iVBORwZXN0LWJhc2U2NA==')) // fake base64
-  },
+// Mock expo-file-system/legacy (what storage.ts imports)
+vi.mock('expo-file-system/legacy', () => ({
+  readAsStringAsync: vi.fn(() => Promise.resolve('iVBORwZXN0LWJhc2U2NA==')), // fake base64
+  EncodingType: { Base64: 'base64' },
 }))
 
 // Mock base64-arraybuffer

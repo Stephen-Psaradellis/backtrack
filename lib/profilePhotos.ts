@@ -95,10 +95,11 @@ function generatePhotoId(): string {
 
 /**
  * Get the current authenticated user ID
+ * P-016: Use getSession() instead of getUser() for local cache (no HTTP request)
  */
 async function getCurrentUserId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser()
-  return user?.id ?? null
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.user?.id ?? null
 }
 
 /**
@@ -378,16 +379,20 @@ export async function getProfilePhotos(): Promise<ProfilePhotoWithUrl[]> {
       return []
     }
 
-    // Get signed URLs for all photos
-    const photosWithUrls: ProfilePhotoWithUrl[] = await Promise.all(
-      photos.map(async (photo) => {
-        const urlResult = await getSignedUrlFromPath(photo.storage_path)
-        return {
-          ...photo,
-          signedUrl: urlResult.success ? urlResult.signedUrl : null,
-        } as ProfilePhotoWithUrl
-      })
-    )
+    // P-014: Batch profile photo signed URL generation
+    // Get all storage paths
+    const storagePaths = photos.map((p) => p.storage_path)
+
+    // Batch request signed URLs
+    const { data: signedUrls, error: urlError } = await supabase.storage
+      .from('profile-photos')
+      .createSignedUrls(storagePaths, 3600) // 1 hour expiry
+
+    // Map signed URLs back to photos
+    const photosWithUrls: ProfilePhotoWithUrl[] = photos.map((photo, index) => ({
+      ...photo,
+      signedUrl: urlError ? null : signedUrls?.[index]?.signedUrl ?? null,
+    })) as ProfilePhotoWithUrl[]
 
     return photosWithUrls
   } catch (error) {
@@ -424,16 +429,20 @@ export async function getApprovedPhotos(): Promise<ProfilePhotoWithUrl[]> {
       return []
     }
 
-    // Get signed URLs for all photos
-    const photosWithUrls: ProfilePhotoWithUrl[] = await Promise.all(
-      photos.map(async (photo) => {
-        const urlResult = await getSignedUrlFromPath(photo.storage_path)
-        return {
-          ...photo,
-          signedUrl: urlResult.success ? urlResult.signedUrl : null,
-        } as ProfilePhotoWithUrl
-      })
-    )
+    // P-014: Batch profile photo signed URL generation
+    // Get all storage paths
+    const storagePaths = photos.map((p) => p.storage_path)
+
+    // Batch request signed URLs
+    const { data: signedUrls, error: urlError } = await supabase.storage
+      .from('profile-photos')
+      .createSignedUrls(storagePaths, 3600) // 1 hour expiry
+
+    // Map signed URLs back to photos
+    const photosWithUrls: ProfilePhotoWithUrl[] = photos.map((photo, index) => ({
+      ...photo,
+      signedUrl: urlError ? null : signedUrls?.[index]?.signedUrl ?? null,
+    })) as ProfilePhotoWithUrl[]
 
     return photosWithUrls
   } catch (error) {
@@ -759,6 +768,13 @@ export async function getPhotoCount(): Promise<number> {
 export function subscribeToPhotoChanges(
   callback: (photos: ProfilePhoto[]) => void
 ): () => void {
+  // P-015: Filter subscription to current user only
+  // Get user ID synchronously from session cache
+  let userId: string | null = null
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    userId = session?.user?.id ?? null
+  })
+
   const channel = supabase
     .channel('profile_photos_changes')
     .on(
@@ -767,6 +783,7 @@ export function subscribeToPhotoChanges(
         event: '*',
         schema: 'public',
         table: 'profile_photos',
+        filter: userId ? `user_id=eq.${userId}` : undefined,
       },
       async () => {
         // Refetch all photos when any change occurs

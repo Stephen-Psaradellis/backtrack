@@ -1,0 +1,48 @@
+appId: com.backtrack.app
+---
+# Profile Edit Flow
+# Tests editing user profile information
+
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Navigate to profile tab
+- tapOn: "Me tab"
+- waitForAnimationToEnd
+
+# Verify we're on profile screen
+- assertVisible:
+    id: "profile-screen"
+
+# Tap edit button for display name
+- tapOn: "Edit display name"
+- waitForAnimationToEnd
+
+# Clear existing name and enter new one
+- tapOn:
+    id: "profile-display-name-input"
+- clearKeyboard
+- inputText: "Test User Updated"
+
+# Save changes
+- tapOn: "Save display name changes"
+- waitForAnimationToEnd
+
+# Verify changes were saved
+- assertVisible: "Test User Updated"
+
+# Test cancel functionality
+- tapOn: "Edit display name"
+- tapOn:
+    id: "profile-display-name-input"
+- clearKeyboard
+- inputText: "This should be cancelled"
+
+# Cancel editing
+- tapOn: "Cancel editing"
+- waitForAnimationToEnd
+
+# Verify old name is still shown
+- assertVisible: "Test User Updated"

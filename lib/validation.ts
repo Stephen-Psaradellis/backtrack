@@ -118,14 +118,12 @@ const DANGEROUS_PATTERNS = [
 /**
  * URL pattern for detection
  */
-const URL_PATTERN = /https?:\/\/[^\s]+/gi
+const URL_PATTERN = /https?:\/\/[^\s]+/i
 
-/**
- * Characters that could be used for SQL injection
- */
-const SQL_INJECTION_PATTERNS = [
-  /(\s|;|--|\/\*|\*\/|@@|@|char|nchar|varchar|nvarchar|alter|begin|cast|create|cursor|declare|delete|drop|end|exec|execute|fetch|insert|kill|select|sys|sysobjects|syscolumns|table|update)\b/gi,
-]
+// SQL_INJECTION_PATTERNS removed: The app uses parameterized queries via
+// Supabase SDK exclusively, so client-side SQL keyword stripping is unnecessary
+// and actively harmful (strips legitimate words like "select", "table", "update"
+// from user content).
 
 // ============================================================================
 // EMAIL VALIDATION
@@ -388,12 +386,6 @@ export function sanitizeText(text: string, allowHtml = false): string {
  */
 export function sanitizeForStorage(text: string): string {
   let sanitized = sanitizeText(text, false)
-
-  // Remove potential SQL injection patterns (basic protection)
-  // Note: Always use parameterized queries for full protection
-  for (const pattern of SQL_INJECTION_PATTERNS) {
-    sanitized = sanitized.replace(pattern, '')
-  }
 
   return sanitized
 }

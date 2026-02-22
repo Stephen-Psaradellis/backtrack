@@ -30,6 +30,7 @@ import NetInfo, {
   NetInfoSubscription,
   NetInfoStateType,
 } from '@react-native-community/netinfo'
+import { networkStatusSingleton } from '../lib/network/singleton'
 
 // ============================================================================
 // TYPES
@@ -317,7 +318,7 @@ export function useNetworkStatus(
   }, [updateFromNetInfoState, setError])
 
   /**
-   * Start listening for network changes
+   * Start listening for network changes (P-041: using singleton)
    */
   const startListening = useCallback((): void => {
     // Stop any existing subscription
@@ -327,8 +328,8 @@ export function useNetworkStatus(
     }
 
     try {
-      // Subscribe to network state changes
-      subscriptionRef.current = NetInfo.addEventListener((netInfoState) => {
+      // Subscribe via singleton to deduplicate NetInfo listeners
+      subscriptionRef.current = networkStatusSingleton.addListener((netInfoState) => {
         updateFromNetInfoState(netInfoState)
       })
 
@@ -339,6 +340,12 @@ export function useNetworkStatus(
         intervalRef.current = setInterval(() => {
           refresh()
         }, config.reachabilityCheckInterval)
+      }
+
+      if (__DEV__) {
+        console.log(
+          `[useNetworkStatus] Subscribed via singleton (${networkStatusSingleton.getListenerCount()} total listeners)`
+        )
       }
     } catch (error) {
       setError(ERROR_MESSAGES.LISTENER_FAILED)

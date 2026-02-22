@@ -3,6 +3,7 @@
  * Shared TypeScript interfaces for chat-related components and hooks
  */
 
+import type { ViewStyle, StyleProp } from 'react-native'
 import type { Message, Profile, ReportReason, UUID } from './database'
 
 // ============================================================================
@@ -76,8 +77,8 @@ export interface MessageListProps {
  * Props for the TypingIndicator component
  */
 export interface TypingIndicatorProps {
-  isTyping: boolean
-  username?: string
+  isVisible: boolean
+  style?: StyleProp<ViewStyle>
 }
 
 /**

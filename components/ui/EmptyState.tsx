@@ -1,7 +1,6 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Button } from './Button';
 
 export type EmptyStateVariant =
   | 'no-posts'
@@ -186,14 +185,14 @@ export function EmptyState({
       {(actionLabel || secondaryActionLabel) && (
         <div className="flex flex-col sm:flex-row gap-3">
           {actionLabel && onAction && (
-            <Button onClick={onAction} size="md">
+            <button onClick={onAction} className="px-4 py-2 bg-primary-500 text-white rounded-lg">
               {actionLabel}
-            </Button>
+            </button>
           )}
           {secondaryActionLabel && onSecondaryAction && (
-            <Button variant="ghost" onClick={onSecondaryAction} size="md">
+            <button onClick={onSecondaryAction} className="px-4 py-2 text-neutral-500 dark:text-neutral-400">
               {secondaryActionLabel}
-            </Button>
+            </button>
           )}
         </div>
       )}

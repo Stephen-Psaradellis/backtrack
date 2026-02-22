@@ -20,11 +20,10 @@
  * ```
  */
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, memo } from 'react'
 import {
   View,
   TouchableOpacity,
-  Text,
   StyleSheet,
   type ViewStyle,
 } from 'react-native'
@@ -64,19 +63,27 @@ export interface FloatingActionButtonsProps {
   style?: ViewStyle
   /** Test ID prefix for testing */
   testID?: string
+  /** Controls whether the FABs are rendered. Defaults to true. Set to false on screens where FABs should be hidden (e.g., Profile, Chats). */
+  isVisible?: boolean
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function FloatingActionButtons({
+function FloatingActionButtonsBase({
   style,
   testID = 'floating-action-buttons',
+  isVisible = true,
 }: FloatingActionButtonsProps): React.ReactNode {
   const insets = useSafeAreaInsets()
   const { activeCheckin } = useCheckin()
   const [showLiveView, setShowLiveView] = useState(false)
+
+  // Hide FABs on screens where they are not relevant (e.g., Profile, Chats)
+  if (!isVisible) {
+    return null
+  }
 
   // Calculate dynamic bottom position above tab bar + safe area
   const dynamicBottom = TAB_BAR_HEIGHT + Math.max(insets.bottom, 8) + TAB_BAR_GAP
@@ -117,20 +124,13 @@ export function FloatingActionButtons({
               ? `View who's at ${activeCheckin.location_name}`
               : 'Live View - Check in to see who else is here'
           }
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <Ionicons
             name="people"
-            size={20}
+            size={18}
             color={activeCheckin ? '#FFFFFF' : colors.accent[500]}
           />
-          <Text
-            style={[
-              styles.liveViewText,
-              activeCheckin ? styles.liveViewTextActive : styles.liveViewTextDefault,
-            ]}
-          >
-            Live View
-          </Text>
         </TouchableOpacity>
       </View>
 
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   liveViewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 10,
     borderRadius: 20,
     gap: 6,
@@ -180,16 +180,8 @@ const styles = StyleSheet.create({
   liveViewButtonActive: {
     backgroundColor: colors.accent[500],
   },
-  liveViewText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  liveViewTextDefault: {
-    color: colors.accent[500],
-  },
-  liveViewTextActive: {
-    color: '#FFFFFF',
-  },
 })
+
+export const FloatingActionButtons = memo(FloatingActionButtonsBase)
 
 export default FloatingActionButtons

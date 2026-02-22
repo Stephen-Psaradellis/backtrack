@@ -40,6 +40,7 @@ import { useRoute, useNavigation } from '@react-navigation/native'
 import { PostCard } from '../components/PostCard'
 import { PostFilters } from '../components/PostFilters'
 import { CheckinButton } from '../components/CheckinButton'
+import { VenueStories } from '../components/VenueStories'
 import { useCheckin } from '../hooks/useCheckin'
 import { selectionFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
@@ -382,6 +383,13 @@ export function LedgerScreen(): React.ReactNode {
           disabled={loading}
           testID="ledger-time-filter"
         />
+        {resolvedLocationId && (
+          <VenueStories
+            locationId={resolvedLocationId}
+            userHasCheckedIn={isCheckedInHere}
+            testID="ledger-venue-stories"
+          />
+        )}
       </View>
     )
   }, [resolvedLocationId, locationName, posts.length, timeFilter, handleTimeFilterChange, loading, isCheckedInAt, activeCheckin])

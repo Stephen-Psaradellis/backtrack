@@ -1,29 +1,16 @@
 /**
  * UI Components Index
  *
- * Central export point for all UI components (web).
- * Import components like: import { Button, Card, Avatar } from './'
+ * Central export point for UI components.
+ * Note: Web-only components (Button, Card, Input, Badge, Icons) were removed.
+ * Use the React Native equivalents in components/ instead.
  */
-
-// Core interactive components
-export { Button } from './Button';
-export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
-
-export { Input } from './Input';
-export type { InputProps } from './Input';
 
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
 
-// Display components
-export { Card, CardHeader, CardContent, CardFooter } from './Card';
-export type { CardProps, CardHeaderProps, CardVariant } from './Card';
-
 export { Avatar, AvatarGroup } from './Avatar';
 export type { AvatarProps, AvatarGroupProps, AvatarSize, AvatarStatus } from './Avatar';
-
-export { Badge, BadgeGroup, NotificationBadge } from './Badge';
-export type { BadgeProps, BadgeGroupProps, NotificationBadgeProps, BadgeVariant, BadgeSize } from './Badge';
 
 // Loading states
 export {
@@ -45,7 +32,6 @@ export type { EmptyStateProps, EmptyStateVariant } from './EmptyState';
 export { AnimatedList, AnimatedListItem } from './AnimatedList';
 export type { AnimatedListProps, AnimatedListItemProps } from './AnimatedList';
 
-
-// Icons
-export * from './Icons';
-export { default as Icons } from './Icons';
+// Cached Image (P-030)
+export { CachedImage } from '../CachedImage';
+export type { CachedImageProps } from '../CachedImage';

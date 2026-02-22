@@ -25,7 +25,7 @@
  * ```
  */
 
-import { supabase } from './supabase'
+import { supabase, type AppSupabaseClient } from './supabase'
 import type { Block, ReportedType } from '../types/database'
 
 // ============================================================================
@@ -182,6 +182,7 @@ export function validateBlockRequest(
  *
  * @param blockerId - The user ID doing the blocking
  * @param blockedId - The user ID being blocked
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns Result indicating success or failure
  *
  * @example
@@ -192,7 +193,8 @@ export function validateBlockRequest(
  */
 export async function blockUser(
   blockerId: string | null | undefined,
-  blockedId: string | null | undefined
+  blockedId: string | null | undefined,
+  client: AppSupabaseClient = supabase
 ): Promise<BlockResult> {
   // Validate inputs
   const validationError = validateBlockRequest(blockerId, blockedId)
@@ -205,7 +207,7 @@ export async function blockUser(
 
   try {
     // Call the database function that handles block creation and conversation deactivation
-    const { error } = await supabase.rpc('block_user', {
+    const { error } = await client.rpc('block_user', {
       blocker: blockerId as string,
       blocked: blockedId as string,
     })
@@ -238,6 +240,7 @@ export async function blockUser(
  *
  * @param blockerId - The user ID who created the block
  * @param blockedId - The user ID who was blocked
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns Result indicating success or failure
  *
  * @example
@@ -248,7 +251,8 @@ export async function blockUser(
  */
 export async function unblockUser(
   blockerId: string | null | undefined,
-  blockedId: string | null | undefined
+  blockedId: string | null | undefined,
+  client: AppSupabaseClient = supabase
 ): Promise<BlockResult> {
   // Validate inputs
   const validationError = validateBlockRequest(blockerId, blockedId)
@@ -261,7 +265,7 @@ export async function unblockUser(
 
   try {
     // Call the database function to remove the block
-    const { error } = await supabase.rpc('unblock_user', {
+    const { error } = await client.rpc('unblock_user', {
       blocker: blockerId as string,
       blocked: blockedId as string,
     })
@@ -291,6 +295,7 @@ export async function unblockUser(
  *
  * @param blockerId - The potential blocker
  * @param blockedId - The potentially blocked user
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns Whether the block exists
  *
  * @example
@@ -301,7 +306,8 @@ export async function unblockUser(
  */
 export async function isUserBlocked(
   blockerId: string | null | undefined,
-  blockedId: string | null | undefined
+  blockedId: string | null | undefined,
+  client: AppSupabaseClient = supabase
 ): Promise<BlockStatusResult> {
   // Validate inputs
   const validationError = validateBlockRequest(blockerId, blockedId)
@@ -314,7 +320,7 @@ export async function isUserBlocked(
   }
 
   try {
-    const { data, error } = await supabase.rpc('is_user_blocked', {
+    const { data, error } = await client.rpc('is_user_blocked', {
       blocker: blockerId as string,
       blocked: blockedId as string,
     })

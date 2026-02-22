@@ -92,6 +92,8 @@ export function MatchingPermissionModal({
             onPress={handleClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID={`${testID}-close`}
+            accessibilityLabel="Close matching permission dialog"
+            accessibilityRole="button"
           >
             <Ionicons name="close" size={24} color="#8E8E93" />
           </TouchableOpacity>

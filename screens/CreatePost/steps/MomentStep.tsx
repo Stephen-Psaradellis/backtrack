@@ -24,7 +24,7 @@
  * ```
  */
 
-import React, { memo, useCallback, useState, useMemo } from 'react'
+import React, { memo, useCallback, useState, useMemo, useEffect } from 'react'
 import {
   View,
   Text,
@@ -56,6 +56,7 @@ import { darkTheme } from '../../../constants/glassStyles'
 import { colors } from '../../../constants/theme'
 import { MIN_NOTE_LENGTH, MAX_NOTE_LENGTH } from '../types'
 import { COLORS } from '../styles'
+import { screenPostContent } from '../../../lib/utils/contentScreening'
 
 // ============================================================================
 // TYPES
@@ -344,7 +345,11 @@ export const MomentStep = memo(function MomentStep({
   const noteLength = note.trim().length
   const isNoteValid = noteLength >= MIN_NOTE_LENGTH
   const isAvatarValid = avatar !== null
-  const canProceed = isAvatarValid && isNoteValid
+
+  // Content screening
+  const screeningResult = useMemo(() => screenPostContent(note), [note])
+
+  const canProceed = isAvatarValid && isNoteValid && !screeningResult.isBlocked
   const remaining = MAX_NOTE_LENGTH - note.length
 
   // Random placeholder
@@ -452,6 +457,25 @@ export const MomentStep = memo(function MomentStep({
               testID={`${testID}-note-input`}
             />
           </View>
+
+          {/* Content screening warnings */}
+          {screeningResult.isBlocked && (
+            <View style={styles.blockMessage}>
+              <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+              <Text style={styles.blockMessageText}>{screeningResult.blockedReason}</Text>
+            </View>
+          )}
+
+          {!screeningResult.isBlocked && screeningResult.warnings.length > 0 && (
+            <View style={styles.warningsContainer}>
+              {screeningResult.warnings.map((warning, index) => (
+                <View key={index} style={styles.warningMessage}>
+                  <Ionicons name="warning" size={14} color={COLORS.warning} />
+                  <Text style={styles.warningMessageText}>{warning}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Character count */}
           <View style={styles.noteFooter}>
@@ -635,6 +659,48 @@ const styles = StyleSheet.create({
 
   noteCountInvalid: {
     color: COLORS.error,
+  },
+
+  blockMessage: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#3D1515',
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.error,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    gap: 8,
+  },
+
+  blockMessageText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.error,
+    lineHeight: 18,
+  },
+
+  warningsContainer: {
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  warningMessage: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#3D3315',
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.warning,
+    borderRadius: 8,
+    padding: 10,
+    gap: 8,
+  },
+
+  warningMessageText: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.warning,
+    lineHeight: 16,
   },
 
   actions: {

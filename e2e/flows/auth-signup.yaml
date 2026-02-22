@@ -1,0 +1,49 @@
+appId: com.backtrack.app
+---
+# Signup Flow
+# Tests the complete signup flow for new users
+
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Verify we're on auth screen
+- assertVisible: "Welcome Back"
+
+# Switch to signup mode
+- tapOn: "Sign up for a new account"
+- waitForAnimationToEnd
+
+# Verify signup screen
+- assertVisible: "Create Account"
+
+# Fill in email
+- tapOn: "Email address"
+- inputText: "newuser@example.com"
+
+# Fill in password
+- tapOn:
+    id: "password-input"
+- inputText: "NewPassword123"
+
+# Fill in confirm password
+- tapOn: "Confirm password"
+- inputText: "NewPassword123"
+
+# Check age verification
+- tapOn: "I confirm I am 18 years or older"
+
+# Submit signup
+- tapOn: "Create Account"
+
+# Wait for confirmation or terms modal
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# If terms modal appears, accept it
+- tapOn: "Accept"
+  optional: true
+
+# Verify email confirmation message
+- assertVisible: "Check Your Email"

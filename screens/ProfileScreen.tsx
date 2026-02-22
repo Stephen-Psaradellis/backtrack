@@ -8,9 +8,9 @@
  * - Display user email and profile information
  * - Edit display name
  * - Create and edit own avatar for matching
- * - Sign out functionality
+ * - Verification status and badge
  * - Profile data refresh on pull
- * - User verification status and badge
+ * - Navigation to Settings screen for preferences and account actions
  */
 
 import React, { useState, useCallback } from 'react'
@@ -21,17 +21,17 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Alert,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { GlobalHeader } from '../components/navigation/GlobalHeader'
 import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
+import { SCREENS } from '../navigation/types'
 import {
   darkTheme,
   darkGradients,
@@ -40,33 +40,19 @@ import {
   darkTypography,
   darkLayout,
 } from '../constants/glassStyles'
-import { colors } from '../constants/theme'
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window')
+import { colors, spacing } from '../constants/theme'
 import { useAuth } from '../contexts/AuthContext'
-import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
-import { Button, DangerButton, OutlineButton } from '../components/Button'
-import {
-  clearTutorialCompletion,
-  TUTORIAL_FEATURE_LABELS,
-  type TutorialFeature,
-} from '../utils/tutorialStorage'
+import { useToast } from '../contexts/ToastContext'
+import { successFeedback, errorFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Avatar, loadCurrentAvatar, type StoredAvatar } from 'react-native-bitmoji'
 import { ProfilePhotoGallery } from '../components/ProfilePhotoGallery'
-import {
-  deleteAccountAndSignOut,
-  getDeletionStatus,
-  cancelAccountDeletion,
-  type DeletionStatus,
-} from '../lib/accountDeletion'
 import { VerifiedBadge } from '../components/VerifiedBadge'
 import { VerificationPrompt } from '../components/VerificationPrompt'
-import { StreakCard } from '../components/streaks/StreakCard'
-import { useLocationStreaks } from '../hooks/useLocationStreaks'
-import { RegularsModeToggle } from '../components/regulars/RegularsModeToggle'
-import { FellowRegularsList } from '../components/regulars/RegularsList'
-import { NotificationSettings, LocationTrackingSettings } from '../components/settings'
+import { AchievementBadge } from '../components/AchievementBadge'
+import { useAchievements } from '../hooks/useAchievements'
+import { TrustProgress } from '../components/TrustProgress'
+import { useTrustLevel } from '../hooks/useTrustLevel'
 
 // ============================================================================
 // TYPES
@@ -94,6 +80,8 @@ export function ProfileScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
 
   const navigation = useNavigation<any>()
+  const insets = useSafeAreaInsets()
+  const { showToast } = useToast()
   const {
     user,
     profile,
@@ -102,6 +90,7 @@ export function ProfileScreen(): React.ReactNode {
     refreshProfile,
     isLoading: authLoading,
   } = useAuth()
+  const { trustLevel, trustPoints } = useTrustLevel()
 
   // ---------------------------------------------------------------------------
   // STATE
@@ -112,15 +101,21 @@ export function ProfileScreen(): React.ReactNode {
   const [errors, setErrors] = useState<ProfileFormErrors>({})
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
   const [userAvatar, setUserAvatar] = useState<StoredAvatar | null>(null)
   const [isLoadingAvatar, setIsLoadingAvatar] = useState(true)
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
-  const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
 
-  // Location streaks data
-  const { topStreaks, isLoading: isLoadingStreaks } = useLocationStreaks({ limit: 5 })
+  // Achievements
+  const {
+    earnedAchievements,
+    totalCount,
+    earnedCount,
+    loading: achievementsLoading,
+    leaderboard,
+    leaderboardLoading,
+    currentStreak,
+    loadLeaderboard,
+  } = useAchievements()
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -131,29 +126,27 @@ export function ProfileScreen(): React.ReactNode {
     useCallback(() => {
       async function loadAvatar() {
         setIsLoadingAvatar(true)
-        const config = await loadCurrentAvatar()
-        // Wrap config in StoredAvatar structure
-        setUserAvatar({
-          id: 'current-avatar',
-          config,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        })
-        setIsLoadingAvatar(false)
+        try {
+          const config = await loadCurrentAvatar()
+          // Wrap config in StoredAvatar structure
+          setUserAvatar({
+            id: 'current-avatar',
+            config,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          })
+        } catch (err) {
+          console.error('[ProfileScreen] Failed to load avatar:', err)
+        } finally {
+          setIsLoadingAvatar(false)
+        }
       }
       loadAvatar()
-    }, [])
-  )
-
-  // Check for scheduled account deletion
-  useFocusEffect(
-    useCallback(() => {
-      async function checkDeletionStatus() {
-        const status = await getDeletionStatus()
-        setDeletionStatus(status)
-      }
-      checkDeletionStatus()
-    }, [])
+      // Load leaderboard on screen focus
+      loadLeaderboard().catch((err) => {
+        console.error('[ProfileScreen] Failed to load leaderboard:', err)
+      })
+    }, [loadLeaderboard])
   )
 
   // ---------------------------------------------------------------------------
@@ -228,125 +221,6 @@ export function ProfileScreen(): React.ReactNode {
   }, [displayName, updateProfile])
 
   /**
-   * Handle sign out with confirmation
-   */
-  const handleSignOut = useCallback(async () => {
-    // Trigger warning haptic when showing destructive action confirmation
-    await warningFeedback()
-
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            setIsSigningOut(true)
-            try {
-              const { error } = await signOut()
-              if (error) {
-                await errorFeedback()
-                Alert.alert('Error', 'Failed to sign out. Please try again.')
-              }
-              // Navigation will be handled automatically by auth state change
-            } catch {
-              await errorFeedback()
-              Alert.alert('Error', 'An unexpected error occurred.')
-            } finally {
-              setIsSigningOut(false)
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    )
-  }, [signOut])
-
-  /**
-   * Handle account deletion with multiple confirmations
-   */
-  const handleDeleteAccount = useCallback(async () => {
-    await warningFeedback()
-
-    Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account and all your data including:\n\n' +
-        '• Your profile and avatar\n' +
-        '• All your posts\n' +
-        '• All your conversations and messages\n' +
-        '• Your photos and favorites\n\n' +
-        'This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete Account',
-          style: 'destructive',
-          onPress: () => {
-            // Second confirmation
-            Alert.alert(
-              'Are you absolutely sure?',
-              'Type "DELETE" to confirm you want to permanently delete your account.',
-              [
-                {
-                  text: 'Cancel',
-                  style: 'cancel',
-                },
-                {
-                  text: 'Yes, Delete Everything',
-                  style: 'destructive',
-                  onPress: async () => {
-                    if (!user?.id) return
-
-                    setIsDeletingAccount(true)
-                    try {
-                      const result = await deleteAccountAndSignOut(user.id)
-                      if (!result.success) {
-                        await errorFeedback()
-                        Alert.alert('Error', result.message || 'Failed to delete account')
-                        setIsDeletingAccount(false)
-                      }
-                      // If successful, navigation will be handled by auth state change
-                    } catch {
-                      await errorFeedback()
-                      Alert.alert('Error', 'An unexpected error occurred')
-                      setIsDeletingAccount(false)
-                    }
-                  },
-                },
-              ],
-              { cancelable: true }
-            )
-          },
-        },
-      ],
-      { cancelable: true }
-    )
-  }, [user?.id])
-
-  /**
-   * Handle cancelling scheduled account deletion
-   */
-  const handleCancelDeletion = useCallback(async () => {
-    const result = await cancelAccountDeletion()
-    if (result.success) {
-      await successFeedback()
-      setDeletionStatus({ scheduled: false })
-      Alert.alert('Success', 'Account deletion cancelled')
-    } else {
-      await errorFeedback()
-      Alert.alert('Error', result.message || 'Failed to cancel deletion')
-    }
-  }, [])
-
-  /**
    * Navigate to avatar creator
    */
   const handleOpenAvatarCreator = useCallback(() => {
@@ -358,63 +232,12 @@ export function ProfileScreen(): React.ReactNode {
    * Verification is completed through the selfie capture in CreatePost flow
    */
   const handleStartVerification = useCallback(() => {
-    Alert.alert(
-      'Get Verified',
-      'Verification is completed when you create a post. The selfie you take during post creation helps verify your identity and builds trust with other users.',
-      [
-        {
-          text: 'OK',
-          style: 'default',
-        },
-      ],
-      { cancelable: true }
-    )
-  }, [])
-
-  /**
-   * Handle tutorial replay - clears completion state and navigates to feature
-   *
-   * @param feature - The tutorial feature to replay
-   */
-  const handleReplayTutorial = useCallback(
-    async (feature: TutorialFeature) => {
-      try {
-        // Clear the tutorial completion state
-        const result = await clearTutorialCompletion(feature)
-
-        if (result.success) {
-          await successFeedback()
-
-          // Navigate to the appropriate screen based on feature
-          switch (feature) {
-            case 'post_creation':
-              // Navigate to CreatePost - tooltip shows on the screen
-              navigation.navigate('CreatePost')
-              break
-            case 'ledger_browsing':
-              // Navigate to HomeTab - user will tap a location to see Ledger
-              navigation.navigate('MainTabs', { screen: 'HomeTab' })
-              break
-            case 'selfie_verification':
-              // Navigate to CreatePost - selfie step is part of the flow
-              navigation.navigate('CreatePost')
-              break
-            case 'messaging':
-              // Navigate to ChatsTab - user will open a conversation
-              navigation.navigate('MainTabs', { screen: 'ChatsTab' })
-              break
-          }
-        } else {
-          await errorFeedback()
-          Alert.alert('Error', 'Failed to reset tutorial. Please try again.')
-        }
-      } catch {
-        await errorFeedback()
-        Alert.alert('Error', 'An unexpected error occurred.')
-      }
-    },
-    [navigation]
-  )
+    showToast({
+      message: 'Verification is completed when you create a post. The selfie you take helps verify your identity.',
+      variant: 'info',
+      duration: 5000,
+    })
+  }, [showToast])
 
   // ---------------------------------------------------------------------------
   // RENDER
@@ -446,7 +269,7 @@ export function ProfileScreen(): React.ReactNode {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <FloatingActionButtons testID="profile-floating-actions" />
+      <FloatingActionButtons testID="profile-floating-actions" isVisible={false} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
@@ -462,12 +285,12 @@ export function ProfileScreen(): React.ReactNode {
         showsVerticalScrollIndicator={false}
         testID="profile-screen"
       >
-      {/* Hero Header with Gradient */}
+      {/* Hero Header with Gradient - UX-008: use safe area insets instead of hardcoded paddingTop */}
       <LinearGradient
         colors={[colors.primary[500], colors.accent[600]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.heroGradient}
+        style={[styles.heroGradient, { paddingTop: insets.top + 16 }]}
       >
         {/* Decorative circles */}
         <View style={styles.heroDecor1} />
@@ -515,6 +338,9 @@ export function ProfileScreen(): React.ReactNode {
             onPress={handleStartVerification}
             activeOpacity={0.8}
             testID="profile-verification-prompt"
+            accessibilityRole="button"
+            accessibilityLabel="Get verified to build trust with other users"
+            accessibilityHint="Double tap to learn about verification"
           >
             <LinearGradient
               colors={['rgba(16, 185, 129, 0.15)', 'rgba(16, 185, 129, 0.05)']}
@@ -532,6 +358,19 @@ export function ProfileScreen(): React.ReactNode {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Trust Progress Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="trophy-outline" size={20} color={colors.primary[400]} />
+          <Text style={styles.sectionTitle}>Trust Level</Text>
+        </View>
+        <TrustProgress
+          trustLevel={trustLevel}
+          trustPoints={trustPoints}
+          testID="profile-trust-progress"
+        />
+      </View>
 
       {/* Profile Info Section */}
       <View style={styles.section}>
@@ -570,6 +409,8 @@ export function ProfileScreen(): React.ReactNode {
                   editable={!isSaving}
                   onSubmitEditing={handleSaveProfile}
                   testID="profile-display-name-input"
+                  accessibilityLabel="Display name"
+                  accessibilityHint="Enter your display name, up to 50 characters"
                 />
                 {errors.displayName && (
                   <Text style={styles.errorText} testID="profile-display-name-error">
@@ -582,6 +423,8 @@ export function ProfileScreen(): React.ReactNode {
                     onPress={handleCancelEditing}
                     disabled={isSaving}
                     testID="profile-cancel-edit-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel editing"
                   >
                     <Text style={[darkButtonStyles.ghostText, darkButtonStyles.smallText]}>Cancel</Text>
                   </TouchableOpacity>
@@ -590,6 +433,9 @@ export function ProfileScreen(): React.ReactNode {
                     onPress={handleSaveProfile}
                     disabled={isSaving}
                     testID="profile-save-button"
+                    accessibilityRole="button"
+                    accessibilityLabel={isSaving ? 'Saving changes' : 'Save display name changes'}
+                    accessibilityState={{ disabled: isSaving }}
                   >
                     <LinearGradient
                       colors={[colors.primary[500], colors.primary[600]]}
@@ -609,6 +455,8 @@ export function ProfileScreen(): React.ReactNode {
                   onPress={handleStartEditing}
                   style={styles.editLink}
                   testID="profile-edit-name-button"
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit display name"
                 >
                   <Text style={styles.editLinkText}>Edit</Text>
                   <Ionicons name="pencil" size={14} color={colors.primary[400]} />
@@ -697,6 +545,138 @@ export function ProfileScreen(): React.ReactNode {
         </View>
       </View>
 
+      {/* Streak Leaderboard Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="flame" size={20} color={colors.primary[400]} />
+          <Text style={styles.sectionTitle}>Streak Leaderboard</Text>
+        </View>
+        <View style={[glassStyles.card, styles.glassCard]}>
+          {/* Current User's Streak */}
+          <View style={styles.currentStreakContainer}>
+            <View style={styles.currentStreakIcon}>
+              <Ionicons name="flame" size={32} color="#FF6347" />
+            </View>
+            <View style={styles.currentStreakText}>
+              <Text style={styles.currentStreakLabel}>Your Current Streak</Text>
+              <Text style={styles.currentStreakValue}>{currentStreak} days</Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Leaderboard */}
+          <Text style={styles.leaderboardTitle}>Top Streakers</Text>
+          {leaderboardLoading ? (
+            <View style={styles.leaderboardLoading}>
+              <LoadingSpinner message="Loading leaderboard..." />
+            </View>
+          ) : leaderboard.length > 0 ? (
+            <View style={styles.leaderboardList} testID="profile-leaderboard">
+              {leaderboard.map((entry, index) => (
+                <View key={entry.user_id} style={styles.leaderboardEntry}>
+                  <View style={styles.leaderboardRank}>
+                    <Text style={[
+                      styles.leaderboardRankText,
+                      index === 0 && styles.leaderboardRankGold,
+                      index === 1 && styles.leaderboardRankSilver,
+                      index === 2 && styles.leaderboardRankBronze,
+                    ]}>
+                      {index + 1}
+                    </Text>
+                  </View>
+                  <View style={styles.leaderboardInfo}>
+                    <Text style={styles.leaderboardName} numberOfLines={1}>
+                      {entry.display_name || 'Anonymous'}
+                    </Text>
+                    {entry.location_name && (
+                      <Text style={styles.leaderboardLocation} numberOfLines={1}>
+                        at {entry.location_name}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.leaderboardStreak}>
+                    <Ionicons name="flame" size={16} color="#FF6347" />
+                    <Text style={styles.leaderboardStreakText}>{entry.current_streak}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.leaderboardEmpty}>
+              <Ionicons name="flame-outline" size={48} color="rgba(255, 255, 255, 0.15)" />
+              <Text style={styles.leaderboardEmptyText}>
+                No streaks yet
+              </Text>
+              <Text style={styles.leaderboardEmptySubtext}>
+                Check in daily to build your streak!
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Achievements Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="trophy-outline" size={20} color={colors.primary[400]} />
+          <Text style={styles.sectionTitle}>Achievements</Text>
+        </View>
+        <View style={[glassStyles.card, styles.glassCard]}>
+          <View style={styles.achievementHeader}>
+            <Text style={styles.achievementCount}>
+              {earnedCount}/{totalCount} Earned
+            </Text>
+            {!achievementsLoading && earnedCount > 0 && (
+              <View style={styles.achievementProgress}>
+                <View style={styles.achievementProgressBar}>
+                  <View
+                    style={[
+                      styles.achievementProgressFill,
+                      { width: `${(earnedCount / totalCount) * 100}%` },
+                    ]}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {achievementsLoading ? (
+            <View style={styles.achievementLoading}>
+              <LoadingSpinner message="Loading achievements..." />
+            </View>
+          ) : earnedAchievements.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.achievementScroll}
+              testID="profile-achievements-scroll"
+            >
+              {earnedAchievements.map((achievement) => (
+                <View key={achievement.id} style={styles.achievementBadgeWrapper}>
+                  <AchievementBadge
+                    achievement={achievement}
+                    size="medium"
+                    showProgress={false}
+                    testID={`achievement-badge-${achievement.id}`}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.achievementEmpty}>
+              <Ionicons name="trophy" size={48} color="rgba(255, 255, 255, 0.15)" />
+              <Text style={styles.achievementEmptyText}>
+                No achievements yet
+              </Text>
+              <Text style={styles.achievementEmptySubtext}>
+                Explore, connect, and create posts to earn badges!
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+
       {/* Verification Photos Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -714,248 +694,23 @@ export function ProfileScreen(): React.ReactNode {
         </View>
       </View>
 
-      {/* My Location Streaks Section */}
-      <View style={styles.section} testID="profile-streaks-section">
-        <View style={styles.sectionHeader}>
-          <Ionicons name="flame-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>My Location Streaks</Text>
-        </View>
-        <View style={[glassStyles.card, styles.glassCard]}>
-          <Text style={styles.avatarDescription}>
-            Track your visits to favorite locations
-          </Text>
-          {isLoadingStreaks ? (
-            <View style={styles.loadingContainer}>
-              <LoadingSpinner size="small" />
-            </View>
-          ) : topStreaks && topStreaks.length > 0 ? (
-            <View style={styles.streaksList}>
-              {topStreaks.map((streak, index) => (
-                <StreakCard
-                  key={streak.id || `${streak.location_id}-${streak.streak_type}`}
-                  streak={streak}
-                  compact
-                  testID={`profile-streak-${index}`}
-                />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyStateContainer}>
-              <Ionicons name="flame" size={32} color={darkTheme.textMuted} />
-              <Text style={styles.emptyText}>No streaks yet</Text>
-              <Text style={styles.emptySubtext}>Visit locations regularly to build streaks!</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Regulars Mode Section */}
-      <View style={styles.section} testID="profile-regulars-section">
-        <View style={styles.sectionHeader}>
-          <Ionicons name="people-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>Regulars Mode</Text>
-        </View>
-        <View style={[glassStyles.card, styles.glassCard]}>
-          <RegularsModeToggle />
-        </View>
-      </View>
-
-      {/* Fellow Regulars Section */}
-      <View style={styles.section} testID="profile-fellow-regulars-section">
-        <View style={styles.sectionHeader}>
-          <Ionicons name="heart-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>Fellow Regulars</Text>
-        </View>
-        <View style={[glassStyles.card, styles.glassCard]}>
-          <Text style={styles.avatarDescription}>
-            People who visit the same spots as you
-          </Text>
-          <FellowRegularsList showLocations limit={5} />
-        </View>
-      </View>
-
-      {/* Settings Sections */}
-      <View style={styles.section} testID="profile-notification-settings-section">
-        <View style={styles.sectionHeader}>
-          <Ionicons name="notifications-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>Notifications</Text>
-        </View>
-        <View style={[glassStyles.card, styles.glassCard]}>
-          <NotificationSettings />
-        </View>
-      </View>
-
-      <View style={styles.section} testID="profile-location-tracking-section">
-        <View style={styles.sectionHeader}>
-          <Ionicons name="location-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>Location Tracking</Text>
-        </View>
-        <View style={[glassStyles.card, styles.glassCard]}>
-          <LocationTrackingSettings testID="profile-location-tracking" />
-        </View>
-      </View>
-
-      {/* Replay Tutorial Section */}
-      <View style={styles.section} testID="profile-replay-tutorial-section">
-        <View style={styles.sectionHeader}>
-          <Ionicons name="school-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>Replay Tutorial</Text>
-        </View>
-        <View style={[glassStyles.card, styles.glassCard]}>
-          <Text style={styles.avatarDescription}>
-            Re-watch helpful tips for using Backtrack features
-          </Text>
-          <View style={styles.replayButtonsContainer}>
-            <TouchableOpacity
-              style={styles.tutorialButton}
-              onPress={() => handleReplayTutorial('post_creation')}
-              testID="profile-replay-post-creation-button"
-            >
-              <Ionicons name="create-outline" size={18} color={darkTheme.textSecondary} />
-              <Text style={styles.tutorialButtonText}>{TUTORIAL_FEATURE_LABELS.post_creation}</Text>
-              <Ionicons name="play-circle-outline" size={18} color={colors.primary[400]} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.tutorialButton}
-              onPress={() => handleReplayTutorial('ledger_browsing')}
-              testID="profile-replay-ledger-browsing-button"
-            >
-              <Ionicons name="book-outline" size={18} color={darkTheme.textSecondary} />
-              <Text style={styles.tutorialButtonText}>{TUTORIAL_FEATURE_LABELS.ledger_browsing}</Text>
-              <Ionicons name="play-circle-outline" size={18} color={colors.primary[400]} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.tutorialButton}
-              onPress={() => handleReplayTutorial('selfie_verification')}
-              testID="profile-replay-selfie-verification-button"
-            >
-              <Ionicons name="camera-outline" size={18} color={darkTheme.textSecondary} />
-              <Text style={styles.tutorialButtonText}>{TUTORIAL_FEATURE_LABELS.selfie_verification}</Text>
-              <Ionicons name="play-circle-outline" size={18} color={colors.primary[400]} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.tutorialButton}
-              onPress={() => handleReplayTutorial('messaging')}
-              testID="profile-replay-messaging-button"
-            >
-              <Ionicons name="chatbubble-outline" size={18} color={darkTheme.textSecondary} />
-              <Text style={styles.tutorialButtonText}>{TUTORIAL_FEATURE_LABELS.messaging}</Text>
-              <Ionicons name="play-circle-outline" size={18} color={colors.primary[400]} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {/* Legal Section */}
-      <View style={styles.section} testID="profile-legal-section">
-        <View style={styles.sectionHeader}>
-          <Ionicons name="document-text-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>Legal</Text>
-        </View>
-        <View style={[glassStyles.card, styles.glassCard]}>
-          <TouchableOpacity
-            style={styles.legalLink}
-            onPress={() => navigation.navigate('Legal', { type: 'privacy' })}
-            testID="profile-privacy-policy-link"
-          >
-            <View style={styles.legalLinkContent}>
-              <Ionicons name="shield-outline" size={18} color={darkTheme.textSecondary} />
-              <Text style={styles.legalLinkText}>Privacy Policy</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={darkTheme.textMuted} />
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity
-            style={styles.legalLink}
-            onPress={() => navigation.navigate('Legal', { type: 'terms' })}
-            testID="profile-terms-link"
-          >
-            <View style={styles.legalLinkContent}>
-              <Ionicons name="document-outline" size={18} color={darkTheme.textSecondary} />
-              <Text style={styles.legalLinkText}>Terms of Service</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={darkTheme.textMuted} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Account Actions Section */}
+      {/* Settings Row - navigate to SettingsScreen */}
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="settings-outline" size={20} color={colors.primary[400]} />
-          <Text style={styles.sectionTitle}>Account</Text>
-        </View>
-
-        {/* Scheduled Deletion Warning */}
-        {deletionStatus?.scheduled && (
-          <View style={styles.deletionWarning}>
-            <View style={styles.deletionWarningHeader}>
-              <Ionicons name="warning" size={24} color="#F59E0B" />
-              <Text style={styles.deletionWarningTitle}>
-                Account Scheduled for Deletion
-              </Text>
-            </View>
-            <Text style={styles.deletionWarningText}>
-              Your account will be deleted in {deletionStatus.daysRemaining} days.
-            </Text>
-            <TouchableOpacity
-              style={styles.cancelDeletionButton}
-              onPress={handleCancelDeletion}
-            >
-              <Text style={styles.cancelDeletionText}>Cancel Deletion</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={[glassStyles.card, styles.glassCard]}>
-          {/* Sign Out Button */}
-          <TouchableOpacity
-            style={styles.signOutButton}
-            onPress={handleSignOut}
-            disabled={isSigningOut || isDeletingAccount}
-            testID="profile-sign-out-button"
-          >
-            <Ionicons name="log-out-outline" size={20} color={darkTheme.textSecondary} />
-            <Text style={styles.signOutText}>
-              {isSigningOut ? 'Signing Out...' : 'Sign Out'}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          {/* Delete Account Button */}
-          <TouchableOpacity
-            style={styles.deleteAccountButton}
-            onPress={handleDeleteAccount}
-            disabled={isDeletingAccount || isSigningOut}
-            testID="profile-delete-account-button"
-          >
-            <Ionicons name="trash-outline" size={20} color="#EF4444" />
-            <View style={styles.deleteAccountContent}>
-              <Text style={styles.deleteAccountText}>
-                {isDeletingAccount ? 'Deleting...' : 'Delete Account'}
-              </Text>
-              <Text style={styles.deleteAccountHint}>
-                Permanently delete your account and all data
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* App Info Footer */}
-      <View style={styles.footer}>
-        <LinearGradient
-          colors={[colors.primary[500], colors.accent[600]]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.footerLogo}
+        <TouchableOpacity
+          onPress={() => navigation.navigate(SCREENS.Settings)}
+          style={styles.settingsRow}
+          activeOpacity={0.7}
+          testID="profile-settings-button"
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          accessibilityHint="Double tap to access app settings and preferences"
         >
-          <Ionicons name="location" size={20} color="#FFF" />
-        </LinearGradient>
-        <Text style={styles.footerText}>Backtrack</Text>
-        <Text style={styles.footerVersion}>Version 1.0.0</Text>
+          <Ionicons name="settings-outline" size={22} color={darkTheme.textSecondary} />
+          <Text style={styles.settingsText}>Settings</Text>
+          <Ionicons name="chevron-forward" size={18} color={darkTheme.textMuted} />
+        </TouchableOpacity>
       </View>
+
       </ScrollView>
     </View>
   )
@@ -975,7 +730,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: spacing[10],
   },
   loadingContainer: {
     flex: 1,
@@ -984,10 +739,9 @@ const styles = StyleSheet.create({
     backgroundColor: darkTheme.background,
   },
 
-  // Hero Gradient Header
+  // Hero Gradient Header - UX-008: paddingTop now applied dynamically via insets
   heroGradient: {
-    paddingTop: 60,
-    paddingBottom: 32,
+    paddingBottom: spacing[8],
     alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
@@ -1012,13 +766,13 @@ const styles = StyleSheet.create({
   },
   heroAvatarContainer: {
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: spacing[4],
   },
   avatarRing: {
     width: 108,
     height: 108,
     borderRadius: 54,
-    padding: 4,
+    padding: spacing[1],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1037,22 +791,22 @@ const styles = StyleSheet.create({
   },
   verifiedBadgeOverlay: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
+    bottom: spacing[1],
+    right: spacing[1],
     backgroundColor: darkTheme.background,
     borderRadius: 14,
-    padding: 2,
+    padding: spacing[0.5],
   },
   heroName: {
     fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: spacing[1],
   },
   heroEmailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing[1.5],
   },
   heroEmail: {
     fontSize: 15,
@@ -1061,10 +815,10 @@ const styles = StyleSheet.create({
   memberBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    gap: spacing[1.5],
+    marginTop: spacing[3],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1.5],
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 20,
   },
@@ -1082,7 +836,7 @@ const styles = StyleSheet.create({
   verifyCardGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: spacing[4],
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(16, 185, 129, 0.2)',
@@ -1094,7 +848,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing[3],
   },
   verifyContent: {
     flex: 1,
@@ -1107,19 +861,19 @@ const styles = StyleSheet.create({
   verifySubtitle: {
     fontSize: 13,
     color: darkTheme.textMuted,
-    marginTop: 2,
+    marginTop: spacing[0.5],
   },
 
   // Sections
   section: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[5],
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
+    gap: spacing[2.5],
+    marginBottom: spacing[4],
   },
   sectionTitle: {
     fontSize: 18,
@@ -1127,18 +881,18 @@ const styles = StyleSheet.create({
     color: darkTheme.textPrimary,
   },
   glassCard: {
-    padding: 20,
+    padding: spacing[5],
   },
 
   // Info rows
   infoRow: {
-    marginBottom: 4,
+    marginBottom: spacing[1],
   },
   infoLabel: {
     fontSize: 11,
     color: darkTheme.textMuted,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: spacing[1.5],
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -1155,9 +909,9 @@ const styles = StyleSheet.create({
   editLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    gap: spacing[1.5],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1.5],
     backgroundColor: 'rgba(255, 107, 71, 0.1)',
     borderRadius: 8,
   },
@@ -1169,20 +923,20 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    marginVertical: 16,
+    marginVertical: spacing[4],
   },
 
   // Edit mode
   editContainer: {
-    gap: 12,
+    gap: spacing[3],
   },
   input: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3.5],
     fontSize: 16,
     color: darkTheme.textPrimary,
   },
@@ -1193,16 +947,16 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: '#EF4444',
-    marginTop: 4,
+    marginTop: spacing[1],
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing[2.5],
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    padding: spacing[3.5],
+    marginBottom: spacing[4],
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.2)',
   },
@@ -1214,16 +968,16 @@ const styles = StyleSheet.create({
   },
   editButtonsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: spacing[3],
+    marginTop: spacing[2],
   },
   saveButton: {
     overflow: 'hidden',
     borderRadius: 10,
   },
   saveButtonGradient: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: spacing[2.5],
+    paddingHorizontal: spacing[5],
     borderRadius: 10,
   },
 
@@ -1231,20 +985,20 @@ const styles = StyleSheet.create({
   avatarDescription: {
     fontSize: 14,
     color: darkTheme.textMuted,
-    marginBottom: 16,
+    marginBottom: spacing[4],
     lineHeight: 20,
   },
   avatarSection: {
-    marginTop: 8,
+    marginTop: spacing[2],
   },
   avatarLoading: {
-    paddingVertical: 40,
+    paddingVertical: spacing[10],
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarConfigured: {
     alignItems: 'center',
-    gap: 16,
+    gap: spacing[4],
   },
   editAvatarButton: {
     overflow: 'hidden',
@@ -1253,9 +1007,9 @@ const styles = StyleSheet.create({
   editAvatarGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    gap: spacing[2],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[5],
     borderRadius: 12,
   },
   editAvatarText: {
@@ -1265,8 +1019,8 @@ const styles = StyleSheet.create({
   },
   avatarEmpty: {
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 16,
+    paddingVertical: spacing[6],
+    gap: spacing[4],
   },
   avatarEmptyGradient: {
     width: 80,
@@ -1285,19 +1039,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: darkTheme.textMuted,
     textAlign: 'center',
-    marginTop: -8,
+    marginTop: spacing[2] * -1,
   },
   createAvatarButton: {
     overflow: 'hidden',
     borderRadius: 14,
-    marginTop: 8,
+    marginTop: spacing[2],
   },
   createAvatarGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
+    gap: spacing[2.5],
+    paddingVertical: spacing[3.5],
+    paddingHorizontal: spacing[7],
     borderRadius: 14,
   },
   createAvatarText: {
@@ -1306,188 +1060,200 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // Empty states
-  emptyStateContainer: {
+  // Achievements section
+  achievementHeader: {
+    marginBottom: spacing[4],
+  },
+  achievementCount: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+    marginBottom: spacing[2],
+  },
+  achievementProgress: {
+    marginTop: spacing[2],
+  },
+  achievementProgressBar: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  achievementProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary[400],
+    borderRadius: 3,
+  },
+  achievementLoading: {
+    paddingVertical: spacing[8],
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 8,
   },
-  emptyText: {
-    fontSize: 15,
+  achievementScroll: {
+    paddingVertical: spacing[2],
+    gap: spacing[3],
+  },
+  achievementBadgeWrapper: {
+    marginRight: spacing[2],
+  },
+  achievementEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing[8],
+  },
+  achievementEmptyText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: darkTheme.textSecondary,
-    textAlign: 'center',
-    fontWeight: '500',
+    marginTop: spacing[3],
   },
-  emptySubtext: {
-    fontSize: 13,
+  achievementEmptySubtext: {
+    fontSize: 14,
     color: darkTheme.textMuted,
     textAlign: 'center',
-  },
-  streaksList: {
-    gap: 10,
+    marginTop: spacing[1.5],
+    paddingHorizontal: spacing[6],
   },
 
-  // Tutorial buttons
-  replayButtonsContainer: {
-    gap: 8,
-  },
-  tutorialButton: {
+  // Leaderboard section
+  currentStreakContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(255, 99, 71, 0.1)',
     borderRadius: 12,
+    padding: spacing[4],
+    marginBottom: spacing[4],
+    borderWidth: 1,
+    borderColor: 'rgba(255, 99, 71, 0.2)',
+  },
+  currentStreakIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 99, 71, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing[3],
+  },
+  currentStreakText: {
+    flex: 1,
+  },
+  currentStreakLabel: {
+    fontSize: 13,
+    color: darkTheme.textMuted,
+    fontWeight: '500',
+    marginBottom: spacing[1],
+  },
+  currentStreakValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: darkTheme.textPrimary,
+  },
+  leaderboardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+    marginBottom: spacing[3],
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  leaderboardLoading: {
+    paddingVertical: spacing[6],
+    alignItems: 'center',
+  },
+  leaderboardList: {
+    gap: spacing[2],
+  },
+  leaderboardEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 10,
+    padding: spacing[3],
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  tutorialButtonText: {
-    flex: 1,
-    fontSize: 15,
-    color: darkTheme.textSecondary,
-    fontWeight: '500',
-  },
-
-  // Legal section
-  legalLink: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  legalLinkContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  legalLinkText: {
-    fontSize: 15,
-    color: darkTheme.textSecondary,
-    fontWeight: '500',
-  },
-
-  // Dev tools
-  devButton: {
-    overflow: 'hidden',
+  leaderboardRank: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
-  },
-  devButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 16,
-  },
-  devButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  devButtonTextContainer: {
-    gap: 2,
-  },
-  devButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.accent[200],
-  },
-  devButtonHint: {
-    fontSize: 12,
-    color: colors.accent[400],
-  },
-
-  // Deletion warning
-  deletionWarning: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-  },
-  deletionWarningHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  deletionWarningTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F59E0B',
-  },
-  deletionWarningText: {
-    fontSize: 14,
-    color: 'rgba(245, 158, 11, 0.8)',
-    marginBottom: 12,
-  },
-  cancelDeletionButton: {
-    backgroundColor: '#F59E0B',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start',
-  },
-  cancelDeletionText: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  // Account actions
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-  },
-  signOutText: {
-    fontSize: 15,
-    color: darkTheme.textSecondary,
-    fontWeight: '500',
-  },
-  deleteAccountButton: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 14,
-  },
-  deleteAccountContent: {
-    flex: 1,
-  },
-  deleteAccountText: {
-    fontSize: 15,
-    color: '#EF4444',
-    fontWeight: '500',
-  },
-  deleteAccountHint: {
-    fontSize: 12,
-    color: darkTheme.textMuted,
-    marginTop: 2,
-  },
-
-  // Footer
-  footer: {
-    paddingVertical: 32,
-    alignItems: 'center',
-    gap: 8,
-  },
-  footerLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginRight: spacing[3],
   },
-  footerText: {
-    fontSize: 16,
-    color: darkTheme.textPrimary,
+  leaderboardRankText: {
+    fontSize: 14,
     fontWeight: '700',
+    color: darkTheme.textSecondary,
   },
-  footerVersion: {
-    fontSize: 13,
+  leaderboardRankGold: {
+    color: '#FFD700',
+  },
+  leaderboardRankSilver: {
+    color: '#C0C0C0',
+  },
+  leaderboardRankBronze: {
+    color: '#CD7F32',
+  },
+  leaderboardInfo: {
+    flex: 1,
+    marginRight: spacing[2],
+  },
+  leaderboardName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+    marginBottom: spacing[0.5],
+  },
+  leaderboardLocation: {
+    fontSize: 12,
     color: darkTheme.textMuted,
+  },
+  leaderboardStreak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    backgroundColor: 'rgba(255, 99, 71, 0.15)',
+    paddingHorizontal: spacing[2.5],
+    paddingVertical: spacing[1.5],
+    borderRadius: 12,
+  },
+  leaderboardStreakText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF6347',
+  },
+  leaderboardEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing[6],
+  },
+  leaderboardEmptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: darkTheme.textSecondary,
+    marginTop: spacing[3],
+  },
+  leaderboardEmptySubtext: {
+    fontSize: 14,
+    color: darkTheme.textMuted,
+    textAlign: 'center',
+    marginTop: spacing[1.5],
+  },
+
+  // Settings row
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkTheme.surface,
+    borderRadius: 16,
+    padding: spacing[4.5],
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
+  },
+  settingsText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+    marginLeft: spacing[3.5],
   },
 })

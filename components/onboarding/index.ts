@@ -57,33 +57,8 @@ export type { WelcomeScreenProps } from './WelcomeScreen'
 export { AvatarCreationStep } from './AvatarCreationStep'
 export type { AvatarCreationStepProps } from './AvatarCreationStep'
 
-/**
- * Location permission step - third step of onboarding
- * Requests location permission with graceful degradation.
- */
-export { LocationPermissionStep } from './LocationPermissionStep'
-export type { LocationPermissionStepProps } from './LocationPermissionStep'
-
-/**
- * Producer demo screen - fourth step of onboarding
- * Shows how to post about someone you noticed.
- */
-export { ProducerDemoScreen } from './ProducerDemoScreen'
-export type { ProducerDemoScreenProps } from './ProducerDemoScreen'
-
-/**
- * Consumer demo screen - fifth step of onboarding
- * Shows how to browse and find posts about you.
- */
-export { ConsumerDemoScreen } from './ConsumerDemoScreen'
-export type { ConsumerDemoScreenProps } from './ConsumerDemoScreen'
-
-/**
- * Onboarding complete screen - final step of onboarding
- * Celebrates completion and provides CTA to enter the app.
- */
-export { OnboardingComplete } from './OnboardingComplete'
-export type { OnboardingCompleteProps } from './OnboardingComplete'
+// Web-only components removed: LocationPermissionStep, ProducerDemoScreen,
+// ConsumerDemoScreen, OnboardingComplete (were HTML/Tailwind, not React Native)
 
 // ============================================================================
 // Navigation & Progress Components

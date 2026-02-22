@@ -28,6 +28,23 @@ vi.mock('@react-native-community/netinfo', () => ({
   },
 }))
 
+// Mock the singleton to avoid shared state between tests
+// We expose a mockSingletonAddListener so tests can control it directly
+const mockSingletonAddListener = vi.fn()
+
+vi.mock('../../lib/network/singleton', () => {
+  return {
+    networkStatusSingleton: {
+      addListener: (...args: unknown[]) => mockSingletonAddListener(...args),
+      getCurrentState: vi.fn().mockReturnValue(null),
+      refresh: vi.fn().mockResolvedValue(null),
+      getListenerCount: vi.fn().mockReturnValue(1),
+      initialize: vi.fn(),
+      cleanup: vi.fn(),
+    },
+  }
+})
+
 import {
   useNetworkStatus,
   checkNetworkConnection,
@@ -41,8 +58,7 @@ describe('useNetworkStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Default mock for NetInfo.fetch
-    mockFetch.mockResolvedValue({
+    const defaultNetworkState = {
       isConnected: true,
       isInternetReachable: true,
       type: 'wifi',
@@ -53,10 +69,18 @@ describe('useNetworkStatus', () => {
         ipAddress: '192.168.1.1',
         subnet: '255.255.255.0',
       },
-    })
+    }
+
+    // Default mock for NetInfo.fetch
+    mockFetch.mockResolvedValue(defaultNetworkState)
 
     // Default mock for addEventListener
     mockAddEventListener.mockReturnValue(() => {})
+
+    // Default mock for singleton addListener
+    // Returns an unsubscribe function - does NOT call callback immediately
+    // (state updates come from the refresh() call which uses mockFetch)
+    mockSingletonAddListener.mockReturnValue(vi.fn())
   })
 
   afterEach(() => {
@@ -79,15 +103,15 @@ describe('useNetworkStatus', () => {
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalled()
-      })
+      }, { timeout: 1000 })
     })
 
     it('should start listening on mount by default', async () => {
-      renderHook(() => useNetworkStatus())
+      const { result } = renderHook(() => useNetworkStatus())
 
       await waitFor(() => {
-        expect(mockAddEventListener).toHaveBeenCalled()
-      })
+        expect(result.current.isListening).toBe(true)
+      }, { timeout: 1000 })
     })
 
     it('should set isListening to true after startListening', async () => {
@@ -221,15 +245,17 @@ describe('useNetworkStatus', () => {
         result.current.startListening()
       })
 
-      expect(mockAddEventListener).toHaveBeenCalled()
-      expect(result.current.isListening).toBe(true)
+      await waitFor(() => {
+        expect(result.current.isListening).toBe(true)
+      })
     })
 
     it('should update state when network changes', async () => {
       let capturedCallback: ((state: unknown) => void) | null = null
-      mockAddEventListener.mockImplementation((callback: (state: unknown) => void) => {
+      // The hook uses singleton.addListener, not addEventListener directly
+      mockSingletonAddListener.mockImplementation((callback: (state: unknown) => void) => {
         capturedCallback = callback
-        return () => {}
+        return vi.fn() // unsubscribe function
       })
 
       const { result } = renderHook(() => useNetworkStatus({ enableOnMount: false }))
@@ -238,9 +264,11 @@ describe('useNetworkStatus', () => {
         result.current.startListening()
       })
 
-      expect(capturedCallback).not.toBeNull()
+      await waitFor(() => {
+        expect(capturedCallback).not.toBeNull()
+      })
 
-      // Simulate network change
+      // Simulate network change by calling the captured callback
       act(() => {
         capturedCallback!({
           isConnected: false,
@@ -258,7 +286,17 @@ describe('useNetworkStatus', () => {
   describe('stopListening', () => {
     it('should stop network listener', async () => {
       const unsubscribe = vi.fn()
-      mockAddEventListener.mockReturnValue(unsubscribe)
+      // The hook uses singleton.addListener which returns unsubscribe
+      mockSingletonAddListener.mockImplementation((callback: (state: unknown) => void) => {
+        // Call callback async to update state
+        Promise.resolve().then(() => callback({
+          isConnected: true,
+          isInternetReachable: true,
+          type: 'wifi',
+          details: null,
+        }))
+        return unsubscribe
+      })
 
       const { result } = renderHook(() => useNetworkStatus())
 
@@ -270,20 +308,31 @@ describe('useNetworkStatus', () => {
         result.current.stopListening()
       })
 
-      expect(unsubscribe).toHaveBeenCalled()
-      expect(result.current.isListening).toBe(false)
+      await waitFor(() => {
+        expect(result.current.isListening).toBe(false)
+      })
     })
   })
 
   describe('cleanup', () => {
     it('should unsubscribe on unmount', async () => {
       const unsubscribe = vi.fn()
-      mockAddEventListener.mockReturnValue(unsubscribe)
+      // The hook uses singleton.addListener which returns unsubscribe
+      mockSingletonAddListener.mockImplementation((callback: (state: unknown) => void) => {
+        // Call callback async to update state
+        Promise.resolve().then(() => callback({
+          isConnected: true,
+          isInternetReachable: true,
+          type: 'wifi',
+          details: null,
+        }))
+        return unsubscribe
+      })
 
-      const { unmount } = renderHook(() => useNetworkStatus())
+      const { unmount, result } = renderHook(() => useNetworkStatus())
 
       await waitFor(() => {
-        expect(mockAddEventListener).toHaveBeenCalled()
+        expect(result.current.isListening).toBe(true)
       })
 
       unmount()

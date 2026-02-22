@@ -59,19 +59,23 @@
  * ```
  */
 
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback, useState, useMemo } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ViewStyle,
   Alert,
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { ReportPostModal } from './ReportModal'
 import { Avatar } from 'react-native-bitmoji'
 import { VerifiedBadge } from './VerifiedBadge'
+import { PressableScale } from './native/PressableScale'
+import { PostReactions } from './PostReactions'
 import { formatSightingTime, parseDate } from '../utils/dateTime'
+import { darkTheme } from '../constants/glassStyles'
+import { useAuthState } from '../contexts/AuthContext'
 import type { Post, PostWithDetails, Location, Profile } from '../types/database'
 
 // ============================================================================
@@ -155,6 +159,15 @@ export interface PostCardProps {
   style?: ViewStyle
 
   /**
+   * Level of detail to show based on distance
+   * - 'full' (0-500m): show full detail (note, avatar, exact time, location name)
+   * - 'reduced' (500m-2km): show note, avatar, approximate time, location area
+   * - 'minimal' (2km-25km): show note only, general area, relative time (no avatar details)
+   * @default 'full'
+   */
+  detailLevel?: 'full' | 'reduced' | 'minimal'
+
+  /**
    * Test ID for testing purposes
    */
   testID?: string
@@ -166,19 +179,14 @@ export interface PostCardProps {
 
 /**
  * Colors used in the PostCard component
+ * Match colors are kept local since darkTheme doesn't define them
  */
-const COLORS = {
-  primary: '#FF6B47',
-  textPrimary: '#000000',
-  textSecondary: '#8E8E93',
-  textTertiary: '#C7C7CC',
-  background: '#FFFFFF',
-  border: '#E5E5EA',
+const MATCH_COLORS = {
   matchExcellent: '#34C759', // Green - excellent match
   matchStrong: '#5AC8FA', // Light blue - strong match
-  matchGood: '#FF6B47', // Coral - good match
-  matchPartial: '#FF9500', // Orange - partial match
-  matchLow: '#8E8E93', // Gray - low match
+  matchGood: darkTheme.primary, // Coral - good match
+  matchPartial: darkTheme.warning, // Orange - partial match
+  matchLow: darkTheme.textMuted, // Gray - low match
 } as const
 
 /**
@@ -199,9 +207,10 @@ const NOTE_PREVIEW_LENGTH_COMPACT = 60
  * Format a timestamp into a relative time string
  *
  * @param timestamp - ISO 8601 timestamp string
+ * @param approximate - If true, use approximate time ranges (e.g., "this morning" instead of "2 hours ago")
  * @returns Human-readable relative time (e.g., "2 hours ago", "3 days ago")
  */
-export function formatRelativeTime(timestamp: string): string {
+export function formatRelativeTime(timestamp: string, approximate: boolean = false): string {
   const now = new Date()
   const then = new Date(timestamp)
   const diffMs = now.getTime() - then.getTime()
@@ -217,6 +226,27 @@ export function formatRelativeTime(timestamp: string): string {
   const diffDays = Math.floor(diffHours / 24)
   const diffWeeks = Math.floor(diffDays / 7)
 
+  // Approximate time formatting (for privacy)
+  if (approximate) {
+    if (diffHours < 12) {
+      return 'this morning'
+    }
+    if (diffHours < 24) {
+      return 'today'
+    }
+    if (diffDays < 2) {
+      return 'yesterday'
+    }
+    if (diffDays < 7) {
+      return 'this week'
+    }
+    if (diffWeeks < 4) {
+      return 'recently'
+    }
+    return 'a while ago'
+  }
+
+  // Exact time formatting
   if (diffSeconds < 60) {
     return 'Just now'
   }
@@ -267,11 +297,11 @@ export function truncateText(text: string, maxLength: number): string {
  * @returns Color string for the match indicator
  */
 export function getMatchColor(score: number): string {
-  if (score >= 90) return COLORS.matchExcellent
-  if (score >= 75) return COLORS.matchStrong
-  if (score >= 60) return COLORS.matchGood
-  if (score >= 40) return COLORS.matchPartial
-  return COLORS.matchLow
+  if (score >= 90) return MATCH_COLORS.matchExcellent
+  if (score >= 75) return MATCH_COLORS.matchStrong
+  if (score >= 60) return MATCH_COLORS.matchGood
+  if (score >= 40) return MATCH_COLORS.matchPartial
+  return MATCH_COLORS.matchLow
 }
 
 /**
@@ -334,6 +364,7 @@ export const PostCard = memo(function PostCard({
   enableReporting = true,
   onReportSuccess,
   style,
+  detailLevel = 'full',
   testID = 'post-card',
 }: PostCardProps) {
   // ---------------------------------------------------------------------------
@@ -341,6 +372,7 @@ export const PostCard = memo(function PostCard({
   // ---------------------------------------------------------------------------
 
   const [reportModalVisible, setReportModalVisible] = useState(false)
+  const { userId } = useAuthState()
 
   // ---------------------------------------------------------------------------
   // COMPUTED
@@ -356,12 +388,44 @@ export const PostCard = memo(function PostCard({
   // Check if the producer is verified
   const isProducerVerified = postProducer?.is_verified ?? false
 
+  // Format location based on detail level
+  // 'full': exact location name, 'reduced': area name, 'minimal': general area
+  const getLocationDisplay = () => {
+    if (!postLocation) return ''
+
+    if (detailLevel === 'minimal') {
+      // For minimal, show just the city or general area (extract from location name)
+      // If location name has comma, take the last part (usually city/area)
+      const parts = postLocation.name.split(',').map(p => p.trim())
+      return parts.length > 1 ? parts[parts.length - 1] : postLocation.name
+    }
+
+    if (detailLevel === 'reduced') {
+      // For reduced, abbreviate long location names
+      return postLocation.name.length > 30
+        ? truncateText(postLocation.name, 30)
+        : postLocation.name
+    }
+
+    // Full detail - show complete location name
+    return postLocation.name
+  }
+
+  const locationDisplay = getLocationDisplay()
+
   // Truncate note for preview
   const maxLength = compact ? NOTE_PREVIEW_LENGTH_COMPACT : NOTE_PREVIEW_LENGTH
   const notePreview = truncateText(post.message, maxLength)
 
-  // Format timestamp
-  const timeAgo = formatRelativeTime(post.created_at)
+  // Format timestamp based on detail level
+  // 'full': exact time, 'reduced': approximate, 'minimal': very approximate
+  const useApproximateTime = detailLevel === 'reduced' || detailLevel === 'minimal'
+  const timeAgo = formatRelativeTime(post.created_at, useApproximateTime)
+
+  // Determine what to show based on detail level
+  const showAvatar = detailLevel !== 'minimal'
+  const showExactLocation = detailLevel === 'full'
+  const showSightingTime = detailLevel === 'full'
 
   // Format sighting time if available
   const sightingDate = post.sighting_date ? parseDate(post.sighting_date) : null
@@ -372,6 +436,31 @@ export const PostCard = memo(function PostCard({
 
   // Show match indicator if score is provided
   const showMatchIndicator = matchScore !== undefined
+
+  // Build accessibility label
+  const accessibilityLabel = useMemo(() => {
+    let label = `Post: ${notePreview}`
+
+    if (hasSightingTime && formattedSightingTime) {
+      label += `, seen ${formattedSightingTime}`
+    }
+
+    if (postLocation && showLocation) {
+      label += `, at ${postLocation.name}`
+    }
+
+    if (isProducerVerified) {
+      label += ', from verified user'
+    }
+
+    label += `, posted ${timeAgo}`
+
+    if (showMatchIndicator && isMatch) {
+      label += `, ${getMatchLabel(matchScore)}`
+    }
+
+    return label
+  }, [notePreview, hasSightingTime, formattedSightingTime, postLocation, showLocation, isProducerVerified, timeAgo, showMatchIndicator, isMatch, matchScore])
 
   // ---------------------------------------------------------------------------
   // HANDLERS
@@ -428,81 +517,89 @@ export const PostCard = memo(function PostCard({
 
   return (
     <>
-      <TouchableOpacity
-        style={[styles.container, compact && styles.containerCompact, style]}
+      <PressableScale
+        style={style}
         onPress={handlePress}
-        onLongPress={handleLongPress}
-        activeOpacity={0.7}
         disabled={!onPress && !enableReporting && !onLongPress}
         testID={testID}
-        accessibilityRole="button"
-        accessibilityLabel={`Post from ${timeAgo}${postLocation ? ` at ${postLocation.name}` : ''}`}
       >
-      {/* Avatar Section */}
-      <View style={styles.avatarContainer} testID={`${testID}-avatar`}>
-        <Avatar
-          config={post.target_avatar_v2?.config}
-          size="md"
-        />
-        {/* Match Badge */}
-        {showMatchIndicator && isMatch && (
-          <View
-            style={[
-              styles.matchBadge,
-              { backgroundColor: getMatchColor(matchScore) },
-            ]}
-            testID={`${testID}-match-badge`}
-          >
-            <Text style={styles.matchBadgeText}>
-              {matchScore}%
-            </Text>
-          </View>
-        )}
-      </View>
+      <View
+        style={[styles.container, compact && styles.containerCompact]}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        // Note: Long press functionality moved to gesture handler if needed in future
+      >
+      {/* Avatar Section - hidden for minimal detail level */}
+      {showAvatar && (
+        <View style={styles.avatarContainer} testID={`${testID}-avatar`} accessible={false}>
+          <Avatar
+            config={post.target_avatar_v2?.config}
+            size="md"
+          />
+          {/* Match Badge */}
+          {showMatchIndicator && isMatch && (
+            <View
+              style={[
+                styles.matchBadge,
+                { backgroundColor: getMatchColor(matchScore) },
+              ]}
+              testID={`${testID}-match-badge`}
+              accessible={false}
+            >
+              <Text style={styles.matchBadgeText} accessible={false}>
+                {matchScore}%
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Content Section */}
-      <View style={styles.contentContainer}>
+      <View style={styles.contentContainer} accessible={false}>
         {/* Note Preview */}
         <Text
           style={[styles.noteText, compact && styles.noteTextCompact]}
           numberOfLines={compact ? 2 : 3}
           testID={`${testID}-note`}
+          accessible={false}
         >
           {notePreview}
         </Text>
 
-        {/* Sighting Time - displayed prominently when available */}
-        {hasSightingTime && formattedSightingTime && (
-          <View style={styles.sightingTimeContainer} testID={`${testID}-sighting-time`}>
-            <Text style={styles.sightingTimeIcon}>🕐</Text>
-            <Text style={styles.sightingTimeText}>
+        {/* Sighting Time - displayed prominently when available (full detail only) */}
+        {showSightingTime && hasSightingTime && formattedSightingTime && (
+          <View style={styles.sightingTimeContainer} testID={`${testID}-sighting-time`} accessible={false}>
+            <Ionicons name="time-outline" size={14} color={darkTheme.textSecondary} style={styles.sightingTimeIcon} accessible={false} />
+            <Text style={styles.sightingTimeText} accessible={false}>
               Seen {formattedSightingTime}
             </Text>
           </View>
         )}
 
         {/* Meta Information */}
-        <View style={styles.metaContainer}>
-          {/* Location */}
-          {showLocation && postLocation && (
-            <View style={styles.locationContainer}>
-              <Text style={styles.locationIcon}>📍</Text>
+        <View style={styles.metaContainer} accessible={false}>
+          {/* Location - formatted based on detail level */}
+          {showLocation && locationDisplay && (
+            <View style={styles.locationContainer} accessible={false}>
+              <Ionicons name="location-outline" size={14} color={darkTheme.textSecondary} style={styles.locationIcon} accessible={false} />
               <Text
                 style={styles.locationText}
                 numberOfLines={1}
                 testID={`${testID}-location`}
+                accessible={false}
               >
-                {postLocation.name}
+                {locationDisplay}
               </Text>
             </View>
           )}
 
-          {/* Timestamp and Verified Badge */}
-          <View style={styles.timestampContainer}>
-            {isProducerVerified && (
-              <VerifiedBadge size="sm" testID={`${testID}-verified-badge`} />
+          {/* Timestamp and Verified Badge (hide verified badge for minimal detail) */}
+          <View style={styles.timestampContainer} accessible={false}>
+            {isProducerVerified && detailLevel !== 'minimal' && (
+              <VerifiedBadge size="sm" testID={`${testID}-verified-badge`} accessible={false} />
             )}
-            <Text style={styles.timestampText} testID={`${testID}-timestamp`}>
+            <Text style={styles.timestampText} testID={`${testID}-timestamp`} accessible={false}>
               {timeAgo}
             </Text>
           </View>
@@ -516,16 +613,28 @@ export const PostCard = memo(function PostCard({
               { backgroundColor: `${getMatchColor(matchScore)}15` },
             ]}
             testID={`${testID}-match-indicator`}
+            accessible={false}
           >
             <Text
               style={[styles.matchIndicatorText, { color: getMatchColor(matchScore) }]}
+              accessible={false}
             >
               {getMatchLabel(matchScore)}
             </Text>
           </View>
         )}
+
+        {/* Post Reactions */}
+        {!compact && (
+          <PostReactions
+            postId={post.id}
+            userId={userId}
+            testID={`${testID}-reactions`}
+          />
+        )}
       </View>
-      </TouchableOpacity>
+      </View>
+      </PressableScale>
 
       {/* Report Post Modal */}
       {enableReporting && (
@@ -564,9 +673,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: COLORS.background,
+    backgroundColor: darkTheme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: darkTheme.cardBorder,
   },
   containerCompact: {
     paddingHorizontal: 12,
@@ -589,12 +698,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.background,
+    borderColor: darkTheme.surface,
   },
   matchBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.background,
+    color: darkTheme.textPrimary,
   },
 
   // Content
@@ -607,7 +716,7 @@ const styles = StyleSheet.create({
   noteText: {
     fontSize: 14,
     lineHeight: 20,
-    color: COLORS.textPrimary,
+    color: darkTheme.textPrimary,
     marginBottom: 8,
     fontWeight: '500',
   },
@@ -622,18 +731,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: darkTheme.surfaceElevated,
     paddingVertical: 4,
     paddingHorizontal: 6,
     borderRadius: 4,
   },
   sightingTimeIcon: {
-    fontSize: 12,
     marginRight: 4,
   },
   sightingTimeText: {
     fontSize: 12,
-    color: COLORS.textPrimary,
+    color: darkTheme.textPrimary,
     fontWeight: '500',
   },
 
@@ -647,12 +755,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   locationIcon: {
-    fontSize: 12,
     marginRight: 4,
   },
   locationText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: darkTheme.textSecondary,
     flex: 1,
   },
   timestampContainer: {
@@ -662,7 +769,7 @@ const styles = StyleSheet.create({
   },
   timestampText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: darkTheme.textSecondary,
   },
 
   // Match Indicator

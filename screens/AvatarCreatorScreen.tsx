@@ -18,9 +18,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { CommonActions } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
-  Avatar,
+  FullBodyAvatar,
   saveCurrentAvatar,
   useAvatarEditor,
   EDITOR_CATEGORIES,
@@ -34,6 +35,7 @@ import {
 import { darkTheme } from '../constants/glassStyles';
 import { colors } from '../constants/theme';
 import type { MainStackParamList } from '../navigation/types';
+import { useAuth } from '../contexts/AuthContext';
 
 // =============================================================================
 // TYPES
@@ -50,6 +52,10 @@ export default function AvatarCreatorScreen({
   route,
 }: Props): React.JSX.Element {
   const [isSaving, setIsSaving] = useState(false);
+  const { refreshProfile, updateProfile } = useAuth();
+
+  // Check if avatar creation is required (first-time setup)
+  const isRequired = route.params?.required ?? false;
 
   // Initialize editor with existing config or default
   const editor = useAvatarEditor({
@@ -88,20 +94,59 @@ export default function AvatarCreatorScreen({
 
     try {
       const storedAvatar = editor.getStoredAvatar();
+
+      if (!storedAvatar?.config || Object.keys(storedAvatar.config).length === 0) {
+        Alert.alert('Error', 'Avatar configuration is empty. Please customize your avatar first.');
+        return;
+      }
+
+      // Save to AsyncStorage (local)
       await saveCurrentAvatar(storedAvatar.config);
-      navigation.goBack();
+
+      // Update profile in Supabase database
+      // updateProfile already calls refreshProfile internally
+      const { error } = await updateProfile({
+        avatar: storedAvatar,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!isRequired) {
+        navigation.goBack();
+      } else {
+        // Reset navigation to MainTabs so user enters the app
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs' }],
+          })
+        );
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Error', `Failed to save avatar: ${message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[AvatarCreator] Save failed:', error);
+      Alert.alert('Save Error', `Failed to save avatar: ${message}`);
     } finally {
       setIsSaving(false);
     }
-  }, [editor, navigation, isSaving]);
+  }, [editor, navigation, isSaving, refreshProfile, updateProfile, isRequired]);
 
   /**
    * Handle cancel
    */
   const handleCancel = useCallback(() => {
+    // If avatar creation is required, don't allow cancellation
+    if (isRequired) {
+      Alert.alert(
+        'Avatar Required',
+        'You need to create an avatar to use the app. Please customize your avatar and tap Save.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+
     if (editor.isDirty) {
       Alert.alert(
         'Discard Changes?',
@@ -118,7 +163,7 @@ export default function AvatarCreatorScreen({
     } else {
       navigation.goBack();
     }
-  }, [editor.isDirty, navigation]);
+  }, [editor.isDirty, navigation, isRequired]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,16 +172,20 @@ export default function AvatarCreatorScreen({
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
+          testID="header-cancel-button"
           style={styles.headerButton}
           onPress={handleCancel}
           activeOpacity={0.7}
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{isRequired ? '' : 'Cancel'}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Edit Avatar</Text>
+        <Text style={styles.headerTitle}>
+          {isRequired ? 'Create Your Avatar' : 'Edit Avatar'}
+        </Text>
 
         <TouchableOpacity
+          testID="header-save-button"
           style={[styles.headerButton, styles.saveButton]}
           onPress={handleSave}
           disabled={isSaving}
@@ -152,11 +201,12 @@ export default function AvatarCreatorScreen({
 
       {/* Avatar Preview */}
       <View style={styles.previewContainer}>
-        <View style={styles.avatarWrapper}>
-          <Avatar config={editor.config} size="xl" />
+        <View style={styles.avatarWrapper} testID="avatar-preview">
+          <FullBodyAvatar config={editor.config} size="md" />
         </View>
         <View style={styles.actionButtons}>
           <TouchableOpacity
+            testID="randomize-button"
             style={styles.actionButton}
             onPress={editor.randomize}
             activeOpacity={0.7}
@@ -165,6 +215,7 @@ export default function AvatarCreatorScreen({
             <Text style={styles.actionButtonText}>Random</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            testID="undo-button"
             style={styles.actionButton}
             onPress={editor.undo}
             disabled={!editor.canUndo}
@@ -177,6 +228,7 @@ export default function AvatarCreatorScreen({
             />
           </TouchableOpacity>
           <TouchableOpacity
+            testID="redo-button"
             style={styles.actionButton}
             onPress={editor.redo}
             disabled={!editor.canRedo}

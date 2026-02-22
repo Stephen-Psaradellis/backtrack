@@ -45,8 +45,8 @@ const mockMessageBubble = vi.fn(({ message, isOwn }) => (
   </div>
 ))
 
-const mockTypingIndicator = vi.fn(({ isTyping, username }) =>
-  isTyping ? <div data-testid="typing-indicator">{username} is typing...</div> : null
+const mockTypingIndicator = vi.fn(({ isVisible }) =>
+  isVisible ? <div data-testid="typing-indicator">Typing...</div> : null
 )
 
 const mockShouldShowDateSeparator = vi.fn((current: unknown, previous: unknown) => !previous)
@@ -282,14 +282,21 @@ describe('MessageList', () => {
     it('should show typing indicator when other user is typing', () => {
       render(<MessageList {...defaultProps} isOtherUserTyping={true} />)
 
-      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
-      expect(screen.getByText('OtherUser is typing...')).toBeInTheDocument()
+      expect(mockTypingIndicator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isVisible: true,
+        })
+      )
     })
 
     it('should not show typing indicator when other user is not typing', () => {
       render(<MessageList {...defaultProps} isOtherUserTyping={false} />)
 
-      expect(screen.queryByTestId('typing-indicator')).not.toBeInTheDocument()
+      expect(mockTypingIndicator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isVisible: false,
+        })
+      )
     })
   })
 
@@ -384,7 +391,11 @@ describe('MessageList', () => {
     it('should handle empty username', () => {
       render(<MessageList {...defaultProps} otherUserName="" isOtherUserTyping={true} />)
 
-      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
+      expect(mockTypingIndicator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isVisible: true,
+        })
+      )
     })
   })
 })

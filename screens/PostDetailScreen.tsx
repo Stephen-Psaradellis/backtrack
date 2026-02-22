@@ -43,6 +43,8 @@ import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { ErrorState } from '../components/EmptyState'
 import { Button, OutlineButton } from '../components/Button'
+import { AvatarComparison } from '../components/AvatarComparison'
+import { MatchCelebration } from '../components/MatchCelebration'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { startConversation } from '../lib/conversations'
@@ -50,7 +52,7 @@ import { blockUser, MODERATION_ERRORS } from '../lib/moderation'
 import { formatRelativeTime } from '../components/PostCard'
 import { darkTheme } from '../constants/glassStyles'
 import type { PostDetailRouteProp, MainStackNavigationProp } from '../navigation/types'
-import type { Post, Location } from '../types/database'
+import type { Post, Location, Profile } from '../types/database'
 
 // ============================================================================
 // TYPES
@@ -109,18 +111,21 @@ export function PostDetailScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
 
   const [post, setPost] = useState<PostWithLocation | null>(null)
+  const [userProfile, setUserProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [startingChat, setStartingChat] = useState(false)
   const [blocking, setBlocking] = useState(false)
+  const [showMatchCelebration, setShowMatchCelebration] = useState(false)
+  const [matchedConversationId, setMatchedConversationId] = useState<string | null>(null)
 
   // ---------------------------------------------------------------------------
   // DATA FETCHING
   // ---------------------------------------------------------------------------
 
   /**
-   * Fetch post details from Supabase
+   * Fetch post details and user profile from Supabase
    */
   const fetchPost = useCallback(async (isRefresh = false) => {
     if (!isRefresh) {
@@ -152,13 +157,26 @@ export function PostDetailScreen(): React.ReactNode {
       }
 
       setPost(postData as PostWithLocation)
+
+      // Fetch current user's profile for avatar comparison
+      if (userId) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id, avatar, avatar_version')
+          .eq('id', userId)
+          .single()
+
+        if (profileData) {
+          setUserProfile(profileData as Profile)
+        }
+      }
     } catch {
       setError('An unexpected error occurred.')
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [postId])
+  }, [postId, userId])
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -197,6 +215,8 @@ export function PostDetailScreen(): React.ReactNode {
    * - Validates that user isn't trying to chat with themselves
    * - Checks for existing conversation (returns it if found)
    * - Creates new conversation if none exists
+   *
+   * Shows MatchCelebration modal if this is a new match (isNew === true)
    */
   const handleStartChat = useCallback(async () => {
     if (!post || !userId) {
@@ -216,7 +236,15 @@ export function PostDetailScreen(): React.ReactNode {
 
     if (result.success && result.conversationId) {
       await successFeedback()
-      navigation.navigate('Chat', { conversationId: result.conversationId })
+
+      // Show celebration modal for new matches
+      if (result.isNew) {
+        setMatchedConversationId(result.conversationId)
+        setShowMatchCelebration(true)
+      } else {
+        // Existing conversation - navigate directly to chat
+        navigation.navigate('Chat', { conversationId: result.conversationId })
+      }
     } else {
       await errorFeedback()
       Alert.alert(
@@ -225,6 +253,26 @@ export function PostDetailScreen(): React.ReactNode {
       )
     }
   }, [post, userId, navigation])
+
+  /**
+   * Handle "Say Hello" button from MatchCelebration modal
+   * Navigates to the chat screen
+   */
+  const handleMatchSayHello = useCallback(() => {
+    setShowMatchCelebration(false)
+    if (matchedConversationId) {
+      navigation.navigate('Chat', { conversationId: matchedConversationId })
+    }
+  }, [matchedConversationId, navigation])
+
+  /**
+   * Handle "Keep Browsing" button from MatchCelebration modal
+   * Dismisses the modal and stays on the post detail screen
+   */
+  const handleMatchDismiss = useCallback(() => {
+    setShowMatchCelebration(false)
+    setMatchedConversationId(null)
+  }, [])
 
   /**
    * Navigate to location ledger
@@ -351,6 +399,15 @@ export function PostDetailScreen(): React.ReactNode {
         )}
       </View>
 
+      {/* Avatar Comparison - show if not own post */}
+      {!isOwnPost && (
+        <AvatarComparison
+          targetAvatar={post.target_avatar_v2}
+          myAvatar={userProfile?.avatar}
+          testID="post-detail-avatar-comparison"
+        />
+      )}
+
       {/* Note Section */}
       <View style={styles.noteSection} testID="post-detail-note-section">
         <Text style={styles.sectionLabel}>Message</Text>
@@ -431,6 +488,17 @@ export function PostDetailScreen(): React.ReactNode {
           />
         </View>
       )}
+
+      {/* Match Celebration Modal */}
+      <MatchCelebration
+        visible={showMatchCelebration}
+        onSayHello={handleMatchSayHello}
+        onDismiss={handleMatchDismiss}
+        matchedAvatar={post.target_avatar_v2}
+        myAvatar={userProfile?.avatar || null}
+        locationName={post.location?.name}
+        testID="post-detail-match-celebration"
+      />
     </ScrollView>
   )
 }

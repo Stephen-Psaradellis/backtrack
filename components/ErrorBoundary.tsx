@@ -421,7 +421,7 @@ export function useErrorHandler(): (error: Error) => void {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0F0F13',
   },
   scrollView: {
     flex: 1,
@@ -445,13 +445,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   detailsContainer: {
     width: '100%',
     marginTop: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1C1C24',
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   detailsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#FFFFFF',
     marginBottom: 16,
   },
   detailSection: {
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: 'rgba(255, 255, 255, 0.5)',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -502,13 +502,13 @@ const styles = StyleSheet.create({
   },
   stackScrollView: {
     maxHeight: 150,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#16161D',
     borderRadius: 8,
     padding: 8,
   },
   stackText: {
     fontSize: 11,
-    color: '#3C3C43',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontFamily: 'monospace',
     lineHeight: 16,
   },

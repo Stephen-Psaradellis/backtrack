@@ -130,6 +130,12 @@ function createSupabaseClient() {
 export const supabase = createSupabaseClient()
 
 /**
+ * Type alias for the Supabase client
+ * Used for dependency injection in testable functions
+ */
+export type AppSupabaseClient = typeof supabase
+
+/**
  * Export the Supabase URL for use in other parts of the app
  * (e.g., constructing storage URLs)
  *

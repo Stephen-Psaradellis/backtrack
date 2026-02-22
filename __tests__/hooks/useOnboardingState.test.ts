@@ -33,7 +33,7 @@ import {
   type OnboardingPersistedState,
   type OnboardingLocationPermissionStatus,
 } from '@/hooks/useOnboardingState'
-import { DEFAULT_AVATAR_CONFIG, type AvatarConfig } from '@/types/avatar'
+import { DEFAULT_MALE_CONFIG as DEFAULT_AVATAR_CONFIG, type AvatarConfig } from '@/types/avatar'
 
 // ============================================================================
 // Test Setup - localStorage Mocking

@@ -210,7 +210,7 @@ export interface UseEventPostsResult {
 }
 
 // ============================================================================
-// Cache Implementation
+// Cache Implementation (P-035: LRU eviction)
 // ============================================================================
 
 interface CacheEntry {
@@ -219,6 +219,7 @@ interface CacheEntry {
   timestamp: number
 }
 
+const MAX_CACHE_SIZE = 10
 const postsCache = new Map<string, CacheEntry>()
 
 /**
@@ -245,9 +246,29 @@ function getCachedEntry(key: string): CacheEntry | null {
 }
 
 /**
- * Store entry in cache
+ * Store entry in cache with LRU eviction (P-035)
  */
 function setCachedEntry(key: string, entry: Omit<CacheEntry, 'timestamp'>): void {
+  // If cache is full, remove oldest entry (LRU)
+  if (postsCache.size >= MAX_CACHE_SIZE && !postsCache.has(key)) {
+    let oldestKey: string | null = null
+    let oldestTime = Infinity
+
+    for (const [k, v] of postsCache.entries()) {
+      if (v.timestamp < oldestTime) {
+        oldestTime = v.timestamp
+        oldestKey = k
+      }
+    }
+
+    if (oldestKey) {
+      postsCache.delete(oldestKey)
+      if (__DEV__) {
+        console.log(`[useEventPosts] Evicted oldest cache entry: ${oldestKey}`)
+      }
+    }
+  }
+
   postsCache.set(key, { ...entry, timestamp: Date.now() })
 }
 

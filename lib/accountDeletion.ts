@@ -25,7 +25,7 @@
  * ```
  */
 
-import { supabase } from './supabase'
+import { supabase, type AppSupabaseClient } from './supabase'
 import { trackEvent, AnalyticsEvent, resetAnalytics } from './analytics'
 import { captureException } from './sentry'
 
@@ -78,11 +78,13 @@ export const MAX_GRACE_DAYS = 30
  *
  * @param reason - Optional reason for deletion
  * @param graceDays - Number of days before deletion (default: 7)
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns Result with scheduled date
  */
 export async function scheduleAccountDeletion(
   reason?: string,
-  graceDays: number = DEFAULT_GRACE_DAYS
+  graceDays: number = DEFAULT_GRACE_DAYS,
+  client: AppSupabaseClient = supabase
 ): Promise<ScheduleDeletionResult> {
   try {
     // Validate grace days
@@ -91,7 +93,7 @@ export async function scheduleAccountDeletion(
       Math.min(MAX_GRACE_DAYS, graceDays)
     )
 
-    const { data, error } = await supabase.rpc('schedule_account_deletion', {
+    const { data, error } = await client.rpc('schedule_account_deletion', {
       p_reason: reason || null,
       p_grace_days: validGraceDays,
     })
@@ -188,15 +190,17 @@ export async function getDeletionStatus(): Promise<DeletionStatus> {
  * must be deleted via Supabase Admin API separately.
  *
  * @param userId - The user ID to delete
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns Result with counts of deleted records
  */
 export async function deleteAccountImmediately(
-  userId: string
+  userId: string,
+  client: AppSupabaseClient = supabase
 ): Promise<DeleteAccountResult> {
   // Verify the authenticated user matches the userId being deleted
   // This prevents any user from deleting another user's account
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await client.auth.getUser()
     if (authError || !user || user.id !== userId) {
       return {
         success: false,
@@ -212,11 +216,45 @@ export async function deleteAccountImmediately(
     }
   }
 
+  // GDPR Compliance: Delete profile photos from storage BEFORE deleting DB records
+  // This ensures we clean up all user data including files
+  try {
+    // Get all profile photo storage paths for this user
+    const { data: photos, error: photosError } = await client
+      .from('profile_photos')
+      .select('storage_path')
+      .eq('user_id', userId)
+
+    if (!photosError && photos && photos.length > 0) {
+      const storagePaths = photos.map((p) => p.storage_path)
+
+      // Delete all profile photos from the 'selfies' storage bucket
+      const { error: storageError } = await client.storage
+        .from('selfies')
+        .remove(storagePaths)
+
+      if (storageError) {
+        // Log but don't fail deletion - we'll still delete the DB records
+        captureException(storageError, {
+          operation: 'deleteAccountStorage',
+          userId,
+          pathCount: storagePaths.length,
+        })
+      }
+    }
+  } catch (storageError) {
+    // Log but continue - storage cleanup failure shouldn't block account deletion
+    captureException(storageError, {
+      operation: 'deleteAccountStorage',
+      userId,
+    })
+  }
+
   // Perform deletion
   let deletionData: { success: boolean; message?: string; deleted_counts?: Record<string, number>; error?: string } | null = null
 
   try {
-    const { data, error } = await supabase.rpc('delete_user_account', {
+    const { data, error } = await client.rpc('delete_user_account', {
       p_user_id: userId,
     })
 

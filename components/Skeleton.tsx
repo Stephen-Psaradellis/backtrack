@@ -1,22 +1,28 @@
 /**
- * Skeleton Loading Components
+ * Skeleton - Shimmer loading component
  *
- * Modern shimmer loading states for React Native.
- * Use these instead of spinners for a more polished loading experience.
+ * Smooth shimmer animation using react-native-reanimated.
+ * Provides placeholder UI while content loads.
+ *
+ * Features:
+ * - Smooth shimmer gradient animation
+ * - Configurable size and shape (width, height, borderRadius)
+ * - Variants: text, circle, card
+ * - Preset composites: SkeletonPostCard, SkeletonChatItem, SkeletonAvatar
+ * - Dark theme optimized
  */
 
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Animated,
-  StyleSheet,
-  ViewStyle,
-  Dimensions,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, borderRadius } from '../constants/theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { darkTheme } from '../constants/glassStyles';
+import { spacing, borderRadius as themeBorderRadius } from '../constants/theme';
 
 // ============================================================================
 // TYPES
@@ -25,239 +31,225 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export interface SkeletonProps {
   width?: number | string;
   height?: number | string;
-  variant?: 'text' | 'circular' | 'rectangular' | 'rounded';
-  animation?: 'shimmer' | 'pulse' | 'none';
+  borderRadius?: number;
+  variant?: 'text' | 'circle' | 'card' | 'circular' | 'rectangular' | 'rounded';
+  style?: ViewStyle;
+}
+
+interface SkeletonGroupProps {
   style?: ViewStyle;
 }
 
 // ============================================================================
-// SHIMMER ANIMATION COMPONENT
+// SKELETON BASE COMPONENT
 // ============================================================================
 
-function ShimmerOverlay() {
-  const animatedValue = useRef(new Animated.Value(0)).current;
+/**
+ * Skeleton - Base shimmer component
+ *
+ * @param width - Width in pixels or percentage (default: '100%')
+ * @param height - Height in pixels (default: 20)
+ * @param borderRadius - Border radius (default: based on variant)
+ * @param variant - Shape variant ('text' | 'circle' | 'card' | 'circular' | 'rectangular' | 'rounded')
+ * @param style - Additional styles
+ *
+ * @example
+ * ```tsx
+ * <Skeleton width={200} height={40} variant="text" />
+ * <Skeleton width={60} height={60} variant="circle" />
+ * <Skeleton width="100%" height={300} variant="card" />
+ * ```
+ */
+export function Skeleton({
+  width = '100%',
+  height = 20,
+  borderRadius,
+  variant = 'text',
+  style,
+}: SkeletonProps): JSX.Element {
+  // Determine default border radius based on variant
+  const defaultBorderRadius = (() => {
+    switch (variant) {
+      case 'circle':
+      case 'circular':
+        return 9999;
+      case 'card':
+      case 'rounded':
+        return themeBorderRadius.lg;
+      case 'rectangular':
+        return 0;
+      case 'text':
+      default:
+        return themeBorderRadius.sm;
+    }
+  })();
 
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.timing(animatedValue, {
-        toValue: 1,
+  const finalBorderRadius = borderRadius ?? defaultBorderRadius;
+
+  // Shimmer animation
+  const shimmerTranslate = useSharedValue(-1);
+
+  React.useEffect(() => {
+    shimmerTranslate.value = withRepeat(
+      withTiming(1, {
         duration: 1500,
-        useNativeDriver: true,
-      })
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      false
     );
-    animation.start();
-    return () => animation.stop();
-  }, [animatedValue]);
+  }, [shimmerTranslate]);
 
-  const translateX = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-SCREEN_WIDTH, SCREEN_WIDTH],
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: shimmerTranslate.value * 300 }],
+    };
   });
 
   return (
-    <Animated.View
+    <View
       style={[
-        StyleSheet.absoluteFill,
-        { transform: [{ translateX }] },
+        styles.skeleton,
+        {
+          width,
+          height,
+          borderRadius: finalBorderRadius,
+        },
+        style,
       ]}
     >
-      <LinearGradient
-        colors={[
-          'transparent',
-          'rgba(255, 255, 255, 0.3)',
-          'transparent',
-        ]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={StyleSheet.absoluteFill}
-      />
-    </Animated.View>
-  );
-}
-
-// ============================================================================
-// BASE SKELETON COMPONENT
-// ============================================================================
-
-export function Skeleton({
-  width = '100%',
-  height = 16,
-  variant = 'text',
-  animation = 'shimmer',
-  style,
-}: SkeletonProps) {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (animation === 'pulse') {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 0.6,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    }
-  }, [animation, pulseAnim]);
-
-  const variantStyles: Record<string, ViewStyle> = {
-    text: { borderRadius: 6 },
-    circular: { borderRadius: 9999 },
-    rectangular: { borderRadius: 0 },
-    rounded: { borderRadius: borderRadius.lg },
-  };
-
-  const containerStyle: ViewStyle = {
-    width: width as number,
-    height: height as number,
-    backgroundColor: colors.neutral[200],
-    overflow: 'hidden',
-    ...variantStyles[variant],
-  };
-
-  if (animation === 'pulse') {
-    return (
-      <Animated.View style={[containerStyle, style, { opacity: pulseAnim }]} />
-    );
-  }
-
-  return (
-    <View style={[containerStyle, style]}>
-      {animation === 'shimmer' && <ShimmerOverlay />}
+      <Animated.View style={[styles.shimmer, animatedStyle]} />
     </View>
   );
 }
 
 // ============================================================================
-// PRESET SKELETON COMPONENTS
+// SKELETON AVATAR
 // ============================================================================
 
-export function SkeletonAvatar({
-  size = 48,
-  style,
-}: {
-  size?: number;
-  style?: ViewStyle;
-}) {
-  return (
-    <Skeleton
-      variant="circular"
-      width={size}
-      height={size}
-      style={style}
-    />
-  );
+/**
+ * SkeletonAvatar - Circular avatar placeholder
+ *
+ * @param size - Avatar diameter (default: 48)
+ *
+ * @example
+ * ```tsx
+ * <SkeletonAvatar size={60} />
+ * ```
+ */
+export function SkeletonAvatar({ size = 48 }: { size?: number }): JSX.Element {
+  return <Skeleton width={size} height={size} variant="circle" />;
 }
 
-export function SkeletonText({
-  lines = 3,
-  style,
-}: {
-  lines?: number;
-  style?: ViewStyle;
-}) {
-  return (
-    <View style={[styles.textContainer, style]}>
-      {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton
-          key={i}
-          variant="text"
-          width={i === lines - 1 ? '60%' : '100%'}
-          height={14}
-          style={i > 0 ? styles.textLine : undefined}
-        />
-      ))}
-    </View>
-  );
-}
+// ============================================================================
+// SKELETON POST CARD
+// ============================================================================
 
-export function SkeletonCard({ style }: { style?: ViewStyle }) {
-  return (
-    <View style={[styles.card, style]}>
-      <View style={styles.cardHeader}>
-        <SkeletonAvatar size={44} />
-        <View style={styles.cardHeaderText}>
-          <Skeleton variant="text" width="50%" height={16} />
-          <Skeleton variant="text" width="30%" height={12} style={styles.mt1} />
-        </View>
-      </View>
-      <View style={styles.mt3}>
-        <SkeletonText lines={2} />
-      </View>
-      <View style={styles.cardActions}>
-        <Skeleton variant="rounded" width={80} height={32} />
-        <Skeleton variant="rounded" width={80} height={32} />
-      </View>
-    </View>
-  );
-}
-
-export function SkeletonPostCard({ style }: { style?: ViewStyle }) {
+/**
+ * SkeletonPostCard - Loading placeholder for PostCard
+ *
+ * Mimics the structure of a post card with avatar, text lines, and image.
+ *
+ * @example
+ * ```tsx
+ * <SkeletonPostCard />
+ * ```
+ */
+export function SkeletonPostCard({ style }: SkeletonGroupProps): JSX.Element {
   return (
     <View style={[styles.postCard, style]}>
-      <Skeleton variant="rectangular" width="100%" height={140} />
-      <View style={styles.postCardContent}>
-        <View style={styles.cardHeader}>
-          <SkeletonAvatar size={40} />
-          <View style={styles.cardHeaderText}>
-            <Skeleton variant="text" width="50%" height={14} />
-            <Skeleton variant="text" width="30%" height={11} style={styles.mt1} />
-          </View>
+      {/* Header: Avatar + Name + Time */}
+      <View style={styles.postHeader}>
+        <SkeletonAvatar size={48} />
+        <View style={styles.postHeaderText}>
+          <Skeleton width={120} height={16} variant="text" />
+          <Skeleton width={80} height={12} variant="text" style={styles.spacingTop4} />
         </View>
-        <View style={styles.mt2}>
-          <SkeletonText lines={2} />
-        </View>
-        <View style={styles.postCardFooter}>
-          <Skeleton variant="rounded" width={90} height={26} />
-          <Skeleton variant="circular" width={32} height={32} />
-        </View>
+      </View>
+
+      {/* Image placeholder */}
+      <Skeleton
+        width="100%"
+        height={280}
+        variant="card"
+        style={styles.spacingTop12}
+      />
+
+      {/* Caption lines */}
+      <View style={styles.spacingTop12}>
+        <Skeleton width="90%" height={14} variant="text" />
+        <Skeleton width="70%" height={14} variant="text" style={styles.spacingTop4} />
+      </View>
+
+      {/* Location and time info */}
+      <View style={styles.postFooter}>
+        <Skeleton width={100} height={12} variant="text" />
+        <Skeleton width={60} height={12} variant="text" />
       </View>
     </View>
   );
 }
 
-export function SkeletonChatItem({ style }: { style?: ViewStyle }) {
+// ============================================================================
+// SKELETON CHAT ITEM
+// ============================================================================
+
+/**
+ * SkeletonChatItem - Loading placeholder for chat conversation item
+ *
+ * Mimics the structure of a chat list item with avatar, name, message preview, and timestamp.
+ *
+ * @example
+ * ```tsx
+ * <SkeletonChatItem />
+ * ```
+ */
+export function SkeletonChatItem({ style }: SkeletonGroupProps): JSX.Element {
   return (
     <View style={[styles.chatItem, style]}>
-      <SkeletonAvatar size={52} />
-      <View style={styles.chatItemContent}>
-        <View style={styles.chatItemHeader}>
-          <Skeleton variant="text" width="45%" height={16} />
-          <Skeleton variant="text" width={45} height={11} />
+      <SkeletonAvatar size={56} />
+      <View style={styles.chatContent}>
+        <View style={styles.chatHeader}>
+          <Skeleton width={140} height={16} variant="text" />
+          <Skeleton width={50} height={12} variant="text" />
         </View>
-        <Skeleton variant="text" width="75%" height={14} style={styles.mt1} />
+        <Skeleton
+          width="85%"
+          height={14}
+          variant="text"
+          style={styles.spacingTop6}
+        />
       </View>
     </View>
   );
 }
 
-export function SkeletonList({
-  count = 5,
-  renderItem,
-  style,
-}: {
-  count?: number;
-  renderItem?: (index: number) => React.ReactNode;
-  style?: ViewStyle;
-}) {
-  const defaultRenderItem = (index: number) => (
-    <SkeletonCard key={index} style={index > 0 ? styles.mt3 : undefined} />
-  );
+// ============================================================================
+// SKELETON TEXT BLOCK
+// ============================================================================
 
+/**
+ * SkeletonTextBlock - Multiple text line placeholders
+ *
+ * @param lines - Number of text lines (default: 3)
+ *
+ * @example
+ * ```tsx
+ * <SkeletonTextBlock lines={4} />
+ * ```
+ */
+export function SkeletonTextBlock({ lines = 3 }: { lines?: number }): JSX.Element {
   return (
-    <View style={style}>
-      {Array.from({ length: count }).map((_, i) =>
-        renderItem ? renderItem(i) : defaultRenderItem(i)
-      )}
+    <View>
+      {Array.from({ length: lines }).map((_, index) => (
+        <Skeleton
+          key={index}
+          width={index === lines - 1 ? '70%' : '100%'}
+          height={14}
+          variant="text"
+          style={index > 0 ? styles.spacingTop6 : undefined}
+        />
+      ))}
     </View>
   );
 }
@@ -267,77 +259,71 @@ export function SkeletonList({
 // ============================================================================
 
 const styles = StyleSheet.create({
-  textContainer: {
-    gap: 8,
+  skeleton: {
+    backgroundColor: darkTheme.surface,
+    overflow: 'hidden',
   },
-  textLine: {
-    marginTop: 6,
+  shimmer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    // Gradient-like shimmer effect using opacity layers
+    opacity: 0.5,
   },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: 16,
-    shadowColor: colors.neutral[900],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+
+  // Post card styles
+  postCard: {
+    backgroundColor: darkTheme.cardBackground,
+    borderRadius: themeBorderRadius.lg,
+    padding: spacing[4],
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[3],
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
   },
-  cardHeader: {
+  postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  cardHeaderText: {
+  postHeaderText: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing[3],
   },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-  },
-  postCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    shadowColor: colors.neutral[900],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  postCardContent: {
-    padding: 16,
-  },
-  postCardFooter: {
+  postFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
+    marginTop: spacing[3],
   },
+
+  // Chat item styles
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    backgroundColor: darkTheme.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: darkTheme.cardBorder,
   },
-  chatItemContent: {
+  chatContent: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing[3],
   },
-  chatItemHeader: {
+  chatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  mt1: {
-    marginTop: 4,
+
+  // Spacing utilities
+  spacingTop4: {
+    marginTop: spacing[1],
   },
-  mt2: {
-    marginTop: 8,
+  spacingTop6: {
+    marginTop: spacing[1.5],
   },
-  mt3: {
-    marginTop: 12,
+  spacingTop12: {
+    marginTop: spacing[3],
   },
 });
 

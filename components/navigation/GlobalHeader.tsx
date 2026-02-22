@@ -30,6 +30,7 @@ import { selectionFeedback } from '../../lib/haptics';
 import { colors, shadows } from '../../constants/theme';
 import { darkTheme } from '../../constants/glassStyles';
 import type { MainTabNavigationProp } from '../../navigation/types';
+import { useGhostMode } from '../../hooks/useGhostMode';
 
 // ============================================================================
 // TYPES
@@ -52,7 +53,7 @@ export interface GlobalHeaderProps {
 // COMPONENT
 // ============================================================================
 
-export function GlobalHeader({
+function GlobalHeaderInner({
   showCheckIn = false,
   showLiveView = false,
   onPostPress,
@@ -61,7 +62,11 @@ export function GlobalHeader({
 }: GlobalHeaderProps): React.ReactNode {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<MainTabNavigationProp>();
+  // Only subscribe to profile from the combined context; avoids re-renders on
+  // pure auth-state changes (token refresh, session update) that don't affect
+  // what GlobalHeader renders.
   const { profile } = useAuth();
+  const { isGhostMode } = useGhostMode();
 
   const hasAvatar = profile?.avatar;
 
@@ -112,13 +117,19 @@ export function GlobalHeader({
           testID="global-header-post-button"
           accessibilityRole="button"
           accessibilityLabel="Create a new post"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="add" size={24} color={darkTheme.textPrimary} />
         </TouchableOpacity>
 
-        {/* Logo */}
+        {/* Logo with Ghost Mode indicator */}
         <View style={styles.logoContainer}>
           <BacktrackLogo size="medium" />
+          {isGhostMode && (
+            <View style={styles.ghostBadge} testID="global-header-ghost-badge">
+              <Ionicons name="eye-off" size={12} color={darkTheme.textPrimary} />
+            </View>
+          )}
         </View>
 
         {/* Avatar */}
@@ -129,6 +140,7 @@ export function GlobalHeader({
           testID="global-header-avatar"
           accessibilityRole="button"
           accessibilityLabel="View profile"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           {hasAvatar ? (
             <Avatar
@@ -157,6 +169,7 @@ export function GlobalHeader({
               testID="global-header-live-view"
               accessibilityRole="button"
               accessibilityLabel="Open live view"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="radio" size={18} color={darkTheme.accent} />
             </TouchableOpacity>
@@ -195,6 +208,20 @@ const styles = StyleSheet.create({
   logoContainer: {
     flex: 1,
     alignItems: 'center',
+    position: 'relative',
+  },
+  ghostBadge: {
+    position: 'absolute',
+    top: -4,
+    right: '45%',
+    backgroundColor: colors.primary[500],
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: darkTheme.cardBackground,
   },
   avatarButton: {
     width: 40,
@@ -233,4 +260,10 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * Memoized export — prevents re-renders when parent re-renders but props are
+ * unchanged. Particularly important because GlobalHeader sits in a tab
+ * navigator and would otherwise re-render on every navigation state change.
+ */
+export const GlobalHeader = React.memo(GlobalHeaderInner);
 export default GlobalHeader;

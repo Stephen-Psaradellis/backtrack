@@ -14,7 +14,8 @@
 
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithProviders } from '../utils/render-with-providers'
 
 // ============================================================================
 // Mock Setup
@@ -37,9 +38,13 @@ vi.mock('../../hooks/useNotificationCounts', () => ({
 // Mock useAuth hook
 const mockUseAuth = vi.fn()
 
-vi.mock('../../contexts/AuthContext', () => ({
-  useAuth: () => mockUseAuth(),
-}))
+vi.mock('../../contexts/AuthContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../contexts/AuthContext')>()
+  return {
+    ...actual,
+    useAuth: () => mockUseAuth(),
+  }
+})
 
 // Mock useFavoriteLocations hook
 const mockUseFavoriteLocations = vi.fn()
@@ -78,6 +83,21 @@ vi.mock('../../lib/supabase', () => ({
   },
 }))
 
+// Mock LiveViewModal to avoid useLiveCheckins -> QueryClient error
+vi.mock('../../components/modals/LiveViewModal', () => ({
+  LiveViewModal: () => null,
+  default: () => null,
+}))
+
+// Mock useLiveCheckins to avoid QueryClient dependency
+vi.mock('../../hooks/useLiveCheckins', () => ({
+  useLiveCheckins: () => ({
+    liveCheckins: [],
+    isLoading: false,
+    error: null,
+  }),
+}))
+
 // Mock haptics
 vi.mock('../../lib/haptics', () => ({
   selectionFeedback: vi.fn(),
@@ -109,6 +129,19 @@ vi.mock('react-native-safe-area-context', () => ({
 
 // Import the component under test AFTER mocking dependencies
 import MySpotsScreen from '../../screens/MySpotsScreen'
+
+// ============================================================================
+// Render Helper
+// ============================================================================
+
+const render = (ui: React.ReactElement) =>
+  renderWithProviders(ui, {
+    authContext: {
+      userId: 'test-user-123',
+      isAuthenticated: true,
+      isLoading: false,
+    },
+  })
 
 // ============================================================================
 // Test Constants

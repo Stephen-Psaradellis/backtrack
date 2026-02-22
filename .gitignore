@@ -128,3 +128,8 @@ coverage-report.json
 
 # Claude Code local settings (user-specific)
 .claude/settings.local.json
+
+# Generated local files
+.claude-flow/
+.swarm/
+.claude/memory.db

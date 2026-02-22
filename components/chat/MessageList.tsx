@@ -261,7 +261,7 @@ function MessageListComponent({
       </div>
 
       {/* Typing indicator */}
-      <TypingIndicator isTyping={isOtherUserTyping} username={otherUserName} />
+      <TypingIndicator isVisible={isOtherUserTyping} />
 
       {/* Scroll anchor */}
       <div ref={messagesEndRef} className={styles.scrollAnchor} aria-hidden="true" />

@@ -1,0 +1,20 @@
+# Maestro Configuration for Backtrack E2E Tests
+
+# Test flows to run
+flows:
+  - flows/auth-login.yaml
+  - flows/auth-signup.yaml
+  - flows/create-post.yaml
+  - flows/chat-send-message.yaml
+  - flows/profile-edit.yaml
+
+# Global settings
+env:
+  APP_ID: com.backtrack.app
+  TIMEOUT: 10000
+
+# Tags for organizing tests
+tags:
+  - auth: [auth-login, auth-signup]
+  - core: [create-post, chat-send-message]
+  - profile: [profile-edit]

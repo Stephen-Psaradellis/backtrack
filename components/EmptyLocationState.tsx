@@ -17,6 +17,7 @@ import { View, Text, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
 import { Button } from './Button'
+import { darkTheme } from '../constants/glassStyles'
 
 // ============================================================================
 // TYPES
@@ -65,14 +66,7 @@ export interface EmptyLocationStateProps {
 // CONSTANTS
 // ============================================================================
 
-const COLORS = {
-  primary: '#FF6B47',
-  background: '#FFFFFF',
-  backgroundSecondary: '#F2F2F7',
-  textPrimary: '#1C1917',
-  textSecondary: '#8E8E93',
-  iconMuted: '#C7C7CC',
-}
+/** @deprecated Local COLORS removed -- using darkTheme tokens instead */
 
 // ============================================================================
 // COMPONENT
@@ -102,14 +96,14 @@ export const EmptyLocationState = memo(function EmptyLocationState({
           <Ionicons
             name="chatbubble-ellipses-outline"
             size={48}
-            color={COLORS.iconMuted}
+            color={darkTheme.textMuted}
           />
         </View>
         <View style={styles.sparkle1}>
-          <Ionicons name="sparkles" size={16} color={COLORS.primary} />
+          <Ionicons name="sparkles" size={16} color={darkTheme.primary} />
         </View>
         <View style={styles.sparkle2}>
-          <Ionicons name="heart-outline" size={14} color={COLORS.primary} />
+          <Ionicons name="heart-outline" size={14} color={darkTheme.primary} />
         </View>
       </View>
 
@@ -153,11 +147,11 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: COLORS.backgroundSecondary,
+    backgroundColor: darkTheme.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: COLORS.iconMuted,
+    borderColor: darkTheme.textMuted,
     borderStyle: 'dashed',
   },
 
@@ -176,14 +170,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: darkTheme.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
 
   message: {
     fontSize: 15,
-    color: COLORS.textSecondary,
+    color: darkTheme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,

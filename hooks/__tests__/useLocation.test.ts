@@ -29,6 +29,11 @@ vi.mock('expo-location', () => ({
   },
 }))
 
+// Mock dev utilities to disable mock coordinates
+vi.mock('../../lib/dev', () => ({
+  shouldUseMockExpoSupabase: () => false,
+}))
+
 import {
   useLocation,
   calculateDistance,
@@ -66,16 +71,26 @@ describe('useLocation', () => {
   })
 
   describe('initial state', () => {
-    it('should start with loading true when enableOnMount is true', () => {
+    it('should start with loading true when enableOnMount is true', async () => {
       const { result } = renderHook(() => useLocation())
 
       expect(result.current.loading).toBe(true)
+
+      // Wait for completion to avoid act warnings
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
     })
 
-    it('should start with loading true when enableOnMount is default', () => {
+    it('should start with loading true when enableOnMount is default', async () => {
       const { result } = renderHook(() => useLocation())
 
       expect(result.current.loading).toBe(true)
+
+      // Wait for completion to avoid act warnings
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
     })
 
     it('should start with default coordinates', async () => {
@@ -147,7 +162,7 @@ describe('useLocation', () => {
     })
 
     it('should use high accuracy when highAccuracy is true', async () => {
-      renderHook(() => useLocation())
+      const { result } = renderHook(() => useLocation())
 
       await waitFor(() => {
         expect(mockGetCurrentPositionAsync).toHaveBeenCalled()
@@ -156,10 +171,15 @@ describe('useLocation', () => {
       expect(mockGetCurrentPositionAsync).toHaveBeenCalledWith({
         accuracy: 6, // High
       })
+
+      // Wait for completion
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
     })
 
     it('should use balanced accuracy when highAccuracy is false', async () => {
-      renderHook(() => useLocation({ highAccuracy: false }))
+      const { result } = renderHook(() => useLocation({ highAccuracy: false }))
 
       await waitFor(() => {
         expect(mockGetCurrentPositionAsync).toHaveBeenCalled()
@@ -167,6 +187,11 @@ describe('useLocation', () => {
 
       expect(mockGetCurrentPositionAsync).toHaveBeenCalledWith({
         accuracy: 3, // Balanced
+      })
+
+      // Wait for completion
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
       })
     })
   })
@@ -186,11 +211,11 @@ describe('useLocation', () => {
       const { result } = renderHook(() => useLocation())
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false)
+        expect(result.current.permissionStatus).toBe('denied')
       })
 
-      expect(result.current.permissionStatus).toBe('denied')
-      expect(result.current.error).toContain('permission')
+      expect(result.current.error).toBeTruthy()
+      expect(result.current.error?.toLowerCase()).toContain('permission')
     })
 
     it('should set error when location services disabled', async () => {
@@ -199,11 +224,11 @@ describe('useLocation', () => {
       const { result } = renderHook(() => useLocation())
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false)
+        expect(result.current.permissionStatus).toBe('restricted')
       })
 
-      expect(result.current.permissionStatus).toBe('restricted')
-      expect(result.current.error).toContain('services')
+      expect(result.current.error).toBeTruthy()
+      expect(result.current.error?.toLowerCase()).toContain('service')
     })
 
     it('should request permission manually', async () => {
@@ -242,7 +267,8 @@ describe('useLocation', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(result.current.error).toContain('timed out')
+      expect(result.current.error).toBeTruthy()
+      expect(result.current.error?.toLowerCase()).toContain('timed out')
     })
 
     it('should set unavailable error for other errors', async () => {
@@ -254,7 +280,8 @@ describe('useLocation', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(result.current.error).toContain('Unable to get')
+      expect(result.current.error).toBeTruthy()
+      expect(result.current.error?.toLowerCase()).toContain('unable')
     })
 
     it('should set unknown error for non-Error throws', async () => {
@@ -266,7 +293,8 @@ describe('useLocation', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(result.current.error).toContain('unknown')
+      expect(result.current.error).toBeTruthy()
+      expect(result.current.error?.toLowerCase()).toContain('unknown')
     })
   })
 

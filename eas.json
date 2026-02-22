@@ -8,13 +8,15 @@
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
-        "resourceClass": "m1-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
       },
       "env": {
+        "EAS_PROJECT_ID": "c7e1ae8a-a8e1-4010-b978-d6f52acae3c0",
         "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "${EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY}",
         "EXPO_PUBLIC_SENTRY_DSN": "${EXPO_PUBLIC_SENTRY_DSN}",
@@ -26,24 +28,27 @@
       "distribution": "internal",
       "channel": "preview",
       "ios": {
-        "resourceClass": "m1-medium"
+        "resourceClass": "m-medium"
       },
       "android": {
         "buildType": "apk"
       },
       "env": {
+        "EAS_PROJECT_ID": "c7e1ae8a-a8e1-4010-b978-d6f52acae3c0",
         "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "${EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY}",
         "EXPO_PUBLIC_SENTRY_DSN": "${EXPO_PUBLIC_SENTRY_DSN}",
         "SENTRY_ORG": "${SENTRY_ORG}",
         "SENTRY_PROJECT": "${SENTRY_PROJECT}",
-        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}"
+        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "preview-no-updates": {
       "extends": "preview",
       "channel": "preview-no-updates",
       "env": {
+        "EAS_PROJECT_ID": "c7e1ae8a-a8e1-4010-b978-d6f52acae3c0",
         "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "${EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY}",
         "EXPO_PUBLIC_SENTRY_DSN": "${EXPO_PUBLIC_SENTRY_DSN}",
@@ -62,9 +67,11 @@
         "buildType": "app-bundle"
       },
       "env": {
+        "EAS_PROJECT_ID": "c7e1ae8a-a8e1-4010-b978-d6f52acae3c0",
         "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "${EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY}",
         "EXPO_PUBLIC_SENTRY_DSN": "${EXPO_PUBLIC_SENTRY_DSN}",
+        "EXPO_PUBLIC_GPS_DEBUG_MODE": "false",
         "SENTRY_ORG": "${SENTRY_ORG}",
         "SENTRY_PROJECT": "${SENTRY_PROJECT}",
         "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}"

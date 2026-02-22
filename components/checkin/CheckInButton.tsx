@@ -392,13 +392,15 @@ export function CheckInButton({
       style={styles.locationItem}
       onPress={() => handleSelectLocation(item)}
       activeOpacity={0.7}
+      accessibilityLabel={`Check in at ${item.name}${item.fromGooglePlaces ? ' (new venue)' : ''}`}
+      accessibilityRole="button"
     >
       <View style={styles.locationItemContent}>
         <View style={styles.locationItemIcon}>
           <Ionicons
             name={item.fromGooglePlaces ? 'add-circle-outline' : 'location'}
             size={24}
-            color={item.fromGooglePlaces ? '#4CAF50' : '#FF6B47'}
+            color={item.fromGooglePlaces ? darkTheme.success : darkTheme.primary}
           />
         </View>
         <View style={styles.locationItemText}>
@@ -438,26 +440,16 @@ export function CheckInButton({
             ? `Checked in at ${activeCheckin.location_name}. Tap to check out.`
             : 'Check in to a nearby location'
         }
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       >
         {isProcessing ? (
-          <ActivityIndicator size="small" color={activeCheckin ? '#FFFFFF' : '#FF6B47'} />
+          <ActivityIndicator size="small" color={activeCheckin ? colors.white : darkTheme.primary} />
         ) : (
-          <>
-            <Ionicons
-              name={activeCheckin ? 'location' : 'location-outline'}
-              size={20}
-              color={activeCheckin ? '#FFFFFF' : '#FF6B47'}
-            />
-            <Text
-              style={[
-                styles.buttonText,
-                activeCheckin ? styles.buttonTextCheckedIn : styles.buttonTextDefault,
-              ]}
-              numberOfLines={1}
-            >
-              {activeCheckin ? activeCheckin.location_name : 'Check In'}
-            </Text>
-          </>
+          <Ionicons
+            name={activeCheckin ? 'location' : 'location-outline'}
+            size={18}
+            color={activeCheckin ? colors.white : darkTheme.primary}
+          />
         )}
       </TouchableOpacity>
 
@@ -471,7 +463,7 @@ export function CheckInButton({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalIcon}>
-              <Ionicons name="location" size={32} color="#FF6B47" />
+              <Ionicons name="location" size={32} color={darkTheme.primary} />
             </View>
             <Text style={styles.modalTitle}>Check In</Text>
             <Text style={styles.modalLocation}>{nearbyLocation?.name}</Text>
@@ -484,7 +476,7 @@ export function CheckInButton({
 
             {nearbyLocation?.fromGooglePlaces && (
               <View style={styles.newVenueBadge}>
-                <Ionicons name="add-circle" size={14} color="#4CAF50" />
+                <Ionicons name="add-circle" size={14} color={darkTheme.success} />
                 <Text style={styles.newVenueBadgeText}>New venue - will be added</Text>
               </View>
             )}
@@ -494,6 +486,8 @@ export function CheckInButton({
                 style={styles.modalButtonCancel}
                 onPress={handleCancel}
                 disabled={isCreatingLocation}
+                accessibilityLabel="Cancel check-in"
+                accessibilityRole="button"
               >
                 <Text style={styles.modalButtonCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -501,9 +495,11 @@ export function CheckInButton({
                 style={styles.modalButtonConfirm}
                 onPress={handleConfirmCheckIn}
                 disabled={isCreatingLocation}
+                accessibilityLabel="Confirm check-in"
+                accessibilityRole="button"
               >
                 {isCreatingLocation ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.white} />
                 ) : (
                   <Text style={styles.modalButtonConfirmText}>Check In</Text>
                 )}
@@ -524,7 +520,13 @@ export function CheckInButton({
           <View style={styles.pickerContent}>
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Select a Venue</Text>
-              <TouchableOpacity onPress={handleCancel} style={styles.pickerCloseButton}>
+              <TouchableOpacity
+                onPress={handleCancel}
+                style={styles.pickerCloseButton}
+                accessibilityLabel="Close location picker"
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Ionicons name="close" size={24} color={darkTheme.textPrimary} />
               </TouchableOpacity>
             </View>
@@ -556,7 +558,7 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 10,
     borderRadius: 20,
     gap: 6,
@@ -583,7 +585,7 @@ const styles = StyleSheet.create({
     color: colors.primary[500],
   },
   buttonTextCheckedIn: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   modalOverlay: {
     flex: 1,
@@ -662,7 +664,7 @@ const styles = StyleSheet.create({
   modalButtonConfirmText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   newVenueBadge: {
     flexDirection: 'row',

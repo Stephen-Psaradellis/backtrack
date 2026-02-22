@@ -25,6 +25,7 @@ import { MapView, createRegion, createMarker, type MapMarker, type PoiData, type
 import { LocationMarker, getActivityState } from '../components/map/LocationMarker'
 import { SearchBar } from '../components/LocationSearch'
 import { GlobalHeader } from '../components/navigation/GlobalHeader'
+import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
 import { selectionFeedback, lightFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { colors, shadows } from '../constants/theme'
@@ -132,7 +133,11 @@ export function MapSearchScreen(): React.ReactNode {
   // Track selected location for marker highlighting
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
 
-  // Create activity markers for nearby locations with posts using custom LocationMarker
+  // P-034: Track last fetch time for staleness check
+  const lastFetchTimeRef = useRef<number>(0)
+
+  // P-022: Create activity markers without selectedLocationId in deps to avoid recreation
+  // Selection state is handled separately via marker ID tracking
   const activityMarkers: MapMarker[] = useMemo(() => {
     return nearbyLocations.map((location) => {
       const postCount = location.active_post_count ?? 0
@@ -141,7 +146,7 @@ export function MapSearchScreen(): React.ReactNode {
         : null
       const activityState = getActivityState(postCount, latestPostAt)
       const isHot = activityState === 'hot'
-      const isSelected = selectedLocationId === location.id
+      // Don't read selectedLocationId here to avoid recreating all markers
 
       return {
         id: location.id,
@@ -154,12 +159,12 @@ export function MapSearchScreen(): React.ReactNode {
             postCount={postCount}
             latestPostAt={latestPostAt}
             size="medium"
-            selected={isSelected}
+            selected={false} // Selection handled via marker press/highlight, not via recreation
           />
         ),
       }
     })
-  }, [nearbyLocations, selectedLocationId])
+  }, [nearbyLocations])
 
   // Add selected venue as a marker if it exists (uses default pin style)
   const allMarkers: MapMarker[] = useMemo(() => {
@@ -285,11 +290,26 @@ export function MapSearchScreen(): React.ReactNode {
     }
   }, [searchResults, handleVenueSelect])
 
-  // Refresh data when screen comes into focus
+  // Refresh data when screen comes into focus (P-034: with staleness check)
   useFocusEffect(
     useCallback(() => {
-      refetchFavorites()
-      refetchNearbyLocations()
+      const now = Date.now()
+      const STALENESS_THRESHOLD_MS = 60000 // 60 seconds
+
+      // Only refetch if data is stale (older than 60s)
+      if (now - lastFetchTimeRef.current > STALENESS_THRESHOLD_MS) {
+        refetchFavorites()
+        refetchNearbyLocations()
+        lastFetchTimeRef.current = now
+
+        if (__DEV__) {
+          console.log('[MapSearchScreen] Refetched data (stale)')
+        }
+      } else {
+        if (__DEV__) {
+          console.log('[MapSearchScreen] Skipped refetch (data fresh)')
+        }
+      }
     }, [refetchFavorites, refetchNearbyLocations])
   )
 
@@ -315,6 +335,7 @@ export function MapSearchScreen(): React.ReactNode {
       <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
       {/* Global Header */}
       <GlobalHeader />
+      <FloatingActionButtons testID="map-floating-actions" />
 
       {/* Search Row: [Star Icon] [Search Bar] */}
       <View style={styles.searchRow}>
@@ -419,8 +440,8 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 100, // Above bottom tab bar
-    right: 16,
+    bottom: 120, // Above bottom tab bar + extra clearance for FABs on right side
+    left: 16,
     zIndex: 999,
     elevation: 999,
   },

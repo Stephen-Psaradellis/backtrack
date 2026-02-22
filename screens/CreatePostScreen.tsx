@@ -18,10 +18,11 @@
  */
 
 import React, { useCallback } from 'react'
-import { View, Alert, Text, TouchableOpacity, Platform, StatusBar, StyleSheet } from 'react-native'
+import { View, Alert, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, useRoute } from '@react-navigation/native'
-import Tooltip from 'react-native-walkthrough-tooltip'
 
+import { darkTheme } from '../constants/glassStyles'
 import { locationToItem } from '../components/LocationPicker'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { selectionFeedback, errorFeedback, warningFeedback, successFeedback } from '../lib/haptics'
@@ -137,26 +138,6 @@ export function CreatePostScreen(): React.ReactNode {
   // ---------------------------------------------------------------------------
 
   /**
-   * Render tutorial tooltip content for post creation onboarding
-   */
-  const renderTutorialContent = (): React.ReactNode => (
-    <View style={tooltipStyles.container}>
-      <Text style={tooltipStyles.title}>Create a Missed Connection</Text>
-      <Text style={tooltipStyles.description}>
-        Start by selecting a photo, then describe who you saw, write a note, and choose a location.
-        Your post will help you reconnect!
-      </Text>
-      <TouchableOpacity
-        style={tooltipStyles.button}
-        onPress={tutorial.markComplete}
-        testID="tutorial-dismiss-button"
-      >
-        <Text style={tooltipStyles.buttonText}>Got it</Text>
-      </TouchableOpacity>
-    </View>
-  )
-
-  /**
    * Render current step content based on currentStep (new 3-moment flow)
    */
   const renderStepContent = (): React.ReactNode => {
@@ -240,7 +221,7 @@ export function CreatePostScreen(): React.ReactNode {
   // In the new 3-moment flow, no steps are full-screen
   // All steps render within the standard container with header and progress bar
 
-  // Render without Tooltip to fix Android blank screen issue
+  // Use inline banner on all platforms to avoid tooltip collision with step content
   return (
     <View style={sharedStyles.container} testID="create-post-screen">
       {/* Header with step indicator */}
@@ -258,6 +239,26 @@ export function CreatePostScreen(): React.ReactNode {
         testID="create-post"
       />
 
+      {/* Inline tutorial banner (consistent on iOS and Android) */}
+      {tutorial.isVisible && !tutorial.loading && (
+        <View style={tooltipStyles.androidBanner} testID="tutorial-banner">
+          <View style={tooltipStyles.androidBannerTextContainer}>
+            <Text style={tooltipStyles.androidBannerTitle}>Create a Missed Connection</Text>
+            <Text style={tooltipStyles.androidBannerDescription}>
+              First, set the scene — where and when did you spot them? Then describe who you saw, and finally, seal your post.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={tooltipStyles.androidBannerDismiss}
+            onPress={tutorial.markComplete}
+            testID="tutorial-dismiss-button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={18} color={darkTheme.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Step content */}
       <View style={sharedStyles.content}>
         {renderStepContent()}
@@ -271,36 +272,40 @@ export function CreatePostScreen(): React.ReactNode {
 // ============================================================================
 
 /**
- * Styles for tutorial tooltip content
+ * Styles for tutorial inline banner (cross-platform)
  */
 const tooltipStyles = StyleSheet.create({
-  container: {
-    padding: 16,
-    maxWidth: 280,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  button: {
-    backgroundColor: '#FF6B47',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  // Inline tutorial banner styles (UX-026, unified cross-platform)
+  androidBanner: {
+    backgroundColor: darkTheme.surfaceElevated,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
     borderRadius: 12,
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  androidBannerTextContainer: {
+    flex: 1,
+  },
+  androidBannerTitle: {
+    fontSize: 15,
     fontWeight: '600',
+    color: darkTheme.textPrimary,
+    marginBottom: 4,
+  },
+  androidBannerDescription: {
+    fontSize: 13,
+    color: darkTheme.textSecondary,
+    lineHeight: 18,
+  },
+  androidBannerDismiss: {
+    padding: 4,
   },
 })
 

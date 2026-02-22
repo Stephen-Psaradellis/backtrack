@@ -15,7 +15,8 @@
 
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { screen, waitFor, fireEvent } from '@testing-library/react'
+import { renderWithProviders } from '../utils/render-with-providers'
 
 // ============================================================================
 // Mock Setup
@@ -26,13 +27,98 @@ const mockUseNearbyPosts = vi.fn()
 
 vi.mock('../../hooks/useNearbyPosts', () => ({
   useNearbyPosts: () => mockUseNearbyPosts(),
+  RADIUS_TIERS: [
+    { label: 'Nearby', value: 1 },
+    { label: 'Local', value: 5 },
+    { label: 'City', value: 25 },
+  ],
 }))
 
-// Mock useAuth hook
-const mockUseAuth = vi.fn()
+// Mock hooks that FeedScreen uses
+vi.mock('../../hooks/useTrendingVenues', () => ({
+  useTrendingVenues: () => ({
+    venues: [],
+    loading: false,
+    error: null,
+  }),
+}))
 
-vi.mock('../../contexts/AuthContext', () => ({
-  useAuth: () => mockUseAuth(),
+vi.mock('../../hooks/useHangouts', () => ({
+  useHangouts: () => ({
+    hangouts: [],
+    loading: false,
+    error: null,
+    createHangout: vi.fn(),
+    joinHangout: vi.fn(),
+    leaveHangout: vi.fn(),
+    refetch: vi.fn(),
+  }),
+}))
+
+vi.mock('../../hooks/useLocation', () => ({
+  useLocation: () => ({
+    location: null,
+    locationError: null,
+    isLoadingLocation: false,
+  }),
+}))
+
+vi.mock('../../hooks/useCheckin', () => ({
+  useCheckin: () => ({
+    checkin: null,
+    isCheckedIn: false,
+    loading: false,
+    checkIn: vi.fn(),
+    checkOut: vi.fn(),
+  }),
+}))
+
+vi.mock('../../lib/haptics', () => ({
+  selectionFeedback: vi.fn(),
+  successFeedback: vi.fn(),
+  errorFeedback: vi.fn(),
+}))
+
+// Mock components that use reanimated animations
+vi.mock('../../components/SwipeableCardStack', () => ({
+  SwipeableCardStack: ({ children }: { children: React.ReactNode }) => children,
+}))
+
+vi.mock('../../components/TimeFilterChips', () => ({
+  TimeFilterChips: () => null,
+  isInTimeRange: vi.fn(() => true),
+}))
+
+vi.mock('../../components/TrendingVenues', () => ({
+  TrendingVenues: () => null,
+}))
+
+vi.mock('../../components/HangoutsList', () => ({
+  HangoutsList: () => null,
+}))
+
+vi.mock('../../components/CreateHangoutModal', () => ({
+  CreateHangoutModal: () => null,
+}))
+
+vi.mock('../../components/navigation/GlobalHeader', () => ({
+  GlobalHeader: () => null,
+}))
+
+vi.mock('../../components/navigation/FloatingActionButtons', () => ({
+  FloatingActionButtons: () => null,
+}))
+
+vi.mock('../../components/PostCard', () => ({
+  PostCard: () => null,
+}))
+
+vi.mock('../../components/EmptyState', () => ({
+  EmptyFeed: () => null,
+}))
+
+vi.mock('../../components/Skeleton', () => ({
+  SkeletonPostCard: () => null,
 }))
 
 // Mock navigation
@@ -42,16 +128,16 @@ vi.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: mockNavigate,
     goBack: vi.fn(),
+    setOptions: vi.fn(),
+    addListener: vi.fn(() => () => {}),
   }),
   useRoute: () => ({
     params: {},
   }),
-}))
-
-// Mock safe area
-vi.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
-  SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+  useFocusEffect: vi.fn(),
+  useIsFocused: () => true,
+  NavigationContainer: ({ children }: { children: React.ReactNode }) => children,
+  createNavigationContainerRef: () => ({ current: null }),
 }))
 
 // Import the component under test AFTER mocking dependencies
@@ -62,15 +148,6 @@ import FeedScreen from '../../screens/FeedScreen'
 // ============================================================================
 
 const TEST_USER_ID = 'test-user-123'
-
-const DEFAULT_AUTH_STATE = {
-  userId: TEST_USER_ID,
-  isAuthenticated: true,
-  isLoading: false,
-  profile: { id: TEST_USER_ID, avatar_config: { avatarId: 'avatar_asian_m' } },
-  session: null,
-  user: null,
-}
 
 const MOCK_POSTS = [
   {
@@ -105,7 +182,14 @@ const MOCK_POSTS = [
   },
 ]
 
+const BASE_HOOK_STATE = {
+  activeTier: 0,
+  effectiveRadius: 1,
+  usingTieredExpansion: false,
+}
+
 const LOADING_STATE = {
+  ...BASE_HOOK_STATE,
   posts: [],
   isLoading: true,
   error: null,
@@ -113,6 +197,7 @@ const LOADING_STATE = {
 }
 
 const EMPTY_STATE = {
+  ...BASE_HOOK_STATE,
   posts: [],
   isLoading: false,
   error: null,
@@ -120,6 +205,7 @@ const EMPTY_STATE = {
 }
 
 const DATA_STATE = {
+  ...BASE_HOOK_STATE,
   posts: MOCK_POSTS,
   isLoading: false,
   error: null,
@@ -127,6 +213,7 @@ const DATA_STATE = {
 }
 
 const ERROR_STATE = {
+  ...BASE_HOOK_STATE,
   posts: [],
   isLoading: false,
   error: 'Failed to fetch posts',
@@ -141,9 +228,6 @@ describe('FeedScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Default auth state
-    mockUseAuth.mockReturnValue(DEFAULT_AUTH_STATE)
-
     // Default hook state (loading)
     mockUseNearbyPosts.mockReturnValue(LOADING_STATE)
   })
@@ -156,7 +240,13 @@ describe('FeedScreen', () => {
     it('renders the FeedScreen component', () => {
       mockUseNearbyPosts.mockReturnValue(DATA_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+          isLoading: false,
+        },
+      })
 
       // Should render without throwing
       expect(true).toBe(true)
@@ -165,7 +255,12 @@ describe('FeedScreen', () => {
     it('renders with loading state', () => {
       mockUseNearbyPosts.mockReturnValue(LOADING_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // Should not crash
       expect(true).toBe(true)
@@ -174,7 +269,12 @@ describe('FeedScreen', () => {
     it('renders with empty state', () => {
       mockUseNearbyPosts.mockReturnValue(EMPTY_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // Should not crash
       expect(true).toBe(true)
@@ -183,7 +283,12 @@ describe('FeedScreen', () => {
     it('renders with error state', () => {
       mockUseNearbyPosts.mockReturnValue(ERROR_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // Should not crash
       expect(true).toBe(true)
@@ -198,17 +303,26 @@ describe('FeedScreen', () => {
     it('displays loading state when isLoading is true', () => {
       mockUseNearbyPosts.mockReturnValue(LOADING_STATE)
 
-      const { container } = render(<FeedScreen />)
+      const { container } = renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // The component should render with loading state
-      // Exact UI depends on implementation (ActivityIndicator, skeleton, etc.)
       expect(container).toBeTruthy()
     })
 
     it('calls useNearbyPosts hook', () => {
       mockUseNearbyPosts.mockReturnValue(LOADING_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       expect(mockUseNearbyPosts).toHaveBeenCalled()
     })
@@ -222,7 +336,12 @@ describe('FeedScreen', () => {
     it('renders empty state when posts array is empty', () => {
       mockUseNearbyPosts.mockReturnValue(EMPTY_STATE)
 
-      const { container } = render(<FeedScreen />)
+      const { container } = renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // Component should render with empty posts
       expect(container).toBeTruthy()
@@ -231,7 +350,12 @@ describe('FeedScreen', () => {
     it('does not show loading indicator when empty but loaded', () => {
       mockUseNearbyPosts.mockReturnValue(EMPTY_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // Loading should be false
       expect(mockUseNearbyPosts().isLoading).toBe(false)
@@ -246,7 +370,12 @@ describe('FeedScreen', () => {
     it('renders posts when data is available', () => {
       mockUseNearbyPosts.mockReturnValue(DATA_STATE)
 
-      const { container } = render(<FeedScreen />)
+      const { container } = renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // Component should render with posts
       expect(container).toBeTruthy()
@@ -256,7 +385,12 @@ describe('FeedScreen', () => {
     it('has correct number of posts in state', () => {
       mockUseNearbyPosts.mockReturnValue(DATA_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       const hookResult = mockUseNearbyPosts()
       expect(hookResult.posts).toHaveLength(2)
@@ -276,7 +410,12 @@ describe('FeedScreen', () => {
         refetch: mockRefetch,
       })
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // The refetch function should be available
       expect(mockUseNearbyPosts().refetch).toBe(mockRefetch)
@@ -289,7 +428,12 @@ describe('FeedScreen', () => {
         refetch: mockRefetch,
       })
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       // Call refetch directly to simulate pull-to-refresh
       await mockUseNearbyPosts().refetch()
@@ -306,7 +450,12 @@ describe('FeedScreen', () => {
     it('renders when there is an error', () => {
       mockUseNearbyPosts.mockReturnValue(ERROR_STATE)
 
-      const { container } = render(<FeedScreen />)
+      const { container } = renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       expect(container).toBeTruthy()
     })
@@ -314,7 +463,12 @@ describe('FeedScreen', () => {
     it('error is accessible from hook', () => {
       mockUseNearbyPosts.mockReturnValue(ERROR_STATE)
 
-      render(<FeedScreen />)
+      renderWithProviders(<FeedScreen />, {
+        authContext: {
+          userId: TEST_USER_ID,
+          isAuthenticated: true,
+        },
+      })
 
       expect(mockUseNearbyPosts().error).toBe('Failed to fetch posts')
     })

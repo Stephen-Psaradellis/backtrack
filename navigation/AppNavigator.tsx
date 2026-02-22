@@ -9,7 +9,8 @@
  * - MainTabs: Bottom tab navigation for core app sections
  */
 
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, Suspense, lazy } from 'react'
+import * as Sentry from '@sentry/react-native'
 import { NavigationContainer, LinkingOptions, NavigationState, PartialState } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -25,13 +26,10 @@ import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
 import { FeedScreen } from '../screens/FeedScreen'
 import { MySpotsScreen } from '../screens/MySpotsScreen'
-import { CreatePostScreen } from '../screens/CreatePostScreen'
 import { LedgerScreen } from '../screens/LedgerScreen'
 import { PostDetailScreen } from '../screens/PostDetailScreen'
 import { ChatScreen } from '../screens/ChatScreen'
 import { ChatListScreen } from '../screens/ChatListScreen'
-import AvatarCreatorScreen from '../screens/AvatarCreatorScreen'
-import { LegalScreen } from '../screens/LegalScreen'
 import { FavoritesScreen } from '../screens/FavoritesScreen'
 import { MapSearchScreen } from '../screens/MapSearchScreen'
 import type {
@@ -41,6 +39,35 @@ import type {
   MainTabParamList,
 } from './types'
 import { SCREENS, TAB_LABELS } from './types'
+
+// ============================================================================
+// SENTRY ROUTING INSTRUMENTATION
+// ============================================================================
+
+/**
+ * Create navigation ref for Sentry routing instrumentation
+ * This allows Sentry to track navigation events and performance
+ */
+const navigationRef = React.createRef<any>()
+
+/**
+ * Lazy-initialize Sentry routing instrumentation
+ * This creates automatic performance transactions for navigation events
+ * Deferred to avoid blocking module load (improves startup time)
+ */
+const navigationIntegration = Sentry.reactNavigationIntegration({
+  routeChangeTimeoutMs: 500,
+})
+
+function getNavigationIntegration() {
+  return navigationIntegration
+}
+
+// P-013: Lazy-load infrequently visited screens
+const CreatePostScreen = lazy(() => import('../screens/CreatePostScreen'))
+const AvatarCreatorScreen = lazy(() => import('../screens/AvatarCreatorScreen'))
+const LegalScreen = lazy(() => import('../screens/LegalScreen'))
+const SettingsScreen = lazy(() => import('../screens/SettingsScreen'))
 
 // ============================================================================
 // STACK AND TAB NAVIGATORS
@@ -190,8 +217,40 @@ function AuthStackNavigator() {
 /**
  * Main stack navigator for authenticated users
  * Contains tab navigator and modal screens
+ * Enforces avatar creation before allowing access to the main app
  */
 function MainStackNavigator() {
+  const { profile } = useAuth()
+
+  // If user has no avatar, force avatar creation before allowing access to main app
+  // Check for both existence and non-empty config (handles edge case of empty {} in DB)
+  const hasAvatar = profile?.avatar && profile.avatar.config && Object.keys(profile.avatar.config).length > 0
+
+  if (!hasAvatar) {
+    return (
+      <MainStack.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <MainStack.Screen
+          name={SCREENS.AvatarCreator}
+          options={{
+            headerShown: false,
+            gestureEnabled: false, // Prevent swipe back
+          }}
+          initialParams={{ required: true }}
+        >
+          {(props) => (
+            <Suspense fallback={<LinkingFallback />}>
+              <AvatarCreatorScreen {...props} />
+            </Suspense>
+          )}
+        </MainStack.Screen>
+      </MainStack.Navigator>
+    )
+  }
+
   return (
     <MainStack.Navigator
       screenOptions={{
@@ -214,17 +273,33 @@ function MainStackNavigator() {
       />
       <MainStack.Screen
         name={SCREENS.CreatePost}
-        component={CreatePostScreen}
         options={{
           headerShown: false, // CreatePostScreen has its own header
           presentation: 'modal',
         }}
-      />
+      >
+        {(props) => (
+          <Suspense fallback={<LinkingFallback />}>
+            <CreatePostScreen {...props} />
+          </Suspense>
+        )}
+      </MainStack.Screen>
       <MainStack.Screen
         name={SCREENS.Ledger}
         component={LedgerScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
+          headerShown: true,
           headerTitle: route.params.locationName,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              testID="ledger-back-button"
+            >
+              <Text style={{ color: '#FF6B47', fontSize: 17 }}>{'‹ Back'}</Text>
+            </TouchableOpacity>
+          ),
         })}
       />
       <MainStack.Screen
@@ -237,9 +312,20 @@ function MainStackNavigator() {
       <MainStack.Screen
         name={SCREENS.PostDetail}
         component={PostDetailScreen}
-        options={{
+        options={({ navigation }) => ({
+          headerShown: true,
           headerTitle: 'Post',
-        }}
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              testID="post-detail-back-button"
+            >
+              <Text style={{ color: '#FF6B47', fontSize: 17 }}>{'‹ Back'}</Text>
+            </TouchableOpacity>
+          ),
+        })}
       />
       <MainStack.Screen
         name={SCREENS.Chat}
@@ -250,19 +336,41 @@ function MainStackNavigator() {
       />
       <MainStack.Screen
         name={SCREENS.AvatarCreator}
-        component={AvatarCreatorScreen}
         options={{
           headerShown: false, // AvatarCreatorScreen has its own header
           presentation: 'modal',
         }}
-      />
+      >
+        {(props) => (
+          <Suspense fallback={<LinkingFallback />}>
+            <AvatarCreatorScreen {...props} />
+          </Suspense>
+        )}
+      </MainStack.Screen>
       <MainStack.Screen
         name={SCREENS.Legal}
-        component={LegalScreen}
         options={{
           headerShown: false, // LegalScreen has its own header
         }}
-      />
+      >
+        {(props) => (
+          <Suspense fallback={<LinkingFallback />}>
+            <LegalScreen {...props} />
+          </Suspense>
+        )}
+      </MainStack.Screen>
+      <MainStack.Screen
+        name={SCREENS.Settings}
+        options={{
+          headerShown: false, // SettingsScreen has its own header with back button
+        }}
+      >
+        {(props) => (
+          <Suspense fallback={<LinkingFallback />}>
+            <SettingsScreen {...props} />
+          </Suspense>
+        )}
+      </MainStack.Screen>
     </MainStack.Navigator>
   )
 }
@@ -419,12 +527,25 @@ export function AppNavigator() {
     // Track initial screen view handled in onStateChange
   }, [])
 
+  /**
+   * Register Sentry routing instrumentation when container is ready
+   */
+  const handleReadyWithSentry = useCallback(() => {
+    // Register navigation container with Sentry for performance tracking
+    // Lazy-initialize routing instrumentation
+    getNavigationIntegration().registerNavigationContainer(navigationRef)
+
+    // Call original ready handler
+    handleReady()
+  }, [handleReady])
+
   return (
     <NavigationContainer
+      ref={navigationRef}
       linking={linking}
       fallback={<LinkingFallback />}
       onStateChange={handleStateChange}
-      onReady={handleReady}
+      onReady={handleReadyWithSentry}
     >
       <RootNavigator />
     </NavigationContainer>
@@ -474,4 +595,4 @@ const styles = StyleSheet.create({
 // ============================================================================
 
 export default AppNavigator
-export { RootNavigator, MainTabNavigator, AuthStackNavigator, MainStackNavigator }
+export { RootNavigator, MainTabNavigator, AuthStackNavigator, MainStackNavigator, getNavigationIntegration }

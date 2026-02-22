@@ -200,6 +200,9 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
   // Ref to store the location subscription
   const watchSubscriptionRef = useRef<Location.LocationSubscription | null>(null)
 
+  // Ref to store last reported coordinates for movement threshold filtering
+  const lastReportedCoordsRef = useRef<Coordinates | null>(null)
+
   // ---------------------------------------------------------------------------
   // HELPER FUNCTIONS
   // ---------------------------------------------------------------------------
@@ -223,10 +226,28 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
   }
 
   /**
-   * Update state with new location data
+   * Update state with new location data.
+   * Skips the update if the device has not moved more than 5 meters since the
+   * last reported position, preventing spurious state updates and DB calls
+   * when the user is stationary (e.g. background location polling).
    */
   const updateLocationState = useCallback(
     (location: Location.LocationObject) => {
+      const newCoords: Coordinates = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      }
+
+      // Only update if movement exceeds the 5-meter threshold
+      if (lastReportedCoordsRef.current !== null) {
+        const moved = calculateDistance(lastReportedCoordsRef.current, newCoords)
+        if (moved < 5) {
+          return // Suppressed — device hasn't moved meaningfully
+        }
+      }
+
+      lastReportedCoordsRef.current = newCoords
+
       setState((prev) => ({
         ...prev,
         latitude: location.coords.latitude,

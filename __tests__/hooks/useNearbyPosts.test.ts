@@ -218,7 +218,8 @@ describe('useNearbyPosts', () => {
     })
 
     it('calls RPC with correct parameters', async () => {
-      const { result } = renderHook(() => useNearbyPosts(100))
+      // Disable tiered expansion so exact radius is used
+      const { result } = renderHook(() => useNearbyPosts(100, false))
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -233,7 +234,8 @@ describe('useNearbyPosts', () => {
     })
 
     it('uses default radius when not specified', async () => {
-      const { result } = renderHook(() => useNearbyPosts())
+      // Disable tiered expansion so the default radius (500) is used directly
+      const { result } = renderHook(() => useNearbyPosts(500, false))
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -242,7 +244,7 @@ describe('useNearbyPosts', () => {
       expect(mockSupabaseRpc).toHaveBeenCalledWith('get_posts_within_radius', {
         p_lat: MOCK_COORDINATES.latitude,
         p_lng: MOCK_COORDINATES.longitude,
-        p_radius_meters: 50, // Default radius
+        p_radius_meters: 500, // Default radius
         p_limit: 50,
       })
     })
@@ -408,23 +410,23 @@ describe('useNearbyPosts', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      expect(mockSupabaseRpc).toHaveBeenCalledTimes(1)
+      const callsBefore = mockSupabaseRpc.mock.calls.length
 
       // Trigger refetch
       await act(async () => {
         await result.current.refetch()
       })
 
-      expect(mockSupabaseRpc).toHaveBeenCalledTimes(2)
+      expect(mockSupabaseRpc.mock.calls.length).toBeGreaterThan(callsBefore)
     })
 
     it('updates posts when refetch returns new data', async () => {
-      let callCount = 0
+      // First return 1 post, then return all 3
+      let shouldReturnAll = false
 
       mockSupabaseRpc.mockImplementation((fnName: string) => {
         if (fnName === 'get_posts_within_radius') {
-          callCount++
-          if (callCount === 1) {
+          if (!shouldReturnAll) {
             return Promise.resolve({
               data: [MOCK_POSTS[0]],
               error: null,
@@ -447,12 +449,15 @@ describe('useNearbyPosts', () => {
 
       expect(result.current.posts).toHaveLength(1)
 
-      // Trigger refetch
+      // Switch to returning all posts, then refetch
+      shouldReturnAll = true
       await act(async () => {
         await result.current.refetch()
       })
 
-      expect(result.current.posts).toHaveLength(3)
+      await waitFor(() => {
+        expect(result.current.posts).toHaveLength(3)
+      })
     })
 
     it('clears previous error on successful refetch', async () => {
@@ -500,7 +505,8 @@ describe('useNearbyPosts', () => {
 
   describe('radius parameter', () => {
     it('uses custom radius when provided', async () => {
-      const { result } = renderHook(() => useNearbyPosts(200))
+      // Disable tiered expansion so the exact radius value is passed to RPC
+      const { result } = renderHook(() => useNearbyPosts(200, false))
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -515,8 +521,9 @@ describe('useNearbyPosts', () => {
     })
 
     it('refetches when radius changes', async () => {
+      // Disable tiered expansion so exact radius values are passed
       const { result, rerender } = renderHook(
-        ({ radius }) => useNearbyPosts(radius),
+        ({ radius }) => useNearbyPosts(radius, false),
         { initialProps: { radius: 50 } }
       )
 

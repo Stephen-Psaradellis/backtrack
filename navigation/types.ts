@@ -53,12 +53,16 @@ export type MainStackParamList = {
   AvatarCreator: {
     /** Initial avatar config to edit */
     initialConfig?: AvatarConfig
+    /** Whether avatar creation is required (true for first-time setup, false for editing) */
+    required?: boolean
   }
   /** Legal documents screen (privacy policy, terms of service) */
   Legal: {
     /** Type of legal document to display */
     type: 'privacy' | 'terms'
   }
+  /** Settings screen (preferences, account actions) */
+  Settings: undefined
 }
 
 /**
@@ -198,6 +202,7 @@ export const SCREENS = {
   Chat: 'Chat' as const,
   AvatarCreator: 'AvatarCreator' as const,
   Legal: 'Legal' as const,
+  Settings: 'Settings' as const,
 
   // Tabs (5-tab icon-only layout)
   FeedTab: 'FeedTab' as const,
@@ -295,6 +300,7 @@ export function isMainScreen(screenName: string): screenName is keyof MainStackP
     'PostDetail',
     'Chat',
     'AvatarCreator',
+    'Settings',
   ]
   return mainScreens.includes(screenName as keyof MainStackParamList)
 }

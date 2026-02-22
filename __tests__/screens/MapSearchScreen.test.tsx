@@ -18,7 +18,17 @@
 
 import React from 'react'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, fireEvent, act } from '@testing-library/react'
+import { fireEvent, act } from '@testing-library/react'
+import { renderWithProviders } from '../utils/render-with-providers'
+
+// Local render helper that uses providers
+const render = (ui: React.ReactElement) => renderWithProviders(ui, {
+  authContext: {
+    userId: 'test-user-123',
+    isAuthenticated: true,
+    isLoading: false,
+  },
+})
 
 // ============================================================================
 // Hoisted Mock Functions (must come first)
@@ -122,6 +132,21 @@ vi.mock('../../components/navigation/GlobalHeader', () => ({
   GlobalHeader: () => null,
 }))
 
+// Mock LiveViewModal to avoid QueryClient issues
+vi.mock('../../components/modals/LiveViewModal', () => ({
+  LiveViewModal: () => null,
+  default: () => null,
+}))
+
+// Mock useLiveCheckins to avoid QueryClient issues
+vi.mock('../../hooks/useLiveCheckins', () => ({
+  useLiveCheckins: () => ({
+    liveCheckins: [],
+    isLoading: false,
+    error: null,
+  }),
+}))
+
 // Mock LocationMarker component
 vi.mock('../../components/map/LocationMarker', () => ({
   LocationMarker: () => null,
@@ -145,13 +170,17 @@ vi.mock('@react-navigation/native', () => ({
     navigate: mockNavigate,
     goBack: vi.fn(),
     setOptions: vi.fn(),
+    addListener: vi.fn(() => () => {}),
   }),
   useRoute: () => ({
     params: {},
   }),
-  useFocusEffect: vi.fn((callback: () => void) => {
+  useFocusEffect: vi.fn((callback: () => (() => void) | void) => {
     callback()
   }),
+  useIsFocused: () => true,
+  NavigationContainer: ({ children }: { children: React.ReactNode }) => children,
+  createNavigationContainerRef: () => ({ current: null }),
 }))
 
 // Mock safe area

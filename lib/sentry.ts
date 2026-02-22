@@ -39,7 +39,33 @@ import Constants from 'expo-constants'
  * Returns undefined if not configured (Sentry will be disabled)
  */
 function getSentryDsn(): string | undefined {
-  return process.env.EXPO_PUBLIC_SENTRY_DSN
+  const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN
+
+  // Check if DSN is set and not a placeholder
+  if (!dsn) {
+    return undefined
+  }
+
+  // Validate DSN format and check for placeholder values
+  if (
+    dsn.includes('YOUR_SENTRY_DSN_HERE') ||
+    dsn.includes('YOUR_PROJECT_ID') ||
+    dsn === 'https://YOUR_SENTRY_DSN_HERE@sentry.io/YOUR_PROJECT_ID'
+  ) {
+    console.error(
+      '[Sentry] DSN is set to placeholder value. ' +
+      'Get your real DSN from https://sentry.io/settings/[your-org]/projects/[your-project]/keys/'
+    )
+    return undefined
+  }
+
+  // Basic DSN format validation (should be https://...)
+  if (!dsn.startsWith('https://')) {
+    console.error('[Sentry] Invalid DSN format. DSN must start with https://')
+    return undefined
+  }
+
+  return dsn
 }
 
 /**
@@ -105,8 +131,9 @@ function containsSensitiveData(value: string): boolean {
 
 /**
  * Recursively redact sensitive values from an object
+ * Exported for testing purposes
  */
-function redactSensitiveData(obj: unknown, depth = 0): unknown {
+export function redactSensitiveData(obj: unknown, depth = 0): unknown {
   // Prevent infinite recursion
   if (depth > 10) return '[DEPTH_LIMIT]'
 
@@ -157,6 +184,7 @@ let isInitialized = false
  * Should be called once at app startup, before any errors might occur.
  * Only initializes in production mode when DSN is configured.
  *
+ * @param routingInstrumentation - Optional React Navigation routing instrumentation
  * @returns Whether Sentry was successfully initialized
  *
  * @example
@@ -170,7 +198,7 @@ let isInitialized = false
  * export default function App() { ... }
  * ```
  */
-export function initSentry(): boolean {
+export function initSentry(routingInstrumentation?: any): boolean {
   // Don't initialize in development mode
   if (__DEV__) {
     if (process.env.NODE_ENV !== 'test') {
@@ -200,8 +228,14 @@ export function initSentry(): boolean {
       release: `backtrack@${getAppVersion()}`,
       // Set dist for identifying specific builds
       dist: getBuildNumber(),
-      // Enable performance monitoring (optional, start with low sample rate)
-      tracesSampleRate: 0.1,
+      // Performance monitoring: 100% in dev, 20% in production
+      tracesSampleRate: __DEV__ ? 1.0 : 0.2,
+      // Profiling: sample 20% of traces for detailed performance analysis
+      profilesSampleRate: 0.2,
+      // React Navigation integration (v7 API)
+      integrations: routingInstrumentation
+        ? [routingInstrumentation]
+        : undefined,
       // Filter sensitive data before sending
       beforeSend(event) {
         // Redact sensitive data from event extras
@@ -227,12 +261,17 @@ export function initSentry(): boolean {
       enabled: !__DEV__,
       // Attach stack traces to messages
       attachStacktrace: true,
-      // Automatically capture unhandled promise rejections
-      enableAutoPerformanceTracing: false,
+      // Enable automatic performance tracing
+      enableAutoPerformanceTracing: true,
+      // Enable automatic session tracking
+      enableAutoSessionTracking: true,
+      // Enable native crash reporting
+      enableNative: true,
+      // Enable native frame tracking for slow/frozen frames
+      enableNativeFramesTracking: true,
     })
 
     isInitialized = true
-    console.log('[Sentry] Initialized successfully')
     return true
   } catch (error) {
     console.error('[Sentry] Failed to initialize:', error)
@@ -450,8 +489,10 @@ export function reportReactError(
   error: Error,
   errorInfo: { componentStack?: string }
 ): void {
-  if (__DEV__) {
-    console.error('[Sentry] Would report React error:', error)
+  // Always attempt to report - don't gate on __DEV__ since ErrorBoundary
+  // errors are critical and we need visibility even if init state is unclear
+  if (!isInitialized) {
+    console.error('[Sentry] Not initialized, cannot report:', error.message)
     return
   }
 
@@ -460,11 +501,21 @@ export function reportReactError(
       componentStack: errorInfo.componentStack,
     },
   })
+  // Force flush - the app may be in an error state and won't get another chance to send
+  Sentry.flush(5000)
 }
 
 // ============================================================================
 // EXPORTS
 // ============================================================================
+
+/**
+ * Get Sentry initialization status for debugging
+ */
+export function getSentryStatus(): string {
+  const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN
+  return `init:${isInitialized} dev:${__DEV__} dsn:${dsn ? 'set' : 'missing'}`
+}
 
 export default {
   initSentry,

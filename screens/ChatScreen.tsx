@@ -51,28 +51,36 @@ import {
   ScrollView,
   Image,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import Tooltip from 'react-native-walkthrough-tooltip'
 
 import { darkTheme } from '../constants/glassStyles'
+import { useToast } from '../contexts/ToastContext'
 import {
   successFeedback,
   errorFeedback,
-  warningFeedback,
-  notificationFeedback,
   selectionFeedback,
 } from '../lib/haptics'
 import { usePhotoSharing } from '../hooks/usePhotoSharing'
 import { useProfilePhotos } from '../hooks/useProfilePhotos'
 import { useTutorialState } from '../hooks/useTutorialState'
+import { useNetworkStatus } from '../hooks/useNetworkStatus'
+import { useChatMessages } from '../hooks/chat/useChatMessages'
 import type { SharedPhotoWithUrl } from '../lib/photoSharing'
 import type { ProfilePhotoWithUrl } from '../lib/profilePhotos'
 import {
   ChatBubble,
   DateSeparator,
   getBubblePosition,
-  shouldShowDateSeparator,
 } from '../components/ChatBubble'
+import { IcebreakerChips } from '../components/chat/IcebreakerChips'
+import { SafetyPrompt } from '../components/chat/SafetyPrompt'
+import { TypingIndicator } from '../components/chat/TypingIndicator'
+import { useTypingIndicator } from '../components/chat/hooks/useTypingIndicator'
+import { useSendMessage } from '../components/chat/hooks/useSendMessage'
+import { useBlockUser } from '../components/chat/hooks/useBlockUser'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyState, ErrorState } from '../components/EmptyState'
 import { ReportMessageModal, ReportUserModal } from '../components/ReportModal'
@@ -85,10 +93,10 @@ import {
   getOtherUserId,
   CONVERSATION_ERRORS,
 } from '../lib/conversations'
-import { blockUser, MODERATION_ERRORS } from '../lib/moderation'
 import type { ChatRouteProp, MainStackNavigationProp } from '../navigation/types'
-import type { Message, Conversation, MessageInsert } from '../types/database'
-import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/supabase-js'
+import type { Message, Conversation } from '../types/database'
+import { sanitizeForDisplay } from '../lib/utils/sanitize'
+import { detectSensitiveContent } from '../lib/utils/safetyDetection'
 
 // ============================================================================
 // TYPES
@@ -127,274 +135,28 @@ const COLORS = {
   inputBorder: darkTheme.cardBorder,
   inputText: darkTheme.textPrimary,
   inputPlaceholder: darkTheme.textMuted,
-  sendButtonActive: darkTheme.accent,
+  sendButtonActive: darkTheme.primary,
   sendButtonDisabled: 'rgba(255, 107, 71, 0.3)',
   textSecondary: darkTheme.textSecondary,
   error: darkTheme.error,
+  warning: darkTheme.warning,
 } as const
 
 const MAX_MESSAGE_LENGTH = 10000
-const MESSAGES_PER_PAGE = 50
-
-/**
- * Minimum interval between haptic feedback for received messages (in milliseconds)
- * Prevents haptic spam when multiple messages arrive rapidly
- */
-const HAPTIC_DEBOUNCE_MS = 500
 
 // ============================================================================
 // CUSTOM HOOKS
 // ============================================================================
 
-/**
- * Hook for managing chat messages, pagination, and realtime subscriptions
- */
-function useChatMessages(conversationId: string, userId: string | null) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [hasMoreMessages, setHasMoreMessages] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const realtimeChannelRef = useRef<RealtimeChannel | null>(null)
-  const lastMessageHapticRef = useRef<number>(0)
-  // Use a ref for messages to avoid recreating fetchMessages when messages change
-  const messagesRef = useRef<Message[]>(messages)
-  messagesRef.current = messages
-
-  const fetchMessages = useCallback(async (isRefresh = false, lastMessageId?: string) => {
-    if (!isRefresh && !lastMessageId) {
-      setLoading(true)
-    }
-    if (lastMessageId) {
-      setLoadingMore(true)
-    }
-
-    try {
-      let query = supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: false })
-        .limit(MESSAGES_PER_PAGE)
-
-      if (lastMessageId) {
-        // Use ref to access current messages without adding to dependencies
-        const lastMessage = messagesRef.current.find(m => m.id === lastMessageId)
-        if (lastMessage) {
-          query = query.lt('created_at', lastMessage.created_at)
-        }
-      }
-
-      const { data, error: fetchError } = await query
-
-      if (fetchError) {
-        if (!isRefresh && !lastMessageId) {
-          setError('Failed to load messages. Please try again.')
-        }
-        return
-      }
-
-      const newMessages = (data as Message[]) || []
-
-      if (lastMessageId) {
-        setMessages(prev => [...prev, ...newMessages])
-        setHasMoreMessages(newMessages.length === MESSAGES_PER_PAGE)
-      } else {
-        setMessages(newMessages)
-        setHasMoreMessages(newMessages.length === MESSAGES_PER_PAGE)
-      }
-
-      setError(null)
-    } catch {
-      if (!isRefresh && !lastMessageId) {
-        setError('An unexpected error occurred.')
-      }
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
-    }
-  }, [conversationId])
-
-  const markMessagesAsRead = useCallback(async () => {
-    if (!userId || messages.length === 0) return
-
-    const unreadMessages = messages.filter(
-      m => m.sender_id !== userId && !m.is_read
-    )
-
-    if (unreadMessages.length === 0) return
-
-    try {
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('conversation_id', conversationId)
-        .neq('sender_id', userId)
-        .eq('is_read', false)
-
-      if (!updateError) {
-        setMessages(prev =>
-          prev.map(m =>
-            m.sender_id !== userId ? { ...m, is_read: true } : m
-          )
-        )
-      }
-    } catch {
-      // Silently fail - not critical
-    }
-  }, [conversationId, messages, userId])
-
-  // Ref to store markMessagesAsRead to avoid recreating subscription
-  const markMessagesAsReadRef = useRef(markMessagesAsRead)
-  useEffect(() => {
-    markMessagesAsReadRef.current = markMessagesAsRead
-  }, [markMessagesAsRead])
-
-  // Subscribe to realtime updates
-  // IMPORTANT: Only depends on conversationId and userId to prevent memory leak
-  // from constant subscription recreation when messages change
-  useEffect(() => {
-    if (!conversationId || !userId) {
-      return
-    }
-
-    const channelName = `chat-${conversationId}`
-
-    const handleRealtimeInsert = (
-      payload: RealtimePostgresInsertPayload<Message>
-    ) => {
-      const newMessage = payload.new
-
-      if (newMessage.sender_id !== userId) {
-        setMessages(prev => {
-          const messageExists = prev.some(m => m.id === newMessage.id)
-          if (messageExists) return prev
-          return [newMessage, ...prev]
-        })
-        // Use ref to call latest markMessagesAsRead without adding it as dependency
-        markMessagesAsReadRef.current()
-
-        // Trigger haptic feedback for incoming messages with debouncing
-        const now = Date.now()
-        if (now - lastMessageHapticRef.current > HAPTIC_DEBOUNCE_MS) {
-          notificationFeedback('success')
-          lastMessageHapticRef.current = now
-        }
-      }
-    }
-
-    const channel = supabase
-      .channel(channelName, {
-        config: {
-          broadcast: { self: false },
-          presence: { key: userId },
-        },
-      })
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        handleRealtimeInsert
-      )
-      .subscribe()
-
-    realtimeChannelRef.current = channel
-
-    return () => {
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current)
-        realtimeChannelRef.current = null
-      }
-    }
-  }, [conversationId, userId])
-
-  return {
-    messages,
-    loading,
-    error,
-    hasMoreMessages,
-    loadingMore,
-    fetchMessages,
-    markMessagesAsRead,
-  }
-}
+// All custom hooks have been extracted to separate files for better testability:
+// - useChatMessages: hooks/chat/useChatMessages.ts
+// - useSendMessage: components/chat/hooks/useSendMessage.ts
+// - useBlockUser: components/chat/hooks/useBlockUser.ts
 
 /**
- * Hook for sending messages with optimistic updates
+ * Optimistic message status
  */
-function useSendMessage(conversationId: string, userId: string | null) {
-  const [sending, setSending] = useState(false)
-
-  const sendMessage = useCallback(
-    async (content: string, onSuccess: (message: Message) => void) => {
-      if (!userId || !content.trim()) return
-
-      setSending(true)
-
-      try {
-        const messageData: MessageInsert = {
-          conversation_id: conversationId,
-          sender_id: userId,
-          content: content.trim(),
-          is_read: false,
-        }
-
-        const { data, error: insertError } = await supabase
-          .from('messages')
-          .insert([messageData])
-          .select()
-          .single()
-
-        if (insertError) {
-          throw insertError
-        }
-
-        successFeedback()
-        onSuccess(data as Message)
-      } catch {
-        errorFeedback()
-        Alert.alert('Error', 'Failed to send message. Please try again.')
-      } finally {
-        setSending(false)
-      }
-    },
-    [conversationId, userId]
-  )
-
-  return { sending, sendMessage }
-}
-
-/**
- * Hook for blocking users
- */
-function useBlockUser() {
-  const [blocking, setBlocking] = useState(false)
-
-  const handleBlockUser = useCallback(async (blockerId: string, blockedId: string) => {
-    setBlocking(true)
-
-    try {
-      const result = await blockUser(blockerId, blockedId)
-
-      if (!result.success) {
-        warningFeedback()
-        Alert.alert('Error', result.error || MODERATION_ERRORS.BLOCK_FAILED)
-        return false
-      }
-
-      successFeedback()
-      return true
-    } finally {
-      setBlocking(false)
-    }
-  }, [])
-
-  return { blocking, handleBlockUser }
-}
+type OptimisticStatus = 'sending' | 'sent' | 'failed'
 
 // ============================================================================
 // PHOTO SHARING COMPONENTS
@@ -570,6 +332,7 @@ export function ChatScreen(): React.ReactNode {
   const route = useRoute<ChatRouteProp>()
   const navigation = useNavigation<MainStackNavigationProp>()
   const { userId } = useAuth()
+  const { showToast } = useToast()
 
   const { conversationId } = route.params
 
@@ -591,11 +354,22 @@ export function ChatScreen(): React.ReactNode {
   const [conversationLoading, setConversationLoading] = useState(true)
   const [conversationError, setConversationError] = useState<string | null>(null)
   const [messageText, setMessageText] = useState('')
+  const [locationName, setLocationName] = useState<string | null>(null)
+  const [showIcebreakers, setShowIcebreakers] = useState(true)
+  const [userHasSentMessage, setUserHasSentMessage] = useState(false)
+  const [safetyPromptDismissed, setSafetyPromptDismissed] = useState(false)
+  const [sensitiveContentWarning, setSensitiveContentWarning] = useState<string | null>(null)
+
+  const insets = useSafeAreaInsets()
   const [refreshing, setRefreshing] = useState(false)
   const [reportModalVisible, setReportModalVisible] = useState(false)
   const [messageToReport, setMessageToReport] = useState<Message | null>(null)
   const [userReportModalVisible, setUserReportModalVisible] = useState(false)
   const [sharePhotoModalVisible, setSharePhotoModalVisible] = useState(false)
+
+  // Network status for offline indicator and reconnection
+  const { isConnected } = useNetworkStatus()
+  const wasDisconnectedRef = useRef(false)
 
   // Custom hooks
   const {
@@ -605,14 +379,97 @@ export function ChatScreen(): React.ReactNode {
     hasMoreMessages,
     loadingMore,
     fetchMessages,
+    newMessageIds,
   } = useChatMessages(conversationId, userId)
 
-  const { sending, sendMessage } = useSendMessage(
-    conversationId,
-    userId
-  )
+  // Optimistic message state - tracks messages shown before server confirms
+  const [optimisticMessages, setOptimisticMessages] = useState<Map<string, OptimisticStatus>>(new Map())
 
-  const { handleBlockUser: performBlockUser } = useBlockUser()
+  // Track optimistic messages for animation
+  const [optimisticNewMessageIds, setOptimisticNewMessageIds] = useState<Set<string>>(new Set())
+
+  const handleOptimisticAdd = useCallback((message: Message) => {
+    // The realtime subscription will pick up the confirmed message;
+    // for optimistic we manually prepend it to the message list via direct state update
+    // handled by parent setting messages directly in useChatMessages wouldn't work
+    // Instead we track status only here and show inline in the existing message list
+    setOptimisticMessages(prev => new Map(prev).set(message.id, 'sending'))
+
+    // Mark as new for animation
+    setOptimisticNewMessageIds(prev => new Set(prev).add(message.id))
+    // Remove from animation set after animation completes
+    setTimeout(() => {
+      setOptimisticNewMessageIds(prev => {
+        const next = new Set(prev)
+        next.delete(message.id)
+        return next
+      })
+    }, 500)
+  }, [])
+
+  const handleOptimisticConfirm = useCallback((localId: string, _confirmed: Message) => {
+    setOptimisticMessages(prev => {
+      const next = new Map(prev)
+      next.delete(localId)
+      return next
+    })
+    // Also remove from optimistic animation tracking
+    setOptimisticNewMessageIds(prev => {
+      const next = new Set(prev)
+      next.delete(localId)
+      return next
+    })
+  }, [])
+
+  const handleOptimisticFail = useCallback((localId: string) => {
+    setOptimisticMessages(prev => new Map(prev).set(localId, 'failed'))
+  }, [])
+
+  const handleOptimisticRemove = useCallback((localId: string) => {
+    setOptimisticMessages(prev => {
+      const next = new Map(prev)
+      next.delete(localId)
+      return next
+    })
+  }, [])
+
+  const {
+    isSending,
+    optimisticMessages: optimisticMessagesFromHook,
+    sendMessage,
+    retryMessage,
+    deleteFailedMessage,
+  } = useSendMessage({
+    conversationId,
+    currentUserId: userId || '',
+    onError: (error) => {
+      showToast({ message: error, variant: 'error' })
+    },
+  })
+
+  // ---------------------------------------------------------------------------
+  // COMPUTED VALUES
+  // ---------------------------------------------------------------------------
+
+  const userRole = useMemo(() => {
+    if (!conversation || !userId) return null
+    return getUserRole(conversation, userId)
+  }, [conversation, userId])
+
+  const otherUserId = useMemo(() => {
+    if (!conversation || !userId) return null
+    return getOtherUserId(conversation, userId)
+  }, [conversation, userId])
+
+  const { blockUser: performBlockUser } = useBlockUser({
+    currentUserId: userId || '',
+    targetUserId: otherUserId || '',
+    conversationId,
+    onNavigateAway: () => navigation.goBack(),
+    onError: (error) => {
+      showToast({ message: error, variant: 'error' })
+    },
+  })
 
   const {
     mySharedPhotos,
@@ -631,57 +488,64 @@ export function ChatScreen(): React.ReactNode {
     refresh: refreshProfilePhotos,
   } = useProfilePhotos()
 
-  // ---------------------------------------------------------------------------
-  // COMPUTED VALUES
-  // ---------------------------------------------------------------------------
-
-  const userRole = useMemo(() => {
-    if (!conversation || !userId) return null
-    return getUserRole(conversation, userId)
-  }, [conversation, userId])
-
-  const otherUserId = useMemo(() => {
-    if (!conversation || !userId) return null
-    return getOtherUserId(conversation, userId)
-  }, [conversation, userId])
+  // Typing indicator hook
+  const { isOtherUserTyping, broadcastTyping } = useTypingIndicator({
+    conversationId,
+    currentUserId: userId || '',
+  })
 
   const canSend = useMemo(() => {
     const trimmedMessage = messageText.trim()
     return (
       trimmedMessage.length > 0 &&
       trimmedMessage.length <= MAX_MESSAGE_LENGTH &&
-      !sending &&
+      !isSending &&
       !messagesError &&
       conversation?.status === 'active'
     )
-  }, [messageText, sending, messagesError, conversation])
+  }, [messageText, isSending, messagesError, conversation])
 
   const messageListItems = useMemo((): MessageListItem[] => {
     if (messages.length === 0) return []
 
+    // Messages are in DESC order (newest first, index 0 = newest).
+    // With inverted FlatList, index 0 renders at the bottom (newest at bottom).
+    // Date separators go after (higher index) the messages they label,
+    // because inverted rendering means higher indices appear above.
     const items: MessageListItem[] = []
 
-    for (let i = messages.length - 1; i >= 0; i--) {
+    for (let i = 0; i < messages.length; i++) {
       const message = messages[i]
-      const prevMessage = i < messages.length - 1 ? messages[i + 1] : null
-      const prevTimestamp = prevMessage?.created_at || null
+      items.push({
+        type: 'message',
+        id: message.id,
+        data: message,
+      })
 
-      if (shouldShowDateSeparator(prevTimestamp, message.created_at)) {
+      // Check if a date separator should appear between this message
+      // and the next older message (which will render above in inverted list)
+      const nextMessage = i < messages.length - 1 ? messages[i + 1] : null
+      if (nextMessage) {
+        const currentDate = new Date(message.created_at).toDateString()
+        const nextDate = new Date(nextMessage.created_at).toDateString()
+        if (currentDate !== nextDate) {
+          items.push({
+            type: 'separator',
+            id: `separator-${message.id}`,
+            data: message.created_at,
+          })
+        }
+      } else {
+        // Last (oldest) message - always show date separator above it
         items.push({
           type: 'separator',
           id: `separator-${message.id}`,
           data: message.created_at,
         })
       }
-
-      items.push({
-        type: 'message',
-        id: message.id,
-        data: message,
-      })
     }
 
-    return items.reverse()
+    return items
   }, [messages])
 
   // ---------------------------------------------------------------------------
@@ -707,6 +571,29 @@ export function ChatScreen(): React.ReactNode {
     }
 
     setConversation(result.conversation)
+
+    // Fetch location name for header display
+    if (result.conversation.post_id) {
+      try {
+        const { data: post } = await supabase
+          .from('posts')
+          .select('location_id')
+          .eq('id', result.conversation.post_id)
+          .maybeSingle()
+
+        if (post?.location_id) {
+          const { data: location } = await supabase
+            .from('locations')
+            .select('name')
+            .eq('id', post.location_id)
+            .maybeSingle()
+          setLocationName(location?.name || null)
+        }
+      } catch {
+        // Non-critical - header will show fallback title
+      }
+    }
+
     return result.conversation
   }, [conversationId, userId])
 
@@ -734,6 +621,20 @@ export function ChatScreen(): React.ReactNode {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId])
 
+  // Reconnection: refetch missed messages when connection restores
+  useEffect(() => {
+    if (!isConnected) {
+      wasDisconnectedRef.current = true
+      return
+    }
+
+    if (wasDisconnectedRef.current) {
+      wasDisconnectedRef.current = false
+      // Refetch messages to catch anything missed while offline
+      fetchMessages(true)
+    }
+  }, [isConnected, fetchMessages])
+
   // ---------------------------------------------------------------------------
   // EVENT HANDLERS
   // ---------------------------------------------------------------------------
@@ -744,10 +645,14 @@ export function ChatScreen(): React.ReactNode {
     const messageContent = messageText
     setMessageText('')
 
-    await sendMessage(messageContent, (newMessage) => {
-      // Message will be added via realtime subscription
-    })
-  }, [canSend, messageText, sendMessage])
+    // Hide icebreakers after first message
+    if (!userHasSentMessage) {
+      setUserHasSentMessage(true)
+      setShowIcebreakers(false)
+    }
+
+    await sendMessage(messageContent)
+  }, [canSend, messageText, sendMessage, userHasSentMessage])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -774,13 +679,9 @@ export function ChatScreen(): React.ReactNode {
   }, [])
 
   const handleBlockUser = useCallback(async () => {
-    if (!otherUserId) return
-
-    const blocked = await performBlockUser(userId || '', otherUserId)
-    if (blocked) {
-      navigation.goBack()
-    }
-  }, [otherUserId, userId, performBlockUser, navigation])
+    if (!otherUserId || !userId) return
+    await performBlockUser()
+  }, [otherUserId, userId, performBlockUser])
 
   const handleSharePhoto = useCallback(async (photoId: string) => {
     try {
@@ -789,17 +690,59 @@ export function ChatScreen(): React.ReactNode {
         successFeedback()
       } else {
         errorFeedback()
-        Alert.alert('Error', 'Failed to share photo. Please try again.')
+        showToast({
+          message: 'Failed to share photo. Please try again.',
+          variant: 'error',
+        })
       }
     } catch (error) {
       errorFeedback()
-      Alert.alert('Error', 'Failed to share photo. Please try again.')
+      showToast({
+        message: 'Failed to share photo. Please try again.',
+        variant: 'error',
+      })
     }
-  }, [sharePhoto])
+  }, [sharePhoto, showToast])
+
+  const handleIcebreakerSelect = useCallback((text: string) => {
+    setMessageText(text)
+    // Hide icebreakers after selection
+    setShowIcebreakers(false)
+    // Focus input
+    inputRef.current?.focus()
+  }, [])
+
+  const handleMessageTextChange = useCallback((text: string) => {
+    setMessageText(text)
+
+    // Broadcast typing status when user types
+    if (text.length > 0) {
+      broadcastTyping()
+    }
+
+    // Detect sensitive content and show warning
+    if (text.trim().length > 0) {
+      const detection = detectSensitiveContent(text)
+      if (detection.hasSensitiveContent) {
+        setSensitiveContentWarning(detection.warning)
+      } else {
+        setSensitiveContentWarning(null)
+      }
+    } else {
+      setSensitiveContentWarning(null)
+    }
+  }, [broadcastTyping])
 
   // ---------------------------------------------------------------------------
   // RENDER HELPERS
   // ---------------------------------------------------------------------------
+
+  // P-012: Pre-compute message index map for O(1) lookups
+  const messageIndexMap = useMemo(() => {
+    const map = new Map<string, number>()
+    messages.forEach((m, i) => map.set(m.id, i))
+    return map
+  }, [messages])
 
   const renderMessage = useCallback(
     ({ item }: { item: MessageListItem }) => {
@@ -809,23 +752,34 @@ export function ChatScreen(): React.ReactNode {
 
       const message = item.data as Message
       const isOwn = message.sender_id === userId
-      const messageIndex = messages.findIndex(m => m.id === message.id)
+      const messageIndex = messageIndexMap.get(message.id) ?? -1
       const position = getBubblePosition(
         messages,
         messageIndex,
         userId || ''
       )
 
+      // Get optimistic message status
+      const messageStatus = optimisticMessages.get(message.id)
+
+      // Check if this message is new (should be animated)
+      const isNewMessage = newMessageIds.has(message.id) || optimisticNewMessageIds.has(message.id)
+
       return (
         <ChatBubble
           message={message}
           isOwn={isOwn}
           position={position}
+          status={messageStatus}
+          isNew={isNewMessage}
+          onRetry={messageStatus === 'failed' ? retryMessage : undefined}
           onLongPress={() => {
             if (isOwn) {
               handleReportMessage(message)
             } else {
-              Alert.alert('Message', message.content, [
+              // Sanitize content before displaying in Alert to prevent injection
+              const safeContent = sanitizeForDisplay(message.content, 500)
+              Alert.alert('Message', safeContent, [
                 {
                   text: 'Report Message',
                   onPress: () => handleReportMessage(message),
@@ -837,7 +791,7 @@ export function ChatScreen(): React.ReactNode {
         />
       )
     },
-    [userId, messages, handleReportMessage]
+    [userId, messages, messageIndexMap, handleReportMessage, optimisticMessages, retryMessage, newMessageIds, optimisticNewMessageIds]
   )
 
   const renderHeader = useCallback(() => {
@@ -874,75 +828,133 @@ export function ChatScreen(): React.ReactNode {
     return null
   }, [conversationLoading, messagesLoading, messages])
 
+  const renderTypingIndicator = useCallback(() => {
+    return <TypingIndicator isVisible={isOtherUserTyping} testID="chat-typing-indicator" />
+  }, [isOtherUserTyping])
+
   const renderInput = useCallback(() => {
     if (conversationError || !conversation?.status) {
       return null
     }
 
+    const shouldShowIcebreakers = showIcebreakers && !userHasSentMessage && messages.filter(m => m.sender_id === userId).length === 0
+
     return (
-      <Tooltip
-        isVisible={tutorial.isVisible}
-        content={
-          <View style={{ padding: 8 }}>
-            <Text style={{ color: 'white', fontSize: 16, fontWeight: '600', marginBottom: 4 }}>
-              Start Chatting
-            </Text>
-            <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 14 }}>
-              Type a message below and tap Send to start your conversation. Your identity stays anonymous until you both decide to share photos.
-            </Text>
+      <>
+        <IcebreakerChips
+          visible={shouldShowIcebreakers}
+          onSelect={handleIcebreakerSelect}
+          testID="chat-icebreakers"
+        />
+        <Tooltip
+          isVisible={tutorial.isVisible}
+          content={
+            <View style={{ padding: 8 }}>
+              <Text style={{ color: 'white', fontSize: 16, fontWeight: '600', marginBottom: 4 }}>
+                Start Chatting
+              </Text>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 14 }}>
+                Type a message below and tap Send to start your conversation. Your identity stays anonymous until you both decide to share photos.
+              </Text>
+            </View>
+          }
+          placement="top"
+          onClose={() => tutorial.markComplete()}
+        >
+          <View>
+            <View style={styles.inputContainer}>
+              <TextInput
+                ref={inputRef}
+                style={styles.input}
+                placeholder="Type a message..."
+                placeholderTextColor={COLORS.inputPlaceholder}
+                value={messageText}
+                onChangeText={handleMessageTextChange}
+                editable={!isSending && conversation?.status === 'active'}
+                maxLength={MAX_MESSAGE_LENGTH}
+                multiline
+                testID="chat-message-input"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  { backgroundColor: canSend ? COLORS.sendButtonActive : COLORS.sendButtonDisabled },
+                ]}
+                onPress={handleSendMessage}
+                disabled={!canSend}
+                testID="chat-send-button"
+              >
+                <Ionicons name="send" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={() => setSharePhotoModalVisible(true)}
+                disabled={!conversation || conversation.status !== 'active'}
+                testID="chat-photo-button"
+              >
+                <Ionicons name="camera-outline" size={22} color={darkTheme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Sensitive content warning */}
+            {sensitiveContentWarning && (
+              <View style={styles.warningContainer} testID="chat-safety-warning">
+                <Ionicons name="warning-outline" size={16} color={COLORS.warning} />
+                <Text style={styles.warningText}>{sensitiveContentWarning}</Text>
+              </View>
+            )}
           </View>
-        }
-        placement="top"
-        onClose={() => tutorial.markComplete()}
-      >
-        <View style={styles.inputContainer}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor={COLORS.inputPlaceholder}
-            value={messageText}
-            onChangeText={setMessageText}
-            editable={!sending && conversation?.status === 'active'}
-            maxLength={MAX_MESSAGE_LENGTH}
-            multiline
-            testID="chat-message-input"
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              { backgroundColor: canSend ? COLORS.sendButtonActive : COLORS.sendButtonDisabled },
-            ]}
-            onPress={handleSendMessage}
-            disabled={!canSend}
-            testID="chat-send-button"
-          >
-            <Text style={styles.sendButtonText}>Send</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.photoButton}
-            onPress={() => setSharePhotoModalVisible(true)}
-            disabled={!conversation || conversation.status !== 'active'}
-            testID="chat-photo-button"
-          >
-            <Text style={styles.photoButtonText}>📷</Text>
-          </TouchableOpacity>
-        </View>
-      </Tooltip>
+        </Tooltip>
+      </>
     )
   }, [
     conversationError,
     conversation,
     messageText,
     canSend,
-    sending,
+    isSending,
     handleSendMessage,
     tutorial,
+    showIcebreakers,
+    userHasSentMessage,
+    messages,
+    userId,
+    handleIcebreakerSelect,
+    handleMessageTextChange,
+    sensitiveContentWarning,
   ])
 
   // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
+
+  const handleHeaderMenu = useCallback(() => {
+    Alert.alert('Options', undefined, [
+      {
+        text: 'Report User',
+        onPress: handleReportUser,
+      },
+      {
+        text: 'Block User',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            'Block User',
+            'Are you sure you want to block this user? You will no longer be able to communicate with them.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Block', style: 'destructive', onPress: handleBlockUser },
+            ]
+          )
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ])
+  }, [handleReportUser, handleBlockUser])
+
+  const headerTitle = locationName
+    ? `Missed Connection at ${locationName}`
+    : 'Conversation'
 
   return (
     <KeyboardAvoidingView
@@ -953,6 +965,40 @@ export function ChatScreen(): React.ReactNode {
     >
       <StatusBar barStyle="light-content" backgroundColor={darkTheme.background} />
 
+      {/* Chat Header */}
+      <View style={[styles.chatHeader, { paddingTop: insets.top }]} testID="chat-header">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.chatHeaderBackButton}
+          testID="chat-header-back"
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
+          <Ionicons name="chevron-back" size={24} color={darkTheme.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.chatHeaderTitle} numberOfLines={1}>
+          {headerTitle}
+        </Text>
+        <TouchableOpacity
+          onPress={handleHeaderMenu}
+          style={styles.chatHeaderMenuButton}
+          testID="chat-header-menu"
+          accessibilityLabel="More options"
+          accessibilityRole="button"
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color={darkTheme.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Offline indicator banner */}
+      {!isConnected && (
+        <View style={styles.offlineBanner} testID="chat-offline-banner">
+          <Text style={styles.offlineBannerText}>
+            No internet connection — messages will send when you reconnect
+          </Text>
+        </View>
+      )}
+
       {messagesLoading && messages.length === 0 ? (
         <View style={styles.loadingContainer}>
           <LoadingSpinner />
@@ -961,20 +1007,32 @@ export function ChatScreen(): React.ReactNode {
         <>
           {renderHeader()}
 
+          {/* Safety prompt - show when conversation has < 3 total messages */}
+          <SafetyPrompt
+            visible={messages.length < 3 && !safetyPromptDismissed}
+            onDismiss={() => setSafetyPromptDismissed(true)}
+            testID="chat-safety-prompt"
+          />
+
           <FlatList
             ref={flatListRef}
             data={messageListItems}
             renderItem={renderMessage}
             keyExtractor={(item) => item.id}
+            inverted
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
             ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderTypingIndicator}
             refreshing={refreshing}
             onRefresh={handleRefresh}
             scrollEnabled
             nestedScrollEnabled
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
+            windowSize={5}
+            maxToRenderPerBatch={5}
+            removeClippedSubviews={true}
             testID="chat-message-list"
           />
 
@@ -1020,6 +1078,46 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  chatHeader: {
+    backgroundColor: darkTheme.background,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: darkTheme.cardBorder,
+  },
+  chatHeaderBackButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatHeaderTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+    marginHorizontal: 4,
+  },
+  chatHeaderMenuButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  offlineBanner: {
+    backgroundColor: '#B45309',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  offlineBannerText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1052,23 +1150,33 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  sendButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
   },
   photoButton: {
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 12,
   },
-  photoButtonText: {
-    fontSize: 20,
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: COLORS.warning,
   },
 })
 

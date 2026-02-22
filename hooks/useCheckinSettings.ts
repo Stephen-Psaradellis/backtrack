@@ -8,12 +8,14 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 
 import { supabase } from "../lib/supabase"
+import { captureException } from "../lib/sentry"
 import { useAuth } from "../contexts/AuthContext"
 import {
   startBackgroundLocationTracking,
   stopBackgroundLocationTracking,
   updateTrackingSettings as updateBackgroundSettings,
   isBackgroundLocationRunning,
+  type StartTrackingResult,
 } from "../services/backgroundLocation"
 import type { TrackingSettings } from "../types/database"
 
@@ -63,8 +65,11 @@ export function useCheckinSettings(
       if (isMountedRef.current) {
         setIsBackgroundTrackingActive(isRunning)
       }
-    } catch {
-      // Ignore errors
+    } catch (error) {
+      // Non-critical: background status check failed, just log in dev
+      if (__DEV__) {
+        console.warn('[useCheckinSettings] Background status check failed', error)
+      }
     }
   }, [])
 
@@ -97,7 +102,11 @@ export function useCheckinSettings(
         if (newSettings.always_on_tracking_enabled) {
           const isRunning = await isBackgroundLocationRunning()
           if (!isRunning) {
-            await startBackgroundLocationTracking(userId, newSettings.checkin_prompt_minutes)
+            const result = await startBackgroundLocationTracking(userId, newSettings.checkin_prompt_minutes)
+            if (!result.success && result.error) {
+              // Log but don't block settings fetch - user can retry via UI
+              console.warn('[useCheckinSettings] Background tracking sync failed:', result.error)
+            }
           }
         }
       }
@@ -149,14 +158,15 @@ export function useCheckinSettings(
         const isNowEnabled = data.always_on_tracking_enabled
 
         if (isNowEnabled && !wasEnabled) {
-          const started = await startBackgroundLocationTracking(
+          const result = await startBackgroundLocationTracking(
             userId,
             data.checkin_prompt_minutes
           )
-          if (!started) {
+          if (!result.success) {
+            // Use the specific error message from the tracking service
             setError({
               code: "BACKGROUND_ERROR",
-              message: "Could not start background tracking. Please grant location permissions.",
+              message: result.error || "Could not start background tracking. Please grant location permissions.",
             })
             // Revert in database
             await supabase.rpc("update_tracking_settings", {

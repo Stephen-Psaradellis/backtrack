@@ -6,7 +6,7 @@
  */
 
 import React, { ReactNode } from 'react'
-import { FileEdit, MessageSquare, Search, SearchX, AlertTriangle } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native'
-import { Button, ButtonProps } from './Button'
+import { Button, ButtonProps } from './native/Button'
+import { darkTheme } from '../constants/glassStyles'
 
 // ============================================================================
 // TYPES
@@ -92,19 +93,19 @@ export function EmptyState({
   return (
     <View style={[styles.container, style]} testID={testID}>
       {icon && (
-        <View style={styles.iconContainer} testID={`${testID}-icon`}>
+        <View style={styles.iconContainer} testID={`${testID}-icon`} accessible={false}>
           {typeof icon === 'string' ? (
-            <Text style={styles.icon}>{icon}</Text>
+            <Text style={styles.icon} accessible={false}>{icon}</Text>
           ) : (
             icon
           )}
         </View>
       )}
-      <Text style={[styles.title, titleStyle]} testID={`${testID}-title`}>
+      <Text style={[styles.title, titleStyle]} testID={`${testID}-title`} accessibilityRole="text">
         {title}
       </Text>
       {message && (
-        <Text style={[styles.message, messageStyle]} testID={`${testID}-message`}>
+        <Text style={[styles.message, messageStyle]} testID={`${testID}-message`} accessibilityRole="text">
           {message}
         </Text>
       )}
@@ -115,6 +116,7 @@ export function EmptyState({
             onPress={action.onPress}
             variant={action.variant || 'primary'}
             testID={`${testID}-action`}
+            accessibilityLabel={action.label}
           />
         </View>
       )}
@@ -138,19 +140,19 @@ export function EmptyLedger({
   return (
     <View style={splashStyles.container} testID={props.testID || 'ledger-empty'}>
       {/* Decorative background circles */}
-      <View style={splashStyles.decorCircleOuter} />
-      <View style={splashStyles.decorCircleInner} />
+      <View style={splashStyles.decorCircleOuter} accessible={false} />
+      <View style={splashStyles.decorCircleInner} accessible={false} />
 
       {/* Icon badge */}
-      <View style={splashStyles.iconBadge}>
-        <FileEdit size={36} strokeWidth={2} color="#FFFFFF" />
+      <View style={splashStyles.iconBadge} accessible={false}>
+        <Ionicons name="create-outline" size={36} color="#FFFFFF" accessible={false} />
       </View>
 
       {/* Title */}
-      <Text style={splashStyles.title}>No posts here yet</Text>
+      <Text style={splashStyles.title} accessibilityRole="text">No posts here yet</Text>
 
       {/* Message */}
-      <Text style={splashStyles.message}>
+      <Text style={splashStyles.message} accessibilityRole="text">
         Be the first to post and notify Regulars immediately!
       </Text>
 
@@ -162,6 +164,7 @@ export function EmptyLedger({
             onPress={onCreatePost}
             variant="primary"
             testID="empty-ledger-action"
+            accessibilityLabel="Create Post"
           />
         </View>
       )}
@@ -175,7 +178,7 @@ const splashStyles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingVertical: 64,
-    backgroundColor: '#FFF5F3',
+    backgroundColor: darkTheme.surface,
     borderRadius: 24,
     marginHorizontal: 16,
     marginVertical: 24,
@@ -199,11 +202,11 @@ const splashStyles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FF6B47',
+    backgroundColor: darkTheme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
-    shadowColor: '#FF6B47',
+    shadowColor: darkTheme.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -212,14 +215,14 @@ const splashStyles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: darkTheme.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
     fontSize: 17,
     fontWeight: '500',
-    color: '#FF6B47',
+    color: darkTheme.primary,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 16,
@@ -228,6 +231,158 @@ const splashStyles = StyleSheet.create({
     marginTop: 32,
     width: '100%',
     maxWidth: 240,
+  },
+})
+
+/**
+ * Empty state for feed with action cards (M-005)
+ */
+export function EmptyFeed({
+  onBrowseMap,
+  onCheckIn,
+  onCreatePost,
+  ...props
+}: Omit<EmptyStateProps, 'icon' | 'title' | 'message' | 'action'> & {
+  onBrowseMap?: () => void
+  onCheckIn?: () => void
+  onCreatePost?: () => void
+}): JSX.Element {
+  return (
+    <View style={feedEmptyStyles.container} testID={props.testID || 'feed-empty'}>
+      {/* Icon */}
+      <View style={feedEmptyStyles.iconBadge} accessible={false}>
+        <Ionicons name="compass-outline" size={40} color={darkTheme.textPrimary} accessible={false} />
+      </View>
+
+      {/* Title */}
+      <Text style={feedEmptyStyles.title} accessibilityRole="text">No posts nearby</Text>
+
+      {/* Message */}
+      <Text style={feedEmptyStyles.message} accessibilityRole="text">
+        Be the first to post about someone you noticed!
+      </Text>
+
+      {/* Action Cards */}
+      <View style={feedEmptyStyles.actionsContainer}>
+        {onBrowseMap && (
+          <View style={feedEmptyStyles.actionCard}>
+            <Ionicons name="map-outline" size={24} color={darkTheme.primary} />
+            <View style={feedEmptyStyles.actionTextContainer}>
+              <Text style={feedEmptyStyles.actionTitle}>Browse the Map</Text>
+              <Text style={feedEmptyStyles.actionDescription}>Explore posts by location</Text>
+            </View>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={onBrowseMap}
+              testID="empty-feed-browse-map"
+              accessibilityLabel="View map"
+            >
+              View
+            </Button>
+          </View>
+        )}
+        {onCheckIn && (
+          <View style={feedEmptyStyles.actionCard}>
+            <Ionicons name="location-outline" size={24} color={darkTheme.accent} />
+            <View style={feedEmptyStyles.actionTextContainer}>
+              <Text style={feedEmptyStyles.actionTitle}>Check In Here</Text>
+              <Text style={feedEmptyStyles.actionDescription}>Mark your current location</Text>
+            </View>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={onCheckIn}
+              testID="empty-feed-check-in"
+              accessibilityLabel="Check in here"
+            >
+              Check In
+            </Button>
+          </View>
+        )}
+        {onCreatePost && (
+          <View style={feedEmptyStyles.actionCard}>
+            <Ionicons name="create-outline" size={24} color={darkTheme.success} />
+            <View style={feedEmptyStyles.actionTextContainer}>
+              <Text style={feedEmptyStyles.actionTitle}>Create a Post</Text>
+              <Text style={feedEmptyStyles.actionDescription}>Share who you noticed</Text>
+            </View>
+            <Button
+              variant="primary"
+              size="sm"
+              onPress={onCreatePost}
+              testID="empty-feed-create-post"
+              accessibilityLabel="Create a post"
+            >
+              Post
+            </Button>
+          </View>
+        )}
+      </View>
+    </View>
+  )
+}
+
+const feedEmptyStyles = StyleSheet.create({
+  container: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 48,
+  },
+  iconBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: darkTheme.surface,
+    borderWidth: 2,
+    borderColor: darkTheme.cardBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: darkTheme.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  message: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: darkTheme.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  actionsContainer: {
+    width: '100%',
+    gap: 12,
+  },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkTheme.surface,
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  actionTextContainer: {
+    flex: 1,
+  },
+  actionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+    marginBottom: 2,
+  },
+  actionDescription: {
+    fontSize: 13,
+    color: darkTheme.textSecondary,
   },
 })
 
@@ -243,7 +398,7 @@ export function EmptyChats({
   return (
     <EmptyState
       {...props}
-      icon={<MessageSquare size={48} strokeWidth={1.5} color="#8B5CF6" />}
+      icon={<Ionicons name="chatbubble-outline" size={48} color={darkTheme.accent} />}
       title="No conversations yet"
       message="When you connect with someone, your conversations will appear here."
       action={
@@ -270,7 +425,7 @@ export function NoMatches({
   return (
     <EmptyState
       {...props}
-      icon={<Search size={48} strokeWidth={1.5} color="#8E8E93" />}
+      icon={<Ionicons name="search-outline" size={48} color={darkTheme.textMuted} />}
       title="No matches found"
       message="Nobody has described someone matching your avatar yet. Check back later!"
       action={
@@ -300,7 +455,7 @@ export function NoSearchResults({
   return (
     <EmptyState
       {...props}
-      icon={<SearchX size={48} strokeWidth={1.5} color="#8E8E93" />}
+      icon={<Ionicons name="search-outline" size={48} color={darkTheme.textMuted} />}
       title="No results found"
       message={
         query
@@ -334,7 +489,7 @@ export function ErrorState({
   return (
     <EmptyState
       {...props}
-      icon={<AlertTriangle size={48} strokeWidth={1.5} color="#FF3B30" />}
+      icon={<Ionicons name="alert-circle-outline" size={48} color={darkTheme.error} />}
       title="Something went wrong"
       message={error || 'An unexpected error occurred. Please try again.'}
       action={
@@ -360,7 +515,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingVertical: 48,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: darkTheme.surface,
   },
   iconContainer: {
     marginBottom: 16,
@@ -373,13 +528,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000000',
+    color: darkTheme.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   message: {
     fontSize: 15,
-    color: '#8E8E93',
+    color: darkTheme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },

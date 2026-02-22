@@ -32,6 +32,7 @@ vi.mock('../supabase', () => {
   const mockOrder = vi.fn()
   const mockLimit = vi.fn()
   const mockRpc = vi.fn()
+  const mockCreateSignedUrls = vi.fn()
   const mockInvoke = vi.fn()
   const mockChannel = vi.fn()
   const mockOn = vi.fn()
@@ -55,7 +56,13 @@ vi.mock('../supabase', () => {
 
   return {
     supabase: {
-      auth: { getUser: () => mockGetUser() },
+      auth: {
+        getUser: () => mockGetUser(),
+        getSession: () => mockGetUser().then((r: any) => ({
+          data: { session: r.data?.user ? { user: r.data.user } : null },
+          error: r.error,
+        })),
+      },
       from: vi.fn(() => ({
         select: mockSelect,
         insert: mockInsert,
@@ -63,6 +70,13 @@ vi.mock('../supabase', () => {
         update: mockUpdate,
       })),
       rpc: mockRpc,
+      storage: {
+        from: vi.fn(() => ({
+          createSignedUrls: mockCreateSignedUrls,
+          upload: vi.fn(),
+          remove: vi.fn(),
+        })),
+      },
       functions: { invoke: mockInvoke },
       channel: mockChannel,
       __mocks: {
@@ -77,6 +91,7 @@ vi.mock('../supabase', () => {
         mockOrder,
         mockLimit,
         mockRpc,
+        mockCreateSignedUrls,
         mockInvoke,
         mockChannel,
         mockOn,
@@ -123,6 +138,7 @@ const {
   mockOrder,
   mockLimit,
   mockRpc,
+  mockCreateSignedUrls,
   mockInvoke,
   mockChannel,
   mockOn,
@@ -157,6 +173,13 @@ describe('profilePhotos', () => {
       on: mockOn.mockReturnValue({
         subscribe: mockSubscribe.mockReturnValue({ unsubscribe: mockUnsubscribe }),
       }),
+    })
+
+    // Reset storage.from mock (cleared by mockReset: true in vitest config)
+    ;(supabase.storage.from as any).mockReturnValue({
+      createSignedUrls: mockCreateSignedUrls,
+      upload: vi.fn(),
+      remove: vi.fn(),
     })
 
     // Default storage mock behavior
@@ -358,11 +381,19 @@ describe('profilePhotos', () => {
         order: vi.fn().mockResolvedValue({ data: mockPhotos, error: null }),
       })
 
+      mockCreateSignedUrls.mockResolvedValueOnce({
+        data: [
+          { signedUrl: 'https://example.com/signed-1' },
+          { signedUrl: 'https://example.com/signed-2' },
+        ],
+        error: null,
+      })
+
       const result = await getProfilePhotos()
 
       expect(result).toHaveLength(2)
-      expect(result[0].signedUrl).toBe('https://example.com/signed-url')
-      expect(mockGetSignedUrlFromPath).toHaveBeenCalledTimes(2)
+      expect(result[0].signedUrl).toBe('https://example.com/signed-1')
+      expect(result[1].signedUrl).toBe('https://example.com/signed-2')
     })
 
     it('should return empty array on database error', async () => {
@@ -384,11 +415,9 @@ describe('profilePhotos', () => {
         order: vi.fn().mockResolvedValue({ data: mockPhotos, error: null }),
       })
 
-      mockGetSignedUrlFromPath.mockResolvedValueOnce({
-        success: false,
-        signedUrl: null,
-        expiresIn: null,
-        error: 'Failed to get URL',
+      mockCreateSignedUrls.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Failed to get URL' },
       })
 
       const result = await getProfilePhotos()
@@ -420,10 +449,15 @@ describe('profilePhotos', () => {
         }),
       })
 
+      mockCreateSignedUrls.mockResolvedValueOnce({
+        data: [{ signedUrl: 'https://example.com/signed-1' }],
+        error: null,
+      })
+
       const result = await getApprovedPhotos()
 
       expect(result).toHaveLength(1)
-      expect(mockGetSignedUrlFromPath).toHaveBeenCalled()
+      expect(result[0].signedUrl).toBe('https://example.com/signed-1')
     })
 
     it('should return empty array on error', async () => {

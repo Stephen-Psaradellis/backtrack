@@ -51,46 +51,46 @@ import type { FavoriteLocation } from '../../types/database'
 // ============================================================================
 
 // Mock the Supabase client
-jest.mock('../../lib/supabase', () => ({
+vi.mock('../../lib/supabase', () => ({
   supabase: require('../mocks/supabase').mockSupabase,
   supabaseUrl: 'https://mock.supabase.co',
 }))
 
 // Mock Supabase client factory
-jest.mock('@/lib/supabase/client', () => ({
+vi.mock('@/lib/supabase/client', () => ({
   createClient: () => require('../mocks/supabase').mockSupabase,
 }))
 
 // Mock storage module
-jest.mock('../../lib/storage', () => ({
-  uploadSelfie: jest.fn().mockResolvedValue({
+vi.mock('../../lib/storage', () => ({
+  uploadSelfie: vi.fn().mockResolvedValue({
     success: true,
     path: 'mock-user-id/mock-post-id.jpg',
     error: null,
   }),
-  getSelfieUrl: jest.fn().mockResolvedValue({
+  getSelfieUrl: vi.fn().mockResolvedValue({
     success: true,
     signedUrl: 'https://example.com/signed-selfie.jpg',
     error: null,
   }),
-  deleteSelfie: jest.fn().mockResolvedValue({
+  deleteSelfie: vi.fn().mockResolvedValue({
     success: true,
     error: null,
   }),
 }))
 
 // Mock favorites module
-const mockAddFavoriteApi = jest.fn()
-const mockRemoveFavoriteApi = jest.fn()
-const mockUpdateFavoriteApi = jest.fn()
-const mockGetUserFavoritesApi = jest.fn()
+const mockAddFavoriteApi = vi.fn()
+const mockRemoveFavoriteApi = vi.fn()
+const mockUpdateFavoriteApi = vi.fn()
+const mockGetUserFavoritesApi = vi.fn()
 
-jest.mock('../../lib/favorites', () => ({
+vi.mock('../../lib/favorites', () => ({
   addFavorite: (...args: unknown[]) => mockAddFavoriteApi(...args),
   removeFavorite: (...args: unknown[]) => mockRemoveFavoriteApi(...args),
   updateFavorite: (...args: unknown[]) => mockUpdateFavoriteApi(...args),
   getUserFavorites: (...args: unknown[]) => mockGetUserFavoritesApi(...args),
-  getFavoriteById: jest.fn().mockResolvedValue({
+  getFavoriteById: vi.fn().mockResolvedValue({
     success: true,
     favorite: null,
   }),
@@ -111,16 +111,16 @@ jest.mock('../../lib/favorites', () => ({
 }))
 
 // Mock moderation module
-jest.mock('../../lib/moderation', () => ({
-  getHiddenUserIds: jest.fn().mockResolvedValue({
+vi.mock('../../lib/moderation', () => ({
+  getHiddenUserIds: vi.fn().mockResolvedValue({
     success: true,
     hiddenUserIds: [],
   }),
-  blockUser: jest.fn().mockResolvedValue({
+  blockUser: vi.fn().mockResolvedValue({
     success: true,
     error: null,
   }),
-  submitReport: jest.fn().mockResolvedValue({
+  submitReport: vi.fn().mockResolvedValue({
     success: true,
     error: null,
   }),
@@ -130,21 +130,21 @@ jest.mock('../../lib/moderation', () => ({
 }))
 
 // Mock matching module
-jest.mock('../../lib/matching', () => ({
-  compareAvatars: jest.fn().mockReturnValue({
+vi.mock('../../lib/matching', () => ({
+  compareAvatars: vi.fn().mockReturnValue({
     score: 75,
     isMatch: true,
     matchedAttributes: ['skinColor', 'topType', 'hairColor'],
     unmatchedAttributes: ['clotheType'],
   }),
-  calculateBatchMatches: jest.fn().mockReturnValue([]),
-  isValidForMatching: jest.fn().mockReturnValue(true),
-  getMatchSummary: jest.fn().mockReturnValue({
+  calculateBatchMatches: vi.fn().mockReturnValue([]),
+  isValidForMatching: vi.fn().mockReturnValue(true),
+  getMatchSummary: vi.fn().mockReturnValue({
     matchCount: 0,
     total: 0,
     percentage: 0,
   }),
-  getPrimaryMatchCount: jest.fn().mockReturnValue({
+  getPrimaryMatchCount: vi.fn().mockReturnValue({
     matchCount: 0,
     total: 0,
   }),
@@ -152,15 +152,15 @@ jest.mock('../../lib/matching', () => ({
 }))
 
 // Mock navigation
-const mockNavigate = jest.fn()
-const mockGoBack = jest.fn()
-const mockReplace = jest.fn()
-const mockSetOptions = jest.fn()
+const mockNavigate = vi.fn()
+const mockGoBack = vi.fn()
+const mockReplace = vi.fn()
+const mockSetOptions = vi.fn()
 
 // Store current route params for tests - can be modified to simulate different scenarios
 let currentRouteParams: Record<string, unknown> = {}
 
-jest.mock('@react-navigation/native', () => {
+vi.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native')
   return {
     ...actualNav,
@@ -168,13 +168,13 @@ jest.mock('@react-navigation/native', () => {
       navigate: mockNavigate,
       goBack: mockGoBack,
       replace: mockReplace,
-      reset: jest.fn(),
+      reset: vi.fn(),
       setOptions: mockSetOptions,
     }),
-    useRoute: jest.fn(() => ({
+    useRoute: vi.fn(() => ({
       params: currentRouteParams,
     })),
-    useFocusEffect: jest.fn((callback) => {
+    useFocusEffect: vi.fn((callback) => {
       React.useEffect(() => {
         callback()
       }, [callback])
@@ -183,32 +183,32 @@ jest.mock('@react-navigation/native', () => {
 })
 
 // Mock expo-location
-jest.mock('../../hooks/useLocation', () => ({
+vi.mock('../../hooks/useLocation', () => ({
   useLocation: () => ({
     latitude: 37.7749,
     longitude: -122.4194,
     loading: false,
     error: null,
     permissionStatus: 'granted',
-    refresh: jest.fn(),
-    requestPermission: jest.fn().mockResolvedValue(true),
-    startWatching: jest.fn(),
-    stopWatching: jest.fn(),
+    refresh: vi.fn(),
+    requestPermission: vi.fn().mockResolvedValue(true),
+    startWatching: vi.fn(),
+    stopWatching: vi.fn(),
     isWatching: false,
     timestamp: Date.now(),
     accuracy: 10,
     altitude: null,
     heading: null,
     speed: null,
-    checkLocationServices: jest.fn(),
+    checkLocationServices: vi.fn(),
   }),
-  calculateDistance: jest.fn().mockReturnValue(100),
-  isWithinRadius: jest.fn().mockReturnValue(true),
-  formatCoordinates: jest.fn().mockReturnValue('37.7749, -122.4194'),
+  calculateDistance: vi.fn().mockReturnValue(100),
+  isWithinRadius: vi.fn().mockReturnValue(true),
+  formatCoordinates: vi.fn().mockReturnValue('37.7749, -122.4194'),
 }))
 
 // Mock network status hook
-jest.mock('../../hooks/useNetworkStatus', () => ({
+vi.mock('../../hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({
     isConnected: true,
     isInternetReachable: true,
@@ -217,16 +217,16 @@ jest.mock('../../hooks/useNetworkStatus', () => ({
 }))
 
 // Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn().mockResolvedValue(null),
-  setItem: jest.fn().mockResolvedValue(undefined),
-  removeItem: jest.fn().mockResolvedValue(undefined),
-  clear: jest.fn().mockResolvedValue(undefined),
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: vi.fn().mockResolvedValue(null),
+  setItem: vi.fn().mockResolvedValue(undefined),
+  removeItem: vi.fn().mockResolvedValue(undefined),
+  clear: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Mock MapView component
-jest.mock('../../components/MapView', () => ({
-  MapView: jest.fn(({ testID, children, onMapReady, onMapPress, onMarkerPress }) => {
+vi.mock('../../components/MapView', () => ({
+  MapView: vi.fn(({ testID, children, onMapReady, onMapPress, onMarkerPress }) => {
     const { View, TouchableOpacity, Text } = require('react-native')
     React.useEffect(() => {
       if (onMapReady) onMapReady()
@@ -253,24 +253,24 @@ jest.mock('../../components/MapView', () => ({
       </View>
     )
   }),
-  createRegion: jest.fn(),
-  createMarker: jest.fn((id, coords, options) => ({
+  createRegion: vi.fn(),
+  createMarker: vi.fn((id, coords, options) => ({
     id,
     coordinate: coords,
     ...options,
   })),
-  getCenterCoordinates: jest.fn(),
-  getRegionForCoordinates: jest.fn(),
+  getCenterCoordinates: vi.fn(),
+  getRegionForCoordinates: vi.fn(),
 }))
 
 // Mock haptics
-jest.mock('../../lib/haptics', () => ({
-  selectionFeedback: jest.fn().mockResolvedValue(undefined),
-  lightFeedback: jest.fn().mockResolvedValue(undefined),
-  successFeedback: jest.fn().mockResolvedValue(undefined),
-  errorFeedback: jest.fn().mockResolvedValue(undefined),
-  mediumFeedback: jest.fn().mockResolvedValue(undefined),
-  warningFeedback: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../lib/haptics', () => ({
+  selectionFeedback: vi.fn().mockResolvedValue(undefined),
+  lightFeedback: vi.fn().mockResolvedValue(undefined),
+  successFeedback: vi.fn().mockResolvedValue(undefined),
+  errorFeedback: vi.fn().mockResolvedValue(undefined),
+  mediumFeedback: vi.fn().mockResolvedValue(undefined),
+  warningFeedback: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Mock Alert
@@ -368,7 +368,7 @@ describe('E2E: Quick Post Flow from Favorites', () => {
     })
     mockAuth.onAuthStateChange.mockImplementation((callback) => {
       callback('SIGNED_IN', mockSession)
-      return { data: { subscription: { unsubscribe: jest.fn() } } }
+      return { data: { subscription: { unsubscribe: vi.fn() } } }
     })
 
     // Default favorites API mock - return saved favorites
@@ -383,9 +383,9 @@ describe('E2E: Quick Post Flow from Favorites', () => {
       if (table === 'profiles') {
         return {
           ...createMockQueryBuilder([mockProfile]),
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
             data: mockProfile,
             error: null,
           }),
@@ -394,30 +394,30 @@ describe('E2E: Quick Post Flow from Favorites', () => {
       if (table === 'locations') {
         return {
           ...createMockQueryBuilder([mockLocation]),
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          gte: jest.fn().mockReturnThis(),
-          lte: jest.fn().mockReturnThis(),
-          limit: jest.fn().mockReturnThis(),
-          insert: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lte: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          insert: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
             data: mockLocation,
             error: null,
           }),
-          then: jest.fn().mockImplementation((resolve) => {
+          then: vi.fn().mockImplementation((resolve) => {
             resolve({ data: [mockLocation], error: null })
           }),
         }
       }
       if (table === 'posts') {
         const queryBuilder = {
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          order: jest.fn().mockReturnThis(),
-          limit: jest.fn().mockReturnThis(),
-          not: jest.fn().mockReturnThis(),
-          insert: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          not: vi.fn().mockReturnThis(),
+          insert: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
             data: mockPostFromFavorite,
             error: null,
           }),
@@ -434,10 +434,10 @@ describe('E2E: Quick Post Flow from Favorites', () => {
       if (table === 'favorite_locations') {
         return {
           ...createMockQueryBuilder([mockFavoriteLocation]),
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          order: jest.fn().mockReturnThis(),
-          then: jest.fn().mockImplementation((resolve) => {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          then: vi.fn().mockImplementation((resolve) => {
             resolve({ data: [mockFavoriteLocation], error: null })
           }),
         }
@@ -1134,9 +1134,9 @@ describe('E2E: Quick Post Flow from Favorites', () => {
         if (table === 'locations') {
           return {
             ...createMockQueryBuilder([]),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: null,
               error: { message: 'Location not found' },
             }),
@@ -1145,9 +1145,9 @@ describe('E2E: Quick Post Flow from Favorites', () => {
         if (table === 'profiles') {
           return {
             ...createMockQueryBuilder([mockProfile]),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: mockProfile,
               error: null,
             }),

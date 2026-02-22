@@ -1,0 +1,31 @@
+appId: com.backtrack.app
+---
+# Login Flow
+# Tests the complete login flow for existing users
+
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Verify we're on auth screen
+- assertVisible: "Welcome Back"
+
+# Fill in email
+- tapOn: "Email address"
+- inputText: "test@example.com"
+
+# Fill in password
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123"
+
+# Submit login
+- tapOn: "Sign In"
+
+# Wait for navigation
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify we're logged in by checking for feed screen
+- assertVisible: "Feed tab"

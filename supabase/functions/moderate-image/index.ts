@@ -4,21 +4,28 @@
  * Moderates uploaded profile photos using Google Cloud Vision SafeSearch API.
  * Called after a photo is uploaded to check for inappropriate content.
  *
+ * Security:
+ * - Requires JWT authentication (client-initiated)
+ * - Rate limits by authenticated user_id (not photo_id)
+ * - Validates storage_path ownership before processing
+ * - CORS restricted to allowed origins
+ * - Error details sanitized
+ *
  * Expected payload:
  * {
  *   photo_id: string,    // UUID of the profile_photo record
  *   storage_path: string // Path to the image in Supabase Storage
  * }
- *
- * Environment variables required:
- * - GOOGLE_CLOUD_VISION_API_KEY: API key for Google Cloud Vision
- * - SUPABASE_URL: Supabase project URL (auto-injected)
- * - SUPABASE_SERVICE_ROLE_KEY: Service role key (auto-injected)
  */
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { encode as base64Encode } from 'https://deno.land/std@0.168.0/encoding/base64.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  withMiddleware,
+  addCorsHeaders,
+  isValidUUID,
+  errorResponse,
+} from '../_shared/middleware.ts'
+import { validateVisionApiKey } from '../_shared/env-validation.ts'
 
 // SafeSearch likelihood levels
 type SafeSearchLikelihood =
@@ -51,51 +58,62 @@ interface ModerationRequest {
   storage_path: string
 }
 
-// Rejection thresholds - content at or above these levels is rejected
-// SECURITY: Stricter thresholds to prevent inappropriate content
+// Rejection thresholds
 const REJECTION_THRESHOLDS: Partial<Record<keyof SafeSearchResult, SafeSearchLikelihood[]>> = {
   adult: ['LIKELY', 'VERY_LIKELY'],
   violence: ['LIKELY', 'VERY_LIKELY'],
-  racy: ['LIKELY', 'VERY_LIKELY'], // Tightened: was only VERY_LIKELY, now includes LIKELY
+  racy: ['LIKELY', 'VERY_LIKELY'],
 }
 
-// Allowed CORS origins for security
-// Only allow requests from our app domains
-const ALLOWED_ORIGINS = [
-  'https://backtrack.social',
-  'https://www.backtrack.social',
-  'https://app.backtrack.social',
-  // Development origins
-  'http://localhost:3000',
-  'http://localhost:8081',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:8081',
-]
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
+const RATE_LIMIT_MAX_REQUESTS = 10
+const RATE_LIMIT_DB_TIMEOUT_MS = 1000
 
-/**
- * Get CORS origin header based on request origin
- * Returns the origin if it's in the allowed list, otherwise null
- */
-function getCorsOrigin(requestOrigin: string | null): string | null {
-  if (!requestOrigin) return null
-  if (ALLOWED_ORIGINS.includes(requestOrigin)) {
-    return requestOrigin
-  }
-  // Allow Expo development URLs (exp:// and custom schemes)
-  if (requestOrigin.startsWith('exp://') || requestOrigin.startsWith('backtrack://')) {
-    return requestOrigin
-  }
-  return null
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Timeout after ${timeoutMs}ms for operation: ${operation}`))
+    }, timeoutMs)
+  })
+
+  return Promise.race([promise, timeoutPromise])
 }
 
-// Likelihood levels in order (for comparison)
-const LIKELIHOOD_ORDER: SafeSearchLikelihood[] = [
-  'VERY_UNLIKELY',
-  'UNLIKELY',
-  'POSSIBLE',
-  'LIKELY',
-  'VERY_LIKELY',
-]
+async function checkRateLimitPersistent(
+  supabase: Parameters<typeof withMiddleware>[0] extends (req: Request, ctx: infer C) => Promise<Response> ? C['supabase'] : never,
+  userId: string
+): Promise<{ allowed: boolean; remaining: number }> {
+  try {
+    const { data, error } = await withTimeout(
+      supabase.rpc('check_rate_limit', {
+        p_user_id: userId,
+        p_window_ms: RATE_LIMIT_WINDOW_MS,
+        p_max_requests: RATE_LIMIT_MAX_REQUESTS,
+      }),
+      RATE_LIMIT_DB_TIMEOUT_MS,
+      'rate_limit_rpc'
+    )
+
+    if (!error && data !== null) {
+      return {
+        allowed: data.allowed ?? false,
+        remaining: data.remaining ?? 0,
+      }
+    }
+
+    // RPC failed - fail closed (deny the request for safety)
+    console.error('Rate limit RPC failed, failing closed:', error)
+    return { allowed: false, remaining: 0 }
+  } catch (dbError) {
+    console.error('Rate limit DB error, rejecting request (fail-closed):', dbError)
+    return { allowed: false, remaining: 0 }
+  }
+}
 
 function shouldReject(result: SafeSearchResult): boolean {
   for (const [category, thresholds] of Object.entries(REJECTION_THRESHOLDS)) {
@@ -111,12 +129,7 @@ async function moderateImage(
   imageBase64: string,
   apiKey: string
 ): Promise<SafeSearchResult> {
-  const visionApiUrl = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`
-
-  // Debug: log image content info
-  console.log('Image base64 length:', imageBase64?.length ?? 'null/undefined')
-  console.log('Image base64 first 100 chars:', imageBase64?.substring(0, 100) ?? 'null')
-  console.log('API key present:', !!apiKey)
+  const visionApiUrl = 'https://vision.googleapis.com/v1/images:annotate'
 
   if (!imageBase64 || imageBase64.length === 0) {
     throw new Error('Image base64 content is empty')
@@ -137,24 +150,17 @@ async function moderateImage(
     ],
   }
 
-  console.log('Request body structure:', JSON.stringify({
-    requests: [{
-      image: { content: `[${imageBase64.length} chars]` },
-      features: requestBody.requests[0].features
-    }]
-  }))
-
   const response = await fetch(visionApiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
     },
     body: JSON.stringify(requestBody),
   })
 
   if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Vision API request failed: ${response.status} - ${errorText}`)
+    throw new Error(`Vision API request failed: ${response.status}`)
   }
 
   const data: VisionApiResponse = await response.json()
@@ -172,190 +178,185 @@ async function moderateImage(
   return safeSearchResult
 }
 
-serve(async (req) => {
-  const requestOrigin = req.headers.get('origin')
-  const corsOrigin = getCorsOrigin(requestOrigin)
+// ============================================================================
+// Main Handler
+// ============================================================================
 
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    // Only allow preflight from allowed origins
-    if (!corsOrigin) {
-      return new Response(null, { status: 403 })
-    }
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
-      },
-    })
+Deno.serve(withMiddleware(async (_req, { supabase, auth, body, origin }) => {
+  const visionApiKey = Deno.env.get('GOOGLE_CLOUD_VISION_API_KEY')
+  if (!visionApiKey) {
+    console.error('Missing GOOGLE_CLOUD_VISION_API_KEY')
+    return errorResponse(500, 'Internal server error', origin)
   }
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  const { photo_id, storage_path } = body as ModerationRequest
+
+  // Validate input BEFORE rate limit (don't consume rate limit on bad input)
+  if (!photo_id || !isValidUUID(photo_id)) {
+    return new Response(
+      JSON.stringify({ error: 'Valid photo_id is required' }),
+      {
+        status: 400,
+        headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+      }
+    )
   }
 
-  try {
-    // Get environment variables
-    // Note: Supabase auto-injects SUPABASE_SERVICE_ROLE_KEY (not SUPABASE_SECRET_KEY)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    const visionApiKey = Deno.env.get('GOOGLE_CLOUD_VISION_API_KEY')
+  if (!storage_path || typeof storage_path !== 'string' || storage_path.length === 0) {
+    return new Response(
+      JSON.stringify({ error: 'Valid storage_path is required' }),
+      {
+        status: 400,
+        headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+      }
+    )
+  }
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration')
-    }
+  // Validate storage_path prefix - must start with authenticated user's ID
+  if (auth.userId && !storage_path.startsWith(`${auth.userId}/`)) {
+    return new Response(
+      JSON.stringify({ error: 'Forbidden: storage path does not belong to you' }),
+      {
+        status: 403,
+        headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+      }
+    )
+  }
 
-    if (!visionApiKey) {
-      throw new Error('Missing GOOGLE_CLOUD_VISION_API_KEY')
-    }
+  // Validate storage_path ownership - ensure photo belongs to authenticated user
+  if (auth.userId) {
+    const { data: photoRecord, error: photoError } = await supabase
+      .from('profile_photos')
+      .select('user_id')
+      .eq('id', photo_id)
+      .single()
 
-    // Parse request body
-    const body: ModerationRequest = await req.json()
-    const { photo_id, storage_path } = body
-
-    if (!photo_id || !storage_path) {
+    if (photoError || !photoRecord) {
       return new Response(
-        JSON.stringify({ error: 'Missing photo_id or storage_path' }),
+        JSON.stringify({ error: 'Photo not found' }),
         {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          status: 404,
+          headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
         }
       )
     }
 
-    // Create Supabase client with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Download the image from Supabase Storage
-    console.log('Downloading image from selfies bucket, path:', storage_path)
-    const { data: imageData, error: downloadError } = await supabase.storage
-      .from('selfies')
-      .download(storage_path)
-
-    if (downloadError || !imageData) {
-      console.error('Failed to download image:', downloadError)
-      console.error('Download error details:', JSON.stringify(downloadError, null, 2))
-      console.error('Storage path attempted:', storage_path)
-      console.error('Supabase URL:', supabaseUrl)
-      // Update status to error
-      await supabase.rpc('update_photo_moderation', {
-        p_photo_id: photo_id,
-        p_status: 'error',
-        p_result: { error: 'Failed to download image', path: storage_path },
-      })
+    if (photoRecord.user_id !== auth.userId) {
       return new Response(
-        JSON.stringify({ error: 'Failed to download image', details: downloadError, path: storage_path }),
+        JSON.stringify({ error: 'Forbidden: photo does not belong to you' }),
         {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
+          status: 403,
+          headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
         }
       )
     }
+  }
 
-    // Convert blob to base64 using Deno's standard library
-    console.log('imageData type:', typeof imageData)
-    console.log('imageData size:', imageData.size)
-    console.log('imageData type property:', imageData.type)
+  // Rate limiting by authenticated user_id (not photo_id)
+  const rateLimitKey = auth.userId || photo_id
+  const rateLimitResult = await checkRateLimitPersistent(supabase, rateLimitKey)
+  if (!rateLimitResult.allowed) {
+    return new Response(
+      JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+      {
+        status: 429,
+        headers: addCorsHeaders({
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+          'X-RateLimit-Remaining': '0',
+        }, origin),
+      }
+    )
+  }
 
-    const arrayBuffer = await imageData.arrayBuffer()
-    console.log('arrayBuffer byteLength:', arrayBuffer.byteLength)
+  // Download the image from Supabase Storage
+  const { data: imageData, error: downloadError } = await supabase.storage
+    .from('selfies')
+    .download(storage_path)
 
-    const uint8Array = new Uint8Array(arrayBuffer)
-    console.log('uint8Array length:', uint8Array.length)
-
-    // Use standard base64 encoding for Deno
-    let base64Image: string
-    try {
-      base64Image = base64Encode(uint8Array)
-      console.log('base64Encode result length:', base64Image.length)
-    } catch (encodeError) {
-      console.error('base64Encode failed:', encodeError)
-      // Fallback: try manual encoding
-      const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('')
-      base64Image = btoa(binaryString)
-      console.log('btoa fallback result length:', base64Image.length)
-    }
-
-    console.log('Final base64 length:', base64Image.length)
-
-    // Call Google Cloud Vision API
-    let safeSearchResult: SafeSearchResult
-    try {
-      safeSearchResult = await moderateImage(base64Image, visionApiKey)
-    } catch (visionError) {
-      console.error('Vision API error:', visionError)
-      // Update status to error
-      await supabase.rpc('update_photo_moderation', {
-        p_photo_id: photo_id,
-        p_status: 'error',
-        p_result: { error: String(visionError) },
-      })
-      return new Response(
-        JSON.stringify({ error: 'Moderation failed', details: String(visionError) }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
-    }
-
-    // Determine if content should be rejected
-    const isRejected = shouldReject(safeSearchResult)
-    const newStatus = isRejected ? 'rejected' : 'approved'
-
-    // Update the photo record with moderation result
+  if (downloadError || !imageData) {
+    console.error('Failed to download image for moderation')
     await supabase.rpc('update_photo_moderation', {
       p_photo_id: photo_id,
-      p_status: newStatus,
-      p_result: safeSearchResult,
+      p_status: 'error',
+      p_result: { error: 'Failed to download image' },
     })
-
-    // If rejected, delete the image from storage
-    if (isRejected) {
-      const { error: deleteError } = await supabase.storage
-        .from('selfies')
-        .remove([storage_path])
-
-      if (deleteError) {
-        console.error('Failed to delete rejected image:', deleteError)
-        // Continue anyway - the photo is marked as rejected
-      }
-    }
-
-    // Build response headers with CORS if origin is allowed
-    const responseHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (corsOrigin) {
-      responseHeaders['Access-Control-Allow-Origin'] = corsOrigin
-    }
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        photo_id,
-        status: newStatus,
-        moderation_result: safeSearchResult,
-      }),
-      {
-        status: 200,
-        headers: responseHeaders,
-      }
-    )
-  } catch (error) {
-    console.error('Moderation error:', error)
-    return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(error) }),
+      JSON.stringify({ error: 'Failed to download image' }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
       }
     )
   }
-})
+
+  // Convert blob to base64
+  const arrayBuffer = await imageData.arrayBuffer()
+  const uint8Array = new Uint8Array(arrayBuffer)
+
+  let base64Image: string
+  try {
+    base64Image = base64Encode(uint8Array)
+  } catch {
+    const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('')
+    base64Image = btoa(binaryString)
+  }
+
+  // Call Google Cloud Vision API
+  let safeSearchResult: SafeSearchResult
+  try {
+    safeSearchResult = await moderateImage(base64Image, visionApiKey)
+  } catch (visionError) {
+    console.error('Vision API error:', visionError)
+    await supabase.rpc('update_photo_moderation', {
+      p_photo_id: photo_id,
+      p_status: 'error',
+      p_result: { error: 'Moderation service unavailable' },
+    })
+    return new Response(
+      JSON.stringify({ error: 'Moderation failed' }),
+      {
+        status: 500,
+        headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+      }
+    )
+  }
+
+  // Determine if content should be rejected
+  const isRejected = shouldReject(safeSearchResult)
+  const newStatus = isRejected ? 'rejected' : 'approved'
+
+  // Update the photo record with moderation result
+  await supabase.rpc('update_photo_moderation', {
+    p_photo_id: photo_id,
+    p_status: newStatus,
+    p_result: safeSearchResult,
+  })
+
+  // If rejected, delete the image from storage
+  if (isRejected) {
+    const { error: deleteError } = await supabase.storage
+      .from('selfies')
+      .remove([storage_path])
+
+    if (deleteError) {
+      console.error('Failed to delete rejected image')
+    }
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      photo_id,
+      status: newStatus,
+      moderation_result: safeSearchResult,
+    }),
+    {
+      status: 200,
+      headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+    }
+  )
+}, {
+  requireAuth: true,
+  maxBodySize: 10 * 1024,
+}))

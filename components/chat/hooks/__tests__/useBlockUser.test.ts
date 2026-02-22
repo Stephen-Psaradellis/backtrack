@@ -339,7 +339,7 @@ describe('useBlockUser', () => {
       expect(result.current.error).toBe('Failed to block user. Please try again.')
     })
 
-    it('should warn but continue if conversation update fails', async () => {
+    it('should continue if conversation update fails (non-critical)', async () => {
       mockSupabase._mockUpdate.mockReturnValue({
         eq: vi.fn().mockResolvedValue({
           error: { message: 'Update failed' },
@@ -361,9 +361,10 @@ describe('useBlockUser', () => {
         await result.current.blockUser()
       })
 
-      // Should still call success callback
+      // Should still call success callback even if conversation update fails
       expect(onSuccess).toHaveBeenCalled()
-      expect(console.warn).toHaveBeenCalled()
+      // Should not have error state
+      expect(result.current.error).toBeNull()
     })
   })
 

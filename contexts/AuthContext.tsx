@@ -22,16 +22,67 @@ import React, {
   type ReactNode,
 } from 'react'
 import { type Session, type User, type AuthError } from '@supabase/supabase-js'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { supabase } from '../lib/supabase'
 import type { Profile, ProfileUpdate, AuthState } from '../lib/types'
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const CACHED_SESSION_KEY = '@auth/cached_session'
+const SESSION_TIMEOUT_MS = 5000 // 5s max for session fetch
+const PROFILE_TIMEOUT_MS = 5000 // 5s max for profile fetch
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 /**
- * Auth context value interface
+ * Auth state context value (session and auth operations)
+ * Separated from profile to prevent unnecessary re-renders
+ */
+interface AuthStateContextValue {
+  /** Supabase session object (if authenticated) */
+  session: Session | null
+  /** Supabase user object (if authenticated) */
+  user: User | null
+  /** Current user ID (null if not authenticated) */
+  userId: string | null
+  /** Whether user is authenticated */
+  isAuthenticated: boolean
+  /** Whether auth state is still loading */
+  isLoading: boolean
+
+  // Auth operations
+  /** Sign up with email and password */
+  signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  /** Sign in with email and password */
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  /** Sign out the current user */
+  signOut: () => Promise<{ error: AuthError | null }>
+  /** Send password reset email */
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
+  /** Update password (when user is logged in) */
+  updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
+}
+
+/**
+ * Profile context value (user profile data)
+ * Separated from auth state to prevent unnecessary re-renders
+ */
+interface ProfileContextValue {
+  /** User profile data (null if not loaded or not authenticated) */
+  profile: Profile | null
+  /** Refresh the user's profile from the database */
+  refreshProfile: () => Promise<void>
+  /** Update the user's profile */
+  updateProfile: (updates: ProfileUpdate) => Promise<{ error: Error | null }>
+}
+
+/**
+ * Combined auth context value interface (backward compatible)
  */
 interface AuthContextValue extends AuthState {
   /** Supabase session object (if authenticated) */
@@ -63,18 +114,14 @@ interface AuthContextValue extends AuthState {
 // ============================================================================
 
 /**
- * Default context value (used when accessed outside provider)
+ * Default auth state context value (used when accessed outside provider)
  */
-const defaultContextValue: AuthContextValue = {
-  // AuthState
-  isLoading: true,
-  isAuthenticated: false,
-  userId: null,
-  profile: null,
-
-  // Session/User
+const defaultAuthStateValue: AuthStateContextValue = {
   session: null,
   user: null,
+  userId: null,
+  isAuthenticated: false,
+  isLoading: true,
 
   // Auth operations (no-op defaults)
   signUp: async () => ({ error: new Error('AuthProvider not mounted') as unknown as AuthError }),
@@ -82,13 +129,28 @@ const defaultContextValue: AuthContextValue = {
   signOut: async () => ({ error: new Error('AuthProvider not mounted') as unknown as AuthError }),
   resetPassword: async () => ({ error: new Error('AuthProvider not mounted') as unknown as AuthError }),
   updatePassword: async () => ({ error: new Error('AuthProvider not mounted') as unknown as AuthError }),
+}
 
-  // Profile operations (no-op defaults)
+/**
+ * Default profile context value (used when accessed outside provider)
+ */
+const defaultProfileValue: ProfileContextValue = {
+  profile: null,
   refreshProfile: async () => {},
   updateProfile: async () => ({ error: new Error('AuthProvider not mounted') }),
 }
 
-const AuthContext = createContext<AuthContextValue>(defaultContextValue)
+/**
+ * Internal auth state context (session, user, auth operations)
+ * Components can use useAuthState() to subscribe only to auth changes
+ */
+const AuthStateContext = createContext<AuthStateContextValue>(defaultAuthStateValue)
+
+/**
+ * Internal profile context (profile data and operations)
+ * Components can use useProfile() to subscribe only to profile changes
+ */
+const ProfileContext = createContext<ProfileContextValue>(defaultProfileValue)
 
 // ============================================================================
 // PROVIDER
@@ -126,24 +188,37 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   // ---------------------------------------------------------------------------
 
   /**
-   * Fetch user profile from the database
+   * Fetch user profile from the database with timeout
    */
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    const { data, error } = await supabase
+    const profilePromise = supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single()
 
-    if (error) {
-      // Profile might not exist yet (will be created by trigger on first access)
-      if (error.code === 'PGRST116') {
-        return null
-      }
-      throw error
-    }
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Profile fetch timeout')), PROFILE_TIMEOUT_MS)
+    )
 
-    return data as Profile
+    try {
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as Awaited<typeof profilePromise>
+
+      if (error) {
+        // Profile might not exist yet (will be created by trigger on first access)
+        if (error.code === 'PGRST116') {
+          return null
+        }
+        throw error
+      }
+
+      return data as Profile
+    } catch (error) {
+      if (__DEV__) {
+        console.log('[AuthContext] Profile fetch failed:', error)
+      }
+      return null
+    }
   }, [])
 
   /**
@@ -270,46 +345,99 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    // Get initial session with timeout and retry logic for emulator latency
+    // Initialize auth with optimized loading strategy
     const initializeAuth = async () => {
-      const MAX_RETRIES = 3
-      const TIMEOUT_MS = 15000 // 15 seconds per attempt
-
-      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        // STEP 1: Check AsyncStorage cache first (instant, no network)
+        let cachedSession: Session | null = null
         try {
-          const sessionPromise = supabase.auth.getSession()
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Auth initialization timeout')), TIMEOUT_MS)
-          )
+          const cachedData = await AsyncStorage.getItem(CACHED_SESSION_KEY)
+          if (cachedData) {
+            cachedSession = JSON.parse(cachedData) as Session
 
-          const { data: { session: initialSession } } = await Promise.race([
+            // Validate cached session isn't expired
+            const expiresAt = cachedSession.expires_at
+            if (expiresAt && expiresAt * 1000 > Date.now()) {
+              // Use cached session immediately for fast startup
+              setSession(cachedSession)
+              setUser(cachedSession.user)
+              setIsLoading(false) // Early return - auth state ready!
+
+              if (__DEV__) {
+                console.log('[AuthContext] Using cached session for fast startup')
+              }
+            } else {
+              cachedSession = null // Expired
+            }
+          }
+        } catch {
+          // Cache read failed - continue to network fetch
+        }
+
+        // STEP 2: Fetch fresh session from Supabase with timeout
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Session fetch timeout')), SESSION_TIMEOUT_MS)
+        )
+
+        try {
+          const { data: { session: freshSession } } = await Promise.race([
             sessionPromise,
             timeoutPromise,
           ]) as Awaited<typeof sessionPromise>
 
-          if (initialSession) {
-            setSession(initialSession)
-            setUser(initialSession.user)
+          // STEP 3: Update state with fresh session (if different from cache)
+          if (freshSession) {
+            setSession(freshSession)
+            setUser(freshSession.user)
 
-            // Fetch profile for authenticated user
+            // Cache the fresh session for next startup
             try {
-              const profileData = await fetchProfile(initialSession.user.id)
-              setProfile(profileData)
+              await AsyncStorage.setItem(CACHED_SESSION_KEY, JSON.stringify(freshSession))
             } catch {
-              // Error fetching profile - continue without it
+              // Cache write failed - non-critical
+            }
+
+            // STEP 4: Mark loading as complete IMMEDIATELY (don't wait for profile)
+            setIsLoading(false)
+
+            // STEP 5: Fetch profile in background (deferred, non-blocking)
+            // This runs async without blocking the UI
+            fetchProfile(freshSession.user.id).then(profileData => {
+              setProfile(profileData)
+            }).catch(() => {
+              // Error fetching profile - app still works without it
+            })
+          } else {
+            // No session - user is logged out
+            setIsLoading(false)
+
+            // Clear cached session
+            try {
+              await AsyncStorage.removeItem(CACHED_SESSION_KEY)
+            } catch {
+              // Cache clear failed - non-critical
             }
           }
-          // Success - exit retry loop
-          setIsLoading(false)
-          return
-        } catch {
-          // Wait briefly before retry (exponential backoff)
-          if (attempt < MAX_RETRIES) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        } catch (error) {
+          // Session fetch failed or timed out
+          if (__DEV__) {
+            console.log('[AuthContext] Session fetch failed:', error)
           }
+
+          // If we have a cached session, keep using it
+          if (!cachedSession) {
+            setIsLoading(false)
+          }
+          // else: already set from cache, keep isLoading=false
         }
+      } catch (error) {
+        // Catastrophic error - mark as not loading
+        if (__DEV__) {
+          console.error('[AuthContext] Auth initialization failed:', error)
+        }
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     initializeAuth()
@@ -322,16 +450,27 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       setUser(newSession?.user ?? null)
 
       if (newSession?.user) {
-        // Fetch profile when user signs in
+        // Cache the new session
         try {
-          const profileData = await fetchProfile(newSession.user.id)
-          setProfile(profileData)
+          await AsyncStorage.setItem(CACHED_SESSION_KEY, JSON.stringify(newSession))
         } catch {
-          // Error fetching profile - continue without it
+          // Cache write failed - non-critical
         }
+
+        // Fetch profile in background (non-blocking)
+        fetchProfile(newSession.user.id).then(profileData => {
+          setProfile(profileData)
+        }).catch(() => {
+          // Error fetching profile - continue without it
+        })
       } else {
-        // Clear profile when user signs out
+        // Clear profile and cache when user signs out
         setProfile(null)
+        try {
+          await AsyncStorage.removeItem(CACHED_SESSION_KEY)
+        } catch {
+          // Cache clear failed - non-critical
+        }
       }
 
       // Handle specific auth events if needed
@@ -344,7 +483,14 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           setProfile(null)
           break
         case 'TOKEN_REFRESHED':
-          // Token was refreshed
+          // Token was refreshed - update cache
+          if (newSession) {
+            try {
+              await AsyncStorage.setItem(CACHED_SESSION_KEY, JSON.stringify(newSession))
+            } catch {
+              // Cache write failed - non-critical
+            }
+          }
           break
         case 'USER_UPDATED':
           // User data was updated
@@ -362,69 +508,74 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   }, [fetchProfile])
 
   // ---------------------------------------------------------------------------
-  // CONTEXT VALUE
+  // CONTEXT VALUES
   // ---------------------------------------------------------------------------
 
-  const contextValue = useMemo<AuthContextValue>(
+  // Auth state context value (session, user, auth operations)
+  const authStateValue = useMemo<AuthStateContextValue>(
     () => ({
-      // AuthState
-      isLoading,
-      isAuthenticated: !!session,
-      userId: user?.id ?? null,
-      profile,
-
-      // Session/User
       session,
       user,
-
-      // Auth operations
+      userId: user?.id ?? null,
+      isAuthenticated: !!session,
+      isLoading,
       signUp,
       signIn,
       signOut,
       resetPassword,
       updatePassword,
-
-      // Profile operations
-      refreshProfile,
-      updateProfile,
     }),
     [
-      isLoading,
       session,
       user,
-      profile,
+      isLoading,
       signUp,
       signIn,
       signOut,
       resetPassword,
       updatePassword,
-      refreshProfile,
-      updateProfile,
     ]
   )
 
+  // Profile context value (profile data and operations)
+  const profileValue = useMemo<ProfileContextValue>(
+    () => ({
+      profile,
+      refreshProfile,
+      updateProfile,
+    }),
+    [profile, refreshProfile, updateProfile]
+  )
+
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthStateContext.Provider value={authStateValue}>
+      <ProfileContext.Provider value={profileValue}>
+        {children}
+      </ProfileContext.Provider>
+    </AuthStateContext.Provider>
   )
 }
 
 // ============================================================================
-// HOOK
+// HOOKS
 // ============================================================================
 
 /**
- * useAuth hook
+ * useAuth hook (backward compatible)
  *
- * Access the auth context from any component within an AuthProvider.
+ * Access the combined auth context from any component within an AuthProvider.
+ * Returns both auth state and profile data.
+ *
+ * For better performance, consider using:
+ * - useAuthState() if you only need auth state (session, user, auth operations)
+ * - useProfile() if you only need profile data
  *
  * @throws Error if used outside of an AuthProvider
  *
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { isAuthenticated, user, signOut } = useAuth()
+ *   const { isAuthenticated, user, profile, signOut } = useAuth()
  *
  *   if (!isAuthenticated) {
  *     return <LoginScreen />
@@ -432,7 +583,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
  *
  *   return (
  *     <View>
- *       <Text>Welcome, {user?.email}</Text>
+ *       <Text>Welcome, {profile?.display_name || user?.email}</Text>
  *       <Button title="Sign Out" onPress={signOut} />
  *     </View>
  *   )
@@ -440,10 +591,90 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
  * ```
  */
 export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext)
+  const authState = useContext(AuthStateContext)
+  const profileContext = useContext(ProfileContext)
 
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+  // Combine both contexts for backward compatibility
+  return useMemo(
+    () => ({
+      ...authState,
+      ...profileContext,
+    }),
+    [authState, profileContext]
+  )
+}
+
+/**
+ * useAuthState hook (granular subscription)
+ *
+ * Access only auth state (session, user, auth operations).
+ * Use this instead of useAuth() when you don't need profile data.
+ * This prevents re-renders when profile changes.
+ *
+ * @throws Error if used outside of an AuthProvider
+ *
+ * @example
+ * ```tsx
+ * function AuthGuard({ children }) {
+ *   const { isAuthenticated, isLoading } = useAuthState()
+ *
+ *   if (isLoading) {
+ *     return <LoadingScreen />
+ *   }
+ *
+ *   if (!isAuthenticated) {
+ *     return <LoginScreen />
+ *   }
+ *
+ *   return children
+ * }
+ * ```
+ */
+export function useAuthState(): AuthStateContextValue {
+  const context = useContext(AuthStateContext)
+
+  if (context === defaultAuthStateValue) {
+    throw new Error('useAuthState must be used within an AuthProvider')
+  }
+
+  return context
+}
+
+/**
+ * useProfile hook (granular subscription)
+ *
+ * Access only profile data and operations.
+ * Use this instead of useAuth() when you don't need auth state.
+ * This prevents re-renders when auth state changes (e.g., token refresh).
+ *
+ * @throws Error if used outside of an AuthProvider
+ *
+ * @example
+ * ```tsx
+ * function ProfileDisplay() {
+ *   const { profile, updateProfile } = useProfile()
+ *
+ *   if (!profile) {
+ *     return <Text>No profile data</Text>
+ *   }
+ *
+ *   return (
+ *     <View>
+ *       <Text>{profile.display_name}</Text>
+ *       <Button
+ *         title="Update"
+ *         onPress={() => updateProfile({ display_name: 'New Name' })}
+ *       />
+ *     </View>
+ *   )
+ * }
+ * ```
+ */
+export function useProfile(): ProfileContextValue {
+  const context = useContext(ProfileContext)
+
+  if (context === defaultProfileValue) {
+    throw new Error('useProfile must be used within an AuthProvider')
   }
 
   return context
@@ -453,5 +684,10 @@ export function useAuth(): AuthContextValue {
 // EXPORTS
 // ============================================================================
 
-export { AuthContext }
-export type { AuthContextValue, AuthProviderProps }
+export { AuthStateContext, ProfileContext }
+export type {
+  AuthContextValue,
+  AuthStateContextValue,
+  ProfileContextValue,
+  AuthProviderProps,
+}

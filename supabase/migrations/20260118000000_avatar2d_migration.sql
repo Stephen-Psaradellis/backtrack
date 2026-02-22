@@ -31,12 +31,16 @@ WHERE avatar IS NOT NULL OR avatar_version != 2;
 -- Step 2: Update posts table
 -- ============================================
 
--- Reset target avatars in posts
-UPDATE posts
-SET
-  target_avatar_v2 = NULL,
-  updated_at = NOW()
-WHERE target_avatar_v2 IS NOT NULL;
+-- Reset target avatars in posts (only if column exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'posts' AND column_name = 'target_avatar_v2'
+  ) THEN
+    UPDATE posts SET target_avatar_v2 = NULL WHERE target_avatar_v2 IS NOT NULL;
+  END IF;
+END $$;
 
 -- ============================================
 -- Step 3: Cleanup old avatar infrastructure

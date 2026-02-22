@@ -126,12 +126,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0F0F13',
   },
   message: {
     marginTop: 12,
     fontSize: 16,
-    color: '#8E8E93',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
   },
   inline: {

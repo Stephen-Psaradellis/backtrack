@@ -101,6 +101,76 @@ if (typeof window !== 'undefined') {
 // React Native Mocks (safe to define in any environment)
 // ============================================================================
 
+// Mock @testing-library/react-native → re-export from @testing-library/react
+// RNTL imports actual react-native internals with Flow types that Vitest can't parse
+vi.mock('@testing-library/react-native', async () => {
+  const rtl = await vi.importActual('@testing-library/react')
+  return {
+    ...rtl,
+    renderHook: (rtl as any).renderHook,
+  }
+})
+
+// Mock react-native-gesture-handler (has Flow types that Vitest can't parse)
+vi.mock('react-native-gesture-handler', () => ({
+  GestureHandlerRootView: ({ children }: { children: React.ReactNode }) => children,
+  Swipeable: 'Swipeable',
+  DrawerLayout: 'DrawerLayout',
+  State: {},
+  PanGestureHandler: 'PanGestureHandler',
+  TapGestureHandler: 'TapGestureHandler',
+  FlingGestureHandler: 'FlingGestureHandler',
+  LongPressGestureHandler: 'LongPressGestureHandler',
+  PinchGestureHandler: 'PinchGestureHandler',
+  RotationGestureHandler: 'RotationGestureHandler',
+  ForceTouchGestureHandler: 'ForceTouchGestureHandler',
+  gestureHandlerRootHOC: vi.fn((component: any) => component),
+  Directions: {},
+}))
+
+// Mock react-native-reanimated (has Flow types that Vitest can't parse)
+vi.mock('react-native-reanimated', async () => {
+  const RN = await import('./__tests__/mocks/react-native')
+  return {
+    __esModule: true,
+    default: {
+      View: RN.View,
+      Text: RN.Text,
+      Image: RN.Image,
+      ScrollView: RN.ScrollView,
+      FlatList: RN.FlatList,
+    },
+    useSharedValue: (initial: any) => ({ value: initial }),
+    useAnimatedStyle: (cb: any) => {
+      try {
+        return cb()
+      } catch {
+        return {}
+      }
+    },
+    withSpring: (value: any) => value,
+    withTiming: (value: any) => value,
+    withSequence: (...values: any[]) => values[values.length - 1],
+    withDelay: (delay: number, value: any) => value,
+    withRepeat: (value: any) => value,
+    useAnimatedGestureHandler: () => ({}),
+    useAnimatedReaction: () => {},
+    useDerivedValue: (fn: any) => ({ value: fn() }),
+    useAnimatedRef: () => ({ current: null }),
+    runOnJS: (fn: any) => fn,
+    runOnUI: (fn: any) => fn,
+  }
+})
+
+// Mock react-native-safe-area-context
+vi.mock('react-native-safe-area-context', () => ({
+  SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+  useSafeAreaFrame: () => ({ x: 0, y: 0, width: 375, height: 812 }),
+  initialWindowMetrics: { frame: { x: 0, y: 0, width: 375, height: 812 }, insets: { top: 44, right: 0, bottom: 34, left: 0 } },
+}))
+
 // Mock react-native-url-polyfill (must be before other RN mocks)
 vi.mock('react-native-url-polyfill/auto', () => ({}))
 vi.mock('react-native-url-polyfill', () => ({
@@ -242,31 +312,44 @@ vi.mock('react-native-maps', () => ({
 }))
 
 // Mock react-native-svg
-vi.mock('react-native-svg', () => ({
-  Svg: 'Svg',
-  Circle: 'Circle',
-  Ellipse: 'Ellipse',
-  G: 'G',
-  Text: 'Text',
-  TSpan: 'TSpan',
-  TextPath: 'TextPath',
-  Path: 'Path',
-  Polygon: 'Polygon',
-  Polyline: 'Polyline',
-  Line: 'Line',
-  Rect: 'Rect',
-  Use: 'Use',
-  Image: 'Image',
-  Symbol: 'Symbol',
-  Defs: 'Defs',
-  LinearGradient: 'LinearGradient',
-  RadialGradient: 'RadialGradient',
-  Stop: 'Stop',
-  ClipPath: 'ClipPath',
-  Pattern: 'Pattern',
-  Mask: 'Mask',
-  SvgXml: 'SvgXml',
-}))
+vi.mock('react-native-svg', () => {
+  const React = require('react');
+  const createSvgMock = (name: string) => {
+    const Component = React.forwardRef((props: any, ref: any) =>
+      React.createElement(name, { ...props, ref })
+    );
+    Component.displayName = name;
+    return Component;
+  };
+  const Svg = createSvgMock('Svg');
+  return {
+    __esModule: true,
+    default: Svg,
+    Svg,
+    Circle: createSvgMock('Circle'),
+    Ellipse: createSvgMock('Ellipse'),
+    G: createSvgMock('G'),
+    Text: createSvgMock('Text'),
+    TSpan: createSvgMock('TSpan'),
+    TextPath: createSvgMock('TextPath'),
+    Path: createSvgMock('Path'),
+    Polygon: createSvgMock('Polygon'),
+    Polyline: createSvgMock('Polyline'),
+    Line: createSvgMock('Line'),
+    Rect: createSvgMock('Rect'),
+    Use: createSvgMock('Use'),
+    Image: createSvgMock('Image'),
+    Symbol: createSvgMock('Symbol'),
+    Defs: createSvgMock('Defs'),
+    LinearGradient: createSvgMock('LinearGradient'),
+    RadialGradient: createSvgMock('RadialGradient'),
+    Stop: createSvgMock('Stop'),
+    ClipPath: createSvgMock('ClipPath'),
+    Pattern: createSvgMock('Pattern'),
+    Mask: createSvgMock('Mask'),
+    SvgXml: createSvgMock('SvgXml'),
+  };
+})
 
 // Mock @dicebear/core
 vi.mock('@dicebear/core', () => ({
@@ -340,20 +423,72 @@ vi.mock('@react-navigation/bottom-tabs', () => ({
 // Mock react-native core
 // Note: In Vitest 4, vi.importActual('react-native') fails due to Flow types
 // So we provide a complete mock without importing the actual module
-vi.mock('react-native', () => ({
+vi.mock('react-native', () => {
+  const React = require('react')
+
+  // Create a pressable component that maps onPress to onClick for jsdom
+  const createPressable = (Tag: string) => {
+    const Component = React.forwardRef(
+      ({ onPress, children, testID, accessibilityState, accessibilityLabel, disabled, ...rest }: any, ref: any) =>
+        React.createElement(Tag, {
+          ...rest,
+          ref,
+          testid: testID,
+          onClick: !disabled ? onPress : undefined,
+          accessibilitystate: accessibilityState ? JSON.stringify(accessibilityState) : undefined,
+          accessibilitylabel: accessibilityLabel,
+          disabled: disabled || undefined,
+        }, children)
+    )
+    Component.displayName = Tag
+    return Component
+  }
+
+  // Mock FlatList to actually render items
+  const FlatListMock = ({ data, renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, testID, refreshControl, ...rest }: any) => {
+    const items = data ?? []
+    return React.createElement('div', { testid: testID, ...rest },
+      ListHeaderComponent ? (typeof ListHeaderComponent === 'function' ? React.createElement(ListHeaderComponent) : ListHeaderComponent) : null,
+      items.length === 0 && ListEmptyComponent
+        ? (typeof ListEmptyComponent === 'function' ? React.createElement(ListEmptyComponent) : ListEmptyComponent)
+        : items.map((item: any, index: number) =>
+            renderItem ? renderItem({ item, index, separators: {} }) : null
+          ),
+      refreshControl || null
+    )
+  }
+  FlatListMock.displayName = 'FlatList'
+
+  // Mock SectionList to actually render sections
+  const SectionListMock = ({ sections, renderItem, renderSectionHeader, keyExtractor, ListHeaderComponent, ListEmptyComponent, testID, ...rest }: any) => {
+    return React.createElement('div', { testid: testID, ...rest },
+      ListHeaderComponent ? (typeof ListHeaderComponent === 'function' ? React.createElement(ListHeaderComponent) : ListHeaderComponent) : null,
+      (sections ?? []).map((section: any, sIdx: number) =>
+        React.createElement('div', { key: sIdx },
+          renderSectionHeader ? renderSectionHeader({ section }) : null,
+          (section.data ?? []).map((item: any, index: number) =>
+            renderItem ? renderItem({ item, index, section, separators: {} }) : null
+          )
+        )
+      )
+    )
+  }
+  SectionListMock.displayName = 'SectionList'
+
+  return ({
   // Core components
   View: 'View',
   Text: 'Text',
   Image: 'Image',
   TextInput: 'TextInput',
   ScrollView: 'ScrollView',
-  FlatList: 'FlatList',
-  SectionList: 'SectionList',
-  TouchableOpacity: 'TouchableOpacity',
-  TouchableHighlight: 'TouchableHighlight',
-  TouchableWithoutFeedback: 'TouchableWithoutFeedback',
-  Pressable: 'Pressable',
-  Button: 'Button',
+  FlatList: FlatListMock,
+  SectionList: SectionListMock,
+  TouchableOpacity: createPressable('button'),
+  TouchableHighlight: createPressable('button'),
+  TouchableWithoutFeedback: createPressable('div'),
+  Pressable: createPressable('button'),
+  Button: createPressable('button'),
   Switch: 'Switch',
   ActivityIndicator: 'ActivityIndicator',
   Modal: 'Modal',
@@ -402,6 +537,7 @@ vi.mock('react-native', () => ({
       _value: number
       constructor(val: number) { this._value = val }
       setValue(val: number) { this._value = val }
+      __getValue() { return this._value }
       setOffset() {}
       flattenOffset() {}
       extractOffset() {}
@@ -411,6 +547,38 @@ vi.mock('react-native', () => ({
       stopAnimation() {}
       resetAnimation() {}
       interpolate() { return this }
+    },
+    ValueXY: class {
+      x: any
+      y: any
+      constructor(valueIn?: {x: number | any, y: number | any} | undefined) {
+        this.x = valueIn?.x ?? 0
+        this.y = valueIn?.y ?? 0
+      }
+      setValue(value: {x: number, y: number}) {
+        this.x = value.x
+        this.y = value.y
+      }
+      setOffset(offset: {x: number, y: number}) {}
+      flattenOffset() {}
+      extractOffset() {}
+      __getValue() { return { x: this.x, y: this.y } }
+      stopAnimation() {}
+      addListener() { return '' }
+      removeListener() {}
+      removeAllListeners() {}
+      getLayout() {
+        return {
+          left: this.x,
+          top: this.y,
+        }
+      }
+      getTranslateTransform() {
+        return [
+          { translateX: this.x },
+          { translateY: this.y },
+        ]
+      }
     },
     timing: () => ({ start: (cb?: () => void) => cb?.(), stop: vi.fn(), reset: vi.fn() }),
     spring: () => ({ start: (cb?: () => void) => cb?.(), stop: vi.fn(), reset: vi.fn() }),
@@ -464,6 +632,24 @@ vi.mock('react-native', () => ({
     addEventListener: vi.fn(() => ({ remove: vi.fn() })),
     removeEventListener: vi.fn(),
   },
+  PanResponder: {
+    create: (config: any) => ({
+      panHandlers: {
+        onMoveShouldSetResponder: vi.fn(),
+        onMoveShouldSetResponderCapture: vi.fn(),
+        onResponderEnd: vi.fn(),
+        onResponderGrant: vi.fn(),
+        onResponderMove: vi.fn(),
+        onResponderReject: vi.fn(),
+        onResponderRelease: vi.fn(),
+        onResponderStart: vi.fn(),
+        onResponderTerminate: vi.fn(),
+        onResponderTerminationRequest: vi.fn(),
+        onStartShouldSetResponder: vi.fn(),
+        onStartShouldSetResponderCapture: vi.fn(),
+      },
+    }),
+  },
   NativeModules: {},
   NativeEventEmitter: vi.fn(() => ({
     addListener: vi.fn(() => ({ remove: vi.fn() })),
@@ -478,7 +664,7 @@ vi.mock('react-native', () => ({
   },
   useWindowDimensions: () => ({ width: 375, height: 812, scale: 2, fontScale: 1 }),
   useColorScheme: () => 'light',
-}))
+})})
 
 // Mock @react-native-community/netinfo
 vi.mock('@react-native-community/netinfo', () => ({

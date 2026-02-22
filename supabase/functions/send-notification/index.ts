@@ -10,9 +10,21 @@
 // - Supports batch notifications (up to 100 per request)
 // - Handles invalid tokens by removing them from the database
 // - Implements retry logic for transient failures
+//
+// Security:
+// - Requires service role key or webhook signature for authentication
+// - CORS restricted to allowed origins only
+// - Error details sanitized in responses
 // ============================================================================
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import {
+  withMiddleware,
+  addCorsHeaders,
+  sanitizeError,
+  createServiceClient,
+  isValidUUID,
+  sanitizeNotificationContent,
+} from '../_shared/middleware.ts'
 
 // ============================================================================
 // Types
@@ -57,15 +69,6 @@ interface ExpoPushResponse {
 }
 
 // ============================================================================
-// Supabase Client
-// ============================================================================
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-// ============================================================================
 // Constants
 // ============================================================================
 
@@ -78,32 +81,24 @@ const RETRY_DELAY_MS = 1000
 // Helper Functions
 // ============================================================================
 
-/**
- * Delay execution for a specified number of milliseconds
- */
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-/**
- * Fetch all push tokens for a user
- */
-async function getUserPushTokens(userId: string): Promise<string[]> {
+async function getUserPushTokens(supabase: ReturnType<typeof createServiceClient>, userId: string): Promise<string[]> {
   const { data, error } = await supabase.rpc('get_user_push_tokens', {
     p_user_id: userId
   })
 
   if (error) {
-    throw new Error(`Failed to fetch push tokens: ${error.message}`)
+    throw new Error('Failed to fetch push tokens')
   }
 
   return (data || []).map((row: { token: string }) => row.token)
 }
 
-/**
- * Check if a notification type is enabled for a user
- */
 async function isNotificationEnabled(
+  supabase: ReturnType<typeof createServiceClient>,
   userId: string,
   notificationType: 'match' | 'message'
 ): Promise<boolean> {
@@ -113,29 +108,18 @@ async function isNotificationEnabled(
   })
 
   if (error) {
-    // Default to enabled if we can't check preferences
     return true
   }
 
   return data === true
 }
 
-/**
- * Remove an invalid push token from the database
- */
-async function removeInvalidToken(token: string): Promise<void> {
-  const { error } = await supabase.rpc('remove_invalid_push_token', {
+async function removeInvalidToken(supabase: ReturnType<typeof createServiceClient>, token: string): Promise<void> {
+  await supabase.rpc('remove_invalid_push_token', {
     p_token: token
   })
-
-  if (error) {
-    // Log but don't throw - token removal is not critical
-  }
 }
 
-/**
- * Send notifications to Expo Push API with retry logic
- */
 async function sendToExpo(
   notifications: ExpoNotification[],
   retryCount = 0
@@ -156,20 +140,17 @@ async function sendToExpo(
     })
 
     if (!response.ok) {
-      // Retry on 5xx errors
       if (response.status >= 500 && retryCount < MAX_RETRIES) {
         await delay(RETRY_DELAY_MS * Math.pow(2, retryCount))
         return sendToExpo(notifications, retryCount + 1)
       }
 
-      const errorText = await response.text()
-      throw new Error(`Expo Push API error: ${response.status} - ${errorText}`)
+      throw new Error(`Expo Push API error: ${response.status}`)
     }
 
     const result: ExpoPushResponse = await response.json()
     return result.data
   } catch (error) {
-    // Retry on network errors
     if (retryCount < MAX_RETRIES) {
       await delay(RETRY_DELAY_MS * Math.pow(2, retryCount))
       return sendToExpo(notifications, retryCount + 1)
@@ -178,10 +159,8 @@ async function sendToExpo(
   }
 }
 
-/**
- * Process Expo Push API response and handle invalid tokens
- */
 async function processExpoPushTickets(
+  supabase: ReturnType<typeof createServiceClient>,
   tickets: ExpoPushTicket[],
   tokens: string[]
 ): Promise<{ successful: number; failed: number; invalidTokens: string[] }> {
@@ -198,11 +177,9 @@ async function processExpoPushTickets(
     } else {
       failed++
 
-      // Check for DeviceNotRegistered error - token is invalid
       if (ticket.details?.error === 'DeviceNotRegistered') {
         invalidTokens.push(token)
-        // Remove invalid token from database
-        await removeInvalidToken(token)
+        await removeInvalidToken(supabase, token)
       }
     }
   }
@@ -210,21 +187,23 @@ async function processExpoPushTickets(
   return { successful, failed, invalidTokens }
 }
 
-/**
- * Send a single notification to a user
- */
-async function sendNotification(request: NotificationRequest): Promise<{
+async function sendNotification(
+  supabase: ReturnType<typeof createServiceClient>,
+  request: NotificationRequest
+): Promise<{
   success: boolean
   sentCount: number
   failedCount: number
   skipped: boolean
   reason?: string
 }> {
-  const { userId, title, body, data } = request
+  const userId = request.userId
+  const title = sanitizeNotificationContent(request.title, 200)
+  const body = sanitizeNotificationContent(request.body, 500)
+  const data = request.data
 
-  // Check if notification type is enabled
   if (data?.type) {
-    const enabled = await isNotificationEnabled(userId, data.type)
+    const enabled = await isNotificationEnabled(supabase, userId, data.type)
     if (!enabled) {
       return {
         success: true,
@@ -236,8 +215,7 @@ async function sendNotification(request: NotificationRequest): Promise<{
     }
   }
 
-  // Get user's push tokens
-  const tokens = await getUserPushTokens(userId)
+  const tokens = await getUserPushTokens(supabase, userId)
 
   if (tokens.length === 0) {
     return {
@@ -249,7 +227,6 @@ async function sendNotification(request: NotificationRequest): Promise<{
     }
   }
 
-  // Build notification payloads for each token
   const notifications: ExpoNotification[] = tokens.map(token => ({
     to: token,
     title,
@@ -260,11 +237,8 @@ async function sendNotification(request: NotificationRequest): Promise<{
     channelId: 'default'
   }))
 
-  // Send to Expo Push API
   const tickets = await sendToExpo(notifications)
-
-  // Process response
-  const result = await processExpoPushTickets(tickets, tokens)
+  const result = await processExpoPushTickets(supabase, tickets, tokens)
 
   return {
     success: result.failed === 0,
@@ -274,10 +248,8 @@ async function sendNotification(request: NotificationRequest): Promise<{
   }
 }
 
-/**
- * Send batch notifications to multiple users
- */
 async function sendBatchNotifications(
+  supabase: ReturnType<typeof createServiceClient>,
   requests: NotificationRequest[]
 ): Promise<{
   totalSent: number
@@ -304,14 +276,12 @@ async function sendBatchNotifications(
     reason?: string
   }> = []
 
-  // Process in batches to respect Expo rate limits
   for (let i = 0; i < requests.length; i += MAX_BATCH_SIZE) {
     const batch = requests.slice(i, i + MAX_BATCH_SIZE)
 
-    // Process each notification in the batch
     for (const request of batch) {
       try {
-        const result = await sendNotification(request)
+        const result = await sendNotification(supabase, request)
         results.push({
           userId: request.userId,
           ...result
@@ -322,14 +292,14 @@ async function sendBatchNotifications(
         if (result.skipped) {
           totalSkipped++
         }
-      } catch (error) {
+      } catch {
         results.push({
           userId: request.userId,
           success: false,
           sentCount: 0,
           failedCount: 1,
           skipped: false,
-          reason: error instanceof Error ? error.message : 'Unknown error'
+          reason: 'Failed to send notification'
         })
         totalFailed++
       }
@@ -348,126 +318,88 @@ async function sendBatchNotifications(
 // Edge Function Handler
 // ============================================================================
 
-Deno.serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-      },
-    })
-  }
+Deno.serve(withMiddleware(async (_req, { supabase, body, origin }) => {
+  const requestBody = body as BatchNotificationRequest | NotificationRequest
 
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      {
-        status: 405,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
-  }
+  // Check if this is a batch request or single notification
+  if ('notifications' in requestBody && Array.isArray(requestBody.notifications)) {
+    const batchRequest = requestBody as BatchNotificationRequest
 
-  try {
-    const body = await req.json()
-
-    // Check if this is a batch request or single notification
-    if ('notifications' in body && Array.isArray(body.notifications)) {
-      // Batch notification request
-      const batchRequest = body as BatchNotificationRequest
-
-      if (batchRequest.notifications.length === 0) {
-        return new Response(
-          JSON.stringify({ error: 'No notifications provided' }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-      }
-
-      const result = await sendBatchNotifications(batchRequest.notifications)
-
+    if (batchRequest.notifications.length === 0) {
       return new Response(
-        JSON.stringify({
-          success: result.totalFailed === 0,
-          totalSent: result.totalSent,
-          totalFailed: result.totalFailed,
-          totalSkipped: result.totalSkipped,
-          results: result.results
-        }),
+        JSON.stringify({ error: 'No notifications provided' }),
         {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
-    } else {
-      // Single notification request
-      const notificationRequest = body as NotificationRequest
-
-      // Validate required fields
-      if (!notificationRequest.userId) {
-        return new Response(
-          JSON.stringify({ error: 'userId is required' }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-      }
-
-      if (!notificationRequest.title) {
-        return new Response(
-          JSON.stringify({ error: 'title is required' }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-      }
-
-      if (!notificationRequest.body) {
-        return new Response(
-          JSON.stringify({ error: 'body is required' }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-      }
-
-      const result = await sendNotification(notificationRequest)
-
-      return new Response(
-        JSON.stringify({
-          success: result.success,
-          sentCount: result.sentCount,
-          failedCount: result.failedCount,
-          skipped: result.skipped,
-          reason: result.reason
-        }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
+          status: 400,
+          headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
         }
       )
     }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    const result = await sendBatchNotifications(supabase, batchRequest.notifications)
 
     return new Response(
       JSON.stringify({
-        success: false,
-        error: errorMessage
+        success: result.totalFailed === 0,
+        totalSent: result.totalSent,
+        totalFailed: result.totalFailed,
+        totalSkipped: result.totalSkipped,
+        results: result.results
       }),
       {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+        headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+      }
+    )
+  } else {
+    const notificationRequest = requestBody as NotificationRequest
+
+    if (!notificationRequest.userId || !isValidUUID(notificationRequest.userId)) {
+      return new Response(
+        JSON.stringify({ error: 'Valid userId is required' }),
+        {
+          status: 400,
+          headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+        }
+      )
+    }
+
+    if (!notificationRequest.title) {
+      return new Response(
+        JSON.stringify({ error: 'title is required' }),
+        {
+          status: 400,
+          headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+        }
+      )
+    }
+
+    if (!notificationRequest.body) {
+      return new Response(
+        JSON.stringify({ error: 'body is required' }),
+        {
+          status: 400,
+          headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
+        }
+      )
+    }
+
+    const result = await sendNotification(supabase, notificationRequest)
+
+    return new Response(
+      JSON.stringify({
+        success: result.success,
+        sentCount: result.sentCount,
+        failedCount: result.failedCount,
+        skipped: result.skipped,
+        reason: result.reason
+      }),
+      {
+        status: 200,
+        headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin),
       }
     )
   }
-})
+}, {
+  allowServiceRole: true,
+  webhookSecret: Deno.env.get('WEBHOOK_SECRET') || undefined,
+}))

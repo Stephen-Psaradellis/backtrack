@@ -7,9 +7,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Create hoisted mocks that are available before module loading
-const { mockRpc, mockSignOut } = vi.hoisted(() => ({
+const { mockRpc, mockSignOut, mockGetUser, mockFrom } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
   mockSignOut: vi.fn(),
+  mockGetUser: vi.fn(),
+  mockFrom: vi.fn(),
 }))
 
 // Mock Supabase client
@@ -18,6 +20,13 @@ vi.mock('../../lib/supabase', () => ({
     rpc: (...args: unknown[]) => mockRpc(...args),
     auth: {
       signOut: () => mockSignOut(),
+      getUser: () => mockGetUser(),
+    },
+    from: (...args: unknown[]) => mockFrom(...args),
+    storage: {
+      from: () => ({
+        remove: vi.fn().mockResolvedValue({ error: null }),
+      }),
     },
   },
 }))
@@ -37,6 +46,18 @@ import {
 describe('Account Deletion Service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: getUser returns the matching user
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'test-user-id' } },
+      error: null,
+    })
+    // Default: from returns a chainable query builder with empty profile_photos
+    const chainable = {
+      select: vi.fn(),
+      eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+    }
+    chainable.select.mockReturnValue(chainable)
+    mockFrom.mockReturnValue(chainable)
   })
 
   describe('Constants', () => {

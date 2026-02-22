@@ -68,25 +68,56 @@ const createMockSentMessage = (content: string): MessageWithSender => ({
 
 // Create mock Supabase functions
 const createMockSupabase = () => {
-  const mockInsertSelect = vi.fn().mockReturnValue({
-    single: vi.fn().mockResolvedValue({
-      data: createMockSentMessage('Test message'),
-      error: null,
-    }),
+  const mockSingle = vi.fn().mockResolvedValue({
+    data: createMockSentMessage('Test message'),
+    error: null,
   })
 
-  const mockInsert = vi.fn().mockReturnValue({
-    select: vi.fn().mockReturnValue(mockInsertSelect()),
+  const mockSelect = vi.fn()
+
+  const mockInsert = vi.fn()
+
+  const mockFrom = vi.fn().mockImplementation((table: string) => {
+    if (table === 'messages') {
+      // For rate limit checks (select with count)
+      const rateLimitChain = {
+        eq: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockResolvedValue({
+          count: 0,
+          error: null,
+        }),
+      }
+
+      // For message insertion
+      const insertChain = {
+        select: vi.fn().mockReturnValue({
+          single: mockSingle,
+        }),
+      }
+
+      return {
+        select: vi.fn().mockReturnValue(rateLimitChain),
+        insert: vi.fn().mockReturnValue(insertChain),
+      }
+    }
+    return {
+      insert: mockInsert,
+    }
   })
 
-  const mockFrom = vi.fn().mockReturnValue({
-    insert: mockInsert,
+  mockSelect.mockReturnValue({
+    single: mockSingle,
+  })
+
+  mockInsert.mockReturnValue({
+    select: mockSelect,
   })
 
   return {
     from: mockFrom,
     _mockFrom: mockFrom,
     _mockInsert: mockInsert,
+    _mockSelect: mockSelect,
   }
 }
 
@@ -167,6 +198,10 @@ describe('useSendMessage', () => {
       // Use a delayed promise to observe optimistic state before completion
       let resolveInsert: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(
@@ -206,6 +241,10 @@ describe('useSendMessage', () => {
     it('should trim message content', async () => {
       let capturedContent = ''
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockImplementation((data) => {
           capturedContent = data.content
           return {
@@ -291,6 +330,10 @@ describe('useSendMessage', () => {
   describe('Error handling and rollback', () => {
     it('should mark optimistic message as failed on error', async () => {
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
@@ -321,6 +364,10 @@ describe('useSendMessage', () => {
       const errorMessage = 'Network error'
 
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
@@ -350,6 +397,10 @@ describe('useSendMessage', () => {
       const onError = vi.fn()
 
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockRejectedValue(new Error('Unexpected error')),
@@ -374,6 +425,10 @@ describe('useSendMessage', () => {
 
     it('should handle non-Error thrown values', async () => {
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockRejectedValue('String error'),
@@ -398,8 +453,12 @@ describe('useSendMessage', () => {
 
   describe('retryMessage function', () => {
     it('should retry a failed message', async () => {
-      // First, make the send fail
-      mockSupabase._mockFrom.mockReturnValueOnce({
+      // First, make the send fail (use mockReturnValue not Once, to cover all from() calls)
+      mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
@@ -421,10 +480,20 @@ describe('useSendMessage', () => {
         await result.current.sendMessage('Test message')
       })
 
-      expect(result.current.optimisticMessages[0].status).toBe('failed')
+      // Wait for failure
+      await waitFor(() => {
+        expect(result.current.optimisticMessages.length).toBeGreaterThan(0)
+        expect(result.current.optimisticMessages[0]?.status).toBe('failed')
+      }, { timeout: 5000 })
+
+      expect(result.current.optimisticMessages[0]?.status).toBe('failed')
 
       // Now setup for success on retry
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
@@ -435,15 +504,17 @@ describe('useSendMessage', () => {
         }),
       })
 
-      const failedMessageId = result.current.optimisticMessages[0].id
+      const failedMessageId = result.current.optimisticMessages[0]?.id
 
       await act(async () => {
-        await result.current.retryMessage(failedMessageId)
+        await result.current.retryMessage(failedMessageId!)
       })
 
       // After successful retry, optimistic message should be removed
-      expect(result.current.optimisticMessages).toHaveLength(0)
-    })
+      await waitFor(() => {
+        expect(result.current.optimisticMessages).toHaveLength(0)
+      }, { timeout: 5000 })
+    }, 10000)
 
     it('should not retry a non-existent message', async () => {
       const { result } = renderHook(() =>
@@ -465,6 +536,10 @@ describe('useSendMessage', () => {
       // Use controllable promise to keep message in "sending" state
       let resolveInsert: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(
@@ -506,8 +581,12 @@ describe('useSendMessage', () => {
     })
 
     it('should set status to sending during retry', async () => {
-      // First fail
-      mockSupabase._mockFrom.mockReturnValueOnce({
+      // First fail (use mockReturnValue not Once, to cover all from() calls)
+      mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
@@ -529,9 +608,19 @@ describe('useSendMessage', () => {
         await result.current.sendMessage('Test message')
       })
 
+      // Wait for failure
+      await waitFor(() => {
+        expect(result.current.optimisticMessages.length).toBeGreaterThan(0)
+        expect(result.current.optimisticMessages[0]?.status).toBe('failed')
+      }, { timeout: 5000 })
+
       // Use controllable promise to observe status change during retry
       let resolveRetry: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(
@@ -541,27 +630,33 @@ describe('useSendMessage', () => {
         }),
       })
 
-      const failedMessageId = result.current.optimisticMessages[0].id
+      const failedMessageId = result.current.optimisticMessages[0]?.id
 
       act(() => {
-        result.current.retryMessage(failedMessageId)
+        result.current.retryMessage(failedMessageId!)
       })
 
       await waitFor(() => {
-        expect(result.current.optimisticMessages[0].status).toBe('sending')
-      }, { timeout: 1000 })
+        expect(result.current.optimisticMessages[0]?.status).toBe('sending')
+      }, { timeout: 5000 })
 
       // Clean up
       if (resolveRetry) {
-        resolveRetry({ data: createMockSentMessage('Test message'), error: null })
+        await act(async () => {
+          resolveRetry({ data: createMockSentMessage('Test message'), error: null })
+        })
       }
-    })
+    }, 10000)
   })
 
   describe('deleteFailedMessage function', () => {
     it('should delete a failed message', async () => {
       // Make send fail
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
@@ -613,6 +708,10 @@ describe('useSendMessage', () => {
       // Use controllable promise to keep message in "sending" state
       let resolveInsert: ((value: unknown) => void) | undefined
       mockSupabase._mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockImplementation(

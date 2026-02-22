@@ -18,7 +18,11 @@ export { MessageList } from './MessageList'
 export { TypingIndicator } from './TypingIndicator'
 export { ChatInput } from './ChatInput'
 export { ChatInputToolbar } from './ChatInputToolbar'
-export { ChatHeader } from './ChatHeader'
+export { IcebreakerChips } from './IcebreakerChips'
+export type { IcebreakerChipsProps } from './IcebreakerChips'
+export { SafetyPrompt } from './SafetyPrompt'
+export type { SafetyPromptProps } from './SafetyPrompt'
+
 export { UserPresenceIndicator } from './UserPresenceIndicator'
 
 // ============================================================================

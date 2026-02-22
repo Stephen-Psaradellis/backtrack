@@ -89,6 +89,20 @@ export function MySpotsScreen(): React.ReactNode {
   // Data Fetching
   // ---------------------------------------------------------------------------
 
+  // P-042: Create stable dependency keys for array dependencies
+  const favoritesKey = useMemo(
+    () => favorites.map(f => f.place_id).filter(Boolean).sort().join(','),
+    [favorites]
+  )
+  const recentLocationsKey = useMemo(
+    () => recentLocations.map(l => l.id).sort().join(','),
+    [recentLocations]
+  )
+  const fellowRegularsKey = useMemo(
+    () => [...new Set(fellowRegulars.map(r => r.location_id))].sort().join(','),
+    [fellowRegulars]
+  )
+
   const fetchData = useCallback(async () => {
     if (!isAuthenticated || !userId) {
       setIsLoadingData(false)
@@ -159,7 +173,7 @@ export function MySpotsScreen(): React.ReactNode {
     } finally {
       setIsLoadingData(false)
     }
-  }, [isAuthenticated, userId, favorites, recentLocations, fellowRegulars])
+  }, [isAuthenticated, userId, favoritesKey, recentLocationsKey, fellowRegularsKey, favorites, recentLocations, fellowRegulars])
 
   useEffect(() => {
     fetchData()

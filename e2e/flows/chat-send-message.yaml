@@ -1,0 +1,43 @@
+appId: com.backtrack.app
+---
+# Chat Send Message Flow
+# Tests sending a message in an existing conversation
+
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Navigate to chats tab
+- tapOn: "Chats tab"
+- waitForAnimationToEnd
+
+# Verify we're on chat list screen
+- assertVisible:
+    id: "chat-list"
+
+# Tap on first conversation
+- tapOn:
+    id: "chat-list-item-.*"
+    regex: true
+    index: 0
+  optional: true
+
+# Wait for chat screen to load
+- waitForAnimationToEnd
+
+# Verify chat screen is visible
+- assertVisible: "Type a message"
+  optional: true
+
+# Type a message
+- tapOn:
+    id: "chat-message-input"
+- inputText: "Hey! How are you doing?"
+
+# Send the message
+- tapOn: "Send message"
+- waitForAnimationToEnd
+
+# Verify message was sent (check for message in list)
+- assertVisible: "Hey! How are you doing?"

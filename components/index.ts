@@ -237,6 +237,12 @@ export {
   type AvatarStatus,
 } from './Avatar'
 
+// Avatar Comparison component
+export {
+  AvatarComparison,
+  type AvatarComparisonProps,
+} from './AvatarComparison'
+
 // Badge components (modern badges and status dots)
 export {
   Badge,

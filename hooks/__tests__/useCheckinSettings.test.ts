@@ -16,6 +16,20 @@ vi.mock('../../lib/supabase', () => ({
   },
 }))
 
+// Background location mock functions (declared outside to allow resetting)
+const mockStartTracking = vi.fn()
+const mockStopTracking = vi.fn()
+const mockUpdateSettings = vi.fn()
+const mockIsRunning = vi.fn()
+
+// Mock backgroundLocation service to prevent import errors
+vi.mock('../../services/backgroundLocation', () => ({
+  startBackgroundLocationTracking: (...args: unknown[]) => mockStartTracking(...args),
+  stopBackgroundLocationTracking: (...args: unknown[]) => mockStopTracking(...args),
+  updateTrackingSettings: (...args: unknown[]) => mockUpdateSettings(...args),
+  isBackgroundLocationRunning: (...args: unknown[]) => mockIsRunning(...args),
+}))
+
 // Mock useAuth
 const mockUseAuth = vi.fn()
 vi.mock('../../contexts/AuthContext', () => ({
@@ -43,6 +57,12 @@ describe('useCheckinSettings', () => {
       },
       error: null,
     })
+
+    // Default background location mock behavior
+    mockStartTracking.mockResolvedValue({ success: true })
+    mockStopTracking.mockResolvedValue(undefined)
+    mockUpdateSettings.mockResolvedValue(undefined)
+    mockIsRunning.mockResolvedValue(false)
   })
 
   describe('initial state', () => {

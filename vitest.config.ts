@@ -193,6 +193,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './'),
       // Vitest 4.x: Alias react-native to our mock to avoid Flow type parsing errors
       'react-native': path.resolve(__dirname, './__tests__/mocks/react-native.ts'),
+      // Alias tooltip library to mock to avoid Flow type parsing errors
+      'react-native-walkthrough-tooltip': path.resolve(__dirname, './__tests__/mocks/react-native-walkthrough-tooltip.ts'),
+      'expo-linear-gradient': path.resolve(__dirname, './__tests__/mocks/expo-linear-gradient.ts'),
+      // Expo modules that resolve to raw .ts source with advanced TypeScript syntax
+      // that Vitest's transform can't parse (e.g., `typeof ExpoGlobal.EventEmitter<T>`)
+      'expo-modules-core': path.resolve(__dirname, './__tests__/mocks/expo-modules-core.ts'),
+      '@react-native-community/slider': path.resolve(__dirname, './__tests__/mocks/react-native-community-slider.ts'),
     },
   },
 })

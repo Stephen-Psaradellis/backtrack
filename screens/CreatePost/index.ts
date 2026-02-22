@@ -64,17 +64,4 @@ export {
   type SealStepProps,
 } from './steps'
 
-// ============================================================================
-// LEGACY STEP COMPONENTS (kept for reference)
-// ============================================================================
-
-export {
-  AvatarStep,
-  type AvatarStepProps,
-  NoteStep,
-  type NoteStepProps,
-  LocationStep,
-  type LocationStepProps,
-  ReviewStep,
-  type ReviewStepProps,
-} from './steps'
+// Legacy step components (AvatarStep, NoteStep, LocationStep, ReviewStep) removed

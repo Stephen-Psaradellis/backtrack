@@ -23,7 +23,7 @@
  * ```
  */
 
-import { supabase } from './supabase'
+import { supabase, type AppSupabaseClient } from './supabase'
 import { captureException } from './sentry'
 import { trackEvent, AnalyticsEvent } from './analytics'
 import type { Conversation, ConversationInsert, UUID } from '../types/database'
@@ -141,11 +141,13 @@ export function validateConversationRequest(
  *
  * @param conversation - The conversation to check
  * @param userId - The user to check
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns Whether the user is a participant
  */
 export function isConversationParticipant(
   conversation: Conversation,
-  userId: string
+  userId: string,
+  client: AppSupabaseClient = supabase
 ): boolean {
   return conversation.producer_id === userId || conversation.consumer_id === userId
 }
@@ -155,11 +157,13 @@ export function isConversationParticipant(
  *
  * @param conversation - The conversation
  * @param userId - The user
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns 'producer' | 'consumer' | null if not a participant
  */
 export function getUserRole(
   conversation: Conversation,
-  userId: string
+  userId: string,
+  client: AppSupabaseClient = supabase
 ): 'producer' | 'consumer' | null {
   if (conversation.producer_id === userId) {
     return 'producer'
@@ -175,11 +179,13 @@ export function getUserRole(
  *
  * @param conversation - The conversation
  * @param userId - The current user's ID
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns The other participant's ID, or null if not a participant
  */
 export function getOtherUserId(
   conversation: Conversation,
-  userId: string
+  userId: string,
+  client: AppSupabaseClient = supabase
 ): string | null {
   if (conversation.producer_id === userId) {
     return conversation.consumer_id
@@ -269,6 +275,7 @@ export async function checkExistingConversation(
  * Get a conversation by its ID
  *
  * @param conversationId - The conversation's ID
+ * @param client - Optional Supabase client (defaults to global instance)
  * @returns The conversation object if found
  *
  * @example
@@ -278,7 +285,8 @@ export async function checkExistingConversation(
  * }
  */
 export async function getConversation(
-  conversationId: string
+  conversationId: string,
+  client: AppSupabaseClient = supabase
 ): Promise<GetConversationResult> {
   if (!conversationId) {
     return {
@@ -289,7 +297,7 @@ export async function getConversation(
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('conversations')
       .select('*')
       .eq('id', conversationId)

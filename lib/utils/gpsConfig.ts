@@ -78,8 +78,13 @@ export const VISIT_GPS_CONFIG = {
 /**
  * Enable debug mode for faster testing of background location features
  * Set to true to use 10-second intervals instead of 2 minutes
+ * WARNING: Never enable in production - causes 12x battery drain
+ *
+ * Controlled via EXPO_PUBLIC_GPS_DEBUG_MODE environment variable.
+ * This prevents accidentally enabling debug mode in production builds.
  */
-export const BACKGROUND_DEBUG_MODE = __DEV__ && true // TESTING: Debug mode enabled for faster check-in prompts
+const GPS_DEBUG_ENV = process.env.EXPO_PUBLIC_GPS_DEBUG_MODE
+export const BACKGROUND_DEBUG_MODE = GPS_DEBUG_ENV === 'true'
 
 /**
  * Configuration for background location tracking dwell detection
@@ -123,6 +128,34 @@ export const DISCOVERY_CONFIG = {
 
   /** Maximum results from Google Places */
   GOOGLE_MAX_RESULTS: 10,
+} as const
+
+// ============================================================================
+// FEED DISCOVERY CONFIG (TIERED RADIUS)
+// ============================================================================
+
+/**
+ * Configuration for feed discovery with tiered radius expansion
+ * Prevents empty feeds by progressively expanding search radius
+ */
+export const FEED_DISCOVERY_CONFIG = {
+  /** Tier 1: Nearby - default, shows closest posts first */
+  NEARBY_RADIUS: 500,
+
+  /** Tier 2: Neighborhood - if no posts in Tier 1 */
+  NEIGHBORHOOD_RADIUS: 2000,
+
+  /** Tier 3: City-wide - if no posts in Tier 1 or 2 */
+  CITY_WIDE_RADIUS: 10000,
+
+  /** Tier 4: Extended - fallback */
+  EXTENDED_RADIUS: 25000,
+
+  /** Minimum posts required before stopping expansion */
+  MIN_POSTS_PER_TIER: 5,
+
+  /** Default starting radius */
+  DEFAULT_START_RADIUS: 500,
 } as const
 
 // ============================================================================

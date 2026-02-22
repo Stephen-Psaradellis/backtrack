@@ -1,34 +1,49 @@
 /**
  * Animated Tab Bar
  *
- * Custom bottom tab bar with animated indicator and icon-only design.
- * 5-tab layout: Feed, MySpots, Map, Chats, Profile
+ * Custom bottom tab bar with animated indicator, icons, and text labels.
+ * 5-tab layout: Feed, Spots, Map, Chats, Me
+ * Uses react-native-reanimated for performant UI-thread animations.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
+  Text,
   StyleSheet,
-  Animated,
-  Dimensions,
-  Platform,
+  useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  SharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows } from '../../constants/theme';
 import { darkTheme } from '../../constants/glassStyles';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Icon mapping for 5-tab icon-only layout
+// Icon mapping for 5-tab layout
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   FeedTab: { active: 'home', inactive: 'home-outline' },
-  MySpotsTab: { active: 'notifications', inactive: 'notifications-outline' },
+  MySpotsTab: { active: 'bookmark', inactive: 'bookmark-outline' },
   MapTab: { active: 'map', inactive: 'map-outline' },
   ChatsTab: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
   ProfileTab: { active: 'person', inactive: 'person-outline' },
+};
+
+// User-facing text labels for each tab
+const TAB_LABELS: Record<string, string> = {
+  FeedTab: 'Feed',
+  MySpotsTab: 'Spots',
+  MapTab: 'Map',
+  ChatsTab: 'Chats',
+  ProfileTab: 'Me',
 };
 
 // Badge configuration for tabs that support notification counts
@@ -37,40 +52,111 @@ interface TabBadgeProps {
   visible?: boolean;
 }
 
+// ============================================================================
+// TAB ITEM COMPONENT
+// Extracted to its own component so useAnimatedStyle is called at the top
+// level of a component, not inside a .map() callback - fixing Rules of Hooks.
+// ============================================================================
+
+interface TabItemProps {
+  route: { key: string; name: string };
+  index: number;
+  isFocused: boolean;
+  options: { tabBarBadge?: number | string; tabBarAccessibilityLabel?: string };
+  scaleValue: SharedValue<number>;
+  onPress: () => void;
+}
+
+function TabItem({ route, index, isFocused, options, scaleValue, onPress }: TabItemProps) {
+  const iconConfig = TAB_ICONS[route.name] || { active: 'ellipse', inactive: 'ellipse-outline' };
+  const iconName = isFocused ? iconConfig.active : iconConfig.inactive;
+  const label = TAB_LABELS[route.name] || route.name;
+
+  const badge = options.tabBarBadge;
+  const showBadge = badge !== undefined && badge !== null && badge !== '' && badge !== 0;
+
+  // useAnimatedStyle is now called at the top level of a component — no Rules of Hooks violation
+  const tabAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleValue.value }],
+  }));
+
+  return (
+    <TouchableOpacity
+      key={route.key}
+      accessibilityRole="tab"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={options.tabBarAccessibilityLabel || `${label} tab${showBadge ? `, ${badge} notifications` : ''}`}
+      accessibilityHint={isFocused ? undefined : `Double tap to navigate to ${label}`}
+      onPress={onPress}
+      style={styles.tab}
+      activeOpacity={0.7}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+    >
+      <Animated.View style={[styles.tabContent, tabAnimatedStyle]}>
+        <View style={styles.iconContainer}>
+          <Ionicons
+            name={iconName}
+            size={24}
+            color={isFocused ? darkTheme.accent : darkTheme.textMuted}
+          />
+          {showBadge && (
+            <View style={styles.badge}>
+              {typeof badge === 'number' && badge > 0 && (
+                <Text style={styles.badgeText}>
+                  {badge > 99 ? '99+' : badge}
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
+        <Text
+          style={[
+            styles.tabLabel,
+            {
+              color: isFocused ? darkTheme.primary : darkTheme.textSecondary,
+              fontWeight: isFocused ? '600' : '400',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+// ============================================================================
+// ANIMATED TAB BAR
+// ============================================================================
+
 export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const tabCount = state.routes.length;
-  const tabWidth = SCREEN_WIDTH / tabCount;
+  const tabWidth = screenWidth / tabCount;
 
-  // Animated values
-  const indicatorPosition = useRef(new Animated.Value(state.index * tabWidth)).current;
-  const scales = useRef(state.routes.map(() => new Animated.Value(1))).current;
+  // P-033: Initialize shared values once with useRef to prevent recreation on re-renders
+  const indicatorPosition = React.useRef(useSharedValue(state.index * tabWidth)).current;
+  // Each tab gets its own SharedValue for scale; stored in a ref so it's stable
+  const scales = React.useRef<SharedValue<number>[]>(
+    state.routes.map(() => useSharedValue(1))
+  ).current;
 
   // Animate indicator on tab change
   useEffect(() => {
-    Animated.spring(indicatorPosition, {
-      toValue: state.index * tabWidth,
-      useNativeDriver: true,
-      tension: 68,
-      friction: 10,
-    }).start();
-  }, [state.index, tabWidth, indicatorPosition]);
+    indicatorPosition.value = withSpring(state.index * tabWidth, {
+      damping: 10,
+      stiffness: 68,
+    });
+  }, [state.index, tabWidth]);
 
   const handleTabPress = (route: typeof state.routes[0], index: number, isFocused: boolean) => {
-    // Scale animation
-    Animated.sequence([
-      Animated.timing(scales[index], {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scales[index], {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 300,
-        friction: 10,
-      }),
-    ]).start();
+    // Scale animation sequence: shrink then spring back
+    scales[index].value = withSequence(
+      withTiming(0.9, { duration: 100 }),
+      withSpring(1, { damping: 10, stiffness: 300, mass: 0.8 })
+    );
 
     const event = navigation.emit({
       type: 'tabPress',
@@ -82,6 +168,11 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
       navigation.navigate(route.name);
     }
   };
+
+  // Animated style for indicator
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorPosition.value + 12 }],
+  }));
 
   return (
     <View
@@ -98,64 +189,26 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
           styles.indicator,
           {
             width: tabWidth - 24,
-            transform: [
-              {
-                translateX: Animated.add(
-                  indicatorPosition,
-                  new Animated.Value(12)
-                ),
-              },
-            ],
           },
+          indicatorStyle,
         ]}
       />
 
-      {/* Tab buttons - icon only, no text labels */}
+      {/* Tab buttons — rendered via TabItem so each useAnimatedStyle is at a component top level */}
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
 
-        const iconConfig = TAB_ICONS[route.name] || { active: 'ellipse', inactive: 'ellipse-outline' };
-        const iconName = isFocused ? iconConfig.active : iconConfig.inactive;
-
-        // Get badge from route options (can be set via tabBarBadge)
-        const badge = options.tabBarBadge;
-        const showBadge = badge !== undefined && badge !== null && badge !== '' && badge !== 0;
-
         return (
-          <TouchableOpacity
+          <TabItem
             key={route.key}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel || route.name}
+            route={route}
+            index={index}
+            isFocused={isFocused}
+            options={options}
+            scaleValue={scales[index]}
             onPress={() => handleTabPress(route, index, isFocused)}
-            style={styles.tab}
-            activeOpacity={0.7}
-          >
-            <Animated.View
-              style={[
-                styles.tabContent,
-                { transform: [{ scale: scales[index] }] },
-              ]}
-            >
-              <View style={styles.iconContainer}>
-                <Ionicons
-                  name={iconName}
-                  size={26}
-                  color={isFocused ? darkTheme.accent : darkTheme.textMuted}
-                />
-                {showBadge && (
-                  <View style={styles.badge}>
-                    {typeof badge === 'number' && badge > 0 && (
-                      <Animated.Text style={styles.badgeText}>
-                        {badge > 99 ? '99+' : badge}
-                      </Animated.Text>
-                    )}
-                  </View>
-                )}
-              </View>
-            </Animated.View>
-          </TouchableOpacity>
+          />
         );
       })}
     </View>
@@ -198,7 +251,7 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: darkTheme.accent,
+    backgroundColor: darkTheme.error,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
@@ -209,6 +262,10 @@ const styles = StyleSheet.create({
     color: darkTheme.textPrimary,
     fontSize: 10,
     fontWeight: '700',
+  },
+  tabLabel: {
+    fontSize: 10,
+    marginTop: 2,
   },
 });
 

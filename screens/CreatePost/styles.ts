@@ -45,6 +45,8 @@ export const COLORS = {
   textSecondary: darkTheme.textSecondary,
   /** Error/danger color */
   error: darkTheme.error,
+  /** Warning color */
+  warning: '#F59E0B',
   /** Full screen background (camera, etc.) */
   fullScreenBackground: '#000000',
 } as const

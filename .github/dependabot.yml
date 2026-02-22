@@ -1,0 +1,65 @@
+version: 2
+updates:
+  # Main project dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "snpsa"
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Group React Native ecosystem updates together
+    groups:
+      security:
+        # High priority: security updates are bumped out of normal grouping
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+        dependency-type: "direct"
+      react-native:
+        patterns:
+          - "react-native*"
+          - "@react-native*"
+          - "expo*"
+          - "@expo*"
+      testing:
+        patterns:
+          - "vitest*"
+          - "@vitest*"
+          - "jest*"
+          - "@testing-library*"
+      supabase:
+        patterns:
+          - "@supabase*"
+          - "supabase*"
+    # Security: Enable auto-merge for patch updates from direct dependencies
+    pull-request-branch-name:
+      separator: "/"
+    rebase-strategy: "auto"
+    # Ensure security patches are prioritized
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"

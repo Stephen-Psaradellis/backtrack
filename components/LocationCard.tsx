@@ -26,21 +26,22 @@
  * ```
  */
 
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback, useState, useRef, useEffect } from 'react'
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   LayoutAnimation,
   UIManager,
   Platform,
   Animated,
+  Easing,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
 import { Avatar, type StoredAvatar } from 'react-native-bitmoji'
 import { Button, OutlineButton } from './Button'
+import { PressableScale } from './native/PressableScale'
 import { lightFeedback } from '../lib/haptics'
 
 // Enable LayoutAnimation on Android
@@ -129,6 +130,7 @@ const COLORS = {
 
 // Time thresholds
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -197,6 +199,43 @@ export const LocationCard = memo(function LocationCard({
   const [expanded, setExpanded] = useState(initialExpanded)
 
   // ---------------------------------------------------------------------------
+  // ANIMATION - M-046: Pulsing "hot" dot for recent activity
+  // ---------------------------------------------------------------------------
+
+  const pulseAnim = useRef(new Animated.Value(0.3)).current
+
+  // Check if location has posts in last 24 hours
+  const hasRecentActivity = latestPostAt && (Date.now() - latestPostAt.getTime()) < TWENTY_FOUR_HOURS_MS
+
+  useEffect(() => {
+    if (!hasRecentActivity) return
+
+    // Pulsing animation loop: opacity 0.3 → 1.0 → 0.3
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.0,
+          duration: 500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    )
+
+    pulse.start()
+
+    return () => {
+      pulse.stop()
+    }
+  }, [hasRecentActivity, pulseAnim])
+
+  // ---------------------------------------------------------------------------
   // COMPUTED VALUES
   // ---------------------------------------------------------------------------
 
@@ -232,10 +271,9 @@ export const LocationCard = memo(function LocationCard({
   // ---------------------------------------------------------------------------
 
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[styles.container, expanded && styles.containerExpanded]}
       onPress={handleToggleExpand}
-      activeOpacity={0.9}
       testID={testID}
     >
       {/* Header Row */}
@@ -249,6 +287,17 @@ export const LocationCard = memo(function LocationCard({
               color={hasRecentPost ? COLORS.amber : COLORS.primary}
             />
             {hasRecentPost && <View style={styles.hotIndicator} />}
+            {/* M-046: Pulsing dot for recent activity (last 24 hours) */}
+            {hasRecentActivity && (
+              <Animated.View
+                style={[
+                  styles.pulsingDot,
+                  {
+                    opacity: pulseAnim,
+                  },
+                ]}
+              />
+            )}
           </View>
 
           {/* Location info */}
@@ -336,7 +385,7 @@ export const LocationCard = memo(function LocationCard({
           </View>
         </View>
       )}
-    </TouchableOpacity>
+    </PressableScale>
   )
 })
 
@@ -397,6 +446,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.amber,
     borderWidth: 2,
     borderColor: COLORS.background,
+  },
+
+  // M-046: Pulsing dot for recent activity (last 24 hours)
+  pulsingDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
   },
 
   locationInfo: {

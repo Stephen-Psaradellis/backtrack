@@ -1,0 +1,56 @@
+appId: com.backtrack.app
+---
+# Create Post Flow
+# Tests creating a new missed connection post
+
+- launchApp
+
+# Assume user is already logged in
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Verify we're on feed screen
+- assertVisible: "Feed tab"
+
+# Navigate to create post screen
+# Look for floating action button or create post button
+- tapOn:
+    id: "feed-floating-actions"
+- waitForAnimationToEnd
+
+# Alternative: Look for "Create Post" button if FAB doesn't work
+- tapOn: "Create Post"
+  optional: true
+
+# Wait for create post screen
+- waitForAnimationToEnd
+
+# Fill in post details
+# Note: Actual flow depends on CreatePostScreen implementation
+# This is a simplified version
+
+# Enter the note/message
+- tapOn: "What would you like to say?"
+  optional: true
+- inputText: "We made eye contact at the coffee shop. I wish I had said hello!"
+
+# Select location (if required)
+- tapOn: "Select Location"
+  optional: true
+- waitForAnimationToEnd
+- tapOn: "Starbucks - Downtown"
+  optional: true
+
+# Set time range (if required)
+- tapOn: "Select Time"
+  optional: true
+- tapOn: "This Morning"
+  optional: true
+
+# Submit the post
+- tapOn: "Post"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify post was created
+- assertVisible: "Feed tab"

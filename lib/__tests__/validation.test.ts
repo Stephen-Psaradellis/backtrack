@@ -292,17 +292,12 @@ describe('sanitizeForStorage', () => {
     expect(sanitizeForStorage('  hello  ')).toBe('hello')
   })
 
-  it('should remove SQL injection keywords', () => {
-    const result = sanitizeForStorage('SELECT * FROM users')
-    expect(result.toLowerCase()).not.toContain('select')
+  it('should preserve SQL keywords in user content (parameterized queries handle safety)', () => {
+    const result = sanitizeForStorage('Please select a table to update')
+    expect(result).toBe('Please select a table to update')
   })
 
-  it('should remove DROP statements', () => {
-    const result = sanitizeForStorage('DROP TABLE users')
-    expect(result.toLowerCase()).not.toContain('drop')
-  })
-
-  it('should preserve text without SQL keywords', () => {
+  it('should preserve text without special characters', () => {
     const result = sanitizeForStorage('Testing123')
     expect(result).toBe('Testing123')
   })

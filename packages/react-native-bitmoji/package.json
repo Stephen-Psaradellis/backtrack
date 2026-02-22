@@ -1,0 +1,35 @@
+{
+  "name": "react-native-bitmoji",
+  "version": "1.0.0",
+  "main": "avatar/index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "react-native-view-shot": "~4.0.0"
+  },
+  "peerDependencies": {
+    "@expo/vector-icons": "*",
+    "@react-native-async-storage/async-storage": "*",
+    "@react-navigation/native": "*",
+    "@react-navigation/native-stack": "*",
+    "expo": "*",
+    "expo-file-system": "*",
+    "expo-linear-gradient": "*",
+    "expo-status-bar": "*",
+    "react": "*",
+    "react-dom": "*",
+    "react-native": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-svg": "*",
+    "react-native-web": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

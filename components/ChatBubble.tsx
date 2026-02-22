@@ -31,15 +31,20 @@
  * ```
  */
 
-import React, { memo, useCallback } from 'react'
+import React, { memo, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ViewStyle,
   Pressable,
+  TouchableOpacity,
+  Animated,
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import type { Message, MessageWithSender } from '../types/database'
+import { sanitizeForDisplay } from '../lib/utils/sanitize'
+import { darkTheme } from '../constants/glassStyles'
 
 // ============================================================================
 // TYPES
@@ -91,6 +96,17 @@ export interface ChatBubbleProps {
   onLongPress?: (message: Message | MessageWithSender) => void
 
   /**
+   * Optimistic message status indicator
+   * 'sending' shows a clock icon, 'failed' shows retry UI
+   */
+  status?: 'sending' | 'sent' | 'failed'
+
+  /**
+   * Callback when a failed message is tapped to retry
+   */
+  onRetry?: (messageId: string) => void
+
+  /**
    * Additional container style
    */
   style?: ViewStyle
@@ -99,6 +115,12 @@ export interface ChatBubbleProps {
    * Test ID for testing purposes
    */
   testID?: string
+
+  /**
+   * Whether this is a newly arrived message that should be animated
+   * @default false
+   */
+  isNew?: boolean
 }
 
 // ============================================================================
@@ -107,24 +129,29 @@ export interface ChatBubbleProps {
 
 /**
  * Colors used in the ChatBubble component
+ * All values now reference the canonical darkTheme from glassStyles
  */
 const COLORS = {
   /** Primary color for own messages (coral) */
-  ownBubble: '#FF6B47',
+  ownBubble: darkTheme.chat.ownBubble,
   /** Text color for own messages */
-  ownText: '#FFFFFF',
-  /** Background color for received messages */
-  otherBubble: '#E5E5EA',
-  /** Text color for received messages */
-  otherText: '#000000',
+  ownText: darkTheme.chat.ownText,
+  /** Background color for received messages - dark theme */
+  otherBubble: darkTheme.chat.otherBubble,
+  /** Text color for received messages - dark theme */
+  otherText: darkTheme.chat.otherText,
   /** Timestamp text color */
-  timestamp: '#8E8E93',
+  timestamp: darkTheme.chat.timestamp,
   /** Read status color */
-  readStatus: '#34C759',
+  readStatus: darkTheme.chat.readStatus,
   /** Unread status color */
-  unreadStatus: '#8E8E93',
+  unreadStatus: darkTheme.chat.unreadStatus,
   /** Pressed state overlay */
-  pressedOverlay: 'rgba(0, 0, 0, 0.1)',
+  pressedOverlay: darkTheme.chat.pressedOverlay,
+  /** Error/failed message color */
+  error: darkTheme.error,
+  /** Date separator line color - dark theme */
+  separatorLine: darkTheme.chat.separatorLine,
 } as const
 
 /**
@@ -376,13 +403,57 @@ export const ChatBubble = memo(function ChatBubble({
   showTimestamp = false,
   showReadStatus = false,
   onLongPress,
+  status,
+  onRetry,
   style,
   testID = 'chat-bubble',
+  isNew = false,
 }: ChatBubbleProps) {
+  // Animation values
+  const animatedValue = useRef(new Animated.Value(isNew ? 0 : 1)).current
+  const slideValue = useRef(new Animated.Value(isNew && !isOwn ? -20 : 0)).current
+  const hasAnimated = useRef(!isNew)
+
+  // Run entrance animation only once for new messages
+  useEffect(() => {
+    if (isNew && !hasAnimated.current) {
+      hasAnimated.current = true
+
+      if (isOwn) {
+        // Sent messages: scale-in animation with spring
+        Animated.spring(animatedValue, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }).start()
+      } else {
+        // Received messages: slide-in from left with fade
+        Animated.parallel([
+          Animated.timing(animatedValue, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideValue, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start()
+      }
+    }
+  }, [isNew, isOwn, animatedValue, slideValue])
+
   // Handle long press
   const handleLongPress = useCallback(() => {
     onLongPress?.(message)
   }, [onLongPress, message])
+
+  // Handle retry tap for failed messages
+  const handleRetry = useCallback(() => {
+    onRetry?.(message.id)
+  }, [onRetry, message.id])
 
   // Get border radius based on position
   const borderRadiusStyle = getBorderRadiusStyle(position, isOwn)
@@ -393,11 +464,60 @@ export const ChatBubble = memo(function ChatBubble({
   // Determine read status indicator
   const showRead = showReadStatus && isOwn
 
-  return (
-    <View
+  // Sanitize message content to prevent display issues from malicious content
+  const safeContent = useMemo(
+    () => sanitizeForDisplay(message.content),
+    [message.content]
+  )
+
+  const isSending = status === 'sending'
+  const isFailed = status === 'failed'
+
+  // Build accessibility label that combines all message info
+  const accessibilityLabel = useMemo(() => {
+    const sender = isOwn ? 'You' : 'Anonymous'
+    const content = safeContent
+    const time = formattedTime || formatMessageTime(message.created_at)
+
+    let label = `${sender}: ${content}, ${time}`
+
+    if (isSending) {
+      label += ', sending'
+    } else if (isFailed) {
+      label += ', failed to send'
+    } else if (showRead) {
+      label += message.is_read ? ', read' : ', sent'
+    }
+
+    return label
+  }, [isOwn, safeContent, formattedTime, message.created_at, message.is_read, isSending, isFailed, showRead])
+
+  // Animation styles
+  const animatedStyles = isOwn
+    ? {
+        // Sent messages: scale from 0.8 to 1.0
+        transform: [
+          {
+            scale: animatedValue.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.8, 1],
+            }),
+          },
+        ],
+        opacity: animatedValue,
+      }
+    : {
+        // Received messages: slide from left with fade
+        transform: [{ translateX: slideValue }],
+        opacity: animatedValue,
+      }
+
+  const bubbleContent = (
+    <Animated.View
       style={[
         styles.container,
         isOwn ? styles.containerOwn : styles.containerOther,
+        animatedStyles,
         style,
       ]}
       testID={testID}
@@ -410,8 +530,13 @@ export const ChatBubble = memo(function ChatBubble({
           isOwn ? styles.bubbleOwn : styles.bubbleOther,
           borderRadiusStyle,
           pressed && onLongPress && styles.bubblePressed,
+          isSending && styles.bubbleSending,
+          isFailed && styles.bubbleFailed,
         ]}
         testID={`${testID}-bubble`}
+        accessible={true}
+        accessibilityRole="text"
+        accessibilityLabel={accessibilityLabel}
       >
         <Text
           style={[
@@ -419,40 +544,66 @@ export const ChatBubble = memo(function ChatBubble({
             isOwn ? styles.messageTextOwn : styles.messageTextOther,
           ]}
           testID={`${testID}-text`}
+          accessible={false}
         >
-          {message.content}
+          {safeContent}
         </Text>
       </Pressable>
 
+      {/* Status indicators for optimistic messages */}
+      {isSending && (
+        <View style={[styles.metaContainer, styles.metaContainerOwn]} testID={`${testID}-sending`} accessible={false}>
+          <Ionicons name="time-outline" size={12} color={COLORS.timestamp} accessible={false} />
+          <Text style={styles.statusText} accessible={false}>Sending...</Text>
+        </View>
+      )}
+
+      {isFailed && (
+        <View style={[styles.metaContainer, styles.metaContainerOwn]} testID={`${testID}-failed`} accessible={false}>
+          <Ionicons name="alert-circle" size={12} color={COLORS.error} accessible={false} />
+          <Text style={styles.failedText} accessible={false}>Tap to retry</Text>
+        </View>
+      )}
+
       {/* Timestamp and Read Status */}
-      {(showTimestamp || showRead) && (
+      {!isSending && !isFailed && (showTimestamp || showRead) && (
         <View
           style={[
             styles.metaContainer,
             isOwn ? styles.metaContainerOwn : styles.metaContainerOther,
           ]}
           testID={`${testID}-meta`}
+          accessible={false}
         >
           {showTimestamp && (
-            <Text style={styles.timestampText} testID={`${testID}-timestamp`}>
+            <Text style={styles.timestampText} testID={`${testID}-timestamp`} accessible={false}>
               {formattedTime}
             </Text>
           )}
           {showRead && (
-            <Text
-              style={[
-                styles.readStatusText,
-                message.is_read ? styles.readStatusRead : styles.readStatusUnread,
-              ]}
+            <Ionicons
+              name={message.is_read ? 'checkmark-done' : 'checkmark'}
+              size={14}
+              color={message.is_read ? COLORS.readStatus : COLORS.unreadStatus}
               testID={`${testID}-read-status`}
-            >
-              {message.is_read ? '✓✓' : '✓'}
-            </Text>
+              accessible={false}
+            />
           )}
         </View>
       )}
-    </View>
+    </Animated.View>
   )
+
+  // Wrap failed messages in TouchableOpacity for retry
+  if (isFailed && onRetry) {
+    return (
+      <TouchableOpacity onPress={handleRetry} activeOpacity={0.7} testID={`${testID}-retry-touch`}>
+        {bubbleContent}
+      </TouchableOpacity>
+    )
+  }
+
+  return bubbleContent
 })
 
 // ============================================================================
@@ -688,6 +839,8 @@ const styles = StyleSheet.create({
   },
   bubbleOther: {
     backgroundColor: COLORS.otherBubble,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   bubblePressed: {
     opacity: 0.8,
@@ -719,16 +872,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.timestamp,
   },
-  readStatusText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  readStatusRead: {
-    color: COLORS.readStatus,
-  },
-  readStatusUnread: {
-    color: COLORS.unreadStatus,
-  },
   dateSeparatorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -738,12 +881,28 @@ const styles = StyleSheet.create({
   dateSeparatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.otherBubble,
+    backgroundColor: COLORS.separatorLine,
   },
   dateSeparatorText: {
     fontSize: 12,
     color: COLORS.timestamp,
     marginHorizontal: 12,
     fontWeight: '500',
+  },
+  bubbleSending: {
+    opacity: 0.6,
+  },
+  bubbleFailed: {
+    opacity: 0.8,
+  },
+  statusText: {
+    fontSize: 11,
+    color: COLORS.timestamp,
+    marginLeft: 4,
+  },
+  failedText: {
+    fontSize: 11,
+    color: COLORS.error,
+    marginLeft: 4,
   },
 })

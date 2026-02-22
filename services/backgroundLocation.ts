@@ -27,10 +27,19 @@ import * as Location from 'expo-location'
 import * as TaskManager from 'expo-task-manager'
 import * as Notifications from 'expo-notifications'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as SecureStore from 'expo-secure-store'
 
 import { supabase } from '../lib/supabase'
 import { captureException } from '../lib/sentry'
 import { BACKGROUND_GPS_CONFIG } from '../lib/utils/gpsConfig'
+import { sanitizeLocationName } from '../lib/utils/sanitize'
+import { reduceCoordinatePrecision } from '../lib/utils/geoPrivacy'
+import {
+  DwellState,
+  createInitialDwellState,
+  updateDwellState,
+  calculateDistance,
+} from './dwellDetection'
 
 // ============================================================================
 // CONSTANTS
@@ -50,6 +59,11 @@ const DWELL_STATE_KEY = 'backtrack:dwell_state'
  * Storage key for tracking settings
  */
 const TRACKING_SETTINGS_KEY = 'backtrack:tracking_settings'
+
+/**
+ * Storage key for proximity notification rate limiting
+ */
+const PROXIMITY_RATE_LIMIT_KEY = 'backtrack:proximity_rate_limit'
 
 /**
  * Radius in meters to consider user "at" a location
@@ -74,31 +88,29 @@ const TIME_INTERVAL_MS = BACKGROUND_GPS_CONFIG.TIME_INTERVAL_MS
  */
 const DEFAULT_PROMPT_MINUTES = 5
 
+/**
+ * Maximum radar notifications per hour (rate limit)
+ */
+const MAX_RADAR_NOTIFICATIONS_PER_HOUR = 3
+
+/**
+ * Minimum distance moved to trigger radar check (prevents spam when stationary)
+ */
+const MIN_RADAR_CHECK_DISTANCE = 50 // meters
+
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface DwellState {
-  /** Current location user is dwelling at */
-  currentLocation: {
-    latitude: number
-    longitude: number
-    locationId?: string
-    locationName?: string
-  } | null
-  /** Timestamp when user arrived at current location */
-  arrivedAt: number | null
-  /** Whether notification has been sent for current dwell */
-  notificationSent: boolean
-  /** User ID for tracking */
-  userId: string | null
-}
+// Note: DwellState now imported from dwellDetection.ts
 
 interface TrackingSettings {
   enabled: boolean
   promptMinutes: number
   userId: string
+  /** Timestamp when settings were last modified (for race condition detection) */
+  lastModified?: number
 }
 
 interface NearbyLocation {
@@ -110,35 +122,90 @@ interface NearbyLocation {
 }
 
 // ============================================================================
+// SECURE STORAGE HELPERS (GDPR 3.4 - Encrypt location data at rest)
+// ============================================================================
+
+/**
+ * Read from SecureStore with AsyncStorage fallback for migration.
+ * On first read from AsyncStorage, migrates data to SecureStore.
+ */
+async function secureGet(key: string): Promise<string | null> {
+  try {
+    // Try SecureStore first
+    const secure = await SecureStore.getItemAsync(key)
+    if (secure) return secure
+  } catch (err) {
+    captureException(err, { operation: 'secureGet:SecureStore', key })
+  }
+
+  try {
+    // Fallback: read from AsyncStorage (existing users migration path)
+    const legacy = await AsyncStorage.getItem(key)
+    if (legacy) {
+      // Migrate to SecureStore, then remove from AsyncStorage
+      try {
+        await SecureStore.setItemAsync(key, legacy)
+        await AsyncStorage.removeItem(key)
+      } catch (migrateErr) {
+        captureException(migrateErr, { operation: 'secureGet:migrate', key })
+      }
+      return legacy
+    }
+  } catch (err) {
+    captureException(err, { operation: 'secureGet:AsyncStorage', key })
+  }
+
+  return null
+}
+
+/**
+ * Write to SecureStore (encrypted at rest).
+ */
+async function secureSet(key: string, value: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(key, value)
+  } catch (err) {
+    captureException(err, { operation: 'secureSet', key })
+  }
+}
+
+/**
+ * Delete from both SecureStore and AsyncStorage.
+ */
+async function secureDelete(key: string): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(key)
+  } catch { /* ignore */ }
+  try {
+    await AsyncStorage.removeItem(key)
+  } catch { /* ignore */ }
+}
+
+// ============================================================================
 // DWELL STATE MANAGEMENT
 // ============================================================================
 
 /**
- * Get current dwell state from storage
+ * Get current dwell state from encrypted storage
  */
 async function getDwellState(): Promise<DwellState> {
   try {
-    const stored = await AsyncStorage.getItem(DWELL_STATE_KEY)
+    const stored = await secureGet(DWELL_STATE_KEY)
     if (stored) {
       return JSON.parse(stored)
     }
   } catch (err) {
     captureException(err, { operation: 'getDwellState', key: DWELL_STATE_KEY })
   }
-  return {
-    currentLocation: null,
-    arrivedAt: null,
-    notificationSent: false,
-    userId: null,
-  }
+  return createInitialDwellState()
 }
 
 /**
- * Save dwell state to storage
+ * Save dwell state to encrypted storage
  */
 async function saveDwellState(state: DwellState): Promise<void> {
   try {
-    await AsyncStorage.setItem(DWELL_STATE_KEY, JSON.stringify(state))
+    await secureSet(DWELL_STATE_KEY, JSON.stringify(state))
   } catch (err) {
     captureException(err, { operation: 'saveDwellState' })
   }
@@ -160,11 +227,47 @@ async function getTrackingSettings(): Promise<TrackingSettings | null> {
 }
 
 /**
+ * Verify that tracking settings haven't changed since the initial check.
+ * This prevents race conditions where user disables tracking during async operations.
+ *
+ * @param initialSettings The settings captured at the start of an operation
+ * @returns true if settings are unchanged and tracking is still enabled, false otherwise
+ */
+async function verifySettingsUnchanged(initialSettings: TrackingSettings): Promise<boolean> {
+  try {
+    const currentSettings = await getTrackingSettings()
+
+    // If tracking is now disabled, abort
+    if (!currentSettings?.enabled) {
+      return false
+    }
+
+    // If settings were modified after we started (timestamp changed), abort
+    if (initialSettings.lastModified && currentSettings.lastModified) {
+      if (currentSettings.lastModified > initialSettings.lastModified) {
+        return false
+      }
+    }
+
+    return true
+  } catch (err) {
+    captureException(err, { operation: 'verifySettingsUnchanged' })
+    // On error, fail safe - don't proceed with state changes
+    return false
+  }
+}
+
+/**
  * Save tracking settings to storage
  */
 async function saveTrackingSettings(settings: TrackingSettings): Promise<void> {
   try {
-    await AsyncStorage.setItem(TRACKING_SETTINGS_KEY, JSON.stringify(settings))
+    // Always update lastModified timestamp to detect concurrent changes
+    const settingsWithTimestamp = {
+      ...settings,
+      lastModified: Date.now(),
+    }
+    await AsyncStorage.setItem(TRACKING_SETTINGS_KEY, JSON.stringify(settingsWithTimestamp))
   } catch (err) {
     captureException(err, { operation: 'saveTrackingSettings' })
   }
@@ -174,39 +277,9 @@ async function saveTrackingSettings(settings: TrackingSettings): Promise<void> {
 // LOCATION HELPERS
 // ============================================================================
 
-/**
- * Reduce coordinate precision to ~50m resolution for privacy.
- * Truncates to 3 decimal places (~111m at equator, ~50-80m at mid-latitudes).
- * This prevents storing exact GPS coordinates while still enabling
- * meaningful proximity detection.
- */
-function reduceCoordinatePrecision(value: number): number {
-  return Math.round(value * 1000) / 1000
-}
-
-/**
- * Calculate distance between two points using Haversine formula
- */
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371e3 // Earth's radius in meters
-  const φ1 = (lat1 * Math.PI) / 180
-  const φ2 = (lat2 * Math.PI) / 180
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180
-
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
-  return R * c
-}
+// Note: reduceCoordinatePrecision moved to lib/utils/geoPrivacy.ts for reuse
+// Note: calculateDistance moved to dwellDetection.ts for reuse
+// Using 2 decimal places (~1.1km) for background location privacy
 
 /**
  * Find nearest location from database
@@ -216,11 +289,11 @@ async function findNearbyLocation(
   lon: number
 ): Promise<NearbyLocation | null> {
   try {
-    // Reduce coordinate precision before sending to server (~50m resolution)
-    const reducedLat = reduceCoordinatePrecision(lat)
-    const reducedLon = reduceCoordinatePrecision(lon)
+    // Reduce coordinate precision before sending to server (~1.1km resolution for privacy)
+    const reducedLat = reduceCoordinatePrecision(lat, 2)
+    const reducedLon = reduceCoordinatePrecision(lon, 2)
 
-    const { data, error } = await supabase.rpc('get_locations_near_point', {
+    const { data, error } = await supabase.rpc('get_locations_near_point_optimized', {
       p_lat: reducedLat,
       p_lon: reducedLon,
       p_radius_meters: 200, // Search within 200m
@@ -247,14 +320,17 @@ async function findNearbyLocation(
  */
 async function sendCheckinPromptNotification(locationName: string, locationId: string): Promise<void> {
   try {
+    // Sanitize location name to prevent notification injection attacks
+    const safeName = sanitizeLocationName(locationName)
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Check In?',
-        body: `You've been at ${locationName} for a while. Tap to check in and see who else is here!`,
+        body: `You've been at ${safeName} for a while. Tap to check in and see who else is here!`,
         data: {
           type: 'checkin_prompt',
           locationId,
-          locationName,
+          locationName: safeName,
         },
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
@@ -267,8 +343,209 @@ async function sendCheckinPromptNotification(locationName: string, locationId: s
 }
 
 // ============================================================================
+// PROXIMITY RADAR HELPERS
+// ============================================================================
+
+/**
+ * Rate limiting for proximity notifications
+ */
+interface ProximityRateLimit {
+  lastCheckLocation: { latitude: number; longitude: number } | null
+  notificationTimestamps: number[]
+}
+
+/**
+ * Get proximity rate limit state
+ */
+async function getProximityRateLimit(): Promise<ProximityRateLimit> {
+  try {
+    const stored = await AsyncStorage.getItem(PROXIMITY_RATE_LIMIT_KEY)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (err) {
+    captureException(err, { operation: 'getProximityRateLimit' })
+  }
+  return {
+    lastCheckLocation: null,
+    notificationTimestamps: [],
+  }
+}
+
+/**
+ * Save proximity rate limit state
+ */
+async function saveProximityRateLimit(state: ProximityRateLimit): Promise<void> {
+  try {
+    await AsyncStorage.setItem(PROXIMITY_RATE_LIMIT_KEY, JSON.stringify(state))
+  } catch (err) {
+    captureException(err, { operation: 'saveProximityRateLimit' })
+  }
+}
+
+/**
+ * Check if rate limit allows sending another radar notification
+ */
+function canSendRadarNotification(timestamps: number[]): boolean {
+  const now = Date.now()
+  const oneHourAgo = now - 60 * 60 * 1000
+
+  // Filter to only recent timestamps
+  const recentNotifications = timestamps.filter((ts) => ts >= oneHourAgo)
+
+  return recentNotifications.length < MAX_RADAR_NOTIFICATIONS_PER_HOUR
+}
+
+/**
+ * Send proximity radar notification
+ */
+async function sendRadarProximityNotification(): Promise<void> {
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Someone nearby!',
+        body: 'Someone you might click with is nearby!',
+        data: {
+          type: 'proximity_radar',
+        },
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.DEFAULT,
+      },
+      trigger: null, // Send immediately
+    })
+  } catch (error) {
+    captureException(error, { operation: 'sendRadarProximityNotification' })
+  }
+}
+
+/**
+ * Check for nearby users and record encounters
+ */
+async function checkProximityRadar(
+  userId: string,
+  latitude: number,
+  longitude: number
+): Promise<void> {
+  try {
+    // Get user's radar settings from profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('radar_enabled, radar_radius_meters')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !profile?.radar_enabled) {
+      return // Radar disabled or error
+    }
+
+    const radius = profile.radar_radius_meters || 200
+
+    // Get rate limit state
+    const rateLimit = await getProximityRateLimit()
+
+    // Check if user moved enough distance since last check
+    if (rateLimit.lastCheckLocation) {
+      const distanceMoved = calculateDistance(
+        latitude,
+        longitude,
+        rateLimit.lastCheckLocation.latitude,
+        rateLimit.lastCheckLocation.longitude
+      )
+
+      if (distanceMoved < MIN_RADAR_CHECK_DISTANCE) {
+        return // Not moved enough, skip check
+      }
+    }
+
+    // Check if we can send more notifications this hour
+    if (!canSendRadarNotification(rateLimit.notificationTimestamps)) {
+      return // Rate limit reached
+    }
+
+    // Call RPC to find nearby users
+    const { data: nearbyUsers, error: nearbyError } = await supabase.rpc(
+      'check_nearby_users',
+      {
+        p_user_id: userId,
+        p_lat: latitude,
+        p_lng: longitude,
+        p_radius: radius,
+      }
+    )
+
+    if (nearbyError || !nearbyUsers || nearbyUsers.length === 0) {
+      // Update last check location even if no users found
+      await saveProximityRateLimit({
+        ...rateLimit,
+        lastCheckLocation: { latitude, longitude },
+      })
+      return
+    }
+
+    // Record encounters for each nearby user
+    let encountersRecorded = 0
+    for (const nearby of nearbyUsers) {
+      const { data: result } = await supabase.rpc('record_proximity_encounter', {
+        p_user_id: userId,
+        p_encountered_user_id: nearby.user_id,
+        p_lat: latitude,
+        p_lng: longitude,
+        p_distance: nearby.distance,
+        p_location_id: nearby.location_id,
+        p_encounter_type: nearby.location_id ? 'same_venue' : 'walkby',
+      })
+
+      if (result?.success && !result?.already_recorded) {
+        encountersRecorded++
+      }
+    }
+
+    // Send notification if we recorded at least one new encounter
+    if (encountersRecorded > 0) {
+      await sendRadarProximityNotification()
+
+      // Update rate limit state
+      const now = Date.now()
+      const oneHourAgo = now - 60 * 60 * 1000
+      const recentTimestamps = rateLimit.notificationTimestamps.filter(
+        (ts) => ts >= oneHourAgo
+      )
+
+      await saveProximityRateLimit({
+        lastCheckLocation: { latitude, longitude },
+        notificationTimestamps: [...recentTimestamps, now],
+      })
+    } else {
+      // No new encounters, just update last check location
+      await saveProximityRateLimit({
+        ...rateLimit,
+        lastCheckLocation: { latitude, longitude },
+      })
+    }
+  } catch (err) {
+    captureException(err, { operation: 'checkProximityRadar' })
+  }
+}
+
+// ============================================================================
 // BACKGROUND TASK DEFINITION
 // ============================================================================
+
+/**
+ * Validate that a nearby location has required fields.
+ * Protects against corrupted database responses.
+ */
+function isValidNearbyLocation(loc: unknown): loc is NearbyLocation {
+  if (!loc || typeof loc !== 'object') return false
+  const l = loc as Record<string, unknown>
+  return (
+    typeof l.id === 'string' &&
+    l.id.length > 0 &&
+    typeof l.name === 'string' &&
+    typeof l.latitude === 'number' &&
+    typeof l.longitude === 'number'
+  )
+}
 
 /**
  * Define the background location task
@@ -304,66 +581,79 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   const dwellState = await getDwellState()
   const promptMinutes = settings.promptMinutes || DEFAULT_PROMPT_MINUTES
 
+  // TASK-06: Movement threshold optimization
+  // Skip network calls if user hasn't moved 20m since last position
+  if (dwellState.lastPosition) {
+    const distanceMoved = calculateDistance(
+      latitude,
+      longitude,
+      dwellState.lastPosition.latitude,
+      dwellState.lastPosition.longitude
+    )
+    if (distanceMoved < 20) {
+      // User hasn't moved enough, skip network call
+      return
+    }
+  }
+
   // Find if there's a known location nearby
   const nearbyLocation = await findNearbyLocation(latitude, longitude)
 
-  if (nearbyLocation) {
-    // User is near a known location
-    if (dwellState.currentLocation?.locationId === nearbyLocation.id) {
-      // Still at same location - check if we should prompt
-      const dwellTimeMinutes = dwellState.arrivedAt
-        ? (now - dwellState.arrivedAt) / (1000 * 60)
-        : 0
+  // Validate location data to prevent crashes from corrupted DB data
+  if (nearbyLocation && !isValidNearbyLocation(nearbyLocation)) {
+    captureException(new Error('Invalid location data from database'), {
+      operation: 'backgroundLocationTask',
+      locationData: JSON.stringify(nearbyLocation),
+    })
+    return
+  }
 
-      if (
-        dwellTimeMinutes >= promptMinutes &&
-        !dwellState.notificationSent
-      ) {
-        // Time to prompt!
-        await sendCheckinPromptNotification(
-          nearbyLocation.name,
-          nearbyLocation.id
-        )
+  // Update dwell state using pure function
+  const updateResult = updateDwellState(
+    dwellState,
+    { latitude, longitude },
+    nearbyLocation,
+    promptMinutes,
+    now
+  )
 
-        // Mark notification as sent
-        await saveDwellState({
-          ...dwellState,
-          notificationSent: true,
-        })
-      }
-    } else {
-      // Arrived at a new location
-      await saveDwellState({
-        currentLocation: {
-          latitude: nearbyLocation.latitude,
-          longitude: nearbyLocation.longitude,
-          locationId: nearbyLocation.id,
-          locationName: nearbyLocation.name,
-        },
-        arrivedAt: now,
-        notificationSent: false,
-        userId: settings.userId,
-      })
-    }
-  } else if (dwellState.currentLocation) {
-    // Check if user moved away from previous location
-    const distance = calculateDistance(
-      latitude,
-      longitude,
-      dwellState.currentLocation.latitude,
-      dwellState.currentLocation.longitude
+  // Handle notifications and side effects based on the update result
+  if (updateResult.shouldNotify && nearbyLocation) {
+    // Time to prompt!
+    await sendCheckinPromptNotification(
+      nearbyLocation.name,
+      nearbyLocation.id
     )
 
-    if (distance > DWELL_RADIUS_METERS * 2) {
-      // User has left the location
-      await saveDwellState({
-        currentLocation: null,
-        arrivedAt: null,
-        notificationSent: false,
-        userId: settings.userId,
-      })
+    // BEST-EFFORT CHECK: AsyncStorage doesn't support CAS (compare-and-swap).
+    // This is adequate for serial background task execution but is not truly atomic.
+    if (!(await verifySettingsUnchanged(settings))) {
+      return // Settings changed, don't save location data
     }
+
+    // Save the updated state (notification sent)
+    await saveDwellState(updateResult.state)
+  } else if (updateResult.action === 'arrived') {
+    // BEST-EFFORT CHECK: AsyncStorage doesn't support CAS (compare-and-swap).
+    // This is adequate for serial background task execution but is not truly atomic.
+    if (!(await verifySettingsUnchanged(settings))) {
+      return // Settings changed, don't save location data
+    }
+
+    // Save arrival state and check for proximity encounters
+    await saveDwellState({ ...updateResult.state, userId: settings.userId })
+    await checkProximityRadar(settings.userId, latitude, longitude)
+  } else if (updateResult.action === 'departed') {
+    // BEST-EFFORT CHECK: AsyncStorage doesn't support CAS (compare-and-swap).
+    // This is adequate for serial background task execution but is not truly atomic.
+    if (!(await verifySettingsUnchanged(settings))) {
+      return // Settings changed, don't modify state
+    }
+
+    // Save departed state
+    await saveDwellState({ ...updateResult.state, userId: settings.userId })
   }
+  // For 'dwelling' (no notification yet) and 'idle' actions, state unchanged
 })
 
 // ============================================================================
@@ -446,20 +736,46 @@ export async function requestBackgroundLocationPermission(): Promise<boolean> {
 }
 
 /**
+ * Result of starting background location tracking
+ */
+export interface StartTrackingResult {
+  success: boolean
+  error?: string
+  errorCode?: 'PERMISSION_DENIED' | 'PERMISSION_UNDETERMINED' | 'TASK_FAILED' | 'UNKNOWN'
+}
+
+/**
  * Start background location tracking
  *
  * @param userId - User ID for tracking
  * @param promptMinutes - Minutes before prompting for check-in
+ * @returns Result object with success status and error details for user feedback
  */
 export async function startBackgroundLocationTracking(
   userId: string,
   promptMinutes: number = DEFAULT_PROMPT_MINUTES
-): Promise<boolean> {
+): Promise<StartTrackingResult> {
   try {
+    // Check permission status before requesting
+    const { status: currentBgStatus } = await Location.getBackgroundPermissionsAsync()
+
     // Request permissions
     const hasPermission = await requestBackgroundLocationPermission()
     if (!hasPermission) {
-      return false
+      // Determine if permission was denied or just not granted yet
+      const { status: bgStatus } = await Location.getBackgroundPermissionsAsync()
+      if (bgStatus === 'denied') {
+        return {
+          success: false,
+          error: 'Location permission denied. Please enable "Always Allow" location access in your device settings.',
+          errorCode: 'PERMISSION_DENIED',
+        }
+      }
+      return {
+        success: false,
+        error: 'Background location permission is required. Please grant "Always Allow" location access.',
+        errorCode: 'PERMISSION_UNDETERMINED',
+      }
     }
 
     // Check if already running
@@ -467,19 +783,35 @@ export async function startBackgroundLocationTracking(
     if (isRunning) {
       // Update settings
       await saveTrackingSettings({ enabled: true, promptMinutes, userId })
-      return true
+      return { success: true }
     }
 
     // Save settings
     await saveTrackingSettings({ enabled: true, promptMinutes, userId })
 
+    // SECURITY: Alert if debug mode is active in production builds
+    if (BACKGROUND_GPS_CONFIG.DEBUG_MODE && !__DEV__) {
+      captureException(
+        new Error('GPS_DEBUG_MODE_IN_PRODUCTION'),
+        {
+          level: 'warning',
+          tags: {
+            component: 'backgroundLocation',
+            severity: 'high',
+            impact: 'battery_drain',
+          },
+          extra: {
+            userId,
+            timeInterval: TIME_INTERVAL_MS,
+            distanceInterval: DISTANCE_INTERVAL_METERS,
+            message: 'Background GPS debug mode is active in production build! This causes 12x battery drain (10s vs 2min intervals).',
+          },
+        }
+      )
+    }
+
     // Initialize dwell state
-    await saveDwellState({
-      currentLocation: null,
-      arrivedAt: null,
-      notificationSent: false,
-      userId,
-    })
+    await saveDwellState(createInitialDwellState(userId))
 
     // Start background location updates
     await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
@@ -498,10 +830,14 @@ export async function startBackgroundLocationTracking(
       activityType: Location.ActivityType.Other,
     })
 
-    return true
+    return { success: true }
   } catch (error) {
     captureException(error, { operation: 'startBackgroundLocationTracking', userId })
-    return false
+    return {
+      success: false,
+      error: 'Failed to start location tracking. Please try again or restart the app.',
+      errorCode: 'TASK_FAILED',
+    }
   }
 }
 
@@ -518,7 +854,9 @@ export async function stopBackgroundLocationTracking(): Promise<void> {
     }
 
     // Purge all stored location data for privacy
-    await AsyncStorage.multiRemove([DWELL_STATE_KEY, TRACKING_SETTINGS_KEY])
+    // DWELL_STATE_KEY is in SecureStore, TRACKING_SETTINGS_KEY in AsyncStorage
+    await secureDelete(DWELL_STATE_KEY)
+    await AsyncStorage.removeItem(TRACKING_SETTINGS_KEY)
   } catch (error) {
     captureException(error, { operation: 'stopBackgroundLocationTracking' })
   }

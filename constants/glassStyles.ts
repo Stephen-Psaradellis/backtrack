@@ -13,26 +13,26 @@ import { colors, gradients } from './theme';
 // ============================================================================
 
 export const darkTheme = {
-  // Backgrounds
-  background: '#0F0F13',
-  backgroundAlt: '#16161D',
-  surface: '#1C1C24',
-  surfaceElevated: '#242430',
+  // Backgrounds (derived from theme.ts)
+  background: colors.surface.background,
+  backgroundAlt: colors.surface.card,
+  surface: colors.surface.cardElevated,
+  surfaceElevated: colors.surface.overlay,
 
   // Card styles (aliases for common UI patterns)
-  cardBackground: '#1C1C24',
+  cardBackground: colors.surface.cardElevated,
   cardBorder: 'rgba(255, 255, 255, 0.08)',
 
-  // Glass effects
+  // Glass effects (derived from theme.ts)
   glass: 'rgba(255, 255, 255, 0.05)',
-  glassBorder: 'rgba(255, 255, 255, 0.08)',
-  glassHighlight: 'rgba(255, 255, 255, 0.12)',
+  glassBorder: colors.glass.border,
+  glassHighlight: colors.surface.borderFocused,
 
-  // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  textDisabled: 'rgba(255, 255, 255, 0.3)',
+  // Text (derived from theme.ts)
+  textPrimary: colors.text.primary,
+  textSecondary: colors.text.secondary,
+  textMuted: colors.text.muted,
+  textDisabled: colors.text.disabled,
 
   // Accents
   primary: colors.primary[500],
@@ -49,6 +49,19 @@ export const darkTheme = {
   warning: '#F59E0B',
   error: '#EF4444',
   info: '#3B82F6',
+
+  // Chat-specific colors
+  chat: {
+    ownBubble: colors.primary[500],
+    ownText: colors.white,
+    otherBubble: colors.surface.overlay,
+    otherText: colors.text.primary,
+    timestamp: colors.text.muted,
+    readStatus: '#34C759',
+    unreadStatus: colors.text.muted,
+    pressedOverlay: 'rgba(0, 0, 0, 0.1)',
+    separatorLine: 'rgba(255, 255, 255, 0.08)',
+  },
 } as const;
 
 // ============================================================================
@@ -145,7 +158,7 @@ export const glassStyles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-    color: darkTheme.textPrimary,
+    color: colors.text.primary,
   },
 
   // Input focused state
@@ -157,7 +170,7 @@ export const glassStyles = StyleSheet.create({
   // Divider line
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: colors.surface.border,
     marginVertical: 16,
   },
 });
@@ -266,7 +279,7 @@ export const darkTypography = StyleSheet.create({
   hero: {
     fontSize: 32,
     fontWeight: '700',
-    color: darkTheme.textPrimary,
+    color: colors.text.primary,
     letterSpacing: -0.5,
   },
 
@@ -274,7 +287,7 @@ export const darkTypography = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: darkTheme.textPrimary,
+    color: colors.text.primary,
     letterSpacing: -0.3,
   },
 
@@ -282,13 +295,13 @@ export const darkTypography = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: darkTheme.textSecondary,
+    color: colors.text.secondary,
   },
 
   // Body text
   body: {
     fontSize: 15,
-    color: darkTheme.textSecondary,
+    color: colors.text.secondary,
     lineHeight: 22,
   },
 
@@ -296,7 +309,7 @@ export const darkTypography = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: darkTheme.textMuted,
+    color: colors.text.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -304,7 +317,7 @@ export const darkTypography = StyleSheet.create({
   // Caption (small helper text)
   caption: {
     fontSize: 13,
-    color: darkTheme.textMuted,
+    color: colors.text.muted,
     lineHeight: 18,
   },
 
@@ -317,7 +330,7 @@ export const darkTypography = StyleSheet.create({
   // Value text (displayed values in forms)
   value: {
     fontSize: 16,
-    color: darkTheme.textPrimary,
+    color: colors.text.primary,
     fontWeight: '500',
   },
 });
@@ -330,7 +343,7 @@ export const darkLayout = StyleSheet.create({
   // Full screen container
   container: {
     flex: 1,
-    backgroundColor: darkTheme.background,
+    backgroundColor: colors.surface.background,
   },
 
   // Section padding

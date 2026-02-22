@@ -36,10 +36,15 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { queryKeys } from './useQueryConfig'
 import type { LiveCheckinUser } from '../types/database'
+
+// P-018: Debounce constant for realtime updates (500ms)
+const REALTIME_DEBOUNCE_MS = 500
 
 // ============================================================================
 // TYPES
@@ -98,116 +103,98 @@ export function useLiveCheckins(
 ): UseLiveCheckinsResult {
   const { enabled = true, realtime = true } = options
   const { userId, isAuthenticated } = useAuth()
-
-  // State
-  const [checkins, setCheckins] = useState<LiveCheckinUser[]>([])
-  const [count, setCount] = useState(0)
-  const [hasAccess, setHasAccess] = useState(false)
-  const [accessReason, setAccessReason] = useState<LiveCheckinAccessReason>('loading')
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   // Refs
-  const isMountedRef = useRef(true)
   const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   /**
-   * Fetch live check-in data
+   * Fetch live check-in data with TanStack Query
    */
-  const fetchData = useCallback(async () => {
-    if (!locationId) {
-      setCheckins([])
-      setCount(0)
-      setHasAccess(false)
-      setAccessReason('loading')
-      setIsLoading(false)
-      return
-    }
-
-    if (!isAuthenticated) {
-      setCheckins([])
-      setCount(0)
-      setHasAccess(false)
-      setAccessReason('not_authenticated')
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      setError(null)
-
-      // Get count (always available)
-      const { data: countData, error: countError } = await supabase.rpc(
-        'get_active_checkin_count_at_location',
-        { p_location_id: locationId }
-      )
-
-      if (countError) {
-        if (isMountedRef.current) {
-          setError(countError.message)
-        }
-        return
-      }
-
-      if (isMountedRef.current) {
-        setCount(countData ?? 0)
-      }
-
-      // Get list (restricted by access)
-      const { data: listData, error: listError } = await supabase.rpc(
-        'get_active_checkins_at_location',
-        { p_location_id: locationId }
-      )
-
-      if (listError) {
-        if (isMountedRef.current) {
-          setError(listError.message)
-        }
-        return
-      }
-
-      if (isMountedRef.current) {
-        // If we got data, user has access
-        if (listData && listData.length >= 0) {
-          setCheckins(listData)
-          setHasAccess(true)
-
-          // Determine access reason
-          // Check if user is a regular
-          const { data: regularData } = await supabase
-            .from('location_regulars')
-            .select('is_regular')
-            .eq('location_id', locationId)
-            .eq('user_id', userId)
-            .single()
-
-          if (regularData?.is_regular) {
-            setAccessReason('regular')
-          } else {
-            setAccessReason('checked_in')
-          }
-        } else {
-          setCheckins([])
-          setHasAccess(false)
-          setAccessReason('not_checked_in')
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.checkins.live(locationId || '', userId),
+    queryFn: async () => {
+      if (!locationId) {
+        return {
+          checkins: [],
+          count: 0,
+          hasAccess: false,
+          accessReason: 'loading' as LiveCheckinAccessReason,
         }
       }
-    } catch (err) {
-      if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch live check-ins')
+
+      if (!isAuthenticated) {
+        return {
+          checkins: [],
+          count: 0,
+          hasAccess: false,
+          accessReason: 'not_authenticated' as LiveCheckinAccessReason,
+        }
       }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false)
+
+      // Run the count RPC and the list RPC in parallel to halve network latency
+      const [countResult, listResult] = await Promise.all([
+        supabase.rpc('get_active_checkin_count_at_location', { p_location_id: locationId }),
+        supabase.rpc('get_active_checkins_at_location', { p_location_id: locationId }),
+      ])
+
+      if (countResult.error) {
+        throw new Error(countResult.error.message)
       }
-    }
-  }, [locationId, isAuthenticated, userId])
+
+      if (listResult.error) {
+        throw new Error(listResult.error.message)
+      }
+
+      const count = countResult.data ?? 0
+      const listData = listResult.data
+
+      // If we got data, user has access
+      if (listData && listData.length >= 0) {
+        // Check regular status in parallel — no need to wait for the list result
+        // before kicking off this query since we already have listData at this point.
+        const { data: regularData } = await supabase
+          .from('location_regulars')
+          .select('is_regular')
+          .eq('location_id', locationId)
+          .eq('user_id', userId)
+          .single()
+
+        const accessReason: LiveCheckinAccessReason = regularData?.is_regular
+          ? 'regular'
+          : 'checked_in'
+
+        return {
+          checkins: listData as LiveCheckinUser[],
+          count,
+          hasAccess: true,
+          accessReason,
+        }
+      }
+
+      return {
+        checkins: [],
+        count,
+        hasAccess: false,
+        accessReason: 'not_checked_in' as LiveCheckinAccessReason,
+      }
+    },
+    enabled: enabled && !!locationId,
+    staleTime: 30 * 1000, // 30 seconds - frequently changing data
+    gcTime: 5 * 60 * 1000,
+  })
 
   /**
    * Set up real-time subscription
    */
-  const setupSubscription = useCallback(() => {
-    if (!locationId || !realtime || !isAuthenticated) {
+  useEffect(() => {
+    if (!locationId || !realtime || !isAuthenticated || !enabled) {
       return
     }
 
@@ -229,34 +216,28 @@ export function useLiveCheckins(
           filter: `location_id=eq.${locationId}`,
         },
         () => {
-          // Refetch on any change
-          fetchData()
+          // P-018: Debounce realtime updates to prevent burst queries
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+          }
+          debounceTimerRef.current = setTimeout(() => {
+            // Invalidate and refetch the query
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.checkins.live(locationId, userId),
+            })
+          }, REALTIME_DEBOUNCE_MS)
         }
       )
       .subscribe()
 
     subscriptionRef.current = channel
-  }, [locationId, realtime, isAuthenticated, fetchData])
-
-  /**
-   * Refresh data
-   */
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
-    await fetchData()
-  }, [fetchData])
-
-  // Fetch data and set up subscription on mount/change
-  useEffect(() => {
-    isMountedRef.current = true
-
-    if (enabled) {
-      fetchData()
-      setupSubscription()
-    }
 
     return () => {
-      isMountedRef.current = false
+      // P-018: Clear debounce timer on unmount
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
 
       // Clean up subscription
       if (subscriptionRef.current) {
@@ -264,15 +245,15 @@ export function useLiveCheckins(
         subscriptionRef.current = null
       }
     }
-  }, [enabled, fetchData, setupSubscription])
+  }, [locationId, realtime, isAuthenticated, enabled, userId, queryClient])
 
   return {
-    checkins,
-    count,
-    hasAccess,
-    accessReason,
+    checkins: data?.checkins || [],
+    count: data?.count || 0,
+    hasAccess: data?.hasAccess || false,
+    accessReason: data?.accessReason || 'loading',
     isLoading,
-    error,
+    error: queryError?.message || null,
     refetch,
   }
 }
