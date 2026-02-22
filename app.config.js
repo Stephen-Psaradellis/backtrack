@@ -87,12 +87,6 @@ export default ({ config }) => {
     },
     plugins: [
       'expo-font',
-      [
-        'react-native-maps',
-        {
-          googleMapsApiKey: googleMapsIosApiKey,
-        },
-      ],
       ...(sentryOrg && sentryProject ? [
         ['@sentry/react-native/expo', {
           organization: sentryOrg,
