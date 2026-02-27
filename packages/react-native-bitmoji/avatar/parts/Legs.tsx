@@ -1,11 +1,20 @@
 /**
- * Legs Component - Anatomically accurate leg rendering with pose variations
- * Renders left and right legs with proper muscle taper, calf bulge, and joint definitions
+ * Legs Component - Simplified leg rendering with 8 core poses
+ * Uses the new proportion system from constants/proportions.ts
  */
 
 import React from 'react';
-import { G, Path, Ellipse, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { G, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { LegPose, BodyType, SvgPartProps } from '../types';
+import {
+  getProportions,
+  CENTER_X,
+  HIP_Y,
+  HEAD_UNIT,
+  LEG_THIGH_RATIO,
+  LEG_CALF_RATIO,
+  SHADING,
+} from '../constants/proportions';
 import { adjustBrightness, useGradientIds } from '../utils';
 
 type LegsGradientIds = {
@@ -21,89 +30,6 @@ interface LegsProps extends SvgPartProps {
   skinTone: string;
 }
 
-interface LegDimensions {
-  thighLength: number;
-  calfLength: number;
-  hipWidth: number;
-  thighWidth: number;
-  kneeWidth: number;
-  calfWidth: number;
-  ankleWidth: number;
-  muscleDefinition: number;
-}
-
-function getLegDimensions(bodyType: BodyType): LegDimensions {
-  switch (bodyType) {
-    case BodyType.SLIM:
-      return {
-        thighLength: 28,
-        calfLength: 26,
-        hipWidth: 26,
-        thighWidth: 8,
-        kneeWidth: 5.5,
-        calfWidth: 6,
-        ankleWidth: 3.5,
-        muscleDefinition: 0.15,
-      };
-    case BodyType.ATHLETIC:
-      return {
-        thighLength: 30,
-        calfLength: 28,
-        hipWidth: 32,
-        thighWidth: 11,
-        kneeWidth: 7,
-        calfWidth: 8,
-        ankleWidth: 4.5,
-        muscleDefinition: 0.7,
-      };
-    case BodyType.CURVY:
-      return {
-        thighLength: 28,
-        calfLength: 26,
-        hipWidth: 40,
-        thighWidth: 12,
-        kneeWidth: 7,
-        calfWidth: 7,
-        ankleWidth: 4,
-        muscleDefinition: 0.2,
-      };
-    case BodyType.PLUS_SIZE:
-      return {
-        thighLength: 28,
-        calfLength: 26,
-        hipWidth: 42,
-        thighWidth: 14,
-        kneeWidth: 9,
-        calfWidth: 9,
-        ankleWidth: 5,
-        muscleDefinition: 0.15,
-      };
-    case BodyType.MUSCULAR:
-      return {
-        thighLength: 30,
-        calfLength: 28,
-        hipWidth: 36,
-        thighWidth: 13,
-        kneeWidth: 8,
-        calfWidth: 9,
-        ankleWidth: 5,
-        muscleDefinition: 0.9,
-      };
-    case BodyType.AVERAGE:
-    default:
-      return {
-        thighLength: 28,
-        calfLength: 26,
-        hipWidth: 32,
-        thighWidth: 9,
-        kneeWidth: 6,
-        calfWidth: 6.5,
-        ankleWidth: 4,
-        muscleDefinition: 0.3,
-      };
-  }
-}
-
 interface LegPath {
   leftThigh: string;
   leftCalf: string;
@@ -113,23 +39,26 @@ interface LegPath {
   rightKnee: { x: number; y: number };
   leftAnkle: { x: number; y: number };
   rightAnkle: { x: number; y: number };
-  leftCalfPeak: { x: number; y: number };
-  rightCalfPeak: { x: number; y: number };
 }
 
-function getLegPaths(pose: LegPose, dims: LegDimensions): LegPath {
-  const hipY = 122;
-  const centerX = 50;
-  const leftHipX = centerX - dims.hipWidth / 4;
-  const rightHipX = centerX + dims.hipWidth / 4;
+function getLegPaths(pose: LegPose, bodyType: BodyType): LegPath {
+  const hipY = HIP_Y; // 122
+  const centerX = CENTER_X; // 50
+  const proportions = getProportions(bodyType);
 
-  // Dimension aliases for cleaner code
-  const tw = dims.thighWidth;
-  const kw = dims.kneeWidth;
-  const cw = dims.calfWidth;
-  const aw = dims.ankleWidth;
+  const thighLength = HEAD_UNIT * LEG_THIGH_RATIO;
+  const calfLength = HEAD_UNIT * LEG_CALF_RATIO;
 
-  // Helper to create anatomically tapered thigh
+  const hipWidth = proportions.hipWidth;
+  const tw = proportions.thighWidth;
+  const cw = proportions.calfWidth;
+  const aw = proportions.ankleWidth;
+  const kneeWidth = (tw + cw) / 2; // knee width is midpoint between thigh and calf
+
+  const leftHipX = centerX - hipWidth / 4;
+  const rightHipX = centerX + hipWidth / 4;
+
+  // Helper to create tapered thigh with organic curves
   const createThigh = (
     hipX: number,
     hipY: number,
@@ -139,114 +68,95 @@ function getLegPaths(pose: LegPose, dims: LegDimensions): LegPath {
   ) => {
     const dir = isLeft ? -1 : 1;
     const midY = (hipY + kneeY) / 2;
-    // Thigh with natural taper from hip to knee
+    const midX = (hipX + kneeX) / 2;
+    const bulge = 2; // muscle bulge outward
     return `
       M ${hipX - dir * tw / 2} ${hipY}
-      C ${hipX - dir * tw / 2} ${hipY + 6},
-        ${hipX - dir * (tw * 0.55)} ${midY - 4},
-        ${hipX - dir * (tw * 0.5)} ${midY}
-      C ${hipX - dir * (tw * 0.45)} ${midY + 6},
-        ${kneeX - dir * kw / 2} ${kneeY - 4},
-        ${kneeX - dir * kw / 2} ${kneeY}
-      L ${kneeX + dir * kw / 2} ${kneeY}
-      C ${kneeX + dir * kw / 2} ${kneeY - 4},
-        ${hipX + dir * (tw * 0.45)} ${midY + 6},
-        ${hipX + dir * (tw * 0.5)} ${midY}
-      C ${hipX + dir * (tw * 0.55)} ${midY - 4},
-        ${hipX + dir * tw / 2} ${hipY + 6},
+      C ${midX - dir * (tw / 2 + bulge)} ${midY - (kneeY - hipY) * 0.15},
+        ${midX - dir * (kneeWidth / 2 + bulge)} ${midY + (kneeY - hipY) * 0.15},
+        ${kneeX - dir * kneeWidth / 2} ${kneeY}
+      L ${kneeX + dir * kneeWidth / 2} ${kneeY}
+      C ${midX + dir * (kneeWidth / 2 + bulge)} ${midY + (kneeY - hipY) * 0.15},
+        ${midX + dir * (tw / 2 + bulge)} ${midY - (kneeY - hipY) * 0.15},
         ${hipX + dir * tw / 2} ${hipY}
       Z
     `;
   };
 
-  // Helper to create calf with muscle bulge
+  // Helper to create tapered calf with organic curves
   const createCalf = (
     kneeX: number,
     kneeY: number,
     ankleX: number,
     ankleY: number,
-    calfPeakX: number,
-    calfPeakY: number,
     isLeft: boolean
   ) => {
     const dir = isLeft ? -1 : 1;
-    // Calf with gastrocnemius bulge and taper to ankle
+    const midY = (kneeY + ankleY) / 2;
+    const midX = (kneeX + ankleX) / 2;
+    const bulge = 1.5; // calf muscle bulge
     return `
-      M ${kneeX - dir * kw / 2} ${kneeY}
-      C ${kneeX - dir * kw / 2} ${kneeY + 3},
-        ${calfPeakX - dir * cw / 2} ${calfPeakY - 4},
-        ${calfPeakX - dir * cw / 2} ${calfPeakY}
-      C ${calfPeakX - dir * (cw * 0.4)} ${calfPeakY + 6},
-        ${ankleX - dir * aw / 2} ${ankleY - 8},
+      M ${kneeX - dir * kneeWidth / 2} ${kneeY}
+      C ${midX - dir * (kneeWidth / 2 + bulge)} ${midY - (ankleY - kneeY) * 0.2},
+        ${midX - dir * (aw / 2 + bulge * 0.5)} ${midY + (ankleY - kneeY) * 0.1},
         ${ankleX - dir * aw / 2} ${ankleY}
       L ${ankleX + dir * aw / 2} ${ankleY}
-      C ${ankleX + dir * aw / 2} ${ankleY - 8},
-        ${calfPeakX + dir * (cw * 0.4)} ${calfPeakY + 6},
-        ${calfPeakX + dir * cw / 2} ${calfPeakY}
-      C ${calfPeakX + dir * cw / 2} ${calfPeakY - 4},
-        ${kneeX + dir * kw / 2} ${kneeY + 3},
-        ${kneeX + dir * kw / 2} ${kneeY}
+      C ${midX + dir * (aw / 2 + bulge * 0.5)} ${midY + (ankleY - kneeY) * 0.1},
+        ${midX + dir * (kneeWidth / 2 + bulge)} ${midY - (ankleY - kneeY) * 0.2},
+        ${kneeX + dir * kneeWidth / 2} ${kneeY}
       Z
     `;
   };
 
+  // === 8 Core Leg Poses ===
+
   switch (pose) {
     case LegPose.CROSSED: {
-      const leftKneeX = leftHipX + 5;
-      const leftKneeY = hipY + dims.thighLength;
-      const leftAnkleX = leftHipX + 3;
-      const leftAnkleY = hipY + dims.thighLength + dims.calfLength;
-      const leftCalfPeakX = leftKneeX + 2;
-      const leftCalfPeakY = leftKneeY + dims.calfLength * 0.35;
+      // Legs crossed at ankles
+      const leftKneeX = leftHipX + 3;
+      const leftKneeY = hipY + thighLength;
+      const leftAnkleX = leftHipX + 2;
+      const leftAnkleY = hipY + thighLength + calfLength;
 
-      const rightKneeX = rightHipX - 5;
-      const rightKneeY = hipY + dims.thighLength;
-      const rightAnkleX = rightHipX - 3;
-      const rightAnkleY = hipY + dims.thighLength + dims.calfLength;
-      const rightCalfPeakX = rightKneeX - 2;
-      const rightCalfPeakY = rightKneeY + dims.calfLength * 0.35;
+      const rightKneeX = rightHipX - 3;
+      const rightKneeY = hipY + thighLength;
+      const rightAnkleX = rightHipX - 2;
+      const rightAnkleY = hipY + thighLength + calfLength;
 
       return {
         leftThigh: createThigh(leftHipX, hipY, leftKneeX, leftKneeY, true),
-        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, leftCalfPeakX, leftCalfPeakY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
         rightThigh: createThigh(rightHipX, hipY, rightKneeX, rightKneeY, false),
-        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, rightCalfPeakX, rightCalfPeakY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
         leftKnee: { x: leftKneeX, y: leftKneeY },
         rightKnee: { x: rightKneeX, y: rightKneeY },
         leftAnkle: { x: leftAnkleX, y: leftAnkleY },
         rightAnkle: { x: rightAnkleX, y: rightAnkleY },
-        leftCalfPeak: { x: leftCalfPeakX, y: leftCalfPeakY },
-        rightCalfPeak: { x: rightCalfPeakX, y: rightCalfPeakY },
       };
     }
 
     case LegPose.WIDE: {
+      // Wide stance
       const wideOffset = 10;
       const leftKneeX = leftHipX - wideOffset;
-      const leftKneeY = hipY + dims.thighLength;
+      const leftKneeY = hipY + thighLength;
       const leftAnkleX = leftHipX - wideOffset + 2;
-      const leftAnkleY = hipY + dims.thighLength + dims.calfLength;
-      const leftCalfPeakX = leftKneeX;
-      const leftCalfPeakY = leftKneeY + dims.calfLength * 0.35;
+      const leftAnkleY = hipY + thighLength + calfLength;
 
       const rightKneeX = rightHipX + wideOffset;
-      const rightKneeY = hipY + dims.thighLength;
+      const rightKneeY = hipY + thighLength;
       const rightAnkleX = rightHipX + wideOffset - 2;
-      const rightAnkleY = hipY + dims.thighLength + dims.calfLength;
-      const rightCalfPeakX = rightKneeX;
-      const rightCalfPeakY = rightKneeY + dims.calfLength * 0.35;
+      const rightAnkleY = hipY + thighLength + calfLength;
 
       return {
         leftThigh: createThigh(leftHipX, hipY, leftKneeX, leftKneeY, true),
-        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, leftCalfPeakX, leftCalfPeakY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
         rightThigh: createThigh(rightHipX, hipY, rightKneeX, rightKneeY, false),
-        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, rightCalfPeakX, rightCalfPeakY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
         leftKnee: { x: leftKneeX, y: leftKneeY },
         rightKnee: { x: rightKneeX, y: rightKneeY },
         leftAnkle: { x: leftAnkleX, y: leftAnkleY },
         rightAnkle: { x: rightAnkleX, y: rightAnkleY },
-        leftCalfPeak: { x: leftCalfPeakX, y: leftCalfPeakY },
-        rightCalfPeak: { x: rightCalfPeakX, y: rightCalfPeakY },
       };
     }
 
@@ -255,24 +165,20 @@ function getLegPaths(pose: LegPose, dims: LegDimensions): LegPath {
       const leftKneeX = leftHipX - 28;
       const leftKneeY = hipY + 15;
       const leftAnkleX = leftKneeX - 8;
-      const leftAnkleY = leftKneeY + dims.calfLength * 0.7;
-      const leftCalfPeakX = leftKneeX - 4;
-      const leftCalfPeakY = leftKneeY + dims.calfLength * 0.3;
+      const leftAnkleY = leftKneeY + calfLength * 0.7;
 
       const rightKneeX = rightHipX + 28;
       const rightKneeY = hipY + 15;
       const rightAnkleX = rightKneeX + 8;
-      const rightAnkleY = rightKneeY + dims.calfLength * 0.7;
-      const rightCalfPeakX = rightKneeX + 4;
-      const rightCalfPeakY = rightKneeY + dims.calfLength * 0.3;
+      const rightAnkleY = rightKneeY + calfLength * 0.7;
 
-      // Custom sitting thigh path (horizontal orientation)
+      // Custom horizontal thigh path for sitting
       const leftThigh = `
         M ${leftHipX - tw / 2} ${hipY}
         C ${leftHipX - tw / 2 - 5} ${hipY + 3},
           ${leftKneeX + 10} ${leftKneeY - tw / 2},
-          ${leftKneeX} ${leftKneeY - kw / 2}
-        L ${leftKneeX} ${leftKneeY + kw / 2}
+          ${leftKneeX} ${leftKneeY - kneeWidth / 2}
+        L ${leftKneeX} ${leftKneeY + kneeWidth / 2}
         C ${leftKneeX + 10} ${leftKneeY + tw / 2},
           ${leftHipX + tw / 2 - 5} ${hipY + 3},
           ${leftHipX + tw / 2} ${hipY}
@@ -283,8 +189,8 @@ function getLegPaths(pose: LegPose, dims: LegDimensions): LegPath {
         M ${rightHipX - tw / 2} ${hipY}
         C ${rightHipX - tw / 2 + 5} ${hipY + 3},
           ${rightKneeX - 10} ${rightKneeY - tw / 2},
-          ${rightKneeX} ${rightKneeY - kw / 2}
-        L ${rightKneeX} ${rightKneeY + kw / 2}
+          ${rightKneeX} ${rightKneeY - kneeWidth / 2}
+        L ${rightKneeX} ${rightKneeY + kneeWidth / 2}
         C ${rightKneeX - 10} ${rightKneeY + tw / 2},
           ${rightHipX + tw / 2 + 5} ${hipY + 3},
           ${rightHipX + tw / 2} ${hipY}
@@ -293,56 +199,144 @@ function getLegPaths(pose: LegPose, dims: LegDimensions): LegPath {
 
       return {
         leftThigh,
-        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, leftCalfPeakX, leftCalfPeakY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
         rightThigh,
-        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, rightCalfPeakX, rightCalfPeakY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
         leftKnee: { x: leftKneeX, y: leftKneeY },
         rightKnee: { x: rightKneeX, y: rightKneeY },
         leftAnkle: { x: leftAnkleX, y: leftAnkleY },
         rightAnkle: { x: rightAnkleX, y: rightAnkleY },
-        leftCalfPeak: { x: leftCalfPeakX, y: leftCalfPeakY },
-        rightCalfPeak: { x: rightCalfPeakX, y: rightCalfPeakY },
+      };
+    }
+
+    case LegPose.STANDING_RELAXED: {
+      // Relaxed standing - slight offset
+      const leftKneeX = leftHipX + 1;
+      const leftKneeY = hipY + thighLength;
+      const leftAnkleX = leftHipX + 2;
+      const leftAnkleY = hipY + thighLength + calfLength;
+
+      const rightKneeX = rightHipX;
+      const rightKneeY = hipY + thighLength;
+      const rightAnkleX = rightHipX - 1;
+      const rightAnkleY = hipY + thighLength + calfLength;
+
+      return {
+        leftThigh: createThigh(leftHipX, hipY, leftKneeX, leftKneeY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
+        rightThigh: createThigh(rightHipX, hipY, rightKneeX, rightKneeY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
+        leftKnee: { x: leftKneeX, y: leftKneeY },
+        rightKnee: { x: rightKneeX, y: rightKneeY },
+        leftAnkle: { x: leftAnkleX, y: leftAnkleY },
+        rightAnkle: { x: rightAnkleX, y: rightAnkleY },
+      };
+    }
+
+    case LegPose.STANDING_WEIGHT_SHIFT: {
+      // Weight shifted to one side
+      const leftKneeX = leftHipX - 3;
+      const leftKneeY = hipY + thighLength + 2;
+      const leftAnkleX = leftHipX - 4;
+      const leftAnkleY = hipY + thighLength + calfLength + 1;
+
+      const rightKneeX = rightHipX;
+      const rightKneeY = hipY + thighLength;
+      const rightAnkleX = rightHipX - 1;
+      const rightAnkleY = hipY + thighLength + calfLength;
+
+      return {
+        leftThigh: createThigh(leftHipX, hipY, leftKneeX, leftKneeY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
+        rightThigh: createThigh(rightHipX, hipY, rightKneeX, rightKneeY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
+        leftKnee: { x: leftKneeX, y: leftKneeY },
+        rightKnee: { x: rightKneeX, y: rightKneeY },
+        leftAnkle: { x: leftAnkleX, y: leftAnkleY },
+        rightAnkle: { x: rightAnkleX, y: rightAnkleY },
+      };
+    }
+
+    case LegPose.WALKING: {
+      // Walking stride
+      const leftKneeX = leftHipX - 6;
+      const leftKneeY = hipY + thighLength - 2;
+      const leftAnkleX = leftHipX - 8;
+      const leftAnkleY = hipY + thighLength + calfLength - 2;
+
+      const rightKneeX = rightHipX + 6;
+      const rightKneeY = hipY + thighLength - 2;
+      const rightAnkleX = rightHipX + 8;
+      const rightAnkleY = hipY + thighLength + calfLength - 2;
+
+      return {
+        leftThigh: createThigh(leftHipX, hipY, leftKneeX, leftKneeY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
+        rightThigh: createThigh(rightHipX, hipY, rightKneeX, rightKneeY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
+        leftKnee: { x: leftKneeX, y: leftKneeY },
+        rightKnee: { x: rightKneeX, y: rightKneeY },
+        leftAnkle: { x: leftAnkleX, y: leftAnkleY },
+        rightAnkle: { x: rightAnkleX, y: rightAnkleY },
+      };
+    }
+
+    case LegPose.KNEELING: {
+      // Kneeling pose - both knees down
+      const leftKneeX = leftHipX;
+      const leftKneeY = hipY + 5;
+      const leftAnkleX = leftHipX + 2;
+      const leftAnkleY = hipY + 8;
+
+      const rightKneeX = rightHipX;
+      const rightKneeY = hipY + 5;
+      const rightAnkleX = rightHipX - 2;
+      const rightAnkleY = hipY + 8;
+
+      return {
+        leftThigh: createThigh(leftHipX, hipY, leftKneeX, leftKneeY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
+        rightThigh: createThigh(rightHipX, hipY, rightKneeX, rightKneeY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
+        leftKnee: { x: leftKneeX, y: leftKneeY },
+        rightKnee: { x: rightKneeX, y: rightKneeY },
+        leftAnkle: { x: leftAnkleX, y: leftAnkleY },
+        rightAnkle: { x: rightAnkleX, y: rightAnkleY },
       };
     }
 
     case LegPose.STANDING:
     default: {
+      // Standard standing pose - straight legs
       const leftKneeX = leftHipX;
-      const leftKneeY = hipY + dims.thighLength;
+      const leftKneeY = hipY + thighLength;
       const leftAnkleX = leftHipX + 1;
-      const leftAnkleY = hipY + dims.thighLength + dims.calfLength;
-      const leftCalfPeakX = leftKneeX + 1;
-      const leftCalfPeakY = leftKneeY + dims.calfLength * 0.35;
+      const leftAnkleY = hipY + thighLength + calfLength;
 
       const rightKneeX = rightHipX;
-      const rightKneeY = hipY + dims.thighLength;
+      const rightKneeY = hipY + thighLength;
       const rightAnkleX = rightHipX - 1;
-      const rightAnkleY = hipY + dims.thighLength + dims.calfLength;
-      const rightCalfPeakX = rightKneeX - 1;
-      const rightCalfPeakY = rightKneeY + dims.calfLength * 0.35;
+      const rightAnkleY = hipY + thighLength + calfLength;
 
       return {
         leftThigh: createThigh(leftHipX, hipY, leftKneeX, leftKneeY, true),
-        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, leftCalfPeakX, leftCalfPeakY, true),
+        leftCalf: createCalf(leftKneeX, leftKneeY, leftAnkleX, leftAnkleY, true),
         rightThigh: createThigh(rightHipX, hipY, rightKneeX, rightKneeY, false),
-        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, rightCalfPeakX, rightCalfPeakY, false),
+        rightCalf: createCalf(rightKneeX, rightKneeY, rightAnkleX, rightAnkleY, false),
         leftKnee: { x: leftKneeX, y: leftKneeY },
         rightKnee: { x: rightKneeX, y: rightKneeY },
         leftAnkle: { x: leftAnkleX, y: leftAnkleY },
         rightAnkle: { x: rightAnkleX, y: rightAnkleY },
-        leftCalfPeak: { x: leftCalfPeakX, y: leftCalfPeakY },
-        rightCalfPeak: { x: rightCalfPeakX, y: rightCalfPeakY },
       };
     }
   }
 }
 
 export function Legs({ pose, bodyType, skinTone, scale = 1 }: LegsProps) {
-  const dims = getLegDimensions(bodyType);
-  const paths = getLegPaths(pose, dims);
-  const shadowColor = adjustBrightness(skinTone, -30);
-  const highlightColor = adjustBrightness(skinTone, 20);
-  const deepShadow = adjustBrightness(skinTone, -45);
+  const proportions = getProportions(bodyType);
+  const paths = getLegPaths(pose, bodyType);
+  const shadowColor = adjustBrightness(skinTone, SHADING.shadowDarken);
+  const outlineColor = adjustBrightness(skinTone, SHADING.shadowDarken - 10);
 
   const ids = useGradientIds<LegsGradientIds>([
     'leftThighGradient',
@@ -354,182 +348,83 @@ export function Legs({ pose, bodyType, skinTone, scale = 1 }: LegsProps) {
   return (
     <G transform={`scale(${scale})`}>
       <Defs>
-        {/* Thigh gradients - fuller, rounder lighting */}
+        {/* Simple 2-stop shadow gradients for legs */}
         <LinearGradient id={ids.leftThighGradient} x1="0%" y1="0%" x2="100%" y2="0%">
-          <Stop offset="0%" stopColor={shadowColor} />
-          <Stop offset="25%" stopColor={skinTone} />
-          <Stop offset="50%" stopColor={highlightColor} />
-          <Stop offset="75%" stopColor={skinTone} />
-          <Stop offset="100%" stopColor={shadowColor} />
+          <Stop offset="0%" stopColor={shadowColor} stopOpacity={0.3} />
+          <Stop offset="100%" stopColor="transparent" />
         </LinearGradient>
-        <LinearGradient id={ids.rightThighGradient} x1="0%" y1="0%" x2="100%" y2="0%">
-          <Stop offset="0%" stopColor={shadowColor} />
-          <Stop offset="25%" stopColor={skinTone} />
-          <Stop offset="50%" stopColor={highlightColor} />
-          <Stop offset="75%" stopColor={skinTone} />
-          <Stop offset="100%" stopColor={shadowColor} />
+        <LinearGradient id={ids.rightThighGradient} x1="100%" y1="0%" x2="0%" y2="0%">
+          <Stop offset="0%" stopColor={shadowColor} stopOpacity={0.3} />
+          <Stop offset="100%" stopColor="transparent" />
         </LinearGradient>
-        {/* Calf gradients - slightly different for muscle definition */}
         <LinearGradient id={ids.leftCalfGradient} x1="0%" y1="0%" x2="100%" y2="0%">
-          <Stop offset="0%" stopColor={shadowColor} />
-          <Stop offset="35%" stopColor={skinTone} />
-          <Stop offset="55%" stopColor={highlightColor} />
-          <Stop offset="100%" stopColor={skinTone} />
+          <Stop offset="0%" stopColor={shadowColor} stopOpacity={0.25} />
+          <Stop offset="100%" stopColor="transparent" />
         </LinearGradient>
-        <LinearGradient id={ids.rightCalfGradient} x1="0%" y1="0%" x2="100%" y2="0%">
-          <Stop offset="0%" stopColor={skinTone} />
-          <Stop offset="45%" stopColor={highlightColor} />
-          <Stop offset="65%" stopColor={skinTone} />
-          <Stop offset="100%" stopColor={shadowColor} />
+        <LinearGradient id={ids.rightCalfGradient} x1="100%" y1="0%" x2="0%" y2="0%">
+          <Stop offset="0%" stopColor={shadowColor} stopOpacity={0.25} />
+          <Stop offset="100%" stopColor="transparent" />
         </LinearGradient>
       </Defs>
 
-      {/* Left thigh */}
-      <Path d={paths.leftThigh} fill={`url(#${ids.leftThighGradient})`} />
+      {/* Left leg */}
+      <Path
+        d={paths.leftThigh}
+        fill={skinTone}
+        stroke={outlineColor}
+        strokeWidth={proportions.outlineWidth}
+        strokeOpacity={SHADING.outlineOpacity}
+      />
+      <Path
+        d={paths.leftThigh}
+        fill={`url(#${ids.leftThighGradient})`}
+        stroke="none"
+      />
+      <Path
+        d={paths.leftCalf}
+        fill={skinTone}
+        stroke={outlineColor}
+        strokeWidth={proportions.outlineWidth}
+        strokeOpacity={SHADING.outlineOpacity}
+      />
+      <Path
+        d={paths.leftCalf}
+        fill={`url(#${ids.leftCalfGradient})`}
+        stroke="none"
+      />
 
-      {/* Left thigh muscle definition */}
-      {dims.muscleDefinition > 0.2 && (
-        <G opacity={dims.muscleDefinition * 0.35}>
-          {/* Quadriceps definition */}
-          <Path
-            d={`M ${paths.leftKnee.x - dims.thighWidth * 0.2} ${122 + 8}
-                Q ${paths.leftKnee.x - dims.thighWidth * 0.15} ${122 + dims.thighLength * 0.5}
-                  ${paths.leftKnee.x - dims.kneeWidth * 0.3} ${paths.leftKnee.y - 4}`}
-            stroke={shadowColor}
-            strokeWidth={0.6}
-            fill="none"
-            opacity={0.4}
-          />
-          {/* Vastus lateralis hint */}
-          <Ellipse
-            cx={paths.leftKnee.x - dims.thighWidth * 0.35}
-            cy={122 + dims.thighLength * 0.4}
-            rx={dims.thighWidth * 0.15}
-            ry={dims.thighLength * 0.15}
-            fill={highlightColor}
-            opacity={0.25}
-          />
-        </G>
-      )}
-
-      {/* Left calf */}
-      <Path d={paths.leftCalf} fill={`url(#${ids.leftCalfGradient})`} />
-
-      {/* Left calf muscle definition */}
-      {dims.muscleDefinition > 0.25 && (
-        <G opacity={dims.muscleDefinition * 0.4}>
-          {/* Gastrocnemius highlight */}
-          <Ellipse
-            cx={paths.leftCalfPeak.x}
-            cy={paths.leftCalfPeak.y}
-            rx={dims.calfWidth * 0.35}
-            ry={dims.calfWidth * 0.5}
-            fill={highlightColor}
-            opacity={0.35}
-          />
-          {/* Achilles tendon definition */}
-          <Path
-            d={`M ${paths.leftCalfPeak.x} ${paths.leftCalfPeak.y + dims.calfLength * 0.3}
-                Q ${paths.leftAnkle.x} ${paths.leftAnkle.y - 6}
-                  ${paths.leftAnkle.x} ${paths.leftAnkle.y - 2}`}
-            stroke={shadowColor}
-            strokeWidth={0.5}
-            fill="none"
-            opacity={0.3}
-          />
-        </G>
-      )}
-
-      {/* Right thigh */}
-      <Path d={paths.rightThigh} fill={`url(#${ids.rightThighGradient})`} />
-
-      {/* Right thigh muscle definition */}
-      {dims.muscleDefinition > 0.2 && (
-        <G opacity={dims.muscleDefinition * 0.35}>
-          {/* Quadriceps definition */}
-          <Path
-            d={`M ${paths.rightKnee.x + dims.thighWidth * 0.2} ${122 + 8}
-                Q ${paths.rightKnee.x + dims.thighWidth * 0.15} ${122 + dims.thighLength * 0.5}
-                  ${paths.rightKnee.x + dims.kneeWidth * 0.3} ${paths.rightKnee.y - 4}`}
-            stroke={shadowColor}
-            strokeWidth={0.6}
-            fill="none"
-            opacity={0.4}
-          />
-          {/* Vastus lateralis hint */}
-          <Ellipse
-            cx={paths.rightKnee.x + dims.thighWidth * 0.35}
-            cy={122 + dims.thighLength * 0.4}
-            rx={dims.thighWidth * 0.15}
-            ry={dims.thighLength * 0.15}
-            fill={highlightColor}
-            opacity={0.25}
-          />
-        </G>
-      )}
-
-      {/* Right calf */}
-      <Path d={paths.rightCalf} fill={`url(#${ids.rightCalfGradient})`} />
-
-      {/* Right calf muscle definition */}
-      {dims.muscleDefinition > 0.25 && (
-        <G opacity={dims.muscleDefinition * 0.4}>
-          {/* Gastrocnemius highlight */}
-          <Ellipse
-            cx={paths.rightCalfPeak.x}
-            cy={paths.rightCalfPeak.y}
-            rx={dims.calfWidth * 0.35}
-            ry={dims.calfWidth * 0.5}
-            fill={highlightColor}
-            opacity={0.35}
-          />
-          {/* Achilles tendon definition */}
-          <Path
-            d={`M ${paths.rightCalfPeak.x} ${paths.rightCalfPeak.y + dims.calfLength * 0.3}
-                Q ${paths.rightAnkle.x} ${paths.rightAnkle.y - 6}
-                  ${paths.rightAnkle.x} ${paths.rightAnkle.y - 2}`}
-            stroke={shadowColor}
-            strokeWidth={0.5}
-            fill="none"
-            opacity={0.3}
-          />
-        </G>
-      )}
-
-      {/* Inner thigh shadows for depth - standing pose */}
-      {pose === LegPose.STANDING && (
-        <G>
-          <Path
-            d={`M ${50 - dims.hipWidth / 8} ${122}
-                C ${50 - dims.hipWidth / 12} ${132},
-                  ${50 - dims.hipWidth / 10} ${142},
-                  ${paths.leftKnee.x + dims.kneeWidth / 3} ${paths.leftKnee.y - 2}`}
-            stroke={shadowColor}
-            strokeWidth={1.2}
-            fill="none"
-            opacity={0.18}
-          />
-          <Path
-            d={`M ${50 + dims.hipWidth / 8} ${122}
-                C ${50 + dims.hipWidth / 12} ${132},
-                  ${50 + dims.hipWidth / 10} ${142},
-                  ${paths.rightKnee.x - dims.kneeWidth / 3} ${paths.rightKnee.y - 2}`}
-            stroke={shadowColor}
-            strokeWidth={1.2}
-            fill="none"
-            opacity={0.18}
-          />
-        </G>
-      )}
-
+      {/* Right leg */}
+      <Path
+        d={paths.rightThigh}
+        fill={skinTone}
+        stroke={outlineColor}
+        strokeWidth={proportions.outlineWidth}
+        strokeOpacity={SHADING.outlineOpacity}
+      />
+      <Path
+        d={paths.rightThigh}
+        fill={`url(#${ids.rightThighGradient})`}
+        stroke="none"
+      />
+      <Path
+        d={paths.rightCalf}
+        fill={skinTone}
+        stroke={outlineColor}
+        strokeWidth={proportions.outlineWidth}
+        strokeOpacity={SHADING.outlineOpacity}
+      />
+      <Path
+        d={paths.rightCalf}
+        fill={`url(#${ids.rightCalfGradient})`}
+        stroke="none"
+      />
     </G>
   );
 }
 
 // Export ankle positions for feet/shoe attachment
 export function getAnklePositions(pose: LegPose, bodyType: BodyType) {
-  const dims = getLegDimensions(bodyType);
-  const paths = getLegPaths(pose, dims);
+  const paths = getLegPaths(pose, bodyType);
   return {
     left: paths.leftAnkle,
     right: paths.rightAnkle,

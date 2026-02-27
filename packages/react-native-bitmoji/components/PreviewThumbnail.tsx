@@ -27,8 +27,14 @@ import {
   EyelinerStyle,
   LipstickStyle,
   BlushStyle,
+  BodyType,
+  ArmPose,
+  LegPose,
 } from '../avatar/types';
 import { Face, Eyes, Hair, HairBehind, Nose, Mouth, Eyebrows } from '../avatar/parts';
+import { Body } from '../avatar/parts/Body';
+import { Arms } from '../avatar/parts/Arms';
+import { Legs } from '../avatar/parts/Legs';
 
 // =============================================================================
 // TYPES
@@ -43,7 +49,12 @@ export type PreviewType =
   | 'faceShape'
   | 'facialHair'
   | 'accessory'
-  | 'clothing';
+  | 'clothing'
+  | 'bodyType'
+  | 'bottomStyle'
+  | 'shoeStyle'
+  | 'armPose'
+  | 'legPose';
 
 interface PreviewThumbnailProps {
   type: PreviewType;
@@ -214,6 +225,69 @@ function FaceShapePreview({
   );
 }
 
+function BodyTypePreview({
+  value,
+  baseConfig,
+}: {
+  value: string;
+  baseConfig: AvatarConfig;
+}) {
+  // Translate up to bring the torso into the 100x100 viewBox window.
+  // FullBodyAvatar renders in a ~200-unit tall coordinate space; torso sits
+  // roughly in the y=60-130 range.  We scale up 1.6x and shift upward so the
+  // torso fills the thumbnail.
+  return (
+    <G transform="translate(50, -30) scale(1.6, 1.6) translate(-50, 0)">
+      <Body
+        bodyType={value as BodyType}
+        skinTone={baseConfig.skinTone}
+      />
+    </G>
+  );
+}
+
+function ArmPosePreview({
+  value,
+  baseConfig,
+}: {
+  value: string;
+  baseConfig: AvatarConfig;
+}) {
+  // Arms render around the shoulder area (y=60-110).  Shift and scale to fill.
+  return (
+    <G transform="translate(50, -25) scale(1.5, 1.5) translate(-50, 0)">
+      <Body
+        bodyType={(baseConfig.bodyType as BodyType) || BodyType.AVERAGE}
+        skinTone={baseConfig.skinTone}
+      />
+      <Arms
+        pose={value as ArmPose}
+        bodyType={(baseConfig.bodyType as BodyType) || BodyType.AVERAGE}
+        skinTone={baseConfig.skinTone}
+      />
+    </G>
+  );
+}
+
+function LegPosePreview({
+  value,
+  baseConfig,
+}: {
+  value: string;
+  baseConfig: AvatarConfig;
+}) {
+  // Legs render from hips downward (y=110-200).  Shift up and scale to fill.
+  return (
+    <G transform="translate(50, 10) scale(1.4, 1.4) translate(-50, -80)">
+      <Legs
+        pose={value as LegPose}
+        bodyType={(baseConfig.bodyType as BodyType) || BodyType.AVERAGE}
+        skinTone={baseConfig.skinTone}
+      />
+    </G>
+  );
+}
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -239,6 +313,14 @@ function PreviewThumbnailComponent({
         return <MouthPreview value={value} baseConfig={baseConfig} />;
       case 'faceShape':
         return <FaceShapePreview value={value} baseConfig={baseConfig} />;
+      case 'bodyType':
+        return <BodyTypePreview value={value} baseConfig={baseConfig} />;
+      case 'armPose':
+        return <ArmPosePreview value={value} baseConfig={baseConfig} />;
+      case 'legPose':
+        return <LegPosePreview value={value} baseConfig={baseConfig} />;
+      // clothing, bottomStyle, shoeStyle: no dedicated renderer — let caller
+      // omit previewType for these categories so OptionGrid uses text fallback.
       default:
         return null;
     }

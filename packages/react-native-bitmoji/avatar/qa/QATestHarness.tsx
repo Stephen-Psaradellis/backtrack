@@ -6,7 +6,7 @@
  * passed, failed, or needing review.
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,8 +18,9 @@ import {
   useColorScheme,
   Alert,
 } from 'react-native';
+import Svg, { Rect, Line } from 'react-native-svg';
 import { Avatar } from '../Avatar';
-import { DEFAULT_MALE_CONFIG, AvatarConfig } from '../types';
+import { DEFAULT_MALE_CONFIG, AvatarConfig, BodyType } from '../types';
 import {
   ENUM_METADATA,
   getEnumValues,
@@ -112,6 +113,86 @@ function StatusBadge({ status, colors }: StatusBadgeProps) {
   return (
     <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
       <Text style={styles.statusBadgeText}>{getStatusLabel()}</Text>
+    </View>
+  );
+}
+
+// ============================================================================
+// VIEWBOX OVERLAY
+// Renders a red border at the viewBox edges (x=0,y=0 to x=100,y=200) and
+// optional grid lines every 20 units, scaled to fit the container.
+// ============================================================================
+
+interface ViewBoxOverlayProps {
+  /** Pixel size of the container that the avatar fills. */
+  containerSize: number;
+  showBoundary: boolean;
+  showGrid: boolean;
+}
+
+function ViewBoxOverlay({ containerSize, showBoundary, showGrid }: ViewBoxOverlayProps) {
+  if (!showBoundary && !showGrid) return null;
+
+  // The viewBox is 100 x 200. The container is square (aspect 1:1), so the
+  // avatar is letterboxed vertically. Scale so width=containerSize.
+  const scaleX = containerSize / 100;
+  const scaleY = containerSize / 200;
+  const svgWidth = containerSize;
+  const svgHeight = containerSize;
+
+  const gridLines: React.ReactElement[] = [];
+  if (showGrid) {
+    // Vertical lines every 20 viewBox units
+    for (let x = 0; x <= 100; x += 20) {
+      gridLines.push(
+        <Line
+          key={`vx${x}`}
+          x1={x * scaleX}
+          y1={0}
+          x2={x * scaleX}
+          y2={svgHeight}
+          stroke="rgba(0,150,255,0.3)"
+          strokeWidth={0.5}
+        />
+      );
+    }
+    // Horizontal lines every 20 viewBox units
+    for (let y = 0; y <= 200; y += 20) {
+      gridLines.push(
+        <Line
+          key={`vy${y}`}
+          x1={0}
+          y1={y * scaleY}
+          x2={svgWidth}
+          y2={y * scaleY}
+          stroke="rgba(0,150,255,0.3)"
+          strokeWidth={0.5}
+        />
+      );
+    }
+  }
+
+  return (
+    <View
+      style={[
+        StyleSheet.absoluteFillObject,
+        { pointerEvents: 'none' },
+      ]}
+    >
+      <Svg width={svgWidth} height={svgHeight}>
+        {gridLines}
+        {showBoundary && (
+          <Rect
+            x={0}
+            y={0}
+            width={svgWidth}
+            height={svgHeight}
+            fill="none"
+            stroke="red"
+            strokeWidth={1.5}
+          />
+        )}
+      </Svg>
     </View>
   );
 }
@@ -247,6 +328,8 @@ interface StylePreviewCardProps {
   onStatusChange: (status: QAStatus) => void;
   colors: typeof COLORS.light;
   qaConfig: QATestConfig;
+  showBoundary: boolean;
+  showGrid: boolean;
 }
 
 function StylePreviewCard({
@@ -256,6 +339,8 @@ function StylePreviewCard({
   onStatusChange,
   colors,
   qaConfig,
+  showBoundary,
+  showGrid,
 }: StylePreviewCardProps) {
   const [renderError, setRenderError] = useState<string | null>(null);
 
@@ -282,6 +367,11 @@ function StylePreviewCard({
             backgroundColor={qaConfig.backgroundColor}
           />
         )}
+        <ViewBoxOverlay
+          containerSize={qaConfig.renderSize}
+          showBoundary={showBoundary}
+          showGrid={showGrid}
+        />
       </View>
       <Text style={[styles.previewValue, { color: colors.textSecondary }]} numberOfLines={1}>
         {variant.styleValue}
@@ -321,6 +411,8 @@ interface StyleGridViewProps {
   onBack: () => void;
   colors: typeof COLORS.light;
   qaConfig: QATestConfig;
+  showBoundary: boolean;
+  showGrid: boolean;
 }
 
 function StyleGridView({
@@ -330,6 +422,8 @@ function StyleGridView({
   onBack,
   colors,
   qaConfig,
+  showBoundary,
+  showGrid,
 }: StyleGridViewProps) {
   const variants = useMemo(() => {
     return Array.from(iterateEnumStyles(metadata));
@@ -348,10 +442,12 @@ function StyleGridView({
           onStatusChange={status => onStatusChange(item.styleKey, item.styleValue, status)}
           colors={colors}
           qaConfig={qaConfig}
+          showBoundary={showBoundary}
+          showGrid={showGrid}
         />
       );
     },
-    [results, onStatusChange, colors, qaConfig]
+    [results, onStatusChange, colors, qaConfig, showBoundary, showGrid]
   );
 
   return (
@@ -397,6 +493,49 @@ export function QATestHarness({ onClose }: QATestHarnessProps) {
   const [selectedEnum, setSelectedEnum] = useState<EnumMetadata | null>(null);
   const [qaResults, setQAResults] = useState<Map<string, Map<string, QAResult>>>(new Map());
   const [qaConfig] = useState<QATestConfig>(DEFAULT_QA_CONFIG);
+
+  // Overlay toggles
+  const [showBoundary, setShowBoundary] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
+
+  // Cycle All: auto-advance through BodyType values every 2 seconds
+  const allBodyTypes = useMemo(() => Object.values(BodyType), []);
+  const [isCycling, setIsCycling] = useState(false);
+  const [cycleIndex, setCycleIndex] = useState(0);
+  const cycleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startCycling = useCallback(() => {
+    if (cycleIntervalRef.current) return;
+    setIsCycling(true);
+    cycleIntervalRef.current = setInterval(() => {
+      setCycleIndex(prev => (prev + 1) % allBodyTypes.length);
+    }, 2000);
+  }, [allBodyTypes.length]);
+
+  const stopCycling = useCallback(() => {
+    if (cycleIntervalRef.current) {
+      clearInterval(cycleIntervalRef.current);
+      cycleIntervalRef.current = null;
+    }
+    setIsCycling(false);
+  }, []);
+
+  const toggleCycling = useCallback(() => {
+    if (isCycling) {
+      stopCycling();
+    } else {
+      startCycling();
+    }
+  }, [isCycling, startCycling, stopCycling]);
+
+  // Clean up interval on unmount
+  useEffect(() => {
+    return () => {
+      if (cycleIntervalRef.current) {
+        clearInterval(cycleIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Get statistics
   const stats = useMemo(() => getQAStatistics(), []);
@@ -493,6 +632,8 @@ export function QATestHarness({ onClose }: QATestHarnessProps) {
         onBack={() => setSelectedEnum(null)}
         colors={colors}
         qaConfig={qaConfig}
+        showBoundary={showBoundary}
+        showGrid={showGrid}
       />
     );
   }
@@ -501,13 +642,45 @@ export function QATestHarness({ onClose }: QATestHarnessProps) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Avatar QA Test Harness</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             {stats.totalEnums} enums | {stats.totalVariants} variants | {stats.totalColors} colors
           </Text>
+          {isCycling && (
+            <Text style={[styles.headerCycleLabel, { color: colors.primary }]}>
+              Cycling: {allBodyTypes[cycleIndex]}
+            </Text>
+          )}
         </View>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              { backgroundColor: isCycling ? colors.needsReview : colors.primary },
+            ]}
+            onPress={toggleCycling}
+          >
+            <Text style={styles.headerButtonText}>{isCycling ? 'Stop' : 'Cycle All'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              { backgroundColor: showBoundary ? colors.failed : colors.textSecondary },
+            ]}
+            onPress={() => setShowBoundary(prev => !prev)}
+          >
+            <Text style={styles.headerButtonText}>Bounds</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              { backgroundColor: showGrid ? colors.passed : colors.textSecondary },
+            ]}
+            onPress={() => setShowGrid(prev => !prev)}
+          >
+            <Text style={styles.headerButtonText}>Grid</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.headerButton, { backgroundColor: colors.primary }]}
             onPress={handleExport}
@@ -566,6 +739,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
   },
+  headerLeft: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -573,6 +749,11 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 12,
     marginTop: 2,
+  },
+  headerCycleLabel: {
+    fontSize: 11,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   headerActions: {
     flexDirection: 'row',

@@ -71,7 +71,6 @@ function getShoePaths(style: ShoeStyle, isLeft: boolean, pose: LegPose): ShoePat
 
     case ShoeStyle.SNEAKERS_HIGH:
     case ShoeStyle.CONVERSE:
-    case ShoeStyle.BASKETBALL:
       return {
         main: `
           M ${-4 * flip} -4
@@ -103,8 +102,7 @@ function getShoePaths(style: ShoeStyle, isLeft: boolean, pose: LegPose): ShoePat
       };
 
     case ShoeStyle.HEELS:
-    case ShoeStyle.HEELS_HIGH:
-      const heelHeight = style === ShoeStyle.HEELS_HIGH ? 8 : 5;
+      const heelHeight = 5;
       return {
         main: `
           M ${-3 * flip} 0
@@ -169,39 +167,6 @@ function getShoePaths(style: ShoeStyle, isLeft: boolean, pose: LegPose): ShoePat
           : [],
       };
 
-    case ShoeStyle.BOOTS_KNEE:
-      return {
-        main: `
-          M ${-4 * flip} -25
-          Q ${-5 * flip} -15 ${-5 * flip} -5
-          Q ${-5 * flip} 2 ${-4 * flip} 6
-          Q ${-2 * flip} 10 ${6 * flip} 10
-          Q ${12 * flip} 9 ${13 * flip} 6
-          Q ${12 * flip} 0 ${10 * flip} -10
-          Q ${8 * flip} -20 ${6 * flip} -25
-          Q ${0 * flip} -27 ${-4 * flip} -25
-          Z
-        `,
-        sole: `
-          M ${-4 * flip} 6
-          Q ${-2 * flip} 12 ${6 * flip} 12
-          Q ${12 * flip} 11 ${14 * flip} 7
-          L ${13 * flip} 6
-          Q ${12 * flip} 9 ${6 * flip} 10
-          Q ${-2 * flip} 10 ${-4 * flip} 6
-        `,
-        details: [
-          `M ${-3 * flip} -20 Q ${3 * flip} -19 ${6 * flip} -20`,
-          `M ${-3 * flip} -10 Q ${3 * flip} -9 ${6 * flip} -10`,
-        ],
-        heel: `
-          M ${-4 * flip} 6
-          L ${-5 * flip} 10
-          L ${-2 * flip} 10
-          L ${-2 * flip} 7
-        `,
-      };
-
     case ShoeStyle.FLATS:
       return {
         main: `
@@ -228,7 +193,6 @@ function getShoePaths(style: ShoeStyle, isLeft: boolean, pose: LegPose): ShoePat
 
     case ShoeStyle.OXFORDS:
     case ShoeStyle.LOAFERS:
-    case ShoeStyle.LOAFERS_DRESS:
       return {
         main: `
           M ${-4 * flip} 0
@@ -277,30 +241,6 @@ function getShoePaths(style: ShoeStyle, isLeft: boolean, pose: LegPose): ShoePat
           `M ${-2 * flip} 4 Q ${2 * flip} 2 ${6 * flip} 4`,
           style === ShoeStyle.SANDALS ? `M ${4 * flip} 2 L ${4 * flip} 8` : '',
         ].filter(Boolean),
-      };
-
-    case ShoeStyle.SLIDES:
-      return {
-        main: `
-          M ${-4 * flip} 0
-          Q ${-5 * flip} 2 ${-4 * flip} 4
-          L ${-4 * flip} 6
-          Q ${-2 * flip} 8 ${4 * flip} 8
-          Q ${8 * flip} 7 ${8 * flip} 4
-          Q ${8 * flip} 1 ${4 * flip} 0
-          Q ${0 * flip} -1 ${-4 * flip} 0
-          Z
-        `,
-        sole: `
-          M ${-4 * flip} 6
-          Q ${-2 * flip} 10 ${6 * flip} 10
-          Q ${11 * flip} 9 ${12 * flip} 6
-          L ${12 * flip} 8
-          Q ${11 * flip} 11 ${6 * flip} 12
-          Q ${-2 * flip} 12 ${-4 * flip} 8
-          Z
-        `,
-        details: [],
       };
 
     case ShoeStyle.SLIPPERS:
@@ -352,36 +292,6 @@ function getShoePaths(style: ShoeStyle, isLeft: boolean, pose: LegPose): ShoePat
           `M ${1 * flip} 5 A 1 1 0 1 1 ${1.1 * flip} 5`,
           `M ${4 * flip} 4 A 1 1 0 1 1 ${4.1 * flip} 4`,
           `M ${7 * flip} 5 A 1 1 0 1 1 ${7.1 * flip} 5`,
-        ],
-      };
-
-    case ShoeStyle.HIKING:
-      return {
-        main: `
-          M ${-4 * flip} -4
-          Q ${-6 * flip} 0 ${-5 * flip} 4
-          L ${-6 * flip} 7
-          Q ${-4 * flip} 12 ${6 * flip} 12
-          Q ${13 * flip} 11 ${15 * flip} 6
-          Q ${14 * flip} 1 ${10 * flip} -3
-          Q ${4 * flip} -6 ${-4 * flip} -4
-          Z
-        `,
-        sole: `
-          M ${-6 * flip} 7
-          Q ${-4 * flip} 14 ${6 * flip} 14
-          Q ${13 * flip} 13 ${16 * flip} 8
-          L ${15 * flip} 6
-          Q ${13 * flip} 11 ${6 * flip} 12
-          Q ${-4 * flip} 12 ${-6 * flip} 7
-        `,
-        details: [
-          `M ${-3 * flip} -2 Q ${4 * flip} -1 ${9 * flip} -2`,
-        ],
-        laces: [
-          `M ${0 * flip} -2 L ${2 * flip} -3 L ${4 * flip} -2`,
-          `M ${0 * flip} 0 L ${2 * flip} -1 L ${4 * flip} 0`,
-          `M ${0 * flip} 2 L ${2 * flip} 1 L ${4 * flip} 2`,
         ],
       };
 
@@ -449,7 +359,7 @@ function SingleShoe({
   return (
     <G transform={`translate(${position.x}, ${position.y})`}>
       {/* Main shoe body */}
-      {paths.main && <Path d={paths.main} fill={`url(#${gradientId})`} />}
+      {paths.main && <Path d={paths.main} fill={`url(#${gradientId})`} stroke={adjustBrightness(color, -40)} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />}
 
       {/* Sole */}
       {paths.sole && <Path d={paths.sole} fill={`url(#${soleGradientId})`} />}

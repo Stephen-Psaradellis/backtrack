@@ -109,7 +109,7 @@ const LAYER_TEST_CASES: LayerTestCase[] = [
     description: 'Tests hat rendering over hair without clipping',
     config: {
       hairStyle: HairStyle.MEDIUM_MESSY,
-      accessory: AccessoryStyle.HAT_BASEBALL,
+      accessory: AccessoryStyle.HEADBAND,
     },
     expectedLayers: ['hair-front', 'accessories'],
     checkPoints: [

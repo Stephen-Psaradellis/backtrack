@@ -212,34 +212,6 @@ const LONG_HAIR_STYLES = new Set([
   HairStyle.TWIST_OUT_LONG,
   HairStyle.SILK_PRESS,
   HairStyle.NATURAL_CURLS,
-  HairStyle.GODDESS_LOCS,
-  HairStyle.PASSION_TWISTS,
-  HairStyle.KNOTLESS_BRAIDS_LONG,
-  HairStyle.FULANI_BRAIDS,
-  HairStyle.TRIBAL_BRAIDS,
-  HairStyle.FAUX_LOCS,
-  HairStyle.CROCHET_LOCS,
-  HairStyle.MARLEY_TWISTS,
-  HairStyle.SENEGALESE_TWISTS,
-  HairStyle.HAVANA_TWISTS,
-  HairStyle.SPRING_TWISTS,
-  HairStyle.BUTTERFLY_LOCS,
-  // Phase 1.1 Modern Trends
-  HairStyle.CURTAIN_BANGS_LONG,
-  HairStyle.CURTAIN_BANGS_WAVY,
-  HairStyle.EGIRL_STYLE,
-  // Phase 1.1 Textured Variations
-  HairStyle.CROCHET_CURLS,
-  HairStyle.TWIST_OUT_DEFINED,
-  HairStyle.BRAID_OUT,
-  HairStyle.FINGER_COILS,
-  HairStyle.SHINGLED_CURLS,
-  HairStyle.STRETCHED_NATURAL,
-  // Phase 1.1 Age Appropriate
-  HairStyle.CLASSIC_WAVES,
-  // Phase 1.1 Hair Accessories
-  HairStyle.WITH_FLOWER_CROWN,
-  HairStyle.WITH_RIBBON,
   // Headwear
   HairStyle.HIJAB,
 ]);
@@ -311,6 +283,9 @@ function AvatarComponent({
             <Circle cx="50" cy="50" r="49" />
           </ClipPath>
         </Defs>
+
+        {/* Avatar drop shadow for depth */}
+        <Circle cx="51" cy="52" r="49" fill="#00000018" />
 
         <G clipPath="url(#avatarClip)">
           {/* 1. Background */}

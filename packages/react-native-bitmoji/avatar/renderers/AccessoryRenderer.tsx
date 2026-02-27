@@ -56,19 +56,19 @@ export const AccessoryRenderer = memo(function AccessoryRenderer({
             </LinearGradient>
           </Defs>
           {/* Lens tint */}
-          <Circle cx="38" cy="44" r="8.5" fill={color} opacity={0.05} />
-          <Circle cx="62" cy="44" r="8.5" fill={color} opacity={0.05} />
+          <Circle cx="39" cy="44" r="7" fill={color} opacity={0.05} />
+          <Circle cx="61" cy="44" r="7" fill={color} opacity={0.05} />
           {/* Frames */}
-          <Circle cx="38" cy="44" r="9" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.8} />
-          <Circle cx="62" cy="44" r="9" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.8} />
+          <Circle cx="39" cy="44" r="7.5" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.2} />
+          <Circle cx="61" cy="44" r="7.5" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.2} />
           {/* Bridge */}
-          <Path d="M47,44 Q50,42 53,44" stroke={color} strokeWidth={1.5} fill="none" />
+          <Path d="M46.5,44 Q50,42 53.5,44" stroke={color} strokeWidth={1.5} fill="none" />
           {/* Temples */}
-          <Path d="M29,43 L22,41" stroke={color} strokeWidth={1.5} />
-          <Path d="M71,43 L78,41" stroke={color} strokeWidth={1.5} />
+          <Path d="M31.5,43 L24,41" stroke={color} strokeWidth={1.5} />
+          <Path d="M68.5,43 L76,41" stroke={color} strokeWidth={1.5} />
           {/* Frame reflection */}
-          <Path d="M32,40 Q35,39 38,40" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.4} />
-          <Path d="M56,40 Q59,39 62,40" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.4} />
+          <Path d="M33,40 Q36,39 39,40" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.4} />
+          <Path d="M55,40 Q58,39 61,40" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.4} />
         </G>
       );
 
@@ -82,20 +82,20 @@ export const AccessoryRenderer = memo(function AccessoryRenderer({
               <Stop offset="100%" stopColor={frameShadow} />
             </LinearGradient>
           </Defs>
-          {/* Lens tint - centered at (38,44) and (62,44) */}
-          <Rect x="30" y="39" width="16" height="10" rx="1" fill={color} opacity={0.05} />
-          <Rect x="54" y="39" width="16" height="10" rx="1" fill={color} opacity={0.05} />
-          {/* Frames - centered at (38,44) and (62,44) */}
-          <Rect x="29" y="38" width="18" height="12" rx="2" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.8} />
-          <Rect x="53" y="38" width="18" height="12" rx="2" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.8} />
+          {/* Lens tint - centered at (39,44) and (61,44) */}
+          <Rect x="32" y="39.5" width="14" height="9" rx="1" fill={color} opacity={0.05} />
+          <Rect x="54" y="39.5" width="14" height="9" rx="1" fill={color} opacity={0.05} />
+          {/* Frames - centered at (39,44) and (61,44) */}
+          <Rect x="31" y="38.5" width="16" height="11" rx="2" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.2} />
+          <Rect x="53" y="38.5" width="16" height="11" rx="2" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.2} />
           {/* Bridge */}
           <Path d="M47,44 L53,44" stroke={color} strokeWidth={1.5} />
           {/* Temples */}
-          <Path d="M29,42 L22,40" stroke={color} strokeWidth={1.5} />
-          <Path d="M71,42 L78,40" stroke={color} strokeWidth={1.5} />
+          <Path d="M31,42 L24,40" stroke={color} strokeWidth={1.5} />
+          <Path d="M69,42 L76,40" stroke={color} strokeWidth={1.5} />
           {/* Corner highlights */}
-          <Path d="M30,39 L33,39" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.5} />
-          <Path d="M54,39 L57,39" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.5} />
+          <Path d="M32,39.5 L35,39.5" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.5} />
+          <Path d="M54,39.5 L57,39.5" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.5} />
         </G>
       );
 
@@ -114,19 +114,19 @@ export const AccessoryRenderer = memo(function AccessoryRenderer({
             </RadialGradient>
           </Defs>
           {/* Lens with refraction effect */}
-          <Circle cx="38" cy="44" r="9.5" fill={`url(#${ids.lens})`} />
-          <Circle cx="62" cy="44" r="9.5" fill={`url(#${ids.lens})`} />
+          <Circle cx="39" cy="44" r="7.5" fill={`url(#${ids.lens})`} />
+          <Circle cx="61" cy="44" r="7.5" fill={`url(#${ids.lens})`} />
           {/* Thick frames */}
-          <Circle cx="38" cy="44" r="10" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={2.5} />
-          <Circle cx="62" cy="44" r="10" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={2.5} />
+          <Circle cx="39" cy="44" r="8" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.5} />
+          <Circle cx="61" cy="44" r="8" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={1.5} />
           {/* Bridge */}
-          <Path d="M48,44 L52,44" stroke={color} strokeWidth={2.5} />
+          <Path d="M47,44 L53,44" stroke={color} strokeWidth={1.5} />
           {/* Temples */}
-          <Path d="M28,44 L22,42" stroke={color} strokeWidth={2} />
-          <Path d="M72,44 L78,42" stroke={color} strokeWidth={2} />
+          <Path d="M31,44 L24,42" stroke={color} strokeWidth={1.5} />
+          <Path d="M69,44 L76,42" stroke={color} strokeWidth={1.5} />
           {/* Frame highlights */}
-          <Circle cx="38" cy="44" r="10" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.3} />
-          <Circle cx="62" cy="44" r="10" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.3} />
+          <Circle cx="39" cy="44" r="8" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.3} />
+          <Circle cx="61" cy="44" r="8" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.3} />
         </G>
       );
 
@@ -335,20 +335,20 @@ export const AccessoryRenderer = memo(function AccessoryRenderer({
           {/* Headband */}
           <Path d="M20,40 Q20,8 50,6 Q80,8 80,40" fill="none" stroke={`url(#${ids.accessoryGrad})`} strokeWidth={5} />
           {/* Headband padding */}
-          <Path d="M35,12 Q50,8 65,12" fill="none" stroke="#3d3d3d" strokeWidth={6} />
+          <Path d="M35,12 Q50,8 65,12" fill="none" stroke="#3d3d3d" strokeWidth={4} />
           <Path d="M37,11 Q50,8 63,11" fill="none" stroke="#4a4a4a" strokeWidth={2} opacity={0.5} />
           {/* Left cup */}
-          <Ellipse cx="18" cy="44" rx="9" ry="11" fill={`url(#${ids.cup})`} />
-          <Ellipse cx="18" cy="44" rx="6" ry="8" fill={`url(#${ids.cushion})`} />
+          <Ellipse cx="18" cy="44" rx="7" ry="8" fill={`url(#${ids.cup})`} />
+          <Ellipse cx="18" cy="44" rx="5" ry="6" fill={`url(#${ids.cushion})`} />
           {/* Left cup detail */}
-          <Ellipse cx="18" cy="44" rx="4" ry="5" fill="#2d2d2d" />
-          <Circle cx="18" cy="44" r="2" fill="#252525" />
+          <Ellipse cx="18" cy="44" rx="3" ry="4" fill="#2d2d2d" />
+          <Circle cx="18" cy="44" r="1.5" fill="#252525" />
           {/* Right cup */}
-          <Ellipse cx="82" cy="44" rx="9" ry="11" fill={`url(#${ids.cup})`} />
-          <Ellipse cx="82" cy="44" rx="6" ry="8" fill={`url(#${ids.cushion})`} />
+          <Ellipse cx="82" cy="44" rx="7" ry="8" fill={`url(#${ids.cup})`} />
+          <Ellipse cx="82" cy="44" rx="5" ry="6" fill={`url(#${ids.cushion})`} />
           {/* Right cup detail */}
-          <Ellipse cx="82" cy="44" rx="4" ry="5" fill="#2d2d2d" />
-          <Circle cx="82" cy="44" r="2" fill="#252525" />
+          <Ellipse cx="82" cy="44" rx="3" ry="4" fill="#2d2d2d" />
+          <Circle cx="82" cy="44" r="1.5" fill="#252525" />
           {/* Cup highlights */}
           <Path d="M12,38 Q18,34 24,38" fill="none" stroke="#505050" strokeWidth={0.8} opacity={0.4} />
           <Path d="M76,38 Q82,34 88,38" fill="none" stroke="#505050" strokeWidth={0.8} opacity={0.4} />
@@ -435,37 +435,6 @@ export const AccessoryRenderer = memo(function AccessoryRenderer({
         </G>
       );
 
-    case AccessoryStyle.HAT_BASEBALL:
-      return (
-        <G>
-          <Defs>
-            <LinearGradient id={ids.accessoryGrad} x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor={frameHighlight} />
-              <Stop offset="60%" stopColor={color} />
-              <Stop offset="100%" stopColor={frameShadow} />
-            </LinearGradient>
-          </Defs>
-          {/* Cap crown */}
-          <Path
-            d="M18,30 Q18,8 50,6 Q82,8 82,30 L82,35 Q82,38 75,38 L25,38 Q18,38 18,35 Z"
-            fill={`url(#${ids.accessoryGrad})`}
-          />
-          {/* Cap front panel detail */}
-          <Path d="M35,12 Q50,8 65,12 L65,38 L35,38 Z" fill={frameHighlight} opacity={0.1} />
-          {/* Brim */}
-          <Ellipse cx="50" cy="38" rx="35" ry="5" fill={color} />
-          <Ellipse cx="50" cy="38" rx="35" ry="4" fill={frameShadow} opacity={0.3} />
-          {/* Brim front shading */}
-          <Path d="M20,38 Q50,34 80,38 Q50,42 20,38" fill={frameShadow} opacity={0.2} />
-          {/* Button on top */}
-          <Circle cx="50" cy="8" r="2" fill={color} />
-          <Circle cx="50" cy="8" r="1.5" fill={frameHighlight} opacity={0.3} />
-          {/* Seam lines */}
-          <Path d="M35,12 L35,38 M65,12 L65,38" stroke={frameShadow} strokeWidth={0.5} opacity={0.3} />
-          <Path d="M50,6 L50,38" stroke={frameShadow} strokeWidth={0.5} opacity={0.2} />
-        </G>
-      );
-
     case AccessoryStyle.NECKLACE_CHAIN:
       return (
         <G>
@@ -534,86 +503,6 @@ export const AccessoryRenderer = memo(function AccessoryRenderer({
           />
           {/* Edge detail */}
           <Path d="M24,27 Q50,14 76,27" fill="none" stroke={frameHighlight} strokeWidth={0.5} opacity={0.4} />
-        </G>
-      );
-
-    case AccessoryStyle.AIRPODS:
-      return (
-        <G>
-          <Defs>
-            <RadialGradient id={ids.accessoryGrad} cx="50%" cy="30%" rx="50%" ry="50%">
-              <Stop offset="0%" stopColor="#ffffff" />
-              <Stop offset="70%" stopColor="#f0f0f0" />
-              <Stop offset="100%" stopColor="#e0e0e0" />
-            </RadialGradient>
-          </Defs>
-          {/* Left AirPod */}
-          <Ellipse cx="20" cy="50" rx="3" ry="4" fill={`url(#${ids.accessoryGrad})`} />
-          <Path d="M18,54 L17,62" stroke="#e0e0e0" strokeWidth={2.5} strokeLinecap="round" />
-          {/* Left AirPod detail */}
-          <Ellipse cx="20" cy="49" rx="1.5" ry="2" fill="#c0c0c0" opacity={0.3} />
-          {/* Right AirPod */}
-          <Ellipse cx="80" cy="50" rx="3" ry="4" fill={`url(#${ids.accessoryGrad})`} />
-          <Path d="M82,54 L83,62" stroke="#e0e0e0" strokeWidth={2.5} strokeLinecap="round" />
-          {/* Right AirPod detail */}
-          <Ellipse cx="80" cy="49" rx="1.5" ry="2" fill="#c0c0c0" opacity={0.3} />
-        </G>
-      );
-
-    case AccessoryStyle.FACE_MASK:
-      return (
-        <G>
-          <Defs>
-            <LinearGradient id={ids.accessoryGrad} x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor="#f5f5f5" />
-              <Stop offset="50%" stopColor="#e8e8e8" />
-              <Stop offset="100%" stopColor="#d0d0d0" />
-            </LinearGradient>
-          </Defs>
-          {/* Mask body */}
-          <Path
-            d="M25,52 Q25,70 50,72 Q75,70 75,52 L75,48 Q75,46 70,46 L30,46 Q25,46 25,48 Z"
-            fill={`url(#${ids.accessoryGrad})`}
-          />
-          {/* Ear straps */}
-          <Path d="M25,50 Q18,50 18,55 Q18,60 22,62" stroke="#b0b0b0" strokeWidth={1} fill="none" />
-          <Path d="M75,50 Q82,50 82,55 Q82,60 78,62" stroke="#b0b0b0" strokeWidth={1} fill="none" />
-          {/* Mask folds */}
-          <Path d="M28,54 Q50,56 72,54" stroke="#c8c8c8" strokeWidth={0.5} fill="none" opacity={0.6} />
-          <Path d="M28,60 Q50,62 72,60" stroke="#c8c8c8" strokeWidth={0.5} fill="none" opacity={0.6} />
-          <Path d="M28,66 Q50,68 72,66" stroke="#c8c8c8" strokeWidth={0.5} fill="none" opacity={0.6} />
-          {/* Nose wire */}
-          <Path d="M40,48 Q50,45 60,48" stroke="#a0a0a0" strokeWidth={1} fill="none" />
-        </G>
-      );
-
-    case AccessoryStyle.BEANIE_CUFFED:
-      return (
-        <G>
-          <Defs>
-            <LinearGradient id={ids.accessoryGrad} x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor={frameHighlight} />
-              <Stop offset="50%" stopColor={color} />
-              <Stop offset="100%" stopColor={frameShadow} />
-            </LinearGradient>
-          </Defs>
-          {/* Beanie crown */}
-          <Path
-            d="M18,35 Q15,5 50,2 Q85,5 82,35 L82,38 L18,38 Z"
-            fill={`url(#${ids.accessoryGrad})`}
-          />
-          {/* Knit texture lines */}
-          <Path d="M25,10 L25,35" stroke={frameShadow} strokeWidth={0.5} opacity={0.3} />
-          <Path d="M38,6 L38,35" stroke={frameShadow} strokeWidth={0.5} opacity={0.3} />
-          <Path d="M50,4 L50,35" stroke={frameShadow} strokeWidth={0.5} opacity={0.2} />
-          <Path d="M62,6 L62,35" stroke={frameShadow} strokeWidth={0.5} opacity={0.3} />
-          <Path d="M75,10 L75,35" stroke={frameShadow} strokeWidth={0.5} opacity={0.3} />
-          {/* Cuff */}
-          <Rect x="16" y="35" width="68" height="8" rx="2" fill={color} />
-          <Path d="M18,36 L82,36" stroke={frameHighlight} strokeWidth={0.5} opacity={0.4} />
-          {/* Cuff ribbing */}
-          <Path d="M20,38 L20,42 M30,38 L30,42 M40,38 L40,42 M50,38 L50,42 M60,38 L60,42 M70,38 L70,42 M80,38 L80,42"
-            stroke={frameShadow} strokeWidth={0.5} opacity={0.3} />
         </G>
       );
 

@@ -54,7 +54,7 @@ export interface PreviewPanelProps {
 // =============================================================================
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PREVIEW_SIZE = Math.min(SCREEN_WIDTH * 0.5, 200);
+const PREVIEW_SIZE = Math.min(SCREEN_WIDTH * 0.35, 140);
 
 // =============================================================================
 // COMPONENT
@@ -333,7 +333,7 @@ export function PreviewPanel({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: colors.neutral[50],
   },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   glowEffect: {
     position: 'absolute',

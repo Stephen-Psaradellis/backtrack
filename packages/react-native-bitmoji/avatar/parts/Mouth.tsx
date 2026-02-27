@@ -202,53 +202,53 @@ export function Mouth({ style, lipColor = LIP_COLOR, scale = 1 }: MouthProps) {
           case MouthStyle.LAUGH:
             return (
               <G>
-                {/* Mouth opening with depth */}
+                {/* Mouth opening — smaller, rounder */}
                 <Ellipse
                   cx={MOUTH_X}
-                  cy={MOUTH_Y + 3}
-                  rx={11}
-                  ry={9}
+                  cy={MOUTH_Y + 2}
+                  rx={9}
+                  ry={7}
                   fill={`url(#${mouthInteriorGradientId})`}
                 />
-                {/* Teeth */}
+                {/* Teeth row */}
                 <Path
-                  d={`M${MOUTH_X - 8},${MOUTH_Y - 2.5} L${MOUTH_X + 8},${MOUTH_Y - 2.5}
-                      L${MOUTH_X + 6},${MOUTH_Y + 2} L${MOUTH_X - 6},${MOUTH_Y + 2} Z`}
+                  d={`M${MOUTH_X - 7},${MOUTH_Y - 2} L${MOUTH_X + 7},${MOUTH_Y - 2}
+                      L${MOUTH_X + 5},${MOUTH_Y + 1.5} L${MOUTH_X - 5},${MOUTH_Y + 1.5} Z`}
                   fill={`url(#${teethGradientId})`}
                 />
                 {/* Tooth separators */}
                 <G stroke="#e0e0d8" strokeWidth={0.3}>
-                  {[-4, 0, 4].map((offset) => (
+                  {[-3.5, 0, 3.5].map((offset) => (
                     <Path
                       key={offset}
-                      d={`M${MOUTH_X + offset},${MOUTH_Y - 2.5} L${MOUTH_X + offset * 0.9},${MOUTH_Y + 2}`}
+                      d={`M${MOUTH_X + offset},${MOUTH_Y - 2} L${MOUTH_X + offset * 0.9},${MOUTH_Y + 1.5}`}
                     />
                   ))}
                 </G>
-                {/* Tongue with gradient */}
+                {/* Tongue — smaller */}
                 <Ellipse
                   cx={MOUTH_X}
-                  cy={MOUTH_Y + 8}
-                  rx={6}
-                  ry={4.5}
+                  cy={MOUTH_Y + 6}
+                  rx={4.5}
+                  ry={3}
                   fill={`url(#${tongueGradientId})`}
                 />
                 {/* Tongue center line */}
                 <Path
-                  d={`M${MOUTH_X},${MOUTH_Y + 5} L${MOUTH_X},${MOUTH_Y + 11}`}
+                  d={`M${MOUTH_X},${MOUTH_Y + 4} L${MOUTH_X},${MOUTH_Y + 8}`}
                   stroke={tongueShadow}
-                  strokeWidth={0.8}
-                  opacity={0.4}
+                  strokeWidth={0.6}
+                  opacity={0.3}
                 />
                 {/* Lip outline */}
                 <Ellipse
                   cx={MOUTH_X}
-                  cy={MOUTH_Y + 3}
-                  rx={11}
-                  ry={9}
+                  cy={MOUTH_Y + 2}
+                  rx={9}
+                  ry={7}
                   fill="none"
                   stroke={lipColor}
-                  strokeWidth={1.8}
+                  strokeWidth={1.5}
                 />
               </G>
             );

@@ -16,79 +16,105 @@ interface FaceProps extends SvgPartProps {
 function getFaceShapeData(shape: FaceShape) {
   const base = { cx: 50, cy: 46 };
 
+  // NOTE: jawPath goes RIGHT→chin→LEFT so it continues correctly after forehead (which ends at right cheek)
   switch (shape) {
     case FaceShape.ROUND:
-      return { ...base, rx: 28, ry: 28, jawPath: 'M22,46 Q22,70 50,74 Q78,70 78,46', chinCurve: 'smooth' };
+      return { ...base, rx: 30, ry: 30, jawPath: 'M80,46 Q80,72 50,76 Q20,72 20,46', chinCurve: 'smooth' };
     case FaceShape.SQUARE:
-      return { ...base, rx: 27, ry: 30, cy: 45, jawPath: 'M23,45 Q23,68 30,72 L70,72 Q77,68 77,45', chinCurve: 'angular' };
+      return { ...base, rx: 29, ry: 32, cy: 45, jawPath: 'M79,45 Q79,69 72,73 L28,73 Q21,69 21,45', chinCurve: 'angular' };
     case FaceShape.HEART:
-      return { ...base, rx: 27, ry: 31, cy: 47, jawPath: 'M23,47 Q28,68 50,78 Q72,68 77,47', chinCurve: 'pointed' };
+      return { ...base, rx: 29, ry: 33, cy: 47, jawPath: 'M79,47 Q74,70 50,80 Q26,70 21,47', chinCurve: 'pointed' };
     case FaceShape.OBLONG:
-      return { ...base, rx: 25, ry: 34, cy: 46, jawPath: 'M25,46 Q25,75 50,80 Q75,75 75,46', chinCurve: 'elongated' };
+      return { ...base, rx: 27, ry: 36, cy: 46, jawPath: 'M77,46 Q77,77 50,82 Q23,77 23,46', chinCurve: 'elongated' };
     case FaceShape.DIAMOND:
-      return { ...base, rx: 26, ry: 32, cy: 46, jawPath: 'M24,46 Q30,70 50,76 Q70,70 76,46', chinCurve: 'diamond' };
+      return { ...base, rx: 28, ry: 34, cy: 46, jawPath: 'M78,46 Q72,72 50,78 Q28,72 22,46', chinCurve: 'diamond' };
     case FaceShape.TRIANGLE:
       // Narrower forehead, wider jaw
-      return { ...base, rx: 25, ry: 31, cy: 45, jawPath: 'M25,45 Q22,68 35,74 L65,74 Q78,68 75,45', chinCurve: 'wide' };
+      return { ...base, rx: 27, ry: 33, cy: 45, jawPath: 'M77,45 Q80,69 67,75 L33,75 Q20,69 23,45', chinCurve: 'wide' };
     case FaceShape.INVERTED_TRIANGLE:
       // Wider forehead, narrow pointed chin
-      return { ...base, rx: 28, ry: 31, cy: 46, jawPath: 'M22,46 Q28,70 50,80 Q72,70 78,46', chinCurve: 'pointed' };
+      return { ...base, rx: 30, ry: 33, cy: 46, jawPath: 'M80,46 Q74,72 50,82 Q26,72 20,46', chinCurve: 'pointed' };
     case FaceShape.RECTANGLE:
       // Longer square face with straight sides
-      return { ...base, rx: 26, ry: 34, cy: 44, jawPath: 'M24,44 Q24,73 32,77 L68,77 Q76,73 76,44', chinCurve: 'angular' };
+      return { ...base, rx: 28, ry: 36, cy: 44, jawPath: 'M78,44 Q78,75 70,79 L30,79 Q22,75 22,44', chinCurve: 'angular' };
     case FaceShape.PEAR:
       // Narrow forehead, full cheeks and jaw
-      return { ...base, rx: 24, ry: 32, cy: 45, jawPath: 'M26,45 Q20,68 38,76 L62,76 Q80,68 74,45', chinCurve: 'soft' };
+      return { ...base, rx: 26, ry: 34, cy: 45, jawPath: 'M76,45 Q82,70 64,78 L36,78 Q18,70 24,45', chinCurve: 'soft' };
     case FaceShape.LONG:
       // Elongated narrow face
-      return { ...base, rx: 23, ry: 36, cy: 44, jawPath: 'M27,44 Q27,76 50,82 Q73,76 73,44', chinCurve: 'elongated' };
+      return { ...base, rx: 25, ry: 38, cy: 44, jawPath: 'M75,44 Q75,78 50,84 Q25,78 25,44', chinCurve: 'elongated' };
     case FaceShape.WIDE:
       // Short and wide face
-      return { ...base, rx: 30, ry: 28, cy: 47, jawPath: 'M20,47 Q20,70 50,72 Q80,70 80,47', chinCurve: 'soft' };
+      return { ...base, rx: 32, ry: 30, cy: 47, jawPath: 'M82,47 Q82,72 50,74 Q18,72 18,47', chinCurve: 'soft' };
     case FaceShape.ANGULAR:
       // Sharp, defined angles
-      return { ...base, rx: 26, ry: 31, cy: 46, jawPath: 'M24,46 Q26,66 40,74 L60,74 Q74,66 76,46', chinCurve: 'angular' };
+      return { ...base, rx: 28, ry: 33, cy: 46, jawPath: 'M78,46 Q76,68 62,76 L38,76 Q24,68 22,46', chinCurve: 'angular' };
     case FaceShape.SOFT_SQUARE:
       // Square with rounded corners
-      return { ...base, rx: 27, ry: 30, cy: 45, jawPath: 'M23,45 Q25,70 50,74 Q75,70 77,45', chinCurve: 'soft' };
+      return { ...base, rx: 29, ry: 32, cy: 45, jawPath: 'M79,45 Q77,72 50,76 Q23,72 21,45', chinCurve: 'soft' };
     case FaceShape.NARROW:
       // Thin, slender face
-      return { ...base, rx: 22, ry: 33, cy: 45, jawPath: 'M28,45 Q28,72 50,77 Q72,72 72,45', chinCurve: 'smooth' };
+      return { ...base, rx: 24, ry: 35, cy: 45, jawPath: 'M74,45 Q74,74 50,79 Q26,74 26,45', chinCurve: 'smooth' };
     // New Shapes (Phase 1.4)
     case FaceShape.BABY_FACE:
       // Youthful, soft features with full cheeks and rounded chin
-      return { ...base, rx: 29, ry: 28, cy: 48, jawPath: 'M21,48 Q21,68 50,72 Q79,68 79,48', chinCurve: 'smooth' };
+      return { ...base, rx: 31, ry: 30, cy: 48, jawPath: 'M81,48 Q81,70 50,74 Q19,70 19,48', chinCurve: 'smooth' };
     case FaceShape.MATURE:
       // Distinguished, slightly longer with defined bone structure
-      return { ...base, rx: 26, ry: 33, cy: 45, jawPath: 'M24,45 Q26,70 50,76 Q74,70 76,45', chinCurve: 'angular' };
+      return { ...base, rx: 28, ry: 35, cy: 45, jawPath: 'M78,45 Q76,72 50,78 Q24,72 22,45', chinCurve: 'angular' };
     case FaceShape.HIGH_CHEEKBONES:
       // Prominent cheekbones with elegant angles
-      return { ...base, rx: 27, ry: 32, cy: 46, jawPath: 'M23,46 Q30,65 50,74 Q70,65 77,46', chinCurve: 'diamond' };
+      return { ...base, rx: 29, ry: 34, cy: 46, jawPath: 'M79,46 Q72,67 50,76 Q28,67 21,46', chinCurve: 'diamond' };
     case FaceShape.FULL_CHEEKS:
       // Rounded, full cheeks with soft jawline
-      return { ...base, rx: 29, ry: 30, cy: 47, jawPath: 'M21,47 Q21,70 50,73 Q79,70 79,47', chinCurve: 'soft' };
+      return { ...base, rx: 31, ry: 32, cy: 47, jawPath: 'M81,47 Q81,72 50,75 Q19,72 19,47', chinCurve: 'soft' };
     case FaceShape.HOLLOW_CHEEKS:
       // Gaunt appearance with sunken cheeks
-      return { ...base, rx: 24, ry: 33, cy: 45, jawPath: 'M26,45 Q32,68 50,76 Q68,68 74,45', chinCurve: 'angular' };
+      return { ...base, rx: 26, ry: 35, cy: 45, jawPath: 'M76,45 Q70,70 50,78 Q30,70 24,45', chinCurve: 'angular' };
     case FaceShape.STRONG_JAW:
       // Prominent, defined jawline
-      return { ...base, rx: 27, ry: 31, cy: 45, jawPath: 'M23,45 Q24,66 35,74 L65,74 Q76,66 77,45', chinCurve: 'angular' };
+      return { ...base, rx: 29, ry: 33, cy: 45, jawPath: 'M79,45 Q78,68 67,76 L33,76 Q22,68 21,45', chinCurve: 'angular' };
     case FaceShape.STRONG_JAW_WIDE:
       // Wide, powerful jaw with angular features
-      return { ...base, rx: 29, ry: 30, cy: 45, jawPath: 'M21,45 Q22,65 32,73 L68,73 Q78,65 79,45', chinCurve: 'angular' };
+      return { ...base, rx: 31, ry: 32, cy: 45, jawPath: 'M81,45 Q80,67 70,75 L30,75 Q20,67 19,45', chinCurve: 'angular' };
     case FaceShape.SOFT_FEATURES:
       // Gentle, rounded features throughout
-      return { ...base, rx: 28, ry: 30, cy: 47, jawPath: 'M22,47 Q24,70 50,74 Q76,70 78,47', chinCurve: 'soft' };
+      return { ...base, rx: 30, ry: 32, cy: 47, jawPath: 'M80,47 Q78,72 50,76 Q22,72 20,47', chinCurve: 'soft' };
     case FaceShape.DEFINED_FEATURES:
       // Clear, distinct facial structure
-      return { ...base, rx: 26, ry: 32, cy: 46, jawPath: 'M24,46 Q28,68 50,76 Q72,68 76,46', chinCurve: 'angular' };
+      return { ...base, rx: 28, ry: 34, cy: 46, jawPath: 'M78,46 Q74,70 50,78 Q26,70 22,46', chinCurve: 'angular' };
     case FaceShape.CHISELED:
       // Very angular, model-like features
-      return { ...base, rx: 25, ry: 33, cy: 45, jawPath: 'M25,45 Q28,64 42,74 L58,74 Q72,64 75,45', chinCurve: 'angular' };
+      return { ...base, rx: 27, ry: 35, cy: 45, jawPath: 'M77,45 Q74,66 60,76 L40,76 Q26,66 23,45', chinCurve: 'angular' };
     case FaceShape.OVAL:
     default:
-      return { ...base, rx: 27, ry: 32, jawPath: 'M23,46 Q23,72 50,76 Q77,72 77,46', chinCurve: 'smooth' };
+      return { ...base, rx: 29, ry: 34, jawPath: 'M79,46 Q79,74 50,78 Q21,74 21,46', chinCurve: 'smooth' };
   }
+}
+
+/**
+ * Generate complete face path combining forehead arc with jaw path
+ */
+function getFacePath(shape: FaceShape): string {
+  const shapeData = getFaceShapeData(shape);
+  const { cx, cy, rx, ry } = shapeData;
+
+  // Calculate forehead curve points
+  const leftCheekX = cx - rx;
+  const rightCheekX = cx + rx;
+  const cheekY = cy; // Cheekbone level
+
+  // Crown (top center of head)
+  const crownY = cy - ry;
+
+  // Build complete face path: left cheek → forehead → right cheek → jaw → back to left cheek
+  return `
+    M ${leftCheekX},${cheekY}
+    Q ${leftCheekX},${crownY + 4} ${cx},${crownY}
+    Q ${rightCheekX},${crownY + 4} ${rightCheekX},${cheekY}
+    ${shapeData.jawPath.replace(/^M\s*[\d.]+,[\d.]+\s*/, '')}
+    Z
+  `.trim();
 }
 
 
@@ -123,17 +149,17 @@ export function Face({ shape, skinTone, scale = 1 }: FaceProps) {
     <G transform={`scale(${scale})`}>
       <Defs>
         {/* Main face radial gradient for natural skin appearance */}
-        <RadialGradient id={gradientId} cx="50%" cy="35%" rx="55%" ry="65%">
-          <Stop offset="0%" stopColor={highlightColor} />
-          <Stop offset="40%" stopColor={skinTone} />
-          <Stop offset="85%" stopColor={warmTone} />
-          <Stop offset="100%" stopColor={shadowColor} />
+        <RadialGradient id={gradientId} cx="44%" cy="40%" rx="50%" ry="55%">
+          <Stop offset="0%" stopColor={skinTone} />
+          <Stop offset="50%" stopColor={skinTone} />
+          <Stop offset="75%" stopColor={warmTone} />
+          <Stop offset="100%" stopColor={shadowColor} stopOpacity="1" />
         </RadialGradient>
 
         {/* Highlight gradient for forehead/cheek shine */}
-        <RadialGradient id={highlightGradientId} cx="50%" cy="30%" rx="40%" ry="35%">
-          <Stop offset="0%" stopColor={brightHighlight} stopOpacity="0.4" />
-          <Stop offset="60%" stopColor={highlightColor} stopOpacity="0.15" />
+        <RadialGradient id={highlightGradientId} cx="45%" cy="32%" rx="35%" ry="30%">
+          <Stop offset="0%" stopColor={brightHighlight} stopOpacity="0.2" />
+          <Stop offset="50%" stopColor={highlightColor} stopOpacity="0.08" />
           <Stop offset="100%" stopColor={skinTone} stopOpacity="0" />
         </RadialGradient>
 
@@ -145,442 +171,119 @@ export function Face({ shape, skinTone, scale = 1 }: FaceProps) {
         </LinearGradient>
       </Defs>
 
-      {/* Neck with improved shading */}
+      {/* Neck - narrow column connecting chin to shoulders */}
       <Path
-        d="M38,70 Q38,72 40,73 L40,92 L60,92 L60,73 Q62,72 62,70"
+        d="M42,70 C42,72 41,80 40,88 L60,88 C59,80 58,72 58,70"
         fill={`url(#${neckGradientId})`}
       />
       {/* Neck side shadows */}
-      <Path d="M38,72 Q40,70 42,72 L42,88 L38,88 Z" fill={shadowColor} opacity={0.25} />
-      <Path d="M62,72 Q60,70 58,72 L58,88 L62,88 Z" fill={shadowColor} opacity={0.25} />
+      <Path d="M41,72 Q42,70 44,72 L44,85 L40,87 Z" fill={shadowColor} opacity={0.25} />
+      <Path d="M59,72 Q58,70 56,72 L56,85 L60,87 Z" fill={shadowColor} opacity={0.25} />
       {/* Neck center highlight */}
-      <Path d="M48,74 L48,88 L52,88 L52,74 Z" fill={highlightColor} opacity={0.15} />
+      <Path d="M48,74 L48,85 L52,85 L52,74 Z" fill={highlightColor} opacity={0.15} />
       {/* Chin shadow on neck */}
-      <Path d="M40,70 Q50,68 60,70 L60,74 Q50,71 40,74 Z" fill={deepShadow} opacity={0.35} />
+      <Path d="M42,70 Q50,68 58,70 L58,74 Q50,71 42,74 Z" fill={deepShadow} opacity={0.2} />
 
-      {/* Ears with improved detail */}
+      {/* Ears with improved detail - connected to face */}
       <G>
         {/* Left ear */}
         <Ellipse
-          cx={shapeData.cx - shapeData.rx - 2}
+          cx={shapeData.cx - shapeData.rx + 1}
           cy={shapeData.cy + 4}
-          rx={5.5}
-          ry={9}
+          rx={3.5}
+          ry={5.5}
           fill={skinTone}
         />
         {/* Ear inner shadow/detail */}
         <Path
-          d={`M${shapeData.cx - shapeData.rx - 4},${shapeData.cy + 1}
-              Q${shapeData.cx - shapeData.rx - 5},${shapeData.cy + 4}
-              ${shapeData.cx - shapeData.rx - 3},${shapeData.cy + 8}
-              Q${shapeData.cx - shapeData.rx - 1},${shapeData.cy + 6}
-              ${shapeData.cx - shapeData.rx - 2},${shapeData.cy + 2}`}
+          d={`M${shapeData.cx - shapeData.rx - 0.5},${shapeData.cy + 1}
+              Q${shapeData.cx - shapeData.rx - 1.5},${shapeData.cy + 4}
+              ${shapeData.cx - shapeData.rx},${shapeData.cy + 7}
+              Q${shapeData.cx - shapeData.rx + 1.5},${shapeData.cy + 5}
+              ${shapeData.cx - shapeData.rx + 1},${shapeData.cy + 2}`}
           fill={shadowColor}
           opacity={0.4}
         />
-        {/* Ear highlight */}
-        <Ellipse
-          cx={shapeData.cx - shapeData.rx - 3}
-          cy={shapeData.cy + 2}
-          rx={2}
-          ry={3}
-          fill={highlightColor}
-          opacity={0.25}
-        />
         {/* Earlobe */}
         <Ellipse
-          cx={shapeData.cx - shapeData.rx - 2}
-          cy={shapeData.cy + 10}
-          rx={3}
-          ry={3}
+          cx={shapeData.cx - shapeData.rx + 1}
+          cy={shapeData.cy + 8}
+          rx={2}
+          ry={2}
           fill={warmTone}
         />
       </G>
       <G>
         {/* Right ear */}
         <Ellipse
-          cx={shapeData.cx + shapeData.rx + 2}
+          cx={shapeData.cx + shapeData.rx - 1}
           cy={shapeData.cy + 4}
-          rx={5.5}
-          ry={9}
+          rx={3.5}
+          ry={5.5}
           fill={skinTone}
         />
         {/* Ear inner shadow/detail */}
         <Path
-          d={`M${shapeData.cx + shapeData.rx + 4},${shapeData.cy + 1}
-              Q${shapeData.cx + shapeData.rx + 5},${shapeData.cy + 4}
-              ${shapeData.cx + shapeData.rx + 3},${shapeData.cy + 8}
-              Q${shapeData.cx + shapeData.rx + 1},${shapeData.cy + 6}
-              ${shapeData.cx + shapeData.rx + 2},${shapeData.cy + 2}`}
+          d={`M${shapeData.cx + shapeData.rx + 0.5},${shapeData.cy + 1}
+              Q${shapeData.cx + shapeData.rx + 1.5},${shapeData.cy + 4}
+              ${shapeData.cx + shapeData.rx},${shapeData.cy + 7}
+              Q${shapeData.cx + shapeData.rx - 1.5},${shapeData.cy + 5}
+              ${shapeData.cx + shapeData.rx - 1},${shapeData.cy + 2}`}
           fill={shadowColor}
           opacity={0.4}
         />
-        {/* Ear highlight */}
-        <Ellipse
-          cx={shapeData.cx + shapeData.rx + 3}
-          cy={shapeData.cy + 2}
-          rx={2}
-          ry={3}
-          fill={highlightColor}
-          opacity={0.25}
-        />
         {/* Earlobe */}
         <Ellipse
-          cx={shapeData.cx + shapeData.rx + 2}
-          cy={shapeData.cy + 10}
-          rx={3}
-          ry={3}
+          cx={shapeData.cx + shapeData.rx - 1}
+          cy={shapeData.cy + 8}
+          rx={2}
+          ry={2}
           fill={warmTone}
         />
       </G>
 
-      {/* Main Face Shape with gradient fill */}
-      <Ellipse
-        cx={shapeData.cx}
-        cy={shapeData.cy}
-        rx={shapeData.rx}
-        ry={shapeData.ry}
+      {/* Main Face Shape with gradient fill - using path instead of ellipse */}
+      <Path
+        d={getFacePath(shape)}
         fill={`url(#${gradientId})`}
+        stroke={adjustBrightness(skinTone, -40)}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
 
-      {/* Face highlight overlay for shine */}
-      <Ellipse
-        cx={shapeData.cx}
-        cy={shapeData.cy - 4}
-        rx={shapeData.rx - 2}
-        ry={shapeData.ry - 4}
-        fill={`url(#${highlightGradientId})`}
-      />
-
-      {/* Forehead highlight */}
-      <Ellipse
-        cx={shapeData.cx}
-        cy={shapeData.cy - 12}
-        rx={12}
-        ry={8}
-        fill={brightHighlight}
-        opacity={0.2}
-      />
-
-      {/* Cheek highlights - rosy, natural */}
+      {/* Cheek warmth - very soft blush */}
       <Ellipse
         cx={shapeData.cx - 14}
-        cy={shapeData.cy + 6}
-        rx={7}
-        ry={5}
-        fill={highlightColor}
-        opacity={0.3}
+        cy={shapeData.cy + 8}
+        rx={8}
+        ry={6}
+        fill={blushColor}
+        opacity={0.06}
       />
       <Ellipse
         cx={shapeData.cx + 14}
-        cy={shapeData.cy + 6}
-        rx={7}
-        ry={5}
-        fill={highlightColor}
-        opacity={0.3}
-      />
-
-      {/* Subtle blush on cheeks */}
-      <Ellipse
-        cx={shapeData.cx - 15}
         cy={shapeData.cy + 8}
-        rx={5}
-        ry={3.5}
+        rx={8}
+        ry={6}
         fill={blushColor}
-        opacity={0.15}
-      />
-      <Ellipse
-        cx={shapeData.cx + 15}
-        cy={shapeData.cy + 8}
-        rx={5}
-        ry={3.5}
-        fill={blushColor}
-        opacity={0.15}
+        opacity={0.06}
       />
 
-      {/* Nose bridge highlight */}
+      {/* Simple jaw shadows - subtle definition */}
       <Path
-        d={`M${shapeData.cx - 2},${shapeData.cy - 8}
-            Q${shapeData.cx},${shapeData.cy - 5}
-            ${shapeData.cx + 2},${shapeData.cy - 8}`}
-        fill={brightHighlight}
-        opacity={0.2}
-      />
-
-      {/* Temple shadows */}
-      <Ellipse
-        cx={shapeData.cx - shapeData.rx + 5}
-        cy={shapeData.cy - 8}
-        rx={6}
-        ry={10}
-        fill={shadowColor}
-        opacity={0.15}
-      />
-      <Ellipse
-        cx={shapeData.cx + shapeData.rx - 5}
-        cy={shapeData.cy - 8}
-        rx={6}
-        ry={10}
-        fill={shadowColor}
-        opacity={0.15}
-      />
-
-      {/* Under-eye area - subtle shadow */}
-      <Path
-        d={`M${shapeData.cx - 18},${shapeData.cy + 2}
-            Q${shapeData.cx - 14},${shapeData.cy + 5}
-            ${shapeData.cx - 8},${shapeData.cy + 3}`}
+        d={`M${shapeData.cx - shapeData.rx + 4},${shapeData.cy + 10}
+            Q${shapeData.cx - shapeData.rx + 2},${shapeData.cy + 20}
+            ${shapeData.cx - 10},${shapeData.cy + 25}`}
         fill={shadowColor}
         opacity={0.1}
       />
       <Path
-        d={`M${shapeData.cx + 18},${shapeData.cy + 2}
-            Q${shapeData.cx + 14},${shapeData.cy + 5}
-            ${shapeData.cx + 8},${shapeData.cy + 3}`}
+        d={`M${shapeData.cx + shapeData.rx - 4},${shapeData.cy + 10}
+            Q${shapeData.cx + shapeData.rx - 2},${shapeData.cy + 20}
+            ${shapeData.cx + 10},${shapeData.cy + 25}`}
         fill={shadowColor}
         opacity={0.1}
-      />
-
-      {/* Jaw and chin contour shadows - shape-specific */}
-      {shape === FaceShape.SQUARE && (
-        <G>
-          <Path
-            d="M24,50 Q26,65 32,70 L32,65 Q28,60 26,50 Z"
-            fill={shadowColor}
-            opacity={0.2}
-          />
-          <Path
-            d="M76,50 Q74,65 68,70 L68,65 Q72,60 74,50 Z"
-            fill={shadowColor}
-            opacity={0.2}
-          />
-          <Path
-            d="M32,70 Q50,75 68,70 L65,73 Q50,77 35,73 Z"
-            fill={shadowColor}
-            opacity={0.15}
-          />
-        </G>
-      )}
-      {shape === FaceShape.HEART && (
-        <G>
-          <Path
-            d="M28,48 Q32,62 50,75 Q34,62 30,50 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M72,48 Q68,62 50,75 Q66,62 70,50 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          {/* Pointed chin highlight */}
-          <Ellipse cx={50} cy={70} rx={4} ry={3} fill={highlightColor} opacity={0.2} />
-        </G>
-      )}
-      {shape === FaceShape.OVAL && (
-        <G>
-          <Path
-            d="M25,52 Q28,68 50,74 Q30,66 27,54 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M75,52 Q72,68 50,74 Q70,66 73,54 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-        </G>
-      )}
-      {shape === FaceShape.ROUND && (
-        <G>
-          <Path
-            d="M24,50 Q26,64 50,70 Q28,62 26,52 Z"
-            fill={shadowColor}
-            opacity={0.1}
-          />
-          <Path
-            d="M76,50 Q74,64 50,70 Q72,62 74,52 Z"
-            fill={shadowColor}
-            opacity={0.1}
-          />
-        </G>
-      )}
-      {shape === FaceShape.OBLONG && (
-        <G>
-          <Path
-            d="M27,50 Q28,70 50,78 Q32,68 29,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M73,50 Q72,70 50,78 Q68,68 71,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-        </G>
-      )}
-      {shape === FaceShape.DIAMOND && (
-        <G>
-          <Path
-            d="M26,46 Q32,62 50,72 Q34,60 28,48 Z"
-            fill={shadowColor}
-            opacity={0.15}
-          />
-          <Path
-            d="M74,46 Q68,62 50,72 Q66,60 72,48 Z"
-            fill={shadowColor}
-            opacity={0.15}
-          />
-          {/* Cheekbone highlights for diamond face */}
-          <Ellipse cx={32} cy={48} rx={4} ry={3} fill={brightHighlight} opacity={0.2} />
-          <Ellipse cx={68} cy={48} rx={4} ry={3} fill={brightHighlight} opacity={0.2} />
-        </G>
-      )}
-      {shape === FaceShape.TRIANGLE && (
-        <G>
-          <Path
-            d="M27,48 Q24,65 38,73 Q30,63 28,50 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M73,48 Q76,65 62,73 Q70,63 72,50 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          {/* Wider jaw shadows */}
-          <Path d="M35,72 Q50,76 65,72 L62,74 Q50,78 38,74 Z" fill={shadowColor} opacity={0.15} />
-        </G>
-      )}
-      {shape === FaceShape.INVERTED_TRIANGLE && (
-        <G>
-          <Path
-            d="M24,48 Q30,66 50,78 Q34,64 26,50 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M76,48 Q70,66 50,78 Q66,64 74,50 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          {/* Pointed chin highlight */}
-          <Ellipse cx={50} cy={74} rx={3} ry={3} fill={highlightColor} opacity={0.2} />
-        </G>
-      )}
-      {shape === FaceShape.RECTANGLE && (
-        <G>
-          <Path
-            d="M26,48 Q26,70 34,76 L34,72 Q28,66 28,50 Z"
-            fill={shadowColor}
-            opacity={0.18}
-          />
-          <Path
-            d="M74,48 Q74,70 66,76 L66,72 Q72,66 72,50 Z"
-            fill={shadowColor}
-            opacity={0.18}
-          />
-          <Path d="M34,75 Q50,79 66,75 L64,77 Q50,81 36,77 Z" fill={shadowColor} opacity={0.15} />
-        </G>
-      )}
-      {shape === FaceShape.PEAR && (
-        <G>
-          <Path
-            d="M28,48 Q22,66 40,74 Q30,64 26,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M72,48 Q78,66 60,74 Q70,64 74,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          {/* Fuller cheek highlights */}
-          <Ellipse cx={34} cy={58} rx={5} ry={4} fill={highlightColor} opacity={0.15} />
-          <Ellipse cx={66} cy={58} rx={5} ry={4} fill={highlightColor} opacity={0.15} />
-        </G>
-      )}
-      {shape === FaceShape.LONG && (
-        <G>
-          <Path
-            d="M29,48 Q29,74 50,80 Q34,72 31,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M71,48 Q71,74 50,80 Q66,72 69,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-        </G>
-      )}
-      {shape === FaceShape.WIDE && (
-        <G>
-          <Path
-            d="M22,50 Q22,66 50,70 Q28,64 24,52 Z"
-            fill={shadowColor}
-            opacity={0.1}
-          />
-          <Path
-            d="M78,50 Q78,66 50,70 Q72,64 76,52 Z"
-            fill={shadowColor}
-            opacity={0.1}
-          />
-        </G>
-      )}
-      {shape === FaceShape.ANGULAR && (
-        <G>
-          <Path
-            d="M26,48 Q28,64 42,72 L42,68 Q30,62 28,50 Z"
-            fill={shadowColor}
-            opacity={0.15}
-          />
-          <Path
-            d="M74,48 Q72,64 58,72 L58,68 Q70,62 72,50 Z"
-            fill={shadowColor}
-            opacity={0.15}
-          />
-          {/* Angular cheekbone highlights */}
-          <Ellipse cx={34} cy={50} rx={4} ry={3} fill={brightHighlight} opacity={0.18} />
-          <Ellipse cx={66} cy={50} rx={4} ry={3} fill={brightHighlight} opacity={0.18} />
-        </G>
-      )}
-      {shape === FaceShape.SOFT_SQUARE && (
-        <G>
-          <Path
-            d="M25,50 Q27,68 50,73 Q30,66 27,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M75,50 Q73,68 50,73 Q70,66 73,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-        </G>
-      )}
-      {shape === FaceShape.NARROW && (
-        <G>
-          <Path
-            d="M30,48 Q30,70 50,76 Q36,68 32,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-          <Path
-            d="M70,48 Q70,70 50,76 Q64,68 68,52 Z"
-            fill={shadowColor}
-            opacity={0.12}
-          />
-        </G>
-      )}
-
-      {/* Philtrum area - subtle shadow under nose */}
-      <Path
-        d={`M${shapeData.cx - 3},${shapeData.cy + 10}
-            Q${shapeData.cx},${shapeData.cy + 14}
-            ${shapeData.cx + 3},${shapeData.cy + 10}`}
-        fill={shadowColor}
-        opacity={0.08}
       />
     </G>
   );

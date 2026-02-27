@@ -327,7 +327,7 @@ const EDGE_CASE_TESTS: IntegrationTestCase[] = [
       {
         ...DEFAULT_MALE_CONFIG,
         hairStyle: HairStyle.BALD,
-        accessory: AccessoryStyle.HAT_BASEBALL,
+        accessory: AccessoryStyle.HEADBAND,
       },
     ],
     expectedBehavior: 'Hat renders correctly on bald head',

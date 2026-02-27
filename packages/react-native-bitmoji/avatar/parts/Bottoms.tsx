@@ -4,9 +4,10 @@
  */
 
 import React from 'react';
-import { G, Path, Rect, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
+import { G, Path, Rect, Ellipse, Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
 import { BottomStyle, BodyType, LegPose, SvgPartProps } from '../types';
 import { adjustBrightness, useGradientIds } from '../utils';
+import { getBodyDimensions } from './Body';
 
 type BottomsGradientIds = {
   bottomsGradient: string;
@@ -28,25 +29,16 @@ interface BottomDimensions {
 }
 
 function getBottomDimensions(bodyType: BodyType): BottomDimensions {
-  switch (bodyType) {
-    case BodyType.SLIM:
-      return { waistWidth: 22, hipWidth: 26, length: 'full' };
-    case BodyType.ATHLETIC:
-      return { waistWidth: 28, hipWidth: 32, length: 'full' };
-    case BodyType.CURVY:
-      return { waistWidth: 26, hipWidth: 40, length: 'full' };
-    case BodyType.PLUS_SIZE:
-      return { waistWidth: 38, hipWidth: 42, length: 'full' };
-    case BodyType.MUSCULAR:
-      return { waistWidth: 32, hipWidth: 36, length: 'full' };
-    case BodyType.AVERAGE:
-    default:
-      return { waistWidth: 26, hipWidth: 32, length: 'full' };
-  }
+  // Use body dimensions for width consistency with Body.tsx torso shape
+  const bodyDims = getBodyDimensions(bodyType);
+  return {
+    waistWidth: bodyDims.waistWidth,
+    hipWidth: bodyDims.hipWidth,
+    length: 'full',
+  };
 }
 
-function getLengthY(length: 'short' | 'knee' | 'midi' | 'long' | 'full'): number {
-  const waistY = 107;
+function getLengthY(length: 'short' | 'knee' | 'midi' | 'long' | 'full', waistY: number): number {
   switch (length) {
     case 'short':
       return waistY + 20;
@@ -62,22 +54,48 @@ function getLengthY(length: 'short' | 'knee' | 'midi' | 'long' | 'full'): number
   }
 }
 
+interface LegPoseOffsets {
+  leftOffset: number;
+  rightOffset: number;
+  bottomYAdjust: number;
+  hipWidthAdjust: number;
+}
+
+function getLegPoseOffsets(legPose: LegPose): LegPoseOffsets {
+  switch (legPose) {
+    case LegPose.CROSSED:
+      return { leftOffset: 3, rightOffset: -3, bottomYAdjust: 0, hipWidthAdjust: 0 };
+    case LegPose.WIDE:
+      return { leftOffset: -5, rightOffset: 5, bottomYAdjust: 0, hipWidthAdjust: 4 };
+    case LegPose.SITTING:
+      return { leftOffset: 0, rightOffset: 0, bottomYAdjust: -33, hipWidthAdjust: 6 };
+    case LegPose.STANDING:
+    default:
+      return { leftOffset: 0, rightOffset: 0, bottomYAdjust: 0, hipWidthAdjust: 0 };
+  }
+}
+
 function getBottomLength(style: BottomStyle): 'short' | 'knee' | 'midi' | 'long' | 'full' {
   switch (style) {
+    // Short
     case BottomStyle.SHORTS:
     case BottomStyle.SHORTS_ATHLETIC:
-    case BottomStyle.SHORTS_DENIM:
-    case BottomStyle.SHORTS_CARGO:
     case BottomStyle.SKIRT_MINI:
       return 'short';
+    // Knee
     case BottomStyle.SKIRT_MIDI:
-    case BottomStyle.SKIRT_PLEATED:
-    case BottomStyle.SKIRT_A_LINE:
       return 'knee';
-    case BottomStyle.SKIRT_PENCIL:
-      return 'midi';
-    case BottomStyle.SKIRT_MAXI:
-      return 'long';
+    // Full (all jeans variants, chinos, trousers, etc.)
+    case BottomStyle.JEANS:
+    case BottomStyle.JEANS_SKINNY:
+    case BottomStyle.CHINOS:
+    case BottomStyle.DRESS_PANTS:
+    case BottomStyle.LEGGINGS:
+    case BottomStyle.CARGO:
+    case BottomStyle.JOGGERS:
+    case BottomStyle.SWEATPANTS:
+    case BottomStyle.JUMPSUIT:
+      return 'full';
     default:
       return 'full';
   }
@@ -87,10 +105,6 @@ function isSkirt(style: BottomStyle): boolean {
   return [
     BottomStyle.SKIRT_MINI,
     BottomStyle.SKIRT_MIDI,
-    BottomStyle.SKIRT_MAXI,
-    BottomStyle.SKIRT_PLEATED,
-    BottomStyle.SKIRT_PENCIL,
-    BottomStyle.SKIRT_A_LINE,
   ].includes(style);
 }
 
@@ -106,9 +120,10 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
 
   const dims = getBottomDimensions(bodyType);
   const length = getBottomLength(style);
-  const bottomY = getLengthY(length);
-  const waistY = 107;
+  const bodyDims = getBodyDimensions(bodyType);
+  const waistY = 72 + bodyDims.torsoLength;
   const centerX = 50;
+  const bottomY = getLengthY(length, waistY);
 
   const shadowColor = adjustBrightness(color, -30);
   const highlightColor = adjustBrightness(color, 20);
@@ -131,17 +146,11 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
     let flare = 0;
 
     switch (style) {
-      case BottomStyle.SKIRT_A_LINE:
-        flare = 15;
+      case BottomStyle.SKIRT_MIDI:
+        flare = 8;
         break;
-      case BottomStyle.SKIRT_PLEATED:
+      case BottomStyle.SKIRT_MINI:
         flare = 12;
-        break;
-      case BottomStyle.SKIRT_MAXI:
-        flare = 10;
-        break;
-      case BottomStyle.SKIRT_PENCIL:
-        flare = -2;
         break;
       default:
         flare = 8;
@@ -179,26 +188,6 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
           fill={shadowColor}
         />
 
-        {/* Pleats for pleated skirt */}
-        {style === BottomStyle.SKIRT_PLEATED && (
-          <G>
-            {Array.from({ length: 8 }).map((_, i) => {
-              const x = leftHip - flare + ((rightHip + 2 * flare - leftHip) / 8) * (i + 0.5);
-              return (
-                <Line
-                  key={i}
-                  x1={x}
-                  y1={hipY + 5}
-                  x2={x + (i % 2 === 0 ? -2 : 2)}
-                  y2={bottomY - 2}
-                  stroke={i % 2 === 0 ? shadowColor : highlightColor}
-                  strokeWidth={1}
-                  opacity={0.4}
-                />
-              );
-            })}
-          </G>
-        )}
 
         {/* Center fold/seam shadow */}
         <Path
@@ -224,21 +213,27 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
 
   // Render pants/shorts styles
   const legWidth = dims.hipWidth / 4;
-  const leftLegX = centerX - dims.hipWidth / 4;
-  const rightLegX = centerX + dims.hipWidth / 4;
+  const baseLegX = dims.hipWidth / 4;
 
   // Calculate leg taper based on style
   let legTaper = 0;
   switch (style) {
+    // Slim / skinny (taper inward)
     case BottomStyle.JEANS_SKINNY:
     case BottomStyle.LEGGINGS:
       legTaper = 3;
       break;
-    case BottomStyle.JEANS_WIDE:
+    // Straight (no taper)
+    case BottomStyle.JEANS:
+    case BottomStyle.CHINOS:
+    case BottomStyle.DRESS_PANTS:
+      legTaper = 0;
+      break;
+    // Wide
     case BottomStyle.CARGO:
-    case BottomStyle.SHORTS_CARGO:
       legTaper = -4;
       break;
+    // Default slight taper
     case BottomStyle.JOGGERS:
     case BottomStyle.SWEATPANTS:
       legTaper = 1;
@@ -247,37 +242,48 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
       legTaper = 1;
   }
 
+  // Apply leg-pose offsets to pants rendering
+  const poseOffsets = getLegPoseOffsets(legPose);
+  const leftLegX = centerX - baseLegX + poseOffsets.leftOffset;
+  const rightLegX = centerX + baseLegX + poseOffsets.rightOffset;
+  const poseBottomY = bottomY + poseOffsets.bottomYAdjust;
+  const poseHipWidth = dims.hipWidth + poseOffsets.hipWidthAdjust;
+  const poseLeftHip = centerX - poseHipWidth / 2;
+  const poseRightHip = centerX + poseHipWidth / 2;
+
+  const crotchHalf = 4; // half the crotch gap width (8 units total)
+
   const leftLegPath = `
     M ${leftWaist} ${waistY}
-    Q ${leftHip - 2} ${hipY - 5} ${leftHip} ${hipY}
-    L ${leftHip} ${bottomY}
-    L ${centerX - 2} ${bottomY}
-    L ${centerX - 2} ${hipY + 5}
-    Q ${centerX - 3} ${hipY} ${leftWaist + dims.waistWidth / 4} ${waistY}
+    Q ${poseLeftHip - 2} ${hipY - 5} ${poseLeftHip} ${hipY}
+    L ${poseLeftHip} ${poseBottomY}
+    L ${centerX - crotchHalf} ${poseBottomY}
+    L ${centerX - crotchHalf} ${hipY + 5}
+    Q ${centerX - crotchHalf - 1} ${hipY} ${leftWaist + dims.waistWidth / 4} ${waistY}
     Z
   `;
 
   const rightLegPath = `
     M ${rightWaist} ${waistY}
-    Q ${rightHip + 2} ${hipY - 5} ${rightHip} ${hipY}
-    L ${rightHip} ${bottomY}
-    L ${centerX + 2} ${bottomY}
-    L ${centerX + 2} ${hipY + 5}
-    Q ${centerX + 3} ${hipY} ${rightWaist - dims.waistWidth / 4} ${waistY}
+    Q ${poseRightHip + 2} ${hipY - 5} ${poseRightHip} ${hipY}
+    L ${poseRightHip} ${poseBottomY}
+    L ${centerX + crotchHalf} ${poseBottomY}
+    L ${centerX + crotchHalf} ${hipY + 5}
+    Q ${centerX + crotchHalf + 1} ${hipY} ${rightWaist - dims.waistWidth / 4} ${waistY}
     Z
   `;
 
   const pantsPath = `
     M ${leftWaist} ${waistY}
-    Q ${leftHip - 2} ${hipY - 5} ${leftHip} ${hipY}
-    Q ${leftLegX - legWidth - legTaper / 2} ${(hipY + bottomY) / 2} ${leftLegX - legWidth + legTaper} ${bottomY}
-    L ${leftLegX + legWidth - legTaper} ${bottomY}
-    Q ${leftLegX + legWidth} ${(hipY + bottomY) / 2} ${centerX - 2} ${hipY + 5}
-    L ${centerX + 2} ${hipY + 5}
-    Q ${rightLegX - legWidth} ${(hipY + bottomY) / 2} ${rightLegX - legWidth + legTaper} ${bottomY}
-    L ${rightLegX + legWidth - legTaper} ${bottomY}
-    Q ${rightLegX + legWidth + legTaper / 2} ${(hipY + bottomY) / 2} ${rightHip} ${hipY}
-    Q ${rightHip + 2} ${hipY - 5} ${rightWaist} ${waistY}
+    Q ${poseLeftHip - 2} ${hipY - 5} ${poseLeftHip} ${hipY}
+    Q ${leftLegX - legWidth - legTaper / 2} ${(hipY + poseBottomY) / 2} ${leftLegX - legWidth + legTaper} ${poseBottomY}
+    L ${leftLegX + legWidth - legTaper} ${poseBottomY}
+    Q ${leftLegX + legWidth} ${(hipY + poseBottomY) / 2} ${centerX - crotchHalf} ${hipY + 5}
+    L ${centerX + crotchHalf} ${hipY + 5}
+    Q ${rightLegX - legWidth} ${(hipY + poseBottomY) / 2} ${rightLegX - legWidth + legTaper} ${poseBottomY}
+    L ${rightLegX + legWidth - legTaper} ${poseBottomY}
+    Q ${rightLegX + legWidth + legTaper / 2} ${(hipY + poseBottomY) / 2} ${poseRightHip} ${hipY}
+    Q ${poseRightHip + 2} ${hipY - 5} ${rightWaist} ${waistY}
     Z
   `;
 
@@ -305,6 +311,15 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
         </LinearGradient>
       </Defs>
 
+      {/* Crotch fill to prevent skin showing between legs */}
+      <Path
+        d={`M ${centerX - crotchHalf} ${hipY + 5}
+            L ${centerX + crotchHalf} ${hipY + 5}
+            L ${centerX + crotchHalf + 2} ${poseBottomY}
+            L ${centerX - crotchHalf - 2} ${poseBottomY}
+            Z`}
+        fill={color}
+      />
       {/* Main pants shape */}
       <Path d={pantsPath} fill={`url(#${gradientId})`} />
 
@@ -315,45 +330,27 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
         fill={shadowColor}
       />
 
-      {/* Fly/zipper area */}
+      {/* Subtle fly detail - small, no extending lines */}
       <Path
-        d={`M ${centerX - 2} ${waistY + 5} L ${centerX - 2} ${hipY + 2}
-            Q ${centerX} ${hipY + 4} ${centerX + 2} ${hipY + 2}
-            L ${centerX + 2} ${waistY + 5}`}
+        d={`M ${centerX - 1} ${waistY + 5} L ${centerX - 1} ${waistY + 12}
+            Q ${centerX} ${waistY + 13} ${centerX + 1} ${waistY + 12}
+            L ${centerX + 1} ${waistY + 5}`}
         fill={deepShadow}
-        opacity={0.3}
-      />
-
-      {/* Inseam shadows */}
-      <Path
-        d={`M ${centerX} ${hipY + 5}
-            Q ${leftLegX + legWidth / 2} ${(hipY + bottomY) / 2 + 5} ${leftLegX + legWidth - legTaper} ${bottomY}`}
-        stroke={deepShadow}
-        strokeWidth={1}
-        fill="none"
-        opacity={0.3}
-      />
-      <Path
-        d={`M ${centerX} ${hipY + 5}
-            Q ${rightLegX - legWidth / 2} ${(hipY + bottomY) / 2 + 5} ${rightLegX - legWidth + legTaper} ${bottomY}`}
-        stroke={deepShadow}
-        strokeWidth={1}
-        fill="none"
-        opacity={0.3}
+        opacity={0.2}
       />
 
       {/* Outseam highlights */}
       <Path
-        d={`M ${leftHip} ${hipY}
-            Q ${leftLegX - legWidth - legTaper / 2} ${(hipY + bottomY) / 2} ${leftLegX - legWidth + legTaper} ${bottomY}`}
+        d={`M ${poseLeftHip} ${hipY}
+            Q ${leftLegX - legWidth - legTaper / 2} ${(hipY + poseBottomY) / 2} ${leftLegX - legWidth + legTaper} ${poseBottomY}`}
         stroke={highlightColor}
         strokeWidth={0.5}
         fill="none"
         opacity={0.2}
       />
       <Path
-        d={`M ${rightHip} ${hipY}
-            Q ${rightLegX + legWidth + legTaper / 2} ${(hipY + bottomY) / 2} ${rightLegX + legWidth - legTaper} ${bottomY}`}
+        d={`M ${poseRightHip} ${hipY}
+            Q ${rightLegX + legWidth + legTaper / 2} ${(hipY + poseBottomY) / 2} ${rightLegX + legWidth - legTaper} ${poseBottomY}`}
         stroke={highlightColor}
         strokeWidth={0.5}
         fill="none"
@@ -362,11 +359,11 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
 
       {/* Style-specific details */}
       {/* Cargo pockets */}
-      {(style === BottomStyle.CARGO || style === BottomStyle.SHORTS_CARGO) && (
+      {style === BottomStyle.CARGO && (
         <G>
           <Rect
             x={leftLegX - legWidth + 2}
-            y={(hipY + bottomY) / 2 - 5}
+            y={(hipY + poseBottomY) / 2 - 5}
             width={legWidth * 1.5}
             height={12}
             fill={shadowColor}
@@ -374,7 +371,7 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
           />
           <Rect
             x={rightLegX - legWidth / 2}
-            y={(hipY + bottomY) / 2 - 5}
+            y={(hipY + poseBottomY) / 2 - 5}
             width={legWidth * 1.5}
             height={12}
             fill={shadowColor}
@@ -383,45 +380,92 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
         </G>
       )}
 
-      {/* Ripped effect for ripped jeans */}
-      {style === BottomStyle.JEANS_RIPPED && (
+      {/* Denim twill texture for jeans styles */}
+      {style === BottomStyle.JEANS || style === BottomStyle.JEANS_SKINNY ? (
         <G>
-          <Path
-            d={`M ${leftLegX - 2} ${hipY + 25} Q ${leftLegX} ${hipY + 28} ${leftLegX + 3} ${hipY + 25}`}
-            stroke="#f5f5f5"
-            strokeWidth={2}
-            fill="none"
-            opacity={0.6}
+          {/* Diagonal twill weave lines — left leg */}
+          {[0, 4, 8, 12, 16].map((offset, i) => (
+            <Path
+              key={`twill-l-${i}`}
+              d={`M ${leftHip + offset} ${hipY + 2} L ${leftHip + offset - 6} ${hipY + 14}`}
+              stroke={highlightColor}
+              strokeWidth={0.4}
+              fill="none"
+              opacity={0.07}
+            />
+          ))}
+          {/* Diagonal twill weave lines — right leg */}
+          {[0, 4, 8, 12, 16].map((offset, i) => (
+            <Path
+              key={`twill-r-${i}`}
+              d={`M ${rightHip - 16 + offset} ${hipY + 2} L ${rightHip - 16 + offset - 6} ${hipY + 14}`}
+              stroke={highlightColor}
+              strokeWidth={0.4}
+              fill="none"
+              opacity={0.07}
+            />
+          ))}
+          {/* Whiskering / thigh fade — left leg highlight */}
+          <Ellipse
+            cx={leftLegX}
+            cy={hipY + 18}
+            rx={legWidth * 0.7}
+            ry={8}
+            fill={highlightColor}
+            opacity={0.1}
           />
-          <Path
-            d={`M ${rightLegX - 3} ${hipY + 30} Q ${rightLegX} ${hipY + 33} ${rightLegX + 2} ${hipY + 30}`}
-            stroke="#f5f5f5"
-            strokeWidth={2}
-            fill="none"
-            opacity={0.6}
+          {/* Whiskering / thigh fade — right leg highlight */}
+          <Ellipse
+            cx={rightLegX}
+            cy={hipY + 18}
+            rx={legWidth * 0.7}
+            ry={8}
+            fill={highlightColor}
+            opacity={0.1}
           />
         </G>
-      )}
+      ) : null}
+
 
       {/* Jogger/sweatpants cuff */}
       {(style === BottomStyle.JOGGERS || style === BottomStyle.SWEATPANTS) && length === 'full' && (
         <G>
           <Path
-            d={`M ${leftLegX - legWidth + legTaper} ${bottomY - 4}
-                Q ${leftLegX} ${bottomY - 3} ${leftLegX + legWidth - legTaper} ${bottomY - 4}
-                L ${leftLegX + legWidth - legTaper} ${bottomY}
-                Q ${leftLegX} ${bottomY + 1} ${leftLegX - legWidth + legTaper} ${bottomY}
+            d={`M ${leftLegX - legWidth + legTaper} ${poseBottomY - 4}
+                Q ${leftLegX} ${poseBottomY - 3} ${leftLegX + legWidth - legTaper} ${poseBottomY - 4}
+                L ${leftLegX + legWidth - legTaper} ${poseBottomY}
+                Q ${leftLegX} ${poseBottomY + 1} ${leftLegX - legWidth + legTaper} ${poseBottomY}
                 Z`}
             fill={shadowColor}
           />
           <Path
-            d={`M ${rightLegX - legWidth + legTaper} ${bottomY - 4}
-                Q ${rightLegX} ${bottomY - 3} ${rightLegX + legWidth - legTaper} ${bottomY - 4}
-                L ${rightLegX + legWidth - legTaper} ${bottomY}
-                Q ${rightLegX} ${bottomY + 1} ${rightLegX - legWidth + legTaper} ${bottomY}
+            d={`M ${rightLegX - legWidth + legTaper} ${poseBottomY - 4}
+                Q ${rightLegX} ${poseBottomY - 3} ${rightLegX + legWidth - legTaper} ${poseBottomY - 4}
+                L ${rightLegX + legWidth - legTaper} ${poseBottomY}
+                Q ${rightLegX} ${poseBottomY + 1} ${rightLegX - legWidth + legTaper} ${poseBottomY}
                 Z`}
             fill={shadowColor}
           />
+        </G>
+      )}
+
+
+
+
+      {/* Dress pants crease line */}
+      {style === BottomStyle.DRESS_PANTS && (
+        <G>
+          <Path d={`M ${leftLegX} ${hipY + 5} L ${leftLegX} ${poseBottomY - 2}`} stroke={highlightColor} strokeWidth={0.8} fill="none" opacity={0.25} />
+          <Path d={`M ${rightLegX} ${hipY + 5} L ${rightLegX} ${poseBottomY - 2}`} stroke={highlightColor} strokeWidth={0.8} fill="none" opacity={0.25} />
+        </G>
+      )}
+
+
+      {/* Leggings subtle sheen */}
+      {style === BottomStyle.LEGGINGS && (
+        <G>
+          <Ellipse cx={leftLegX + 2} cy={(hipY + poseBottomY) / 2} rx={legWidth * 0.5} ry={18} fill={highlightColor} opacity={0.15} />
+          <Ellipse cx={rightLegX + 2} cy={(hipY + poseBottomY) / 2} rx={legWidth * 0.5} ry={18} fill={highlightColor} opacity={0.15} />
         </G>
       )}
 

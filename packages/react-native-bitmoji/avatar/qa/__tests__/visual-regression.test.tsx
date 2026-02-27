@@ -7,7 +7,9 @@
 
 import React from 'react';
 import { render as rtlRender } from '@testing-library/react';
+import renderer from 'react-test-renderer';
 import { Avatar } from '../../Avatar';
+import { FullBodyAvatar } from '../../FullBodyAvatar';
 import {
   DEFAULT_MALE_CONFIG,
   DEFAULT_FEMALE_CONFIG,
@@ -30,6 +32,10 @@ import {
   LipstickStyle,
   BlushStyle,
   AvatarConfig,
+  BodyType,
+  ArmPose,
+  LegPose,
+  ShoeStyle,
 } from '../../types';
 
 // ============================================================================
@@ -458,5 +464,58 @@ describe('Avatar Edge Cases', () => {
   it('renders female default config', () => {
     const { toJSON } = render(<Avatar config={DEFAULT_FEMALE_CONFIG} />);
     expect(toJSON()).toMatchSnapshot();
+  });
+});
+
+// ============================================================================
+// FULL BODY AVATAR SNAPSHOT TESTS
+// ============================================================================
+
+describe('FullBodyAvatar snapshots', () => {
+  // Test each body type renders without error
+  Object.values(BodyType).forEach(bodyType => {
+    it(`renders ${bodyType} body type`, () => {
+      const config = { ...DEFAULT_MALE_CONFIG, bodyType };
+      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
+      expect(tree.toJSON()).toBeTruthy();
+    });
+  });
+
+  // Test each clothing style with each body type
+  Object.values(ClothingStyle).forEach(clothing => {
+    Object.values(BodyType).forEach(bodyType => {
+      it(`renders ${clothing} on ${bodyType}`, () => {
+        const config = { ...DEFAULT_MALE_CONFIG, bodyType, clothing };
+        const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
+        expect(tree.toJSON()).toBeTruthy();
+      });
+    });
+  });
+
+  // Test each arm pose
+  Object.values(ArmPose).forEach(armPose => {
+    it(`renders ${armPose} arm pose`, () => {
+      const config = { ...DEFAULT_MALE_CONFIG, armPose };
+      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
+      expect(tree.toJSON()).toBeTruthy();
+    });
+  });
+
+  // Test each leg pose
+  Object.values(LegPose).forEach(legPose => {
+    it(`renders ${legPose} leg pose`, () => {
+      const config = { ...DEFAULT_MALE_CONFIG, legPose };
+      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
+      expect(tree.toJSON()).toBeTruthy();
+    });
+  });
+
+  // Test shoe styles
+  Object.values(ShoeStyle).forEach(shoeStyle => {
+    it(`renders ${shoeStyle} shoe style`, () => {
+      const config = { ...DEFAULT_MALE_CONFIG, shoeStyle };
+      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
+      expect(tree.toJSON()).toBeTruthy();
+    });
   });
 });

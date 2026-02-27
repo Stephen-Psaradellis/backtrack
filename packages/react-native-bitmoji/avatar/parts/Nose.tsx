@@ -167,14 +167,14 @@ export function Nose({ style, skinTone, scale = 1 }: NoseProps) {
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.8}
-                  opacity={0.3}
+                  opacity={0.18}
                 />
                 <Path
                   d={`M${NOSE_X + 2},${NOSE_Y - 10} Q${NOSE_X + 1},${NOSE_Y - 5} ${NOSE_X + 1},${NOSE_Y}`}
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.8}
-                  opacity={0.3}
+                  opacity={0.18}
                 />
                 {/* Bridge highlight */}
                 <Path
@@ -182,7 +182,7 @@ export function Nose({ style, skinTone, scale = 1 }: NoseProps) {
                   fill="none"
                   stroke={brightHighlight}
                   strokeWidth={1.2}
-                  opacity={0.35}
+                  opacity={0.23}
                 />
                 {/* Nose tip base */}
                 <Ellipse
@@ -252,21 +252,21 @@ export function Nose({ style, skinTone, scale = 1 }: NoseProps) {
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.6}
-                  opacity={0.3}
+                  opacity={0.18}
                 />
                 <Path
                   d={`M${NOSE_X + 2},${NOSE_Y - 8} Q${NOSE_X + 1.5},${NOSE_Y - 3} ${NOSE_X + 2},${NOSE_Y + 1}`}
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.6}
-                  opacity={0.3}
+                  opacity={0.18}
                 />
                 {/* Bridge highlight */}
                 <Path
                   d={`M${NOSE_X},${NOSE_Y - 7} L${NOSE_X},${NOSE_Y + 1}`}
                   stroke={brightHighlight}
                   strokeWidth={1.2}
-                  opacity={0.4}
+                  opacity={0.22}
                 />
                 {/* Main pointed shape */}
                 <Path
@@ -486,21 +486,21 @@ export function Nose({ style, skinTone, scale = 1 }: NoseProps) {
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.6}
-                  opacity={0.35}
+                  opacity={0.18}
                 />
                 <Path
                   d={`M${NOSE_X + 1.5},${NOSE_Y - 8} Q${NOSE_X + 1},${NOSE_Y - 4} ${NOSE_X + 1},${NOSE_Y + 2}`}
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.6}
-                  opacity={0.35}
+                  opacity={0.18}
                 />
                 {/* Bridge highlight */}
                 <Path
                   d={`M${NOSE_X},${NOSE_Y - 7} L${NOSE_X},${NOSE_Y}`}
                   stroke={brightHighlight}
                   strokeWidth={1}
-                  opacity={0.45}
+                  opacity={0.25}
                 />
                 {/* Main narrow nose shape */}
                 <Path
@@ -551,14 +551,14 @@ export function Nose({ style, skinTone, scale = 1 }: NoseProps) {
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.6}
-                  opacity={0.3}
+                  opacity={0.18}
                 />
                 {/* Bridge highlight */}
                 <Path
                   d={`M${NOSE_X},${NOSE_Y - 7} Q${NOSE_X + 1},${NOSE_Y - 3} ${NOSE_X + 2},${NOSE_Y + 1}`}
                   stroke={brightHighlight}
                   strokeWidth={1}
-                  opacity={0.35}
+                  opacity={0.2}
                 />
                 {/* Main hooked profile */}
                 <Path
@@ -678,21 +678,21 @@ export function Nose({ style, skinTone, scale = 1 }: NoseProps) {
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.6}
-                  opacity={0.3}
+                  opacity={0.18}
                 />
                 <Path
                   d={`M${NOSE_X + 2},${NOSE_Y - 8} Q${NOSE_X + 1.5},${NOSE_Y - 4} ${NOSE_X + 2},${NOSE_Y}`}
                   fill="none"
                   stroke={shadowColor}
                   strokeWidth={0.6}
-                  opacity={0.3}
+                  opacity={0.18}
                 />
                 {/* Bridge highlight */}
                 <Path
                   d={`M${NOSE_X},${NOSE_Y - 7} L${NOSE_X},${NOSE_Y}`}
                   stroke={brightHighlight}
                   strokeWidth={1.2}
-                  opacity={0.4}
+                  opacity={0.22}
                 />
                 {/* Main nose shape */}
                 <Path
@@ -703,7 +703,7 @@ export function Nose({ style, skinTone, scale = 1 }: NoseProps) {
                       Q${NOSE_X + 4.5},${NOSE_Y + 4.5} ${NOSE_X},${NOSE_Y + 2}`}
                   fill="none"
                   stroke={shadowColor}
-                  strokeWidth={1.1}
+                  strokeWidth={0.8}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />

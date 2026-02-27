@@ -24,6 +24,7 @@ export { Hands, default as HandsDefault } from './Hands';
 export { Feet, default as FeetDefault } from './Feet';
 export { Bottoms, default as BottomsDefault } from './Bottoms';
 export { Shoes, default as ShoesDefault } from './Shoes';
+export { Sleeves, default as SleevesDefault } from './Sleeves';
 
 // Expression system
 export { ExpressionRenderer, applyExpressionToConfig, getExpressionEffects } from './ExpressionRenderer';

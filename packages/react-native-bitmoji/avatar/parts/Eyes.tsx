@@ -32,10 +32,11 @@ interface EyesProps extends SvgPartProps {
   eyeColor: string;
   rightEyeColor?: string;  // For heterochromia - if not provided, uses eyeColor
   eyelashStyle?: EyelashStyle;
+  faceWidth?: number; // face ellipse rx value, defaults to ~22
 }
 
-const LEFT_EYE_X = 38;
-const RIGHT_EYE_X = 62;
+const LEFT_EYE_X = 39;
+const RIGHT_EYE_X = 61;
 const EYE_Y = 44;
 const EYE_RADIUS = 5;
 
@@ -46,204 +47,87 @@ function DefaultEye({ cx, cy, eyeColor, radius = EYE_RADIUS, lookDirection = 0 }
   radius?: number;
   lookDirection?: number;
 }) {
-  const irisRadius = radius * 0.72;
-  const pupilRadius = radius * 0.32;
-  const highlightRadius = radius * 0.22;
-  const irisLightColor = adjustBrightness(eyeColor, 30);
-  const irisDarkColor = adjustBrightness(eyeColor, -40);
-  const irisRimColor = adjustBrightness(eyeColor, -60);
-
-  const ids = useGradientIds<DefaultEyeGradientIds>(['irisGradient', 'scleraGradient', 'pupilGradient']);
-  const gradientId = ids.irisGradient;
-  const scleraGradientId = ids.scleraGradient;
-  const pupilGradientId = ids.pupilGradient;
+  const irisRadius = radius * 0.65;
+  const pupilRadius = radius * 0.3;
+  const highlightRadius = irisRadius * 0.3;
+  const limbalRingColor = adjustBrightness(eyeColor, -40);
 
   return (
     <G>
-      <Defs>
-        {/* Sclera (white of eye) gradient - subtle blue/gray tint at edges */}
-        <RadialGradient id={scleraGradientId} cx="50%" cy="45%" rx="55%" ry="50%">
-          <Stop offset="0%" stopColor="#ffffff" />
-          <Stop offset="70%" stopColor="#fafafa" />
-          <Stop offset="90%" stopColor="#f0f0f5" />
-          <Stop offset="100%" stopColor="#e8e8f0" />
-        </RadialGradient>
-
-        {/* Iris gradient - creates depth and color variation */}
-        <RadialGradient id={gradientId} cx="40%" cy="35%" rx="60%" ry="60%">
-          <Stop offset="0%" stopColor={irisLightColor} />
-          <Stop offset="40%" stopColor={eyeColor} />
-          <Stop offset="80%" stopColor={irisDarkColor} />
-          <Stop offset="100%" stopColor={irisRimColor} />
-        </RadialGradient>
-
-        {/* Pupil gradient - not pure black, has depth */}
-        <RadialGradient id={pupilGradientId} cx="45%" cy="40%" rx="50%" ry="50%">
-          <Stop offset="0%" stopColor="#2a2a2a" />
-          <Stop offset="60%" stopColor="#1a1a1a" />
-          <Stop offset="100%" stopColor="#0a0a0a" />
-        </RadialGradient>
-      </Defs>
-
-      {/* Eye shadow (upper lid cast shadow) */}
-      <Ellipse
-        cx={cx}
-        cy={cy - radius * 0.15}
-        rx={radius * 1.05}
-        ry={radius * 0.5}
-        fill="#00000015"
-      />
-
-      {/* Sclera (eyeball white) */}
+      {/* Sclera (white of eye) - simple white ellipse with thin outline */}
       <Ellipse
         cx={cx}
         cy={cy}
         rx={radius}
         ry={radius * 0.85}
-        fill={`url(#${scleraGradientId})`}
+        fill="#ffffff"
+        stroke="#555555"
+        strokeWidth={0.5}
       />
 
-      {/* Sclera outline - subtle, natural */}
-      <Ellipse
-        cx={cx}
-        cy={cy}
-        rx={radius}
-        ry={radius * 0.85}
-        fill="none"
-        stroke="#6a6a7a"
-        strokeWidth={0.4}
-        opacity={0.6}
-      />
-
-      {/* Iris outer ring (limbal ring) */}
-      <Circle
-        cx={cx + lookDirection}
-        cy={cy}
-        r={irisRadius + 0.3}
-        fill={irisRimColor}
-      />
-
-      {/* Iris main body with gradient */}
+      {/* Iris - flat colored circle with limbal ring */}
       <Circle
         cx={cx + lookDirection}
         cy={cy}
         r={irisRadius}
-        fill={`url(#${gradientId})`}
+        fill={eyeColor}
       />
 
-      {/* Iris texture - radial lines */}
-      <G opacity={0.15}>
-        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
-          const rad = (angle * Math.PI) / 180;
-          const innerR = pupilRadius + 0.3;
-          const outerR = irisRadius - 0.2;
-          const x1 = cx + lookDirection + innerR * Math.cos(rad);
-          const y1 = cy + innerR * Math.sin(rad);
-          const x2 = cx + lookDirection + outerR * Math.cos(rad);
-          const y2 = cy + outerR * Math.sin(rad);
-          return (
-            <Path
-              key={angle}
-              d={`M${x1},${y1} L${x2},${y2}`}
-              stroke={irisDarkColor}
-              strokeWidth={0.3}
-            />
-          );
-        })}
-      </G>
-
-      {/* Iris inner ring around pupil */}
+      {/* Limbal ring - thin dark outline around iris */}
       <Circle
         cx={cx + lookDirection}
         cy={cy}
-        r={pupilRadius + 0.5}
+        r={irisRadius}
         fill="none"
-        stroke={irisDarkColor}
-        strokeWidth={0.5}
-        opacity={0.4}
+        stroke={limbalRingColor}
+        strokeWidth={0.4}
       />
 
-      {/* Pupil with gradient */}
+      {/* Pupil - simple black circle */}
       <Circle
         cx={cx + lookDirection}
         cy={cy}
         r={pupilRadius}
-        fill={`url(#${pupilGradientId})`}
+        fill="#111111"
       />
 
-      {/* Main highlight - large, bright */}
-      <Ellipse
-        cx={cx + lookDirection - radius * 0.25}
-        cy={cy - radius * 0.25}
-        rx={highlightRadius}
-        ry={highlightRadius * 0.9}
-        fill="white"
-        opacity={0.95}
-      />
-
-      {/* Secondary highlight - small, soft */}
+      {/* Single highlight - white circle upper-left */}
       <Circle
-        cx={cx + lookDirection + radius * 0.2}
-        cy={cy + radius * 0.2}
-        r={highlightRadius * 0.4}
+        cx={cx + lookDirection - irisRadius * 0.4}
+        cy={cy - irisRadius * 0.4}
+        r={highlightRadius}
         fill="white"
-        opacity={0.5}
-      />
-
-      {/* Ambient reflection at bottom of iris */}
-      <Path
-        d={`M${cx + lookDirection - irisRadius * 0.6},${cy + irisRadius * 0.5}
-            Q${cx + lookDirection},${cy + irisRadius * 0.7}
-            ${cx + lookDirection + irisRadius * 0.6},${cy + irisRadius * 0.5}`}
-        fill="white"
-        opacity={0.08}
-      />
-
-      {/* Upper eyelid shadow cast on eye */}
-      <Path
-        d={`M${cx - radius},${cy - radius * 0.5}
-            Q${cx},${cy - radius * 0.2}
-            ${cx + radius},${cy - radius * 0.5}`}
-        fill="#00000010"
+        opacity={0.85}
       />
     </G>
   );
 }
 
 function ClosedEye({ cx, cy }: { cx: number; cy: number }) {
+  const w = EYE_RADIUS; // match open eye size
   return (
     <G>
       {/* Eyelid shadow */}
       <Ellipse
         cx={cx}
-        cy={cy + 1}
-        rx={6}
-        ry={3}
+        cy={cy + 0.5}
+        rx={w + 0.5}
+        ry={w * 0.5}
         fill="#00000008"
       />
-      {/* Main closed line */}
+      {/* Main closed line - gentle downward curve */}
       <Path
-        d={`M${cx - 6},${cy} Q${cx},${cy + 3} ${cx + 6},${cy}`}
+        d={`M${cx - w},${cy} Q${cx},${cy + w * 0.5} ${cx + w},${cy}`}
         fill="none"
         stroke="#3a3a3a"
-        strokeWidth={2}
+        strokeWidth={1.5}
         strokeLinecap="round"
       />
-      {/* Lash line */}
-      <Path
-        d={`M${cx - 5.5},${cy - 0.5} Q${cx},${cy + 2} ${cx + 5.5},${cy - 0.5}`}
-        fill="none"
-        stroke="#2c2c2c"
-        strokeWidth={0.8}
-        strokeLinecap="round"
-      />
-      {/* Eyelashes */}
-      <G stroke="#2c2c2c" strokeWidth={0.6} strokeLinecap="round">
-        <Path d={`M${cx - 5},${cy} L${cx - 6},${cy - 2}`} />
-        <Path d={`M${cx - 3},${cy + 1} L${cx - 4},${cy - 1.5}`} />
-        <Path d={`M${cx},${cy + 2} L${cx},${cy - 1}`} />
-        <Path d={`M${cx + 3},${cy + 1} L${cx + 4},${cy - 1.5}`} />
-        <Path d={`M${cx + 5},${cy} L${cx + 6},${cy - 2}`} />
+      {/* Small lashes */}
+      <G stroke="#2c2c2c" strokeWidth={0.5} strokeLinecap="round">
+        <Path d={`M${cx - w * 0.8},${cy} L${cx - w},${cy - 1.5}`} />
+        <Path d={`M${cx},${cy + w * 0.4} L${cx},${cy - 0.8}`} />
+        <Path d={`M${cx + w * 0.8},${cy} L${cx + w},${cy - 1.5}`} />
       </G>
     </G>
   );
@@ -740,10 +624,16 @@ function Eyelashes({ cx, cy, style, isLeft }: EyelashProps) {
   }
 }
 
-export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashStyle.NONE, scale = 1 }: EyesProps) {
+export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashStyle.NONE, faceWidth, scale = 1 }: EyesProps) {
   // Use rightEyeColor for heterochromia, or fall back to eyeColor for both eyes
   const leftEyeColor = eyeColor;
   const actualRightEyeColor = rightEyeColor || eyeColor;
+
+  // Compute dynamic eye positions based on face width
+  const faceRx = faceWidth || 22; // default face rx
+  const leftEyeX = 50 - faceRx * 0.45;
+  const rightEyeX = 50 + faceRx * 0.45;
+  const eyeY = EYE_Y; // Y stays the same
 
   // Render eyelashes for styles that show the eye opening
   const renderEyelashes = eyelashStyle !== EyelashStyle.NONE &&
@@ -758,49 +648,49 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.CLOSED:
             return (
               <G>
-                <ClosedEye cx={LEFT_EYE_X} cy={EYE_Y} />
-                <ClosedEye cx={RIGHT_EYE_X} cy={EYE_Y} />
+                <ClosedEye cx={leftEyeX} cy={EYE_Y} />
+                <ClosedEye cx={rightEyeX} cy={EYE_Y} />
               </G>
             );
           case EyeStyle.HAPPY:
             return (
               <G>
-                <HappyEye cx={LEFT_EYE_X} cy={EYE_Y} />
-                <HappyEye cx={RIGHT_EYE_X} cy={EYE_Y} />
+                <HappyEye cx={leftEyeX} cy={EYE_Y} />
+                <HappyEye cx={rightEyeX} cy={EYE_Y} />
               </G>
             );
           case EyeStyle.WINK:
             return (
               <G>
-                <DefaultEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} />
-                <ClosedEye cx={RIGHT_EYE_X} cy={EYE_Y} />
-                {renderEyelashes && <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />}
+                <DefaultEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} />
+                <ClosedEye cx={rightEyeX} cy={EYE_Y} />
+                {renderEyelashes && <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />}
               </G>
             );
           case EyeStyle.WINK_LEFT:
             return (
               <G>
-                <ClosedEye cx={LEFT_EYE_X} cy={EYE_Y} />
-                <DefaultEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} />
-                {renderEyelashes && <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />}
+                <ClosedEye cx={leftEyeX} cy={EYE_Y} />
+                <DefaultEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} />
+                {renderEyelashes && <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />}
               </G>
             );
           case EyeStyle.SLEEPY:
             return (
               <G>
-                <SleepyEye cx={LEFT_EYE_X} cy={EYE_Y} />
-                <SleepyEye cx={RIGHT_EYE_X} cy={EYE_Y} />
+                <SleepyEye cx={leftEyeX} cy={EYE_Y} />
+                <SleepyEye cx={rightEyeX} cy={EYE_Y} />
               </G>
             );
           case EyeStyle.SURPRISED:
             return (
               <G>
-                <DefaultEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} radius={6.5} />
-                <DefaultEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={6.5} />
+                <DefaultEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} radius={5.2} />
+                <DefaultEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={5.2} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -808,12 +698,12 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.WIDE:
             return (
               <G>
-                <DefaultEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} radius={6} />
-                <DefaultEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={6} />
+                <DefaultEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} radius={4.8} />
+                <DefaultEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={4.8} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -821,12 +711,12 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.NARROW:
             return (
               <G>
-                <DefaultEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} radius={4} />
-                <DefaultEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={4} />
+                <DefaultEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} radius={3.2} />
+                <DefaultEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={3.2} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -834,12 +724,12 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.ALMOND:
             return (
               <G>
-                <DefaultEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} radius={5.2} />
-                <DefaultEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={5.2} />
+                <DefaultEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} radius={4.2} />
+                <DefaultEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} radius={4.2} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -847,12 +737,12 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.SIDE:
             return (
               <G>
-                <DefaultEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} lookDirection={2} />
-                <DefaultEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} lookDirection={2} />
+                <DefaultEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} lookDirection={2} />
+                <DefaultEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} lookDirection={2} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -860,12 +750,12 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.SQUINT:
             return (
               <G>
-                <SquintEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} />
-                <SquintEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} />
+                <SquintEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} />
+                <SquintEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -873,12 +763,12 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.ROLL:
             return (
               <G>
-                <RollEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} />
-                <RollEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} />
+                <RollEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} />
+                <RollEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -886,33 +776,33 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           case EyeStyle.HEARTS:
             return (
               <G>
-                <HeartEye cx={LEFT_EYE_X} cy={EYE_Y} />
-                <HeartEye cx={RIGHT_EYE_X} cy={EYE_Y} />
+                <HeartEye cx={leftEyeX} cy={EYE_Y} />
+                <HeartEye cx={rightEyeX} cy={EYE_Y} />
               </G>
             );
           case EyeStyle.STARS:
             return (
               <G>
-                <StarEye cx={LEFT_EYE_X} cy={EYE_Y} />
-                <StarEye cx={RIGHT_EYE_X} cy={EYE_Y} />
+                <StarEye cx={leftEyeX} cy={EYE_Y} />
+                <StarEye cx={rightEyeX} cy={EYE_Y} />
               </G>
             );
           case EyeStyle.DIZZY:
             return (
               <G>
-                <DizzyEye cx={LEFT_EYE_X} cy={EYE_Y} />
-                <DizzyEye cx={RIGHT_EYE_X} cy={EYE_Y} />
+                <DizzyEye cx={leftEyeX} cy={EYE_Y} />
+                <DizzyEye cx={rightEyeX} cy={EYE_Y} />
               </G>
             );
           case EyeStyle.CRY:
             return (
               <G>
-                <CryEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} />
-                <CryEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} />
+                <CryEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} />
+                <CryEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>
@@ -922,12 +812,12 @@ export function Eyes({ style, eyeColor, rightEyeColor, eyelashStyle = EyelashSty
           default:
             return (
               <G>
-                <DefaultEye cx={LEFT_EYE_X} cy={EYE_Y} eyeColor={leftEyeColor} />
-                <DefaultEye cx={RIGHT_EYE_X} cy={EYE_Y} eyeColor={actualRightEyeColor} />
+                <DefaultEye cx={leftEyeX} cy={EYE_Y} eyeColor={leftEyeColor} />
+                <DefaultEye cx={rightEyeX} cy={EYE_Y} eyeColor={actualRightEyeColor} />
                 {renderEyelashes && (
                   <>
-                    <Eyelashes cx={LEFT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
-                    <Eyelashes cx={RIGHT_EYE_X} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
+                    <Eyelashes cx={leftEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={true} />
+                    <Eyelashes cx={rightEyeX} cy={EYE_Y} style={eyelashStyle} isLeft={false} />
                   </>
                 )}
               </G>

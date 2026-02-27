@@ -34,45 +34,6 @@ const BASE_BROW_Y = 35;
 const BASE_BROW_WIDTH = 12;
 const CENTER_X = 50;
 
-// Hair stroke pattern generator for natural eyebrow texture
-function HairStrokes({ x, y, width, curve, color, direction = 'up' }: {
-  x: number;
-  y: number;
-  width: number;
-  curve: number;
-  color: string;
-  direction?: 'up' | 'down' | 'flat';
-}) {
-  const strokes = [];
-  const numStrokes = Math.floor(width / 1.5);
-  const strokeColor = adjustBrightness(color, 10);
-
-  for (let i = 0; i < numStrokes; i++) {
-    const progress = i / numStrokes;
-    const xPos = x + progress * width;
-    const yOffset = direction === 'up' ? -Math.sin(progress * Math.PI) * curve
-      : direction === 'down' ? Math.sin(progress * Math.PI) * curve
-      : 0;
-    const baseY = y + yOffset;
-    const strokeLength = 1.5 + ((i * 7) % 10) * 0.1;
-    const angle = direction === 'up' ? -0.3 - progress * 0.4
-      : direction === 'down' ? 0.3 + progress * 0.4
-      : -0.1 + progress * 0.2;
-
-    strokes.push(
-      <Path
-        key={i}
-        d={`M${xPos},${baseY} l${Math.sin(angle) * strokeLength},${-Math.cos(angle) * strokeLength}`}
-        stroke={strokeColor}
-        strokeWidth={0.4}
-        strokeLinecap="round"
-        opacity={0.3 + ((i * 3) % 10) * 0.03}
-      />
-    );
-  }
-  return <G>{strokes}</G>;
-}
-
 export function Eyebrows({ style, eyebrowColor, adjustments = {}, scale = 1 }: EyebrowsProps) {
   const lightColor = adjustBrightness(eyebrowColor, 20);
   const darkColor = adjustBrightness(eyebrowColor, -20);
@@ -122,200 +83,134 @@ export function Eyebrows({ style, eyebrowColor, adjustments = {}, scale = 1 }: E
           case EyebrowStyle.NATURAL:
             return (
               <G>
-                {/* Left eyebrow - natural arch */}
+                {/* Left eyebrow - natural arch filled */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y}
-                      Q${LEFT_BROW_X + 3},${BROW_Y - 2.5} ${LEFT_BROW_X + 6},${BROW_Y - 3}
-                      Q${LEFT_BROW_X + 9},${BROW_Y - 2.5} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={2.8}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y + 1.4}
+                      Q${LEFT_BROW_X + 3},${BROW_Y - 1.1} ${LEFT_BROW_X + 6},${BROW_Y - 1.6}
+                      Q${LEFT_BROW_X + 9},${BROW_Y - 1.1} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 1.4}
+                      Q${LEFT_BROW_X + 9},${BROW_Y - 3.9} ${LEFT_BROW_X + 6},${BROW_Y - 4.4}
+                      Q${LEFT_BROW_X + 3},${BROW_Y - 3.9} ${LEFT_BROW_X},${BROW_Y - 1.4}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                {/* Hair texture overlay */}
-                <HairStrokes x={LEFT_BROW_X} y={BROW_Y - 1} width={BROW_WIDTH} curve={2.5} color={eyebrowColor} direction="up" />
 
-                {/* Right eyebrow */}
+                {/* Right eyebrow - natural arch filled */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y}
-                      Q${RIGHT_BROW_X + 3},${BROW_Y - 2.5} ${RIGHT_BROW_X + 6},${BROW_Y - 3}
-                      Q${RIGHT_BROW_X + 9},${BROW_Y - 2.5} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={2.8}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y + 1.4}
+                      Q${RIGHT_BROW_X + 3},${BROW_Y - 1.1} ${RIGHT_BROW_X + 6},${BROW_Y - 1.6}
+                      Q${RIGHT_BROW_X + 9},${BROW_Y - 1.1} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 1.4}
+                      Q${RIGHT_BROW_X + 9},${BROW_Y - 3.9} ${RIGHT_BROW_X + 6},${BROW_Y - 4.4}
+                      Q${RIGHT_BROW_X + 3},${BROW_Y - 3.9} ${RIGHT_BROW_X},${BROW_Y - 1.4}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <HairStrokes x={RIGHT_BROW_X} y={BROW_Y - 1} width={BROW_WIDTH} curve={2.5} color={eyebrowColor} direction="up" />
               </G>
             );
 
           case EyebrowStyle.THICK:
             return (
               <G>
-                {/* Left thick eyebrow - filled shape */}
+                {/* Left thick eyebrow - filled shape with more vertical height */}
                 <Path
-                  d={`M${LEFT_BROW_X - 1},${BROW_Y + 1.5}
-                      Q${LEFT_BROW_X + 2},${BROW_Y - 1} ${LEFT_BROW_X + 6},${BROW_Y - 4}
-                      Q${LEFT_BROW_X + 10},${BROW_Y - 3} ${LEFT_BROW_X + BROW_WIDTH + 1},${BROW_Y}
-                      Q${LEFT_BROW_X + 8},${BROW_Y + 1} ${LEFT_BROW_X + 6},${BROW_Y + 2}
-                      Q${LEFT_BROW_X + 3},${BROW_Y + 2} ${LEFT_BROW_X - 1},${BROW_Y + 1.5}`}
+                  d={`M${LEFT_BROW_X - 1},${BROW_Y + 2}
+                      Q${LEFT_BROW_X + 2},${BROW_Y - 1} ${LEFT_BROW_X + 6},${BROW_Y - 2}
+                      Q${LEFT_BROW_X + 10},${BROW_Y - 1} ${LEFT_BROW_X + BROW_WIDTH + 1},${BROW_Y + 1}
+                      Q${LEFT_BROW_X + 10},${BROW_Y - 4} ${LEFT_BROW_X + 6},${BROW_Y - 6}
+                      Q${LEFT_BROW_X + 2},${BROW_Y - 4} ${LEFT_BROW_X - 1},${BROW_Y - 1}
+                      Z`}
                   fill={eyebrowColor}
                 />
-                {/* Top highlight */}
-                <Path
-                  d={`M${LEFT_BROW_X + 2},${BROW_Y - 2} Q${LEFT_BROW_X + 6},${BROW_Y - 4} ${LEFT_BROW_X + 9},${BROW_Y - 2.5}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.8}
-                  opacity={0.3}
-                />
-                {/* Hair strokes for texture */}
-                <G stroke={darkColor} strokeWidth={0.5} opacity={0.4}>
-                  <Path d={`M${LEFT_BROW_X + 2},${BROW_Y + 1} L${LEFT_BROW_X + 3},${BROW_Y - 2}`} />
-                  <Path d={`M${LEFT_BROW_X + 5},${BROW_Y + 1.5} L${LEFT_BROW_X + 6},${BROW_Y - 3}`} />
-                  <Path d={`M${LEFT_BROW_X + 8},${BROW_Y + 0.5} L${LEFT_BROW_X + 9},${BROW_Y - 2}`} />
-                  <Path d={`M${LEFT_BROW_X + 11},${BROW_Y} L${LEFT_BROW_X + 11},${BROW_Y - 1.5}`} />
-                </G>
 
-                {/* Right thick eyebrow */}
+                {/* Right thick eyebrow - filled shape with more vertical height */}
                 <Path
-                  d={`M${RIGHT_BROW_X - 1},${BROW_Y}
-                      Q${RIGHT_BROW_X + 2},${BROW_Y - 3} ${RIGHT_BROW_X + 6},${BROW_Y - 4}
-                      Q${RIGHT_BROW_X + 10},${BROW_Y - 1} ${RIGHT_BROW_X + BROW_WIDTH + 1},${BROW_Y + 1.5}
-                      Q${RIGHT_BROW_X + 9},${BROW_Y + 2} ${RIGHT_BROW_X + 6},${BROW_Y + 2}
-                      Q${RIGHT_BROW_X + 4},${BROW_Y + 1} ${RIGHT_BROW_X - 1},${BROW_Y}`}
+                  d={`M${RIGHT_BROW_X - 1},${BROW_Y + 1}
+                      Q${RIGHT_BROW_X + 2},${BROW_Y - 1} ${RIGHT_BROW_X + 6},${BROW_Y - 2}
+                      Q${RIGHT_BROW_X + 10},${BROW_Y - 1} ${RIGHT_BROW_X + BROW_WIDTH + 1},${BROW_Y + 2}
+                      Q${RIGHT_BROW_X + 10},${BROW_Y - 4} ${RIGHT_BROW_X + 6},${BROW_Y - 6}
+                      Q${RIGHT_BROW_X + 2},${BROW_Y - 4} ${RIGHT_BROW_X - 1},${BROW_Y - 1}
+                      Z`}
                   fill={eyebrowColor}
                 />
-                <Path
-                  d={`M${RIGHT_BROW_X + 3},${BROW_Y - 2.5} Q${RIGHT_BROW_X + 6},${BROW_Y - 4} ${RIGHT_BROW_X + 10},${BROW_Y - 2}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.8}
-                  opacity={0.3}
-                />
-                <G stroke={darkColor} strokeWidth={0.5} opacity={0.4}>
-                  <Path d={`M${RIGHT_BROW_X + 1},${BROW_Y} L${RIGHT_BROW_X + 1},${BROW_Y - 1.5}`} />
-                  <Path d={`M${RIGHT_BROW_X + 4},${BROW_Y + 0.5} L${RIGHT_BROW_X + 3},${BROW_Y - 2}`} />
-                  <Path d={`M${RIGHT_BROW_X + 7},${BROW_Y + 1.5} L${RIGHT_BROW_X + 6},${BROW_Y - 3}`} />
-                  <Path d={`M${RIGHT_BROW_X + 10},${BROW_Y + 1} L${RIGHT_BROW_X + 9},${BROW_Y - 2}`} />
-                </G>
               </G>
             );
 
           case EyebrowStyle.THIN:
             return (
               <G>
-                {/* Left thin eyebrow */}
+                {/* Left thin eyebrow - narrower filled shape */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y}
-                      Q${LEFT_BROW_X + 6},${BROW_Y - 2} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y + 0.75}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 1.25} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 0.75}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 2.75} ${LEFT_BROW_X},${BROW_Y - 0.75}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                {/* Subtle hair detail */}
-                <G stroke={lightColor} strokeWidth={0.3} opacity={0.4}>
-                  <Path d={`M${LEFT_BROW_X + 3},${BROW_Y - 0.5} L${LEFT_BROW_X + 4},${BROW_Y - 1.5}`} />
-                  <Path d={`M${LEFT_BROW_X + 6},${BROW_Y - 1} L${LEFT_BROW_X + 7},${BROW_Y - 2}`} />
-                  <Path d={`M${LEFT_BROW_X + 9},${BROW_Y - 0.5} L${LEFT_BROW_X + 10},${BROW_Y - 1.5}`} />
-                </G>
 
-                {/* Right thin eyebrow */}
+                {/* Right thin eyebrow - narrower filled shape */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y}
-                      Q${RIGHT_BROW_X + 6},${BROW_Y - 2} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y + 0.75}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 1.25} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 0.75}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 2.75} ${RIGHT_BROW_X},${BROW_Y - 0.75}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <G stroke={lightColor} strokeWidth={0.3} opacity={0.4}>
-                  <Path d={`M${RIGHT_BROW_X + 3},${BROW_Y - 0.5} L${RIGHT_BROW_X + 2},${BROW_Y - 1.5}`} />
-                  <Path d={`M${RIGHT_BROW_X + 6},${BROW_Y - 1} L${RIGHT_BROW_X + 5},${BROW_Y - 2}`} />
-                  <Path d={`M${RIGHT_BROW_X + 9},${BROW_Y - 0.5} L${RIGHT_BROW_X + 8},${BROW_Y - 1.5}`} />
-                </G>
               </G>
             );
 
           case EyebrowStyle.ARCHED:
             return (
               <G>
-                {/* Left arched eyebrow - dramatic high arch */}
+                {/* Left arched eyebrow - dramatic high arch filled */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y + 1}
-                      Q${LEFT_BROW_X + 3},${BROW_Y - 3} ${LEFT_BROW_X + 6},${BROW_Y - 5}
-                      Q${LEFT_BROW_X + 9},${BROW_Y - 4} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y + 2.3}
+                      Q${LEFT_BROW_X + 3},${BROW_Y - 1.7} ${LEFT_BROW_X + 6},${BROW_Y - 3.7}
+                      Q${LEFT_BROW_X + 9},${BROW_Y - 2.7} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 1.3}
+                      Q${LEFT_BROW_X + 9},${BROW_Y - 5.3} ${LEFT_BROW_X + 6},${BROW_Y - 6.3}
+                      Q${LEFT_BROW_X + 3},${BROW_Y - 4.3} ${LEFT_BROW_X},${BROW_Y - 0.3}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                {/* Arch highlight */}
-                <Path
-                  d={`M${LEFT_BROW_X + 4},${BROW_Y - 3.5} Q${LEFT_BROW_X + 6},${BROW_Y - 5} ${LEFT_BROW_X + 8},${BROW_Y - 4}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.6}
-                  opacity={0.35}
-                />
-                <HairStrokes x={LEFT_BROW_X} y={BROW_Y - 1} width={BROW_WIDTH} curve={4} color={eyebrowColor} direction="up" />
 
-                {/* Right arched eyebrow */}
+                {/* Right arched eyebrow - dramatic high arch filled */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y}
-                      Q${RIGHT_BROW_X + 3},${BROW_Y - 4} ${RIGHT_BROW_X + 6},${BROW_Y - 5}
-                      Q${RIGHT_BROW_X + 9},${BROW_Y - 3} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 1}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y + 1.3}
+                      Q${RIGHT_BROW_X + 3},${BROW_Y - 2.7} ${RIGHT_BROW_X + 6},${BROW_Y - 3.7}
+                      Q${RIGHT_BROW_X + 9},${BROW_Y - 1.7} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 2.3}
+                      Q${RIGHT_BROW_X + 9},${BROW_Y - 4.3} ${RIGHT_BROW_X + 6},${BROW_Y - 6.3}
+                      Q${RIGHT_BROW_X + 3},${BROW_Y - 5.3} ${RIGHT_BROW_X},${BROW_Y - 0.3}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <Path
-                  d={`M${RIGHT_BROW_X + 4},${BROW_Y - 4} Q${RIGHT_BROW_X + 6},${BROW_Y - 5} ${RIGHT_BROW_X + 8},${BROW_Y - 3.5}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.6}
-                  opacity={0.35}
-                />
-                <HairStrokes x={RIGHT_BROW_X} y={BROW_Y - 1} width={BROW_WIDTH} curve={4} color={eyebrowColor} direction="up" />
               </G>
             );
 
           case EyebrowStyle.FLAT:
             return (
               <G>
-                {/* Left flat eyebrow */}
+                {/* Left flat eyebrow - filled rectangle with rounded ends */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y} L${LEFT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
-                />
-                {/* Top edge highlight */}
-                <Path
-                  d={`M${LEFT_BROW_X + 2},${BROW_Y - 1} L${LEFT_BROW_X + 10},${BROW_Y - 1}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.5}
-                  opacity={0.3}
+                  d={`M${LEFT_BROW_X + 1.3},${BROW_Y - 1.3}
+                      L${LEFT_BROW_X + BROW_WIDTH - 1.3},${BROW_Y - 1.3}
+                      Q${LEFT_BROW_X + BROW_WIDTH},${BROW_Y - 1.3} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y}
+                      Q${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 1.3} ${LEFT_BROW_X + BROW_WIDTH - 1.3},${BROW_Y + 1.3}
+                      L${LEFT_BROW_X + 1.3},${BROW_Y + 1.3}
+                      Q${LEFT_BROW_X},${BROW_Y + 1.3} ${LEFT_BROW_X},${BROW_Y}
+                      Q${LEFT_BROW_X},${BROW_Y - 1.3} ${LEFT_BROW_X + 1.3},${BROW_Y - 1.3}
+                      Z`}
+                  fill={eyebrowColor}
                 />
 
-                {/* Right flat eyebrow */}
+                {/* Right flat eyebrow - filled rectangle with rounded ends */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y} L${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
-                />
-                <Path
-                  d={`M${RIGHT_BROW_X + 2},${BROW_Y - 1} L${RIGHT_BROW_X + 10},${BROW_Y - 1}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.5}
-                  opacity={0.3}
+                  d={`M${RIGHT_BROW_X + 1.3},${BROW_Y - 1.3}
+                      L${RIGHT_BROW_X + BROW_WIDTH - 1.3},${BROW_Y - 1.3}
+                      Q${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - 1.3} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y}
+                      Q${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 1.3} ${RIGHT_BROW_X + BROW_WIDTH - 1.3},${BROW_Y + 1.3}
+                      L${RIGHT_BROW_X + 1.3},${BROW_Y + 1.3}
+                      Q${RIGHT_BROW_X},${BROW_Y + 1.3} ${RIGHT_BROW_X},${BROW_Y}
+                      Q${RIGHT_BROW_X},${BROW_Y - 1.3} ${RIGHT_BROW_X + 1.3},${BROW_Y - 1.3}
+                      Z`}
+                  fill={eyebrowColor}
                 />
               </G>
             );
@@ -323,187 +218,113 @@ export function Eyebrows({ style, eyebrowColor, adjustments = {}, scale = 1 }: E
           case EyebrowStyle.ANGRY:
             return (
               <G>
-                {/* Left angry eyebrow - angled down toward center */}
+                {/* Left angry eyebrow - angled down toward center, filled wedge */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y + 3}
-                      Q${LEFT_BROW_X + 6},${BROW_Y} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y - 4}`}
-                  fill="none"
-                  stroke={eyebrowColor}
-                  strokeWidth={3.2}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y + 4.6}
+                      Q${LEFT_BROW_X + 6},${BROW_Y + 1.6} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y - 2.4}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 1.6} ${LEFT_BROW_X},${BROW_Y + 1.4}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                {/* Furrow emphasis */}
-                <Path
-                  d={`M${LEFT_BROW_X + 10},${BROW_Y - 3} L${LEFT_BROW_X + 13},${BROW_Y - 2}`}
-                  fill="none"
-                  stroke={darkColor}
-                  strokeWidth={1.5}
-                  opacity={0.4}
-                />
-                {/* Hair texture */}
-                <G stroke={darkColor} strokeWidth={0.5} opacity={0.35}>
-                  <Path d={`M${LEFT_BROW_X + 2},${BROW_Y + 2} L${LEFT_BROW_X + 3},${BROW_Y + 0.5}`} />
-                  <Path d={`M${LEFT_BROW_X + 5},${BROW_Y + 1} L${LEFT_BROW_X + 6},${BROW_Y - 1}`} />
-                  <Path d={`M${LEFT_BROW_X + 9},${BROW_Y - 1} L${LEFT_BROW_X + 10},${BROW_Y - 3}`} />
-                </G>
 
-                {/* Right angry eyebrow */}
+                {/* Right angry eyebrow - angled down toward center, filled wedge */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y - 4}
-                      Q${RIGHT_BROW_X + 6},${BROW_Y} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 3}`}
-                  fill="none"
-                  stroke={eyebrowColor}
-                  strokeWidth={3.2}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y - 2.4}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y + 1.6} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 4.6}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 1.6} ${RIGHT_BROW_X},${BROW_Y + 1.4}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <Path
-                  d={`M${RIGHT_BROW_X - 1},${BROW_Y - 2} L${RIGHT_BROW_X + 2},${BROW_Y - 3}`}
-                  fill="none"
-                  stroke={darkColor}
-                  strokeWidth={1.5}
-                  opacity={0.4}
-                />
-                <G stroke={darkColor} strokeWidth={0.5} opacity={0.35}>
-                  <Path d={`M${RIGHT_BROW_X + 3},${BROW_Y - 1} L${RIGHT_BROW_X + 2},${BROW_Y - 3}`} />
-                  <Path d={`M${RIGHT_BROW_X + 7},${BROW_Y + 1} L${RIGHT_BROW_X + 6},${BROW_Y - 1}`} />
-                  <Path d={`M${RIGHT_BROW_X + 10},${BROW_Y + 2} L${RIGHT_BROW_X + 9},${BROW_Y + 0.5}`} />
-                </G>
               </G>
             );
 
           case EyebrowStyle.SAD:
             return (
               <G>
-                {/* Left sad eyebrow - angled up toward center */}
+                {/* Left sad eyebrow - angled up toward center, filled */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y - 3}
-                      Q${LEFT_BROW_X + 6},${BROW_Y} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 3}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y - 1.7}
+                      Q${LEFT_BROW_X + 6},${BROW_Y + 1.3} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 4.3}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 1.3} ${LEFT_BROW_X},${BROW_Y - 4.3}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <HairStrokes x={LEFT_BROW_X} y={BROW_Y} width={BROW_WIDTH} curve={2} color={eyebrowColor} direction="down" />
 
-                {/* Right sad eyebrow */}
+                {/* Right sad eyebrow - angled up toward center, filled */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y + 3}
-                      Q${RIGHT_BROW_X + 6},${BROW_Y} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - 3}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y + 4.3}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y + 1.3} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - 1.7}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 1.3} ${RIGHT_BROW_X},${BROW_Y - 4.3}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <HairStrokes x={RIGHT_BROW_X} y={BROW_Y} width={BROW_WIDTH} curve={2} color={eyebrowColor} direction="down" />
               </G>
             );
 
           case EyebrowStyle.RAISED:
             return (
               <G>
-                {/* Left raised eyebrow - high position */}
+                {/* Left raised eyebrow — moderate lift, filled */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y - 2}
-                      Q${LEFT_BROW_X + 6},${BROW_Y - 7} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y - 2}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y + 0.2}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 3.8} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 0.2}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 6.2} ${LEFT_BROW_X},${BROW_Y - 2.2}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                {/* Surprised arch highlight */}
-                <Path
-                  d={`M${LEFT_BROW_X + 3},${BROW_Y - 4} Q${LEFT_BROW_X + 6},${BROW_Y - 7} ${LEFT_BROW_X + 9},${BROW_Y - 4}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.6}
-                  opacity={0.4}
-                />
-                <HairStrokes x={LEFT_BROW_X} y={BROW_Y - 3} width={BROW_WIDTH} curve={4} color={eyebrowColor} direction="up" />
 
-                {/* Right raised eyebrow */}
+                {/* Right raised eyebrow — moderate lift, filled */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y - 2}
-                      Q${RIGHT_BROW_X + 6},${BROW_Y - 7} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - 2}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y + 0.2}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 3.8} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 0.2}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 6.2} ${RIGHT_BROW_X},${BROW_Y - 2.2}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <Path
-                  d={`M${RIGHT_BROW_X + 3},${BROW_Y - 4} Q${RIGHT_BROW_X + 6},${BROW_Y - 7} ${RIGHT_BROW_X + 9},${BROW_Y - 4}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.6}
-                  opacity={0.4}
-                />
-                <HairStrokes x={RIGHT_BROW_X} y={BROW_Y - 3} width={BROW_WIDTH} curve={4} color={eyebrowColor} direction="up" />
               </G>
             );
 
           case EyebrowStyle.UNIBROW:
             return (
               <G>
-                {/* Connected unibrow */}
+                {/* Connected unibrow - filled shape across entire bridge */}
                 <Path
-                  d={`M${LEFT_BROW_X - 2},${BROW_Y + 1}
-                      Q${LEFT_BROW_X + 4},${BROW_Y - 3} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y}
-                      Q${CENTER_X},${BROW_Y - 2} ${RIGHT_BROW_X},${BROW_Y}
-                      Q${RIGHT_BROW_X + 8},${BROW_Y - 3} ${RIGHT_BROW_X + BROW_WIDTH + 2},${BROW_Y + 1}`}
-                  fill="none"
-                  stroke={eyebrowColor}
-                  strokeWidth={3}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X - 2},${BROW_Y + 2.5}
+                      Q${LEFT_BROW_X + 4},${BROW_Y - 1.5} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 1.5}
+                      Q${CENTER_X},${BROW_Y - 0.5} ${RIGHT_BROW_X},${BROW_Y + 1.5}
+                      Q${RIGHT_BROW_X + 8},${BROW_Y - 1.5} ${RIGHT_BROW_X + BROW_WIDTH + 2},${BROW_Y + 2.5}
+                      Q${RIGHT_BROW_X + 8},${BROW_Y - 4.5} ${RIGHT_BROW_X},${BROW_Y - 1.5}
+                      Q${CENTER_X},${BROW_Y - 3.5} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y - 1.5}
+                      Q${LEFT_BROW_X + 4},${BROW_Y - 4.5} ${LEFT_BROW_X - 2},${BROW_Y - 0.5}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                {/* Center bridge thickening */}
-                <Path
-                  d={`M${LEFT_BROW_X + 10},${BROW_Y} Q${CENTER_X},${BROW_Y - 1} ${RIGHT_BROW_X + 2},${BROW_Y}`}
-                  fill="none"
-                  stroke={eyebrowColor}
-                  strokeWidth={2}
-                />
-                {/* Top highlight */}
-                <Path
-                  d={`M${LEFT_BROW_X + 3},${BROW_Y - 2} Q${CENTER_X},${BROW_Y - 3} ${RIGHT_BROW_X + 9},${BROW_Y - 2}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.6}
-                  opacity={0.3}
-                />
-                {/* Hair texture across */}
-                <G stroke={darkColor} strokeWidth={0.4} opacity={0.3}>
-                  <Path d={`M${LEFT_BROW_X + 3},${BROW_Y} L${LEFT_BROW_X + 4},${BROW_Y - 2}`} />
-                  <Path d={`M${LEFT_BROW_X + 8},${BROW_Y - 0.5} L${LEFT_BROW_X + 9},${BROW_Y - 2}`} />
-                  <Path d={`M${CENTER_X - 2},${BROW_Y - 1} L${CENTER_X - 1},${BROW_Y - 2}`} />
-                  <Path d={`M${CENTER_X + 2},${BROW_Y - 1} L${CENTER_X + 1},${BROW_Y - 2}`} />
-                  <Path d={`M${RIGHT_BROW_X + 4},${BROW_Y - 0.5} L${RIGHT_BROW_X + 3},${BROW_Y - 2}`} />
-                  <Path d={`M${RIGHT_BROW_X + 9},${BROW_Y} L${RIGHT_BROW_X + 8},${BROW_Y - 2}`} />
-                </G>
               </G>
             );
 
           case EyebrowStyle.CONCERNED:
             return (
               <G>
-                {/* Left concerned - slight inner raise */}
+                {/* Left concerned - slight inner raise, filled */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y - 1}
-                      Q${LEFT_BROW_X + 4},${BROW_Y - 3} ${LEFT_BROW_X + 8},${BROW_Y - 1}
-                      Q${LEFT_BROW_X + 10},${BROW_Y} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 1}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y + 0.25}
+                      Q${LEFT_BROW_X + 4},${BROW_Y - 1.75} ${LEFT_BROW_X + 8},${BROW_Y + 0.25}
+                      Q${LEFT_BROW_X + 10},${BROW_Y + 1.25} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 2.25}
+                      Q${LEFT_BROW_X + 10},${BROW_Y - 1.25} ${LEFT_BROW_X + 8},${BROW_Y - 2.25}
+                      Q${LEFT_BROW_X + 4},${BROW_Y - 4.25} ${LEFT_BROW_X},${BROW_Y - 2.25}
+                      Z`}
+                  fill={eyebrowColor}
                 />
 
-                {/* Right concerned */}
+                {/* Right concerned - slight inner raise, filled */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y + 1}
-                      Q${RIGHT_BROW_X + 2},${BROW_Y} ${RIGHT_BROW_X + 4},${BROW_Y - 1}
-                      Q${RIGHT_BROW_X + 8},${BROW_Y - 3} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - 1}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y + 2.25}
+                      Q${RIGHT_BROW_X + 2},${BROW_Y + 1.25} ${RIGHT_BROW_X + 4},${BROW_Y + 0.25}
+                      Q${RIGHT_BROW_X + 8},${BROW_Y - 1.75} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y + 0.25}
+                      Q${RIGHT_BROW_X + 8},${BROW_Y - 4.25} ${RIGHT_BROW_X + 4},${BROW_Y - 2.25}
+                      Q${RIGHT_BROW_X + 2},${BROW_Y - 1.25} ${RIGHT_BROW_X},${BROW_Y - 2.25}
+                      Z`}
+                  fill={eyebrowColor}
                 />
               </G>
             );
@@ -511,78 +332,55 @@ export function Eyebrows({ style, eyebrowColor, adjustments = {}, scale = 1 }: E
           case EyebrowStyle.SKEPTICAL:
             return (
               <G>
-                {/* Left eyebrow - normal position */}
+                {/* Left eyebrow - normal position, filled */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y}
-                      Q${LEFT_BROW_X + 6},${BROW_Y - 2} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
+                  d={`M${LEFT_BROW_X},${BROW_Y + 1.25}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 0.75} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + 1.25}
+                      Q${LEFT_BROW_X + 6},${BROW_Y - 3.25} ${LEFT_BROW_X},${BROW_Y - 1.25}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <HairStrokes x={LEFT_BROW_X} y={BROW_Y - 0.5} width={BROW_WIDTH} curve={1.5} color={eyebrowColor} direction="up" />
 
-                {/* Right eyebrow - raised high for skeptical look */}
+                {/* Right eyebrow - raised high for skeptical look, filled */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y - 4}
-                      Q${RIGHT_BROW_X + 6},${BROW_Y - 8} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - 4}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
+                  d={`M${RIGHT_BROW_X},${BROW_Y - 2.75}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 6.75} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - 2.75}
+                      Q${RIGHT_BROW_X + 6},${BROW_Y - 9.25} ${RIGHT_BROW_X},${BROW_Y - 5.25}
+                      Z`}
+                  fill={eyebrowColor}
                 />
-                <Path
-                  d={`M${RIGHT_BROW_X + 3},${BROW_Y - 5.5} Q${RIGHT_BROW_X + 6},${BROW_Y - 8} ${RIGHT_BROW_X + 9},${BROW_Y - 5.5}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.5}
-                  opacity={0.4}
-                />
-                <HairStrokes x={RIGHT_BROW_X} y={BROW_Y - 5} width={BROW_WIDTH} curve={3} color={eyebrowColor} direction="up" />
               </G>
             );
 
           case EyebrowStyle.DEFAULT:
           default:
+            const thickness = strokeWidth / 2;
             return (
               <G>
-                {/* Left default eyebrow - with adjustments */}
+                {/* Left default eyebrow - filled crescent */}
                 <Path
-                  d={`M${LEFT_BROW_X},${BROW_Y - tiltOffset}
-                      Q${LEFT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount} ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + tiltOffset}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdLeft})`}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                />
-                {/* Subtle top highlight */}
-                <Path
-                  d={`M${LEFT_BROW_X + BROW_WIDTH * 0.25},${BROW_Y - archAmount * 0.3 - tiltOffset * 0.5}
-                      Q${LEFT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount * 0.8}
-                      ${LEFT_BROW_X + BROW_WIDTH * 0.75},${BROW_Y - archAmount * 0.3 + tiltOffset * 0.5}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.4}
-                  opacity={0.3}
+                  d={`M${LEFT_BROW_X},${BROW_Y - tiltOffset + thickness}
+                      Q${LEFT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount - thickness}
+                      ${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + tiltOffset + thickness}
+                      Q${LEFT_BROW_X + BROW_WIDTH},${BROW_Y + tiltOffset - thickness}
+                      ${LEFT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount + thickness}
+                      Q${LEFT_BROW_X},${BROW_Y - tiltOffset - thickness}
+                      ${LEFT_BROW_X},${BROW_Y - tiltOffset + thickness}
+                      Z`}
+                  fill={eyebrowColor}
                 />
 
-                {/* Right default eyebrow - with adjustments (mirrored) */}
+                {/* Right default eyebrow - filled crescent */}
                 <Path
-                  d={`M${RIGHT_BROW_X},${BROW_Y + tiltOffset}
-                      Q${RIGHT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount} ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - tiltOffset}`}
-                  fill="none"
-                  stroke={`url(#${gradientIdRight})`}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                />
-                <Path
-                  d={`M${RIGHT_BROW_X + BROW_WIDTH * 0.25},${BROW_Y - archAmount * 0.3 + tiltOffset * 0.5}
-                      Q${RIGHT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount * 0.8}
-                      ${RIGHT_BROW_X + BROW_WIDTH * 0.75},${BROW_Y - archAmount * 0.3 - tiltOffset * 0.5}`}
-                  fill="none"
-                  stroke={lightColor}
-                  strokeWidth={0.4}
-                  opacity={0.3}
+                  d={`M${RIGHT_BROW_X},${BROW_Y + tiltOffset + thickness}
+                      Q${RIGHT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount - thickness}
+                      ${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - tiltOffset + thickness}
+                      Q${RIGHT_BROW_X + BROW_WIDTH},${BROW_Y - tiltOffset - thickness}
+                      ${RIGHT_BROW_X + BROW_WIDTH / 2},${BROW_Y - archAmount + thickness}
+                      Q${RIGHT_BROW_X},${BROW_Y + tiltOffset - thickness}
+                      ${RIGHT_BROW_X},${BROW_Y + tiltOffset + thickness}
+                      Z`}
+                  fill={eyebrowColor}
                 />
               </G>
             );

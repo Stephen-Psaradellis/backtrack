@@ -8,10 +8,7 @@ module.exports = {
   testMatch: ['**/scripts/qa/__tests__/**/*.test.ts'],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react',
-        esModuleInterop: true,
-      },
+      tsconfig: '<rootDir>/../../tsconfig.test.json',
     }],
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
