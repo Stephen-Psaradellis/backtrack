@@ -11,7 +11,7 @@
 
 import React, { useRef, useCallback, Suspense, lazy } from 'react'
 import * as Sentry from '@sentry/react-native'
-import { NavigationContainer, LinkingOptions, NavigationState, PartialState } from '@react-navigation/native'
+import { NavigationContainer, NavigationContainerRef, LinkingOptions, NavigationState, PartialState } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import * as Linking from 'expo-linking'
@@ -20,7 +20,8 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { trackScreenView } from '../lib/analytics'
 
 import { useAuth } from '../contexts/AuthContext'
-import { Avatar } from 'react-native-bitmoji'
+import { AvatarDisplay } from '../components/AvatarDisplay'
+import { hasGeneratedAvatar } from '../types/avatar'
 import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
@@ -48,7 +49,7 @@ import { SCREENS, TAB_LABELS } from './types'
  * Create navigation ref for Sentry routing instrumentation
  * This allows Sentry to track navigation events and performance
  */
-const navigationRef = React.createRef<any>()
+export const navigationRef = React.createRef<NavigationContainerRef<RootStackParamList>>()
 
 /**
  * Lazy-initialize Sentry routing instrumentation
@@ -66,6 +67,7 @@ function getNavigationIntegration() {
 // P-013: Lazy-load infrequently visited screens
 const CreatePostScreen = lazy(() => import('../screens/CreatePostScreen'))
 const AvatarCreatorScreen = lazy(() => import('../screens/AvatarCreatorScreen'))
+const AvatarSelectionScreen = lazy(() => import('../screens/AvatarSelectionScreen'))
 const LegalScreen = lazy(() => import('../screens/LegalScreen'))
 const SettingsScreen = lazy(() => import('../screens/SettingsScreen'))
 
@@ -107,7 +109,7 @@ function LinkingFallback() {
 function HeaderAvatar({ onPress }: { onPress?: () => void }) {
   const { profile } = useAuth()
 
-  const hasAvatar = profile?.avatar
+  const avatarExists = profile?.avatar && hasGeneratedAvatar(profile.avatar)
 
   return (
     <TouchableOpacity
@@ -116,9 +118,9 @@ function HeaderAvatar({ onPress }: { onPress?: () => void }) {
       testID="header-avatar"
       activeOpacity={0.7}
     >
-      {hasAvatar && profile?.avatar ? (
-        <Avatar
-          config={profile.avatar.config}
+      {avatarExists && profile?.avatar ? (
+        <AvatarDisplay
+          avatar={profile.avatar}
           size="sm"
         />
       ) : (
@@ -222,9 +224,13 @@ function AuthStackNavigator() {
 function MainStackNavigator() {
   const { profile } = useAuth()
 
+  // Profile not yet loaded from DB — show loading instead of flashing avatar creation
+  if (profile === null) {
+    return <LinkingFallback />
+  }
+
   // If user has no avatar, force avatar creation before allowing access to main app
-  // Check for both existence and non-empty config (handles edge case of empty {} in DB)
-  const hasAvatar = profile?.avatar && profile.avatar.config && Object.keys(profile.avatar.config).length > 0
+  const hasAvatar = profile?.avatar && hasGeneratedAvatar(profile.avatar)
 
   if (!hasAvatar) {
     return (
@@ -237,13 +243,26 @@ function MainStackNavigator() {
           name={SCREENS.AvatarCreator}
           options={{
             headerShown: false,
-            gestureEnabled: false, // Prevent swipe back
+            gestureEnabled: false,
           }}
           initialParams={{ required: true }}
         >
           {(props) => (
             <Suspense fallback={<LinkingFallback />}>
               <AvatarCreatorScreen {...props} />
+            </Suspense>
+          )}
+        </MainStack.Screen>
+        <MainStack.Screen
+          name={SCREENS.AvatarSelection}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        >
+          {(props) => (
+            <Suspense fallback={<LinkingFallback />}>
+              <AvatarSelectionScreen {...props} />
             </Suspense>
           )}
         </MainStack.Screen>
@@ -344,6 +363,18 @@ function MainStackNavigator() {
         {(props) => (
           <Suspense fallback={<LinkingFallback />}>
             <AvatarCreatorScreen {...props} />
+          </Suspense>
+        )}
+      </MainStack.Screen>
+      <MainStack.Screen
+        name={SCREENS.AvatarSelection}
+        options={{
+          headerShown: false,
+        }}
+      >
+        {(props) => (
+          <Suspense fallback={<LinkingFallback />}>
+            <AvatarSelectionScreen {...props} />
           </Suspense>
         )}
       </MainStack.Screen>

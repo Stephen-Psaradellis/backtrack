@@ -23,6 +23,7 @@
  * ```
  */
 
+import NetInfo from '@react-native-community/netinfo'
 import * as Location from 'expo-location'
 import * as TaskManager from 'expo-task-manager'
 import * as Notifications from 'expo-notifications'
@@ -34,11 +35,13 @@ import { captureException } from '../lib/sentry'
 import { BACKGROUND_GPS_CONFIG } from '../lib/utils/gpsConfig'
 import { sanitizeLocationName } from '../lib/utils/sanitize'
 import { reduceCoordinatePrecision } from '../lib/utils/geoPrivacy'
+import { searchNearbyPlaces } from './locationService'
 import {
   DwellState,
   createInitialDwellState,
   updateDwellState,
   calculateDistance,
+  hasMovedAway,
 } from './dwellDetection'
 
 // ============================================================================
@@ -53,17 +56,22 @@ export const BACKGROUND_LOCATION_TASK = 'BACKTRACK_BACKGROUND_LOCATION'
 /**
  * Storage key for dwell tracking state
  */
-const DWELL_STATE_KEY = 'backtrack:dwell_state'
+const DWELL_STATE_KEY = 'backtrack.dwell_state'
 
 /**
  * Storage key for tracking settings
  */
-const TRACKING_SETTINGS_KEY = 'backtrack:tracking_settings'
+const TRACKING_SETTINGS_KEY = 'backtrack.tracking_settings'
 
 /**
  * Storage key for proximity notification rate limiting
  */
-const PROXIMITY_RATE_LIMIT_KEY = 'backtrack:proximity_rate_limit'
+const PROXIMITY_RATE_LIMIT_KEY = 'backtrack.proximity_rate_limit'
+
+/**
+ * Storage key for background task diagnostics (debug)
+ */
+const TASK_DIAGNOSTICS_KEY = 'backtrack.task_diagnostics'
 
 /**
  * Radius in meters to consider user "at" a location
@@ -126,13 +134,22 @@ interface NearbyLocation {
 // ============================================================================
 
 /**
+ * SecureStore options for background-accessible data.
+ * AFTER_FIRST_UNLOCK allows reads when the device is locked (after first unlock since boot),
+ * which is essential for background location tasks that run while the screen is off.
+ */
+const BACKGROUND_SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+}
+
+/**
  * Read from SecureStore with AsyncStorage fallback for migration.
  * On first read from AsyncStorage, migrates data to SecureStore.
  */
 async function secureGet(key: string): Promise<string | null> {
   try {
-    // Try SecureStore first
-    const secure = await SecureStore.getItemAsync(key)
+    // Try SecureStore first (with AFTER_FIRST_UNLOCK for background access)
+    const secure = await SecureStore.getItemAsync(key, BACKGROUND_SECURE_STORE_OPTIONS)
     if (secure) return secure
   } catch (err) {
     captureException(err, { operation: 'secureGet:SecureStore', key })
@@ -142,9 +159,9 @@ async function secureGet(key: string): Promise<string | null> {
     // Fallback: read from AsyncStorage (existing users migration path)
     const legacy = await AsyncStorage.getItem(key)
     if (legacy) {
-      // Migrate to SecureStore, then remove from AsyncStorage
+      // Migrate to SecureStore with background-accessible options, then remove from AsyncStorage
       try {
-        await SecureStore.setItemAsync(key, legacy)
+        await SecureStore.setItemAsync(key, legacy, BACKGROUND_SECURE_STORE_OPTIONS)
         await AsyncStorage.removeItem(key)
       } catch (migrateErr) {
         captureException(migrateErr, { operation: 'secureGet:migrate', key })
@@ -160,12 +177,20 @@ async function secureGet(key: string): Promise<string | null> {
 
 /**
  * Write to SecureStore (encrypted at rest).
+ * Deletes the old item first to ensure the AFTER_FIRST_UNLOCK accessibility
+ * attribute is applied — iOS Keychain doesn't update attributes on overwrite.
  */
 async function secureSet(key: string, value: string): Promise<void> {
   try {
-    await SecureStore.setItemAsync(key, value)
+    // Delete first to ensure accessibility attribute is re-created (not just value updated)
+    try { await SecureStore.deleteItemAsync(key) } catch { /* may not exist */ }
+    await SecureStore.setItemAsync(key, value, BACKGROUND_SECURE_STORE_OPTIONS)
   } catch (err) {
     captureException(err, { operation: 'secureSet', key })
+    // Fallback to AsyncStorage so background task state is not lost
+    try {
+      await AsyncStorage.setItem(key, value)
+    } catch { /* last resort failed */ }
   }
 }
 
@@ -174,7 +199,7 @@ async function secureSet(key: string, value: string): Promise<void> {
  */
 async function secureDelete(key: string): Promise<void> {
   try {
-    await SecureStore.deleteItemAsync(key)
+    await SecureStore.deleteItemAsync(key, BACKGROUND_SECURE_STORE_OPTIONS)
   } catch { /* ignore */ }
   try {
     await AsyncStorage.removeItem(key)
@@ -186,11 +211,13 @@ async function secureDelete(key: string): Promise<void> {
 // ============================================================================
 
 /**
- * Get current dwell state from encrypted storage
+ * Get current dwell state from AsyncStorage.
+ * Uses AsyncStorage instead of SecureStore because dwell state (coordinates/timestamps)
+ * is not sensitive, and AsyncStorage is more reliable in iOS background tasks.
  */
 async function getDwellState(): Promise<DwellState> {
   try {
-    const stored = await secureGet(DWELL_STATE_KEY)
+    const stored = await AsyncStorage.getItem(DWELL_STATE_KEY)
     if (stored) {
       return JSON.parse(stored)
     }
@@ -201,11 +228,11 @@ async function getDwellState(): Promise<DwellState> {
 }
 
 /**
- * Save dwell state to encrypted storage
+ * Save dwell state to AsyncStorage.
  */
 async function saveDwellState(state: DwellState): Promise<void> {
   try {
-    await secureSet(DWELL_STATE_KEY, JSON.stringify(state))
+    await AsyncStorage.setItem(DWELL_STATE_KEY, JSON.stringify(state))
   } catch (err) {
     captureException(err, { operation: 'saveDwellState' })
   }
@@ -288,23 +315,50 @@ async function findNearbyLocation(
   lat: number,
   lon: number
 ): Promise<NearbyLocation | null> {
+  // 1. Try local database first (cheaper, faster)
   try {
-    // Reduce coordinate precision before sending to server (~1.1km resolution for privacy)
-    const reducedLat = reduceCoordinatePrecision(lat, 2)
-    const reducedLon = reduceCoordinatePrecision(lon, 2)
+    const reducedLat = reduceCoordinatePrecision(lat, 4)
+    const reducedLon = reduceCoordinatePrecision(lon, 4)
 
     const { data, error } = await supabase.rpc('get_locations_near_point_optimized', {
       p_lat: reducedLat,
       p_lon: reducedLon,
-      p_radius_meters: 200, // Search within 200m
+      p_radius_meters: 500,
       p_limit: 1,
     })
 
-    if (error || !data || data.length === 0) {
+    if (!error && data && data.length > 0) {
+      return data[0] as NearbyLocation
+    }
+  } catch (err) {
+    // DB failed, fall through to Google Places
+    if (__DEV__) console.warn('[backgroundLocation] DB lookup failed, trying Google Places', err)
+  }
+
+  // 2. Fall back to Google Places API
+  try {
+    const result = await searchNearbyPlaces({
+      latitude: lat,
+      longitude: lon,
+      radius_meters: 500,
+      max_results: 1,
+    })
+
+    if (!result.success || result.places.length === 0) {
       return null
     }
 
-    return data[0] as NearbyLocation
+    const place = result.places[0]
+    if (!place.location?.latitude || !place.location?.longitude) {
+      return null
+    }
+
+    return {
+      id: place.id,
+      name: place.displayName?.text || 'Unknown venue',
+      latitude: place.location.latitude,
+      longitude: place.location.longitude,
+    }
   } catch (err) {
     captureException(err, { operation: 'findNearbyLocation' })
     return null
@@ -332,8 +386,9 @@ async function sendCheckinPromptNotification(locationName: string, locationId: s
           locationId,
           locationName: safeName,
         },
-        sound: true,
+        sound: 'default',
         priority: Notifications.AndroidNotificationPriority.HIGH,
+        interruptionLevel: 'active',
       },
       trigger: null, // Send immediately
     })
@@ -408,8 +463,9 @@ async function sendRadarProximityNotification(): Promise<void> {
         data: {
           type: 'proximity_radar',
         },
-        sound: true,
+        sound: 'default',
         priority: Notifications.AndroidNotificationPriority.DEFAULT,
+        interruptionLevel: 'active',
       },
       trigger: null, // Send immediately
     })
@@ -582,31 +638,70 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   const promptMinutes = settings.promptMinutes || DEFAULT_PROMPT_MINUTES
 
   // TASK-06: Movement threshold optimization
-  // Skip network calls if user hasn't moved 20m since last position
-  if (dwellState.lastPosition) {
-    const distanceMoved = calculateDistance(
-      latitude,
-      longitude,
-      dwellState.lastPosition.latitude,
-      dwellState.lastPosition.longitude
-    )
-    if (distanceMoved < 20) {
-      // User hasn't moved enough, skip network call
+  // If user is stationary and already dwelling at a location, reuse it to skip network call.
+  // Otherwise fetch nearby locations from the server.
+  let nearbyLocation: NearbyLocation | null = null
+  const isStationaryAtLocation = dwellState.currentLocation && !hasMovedAway(dwellState, { latitude, longitude })
+
+  if (isStationaryAtLocation) {
+    // Reuse existing location - skip network call
+    nearbyLocation = {
+      id: dwellState.currentLocation!.locationId!,
+      name: dwellState.currentLocation!.locationName!,
+      latitude: dwellState.currentLocation!.latitude,
+      longitude: dwellState.currentLocation!.longitude,
+    }
+  } else {
+    // User moved or no current location - fetch from network
+    const netState = await NetInfo.fetch()
+    if (!netState.isConnected) {
       return
     }
+
+    nearbyLocation = await findNearbyLocation(latitude, longitude)
+
+    // Validate location data to prevent crashes from corrupted DB data
+    if (nearbyLocation && !isValidNearbyLocation(nearbyLocation)) {
+      captureException(new Error('Invalid location data from database'), {
+        operation: 'backgroundLocationTask',
+        locationData: JSON.stringify(nearbyLocation),
+      })
+      return
+    }
+
   }
 
-  // Find if there's a known location nearby
-  const nearbyLocation = await findNearbyLocation(latitude, longitude)
+  // Calculate dwell time for diagnostics
+  const dwellElapsedMin = dwellState.arrivedAt
+    ? ((now - dwellState.arrivedAt) / 60000).toFixed(1)
+    : '0'
+  const distToVenue = nearbyLocation
+    ? calculateDistance(latitude, longitude, nearbyLocation.latitude, nearbyLocation.longitude).toFixed(0)
+    : null
+  const sameAsCurrentId = dwellState.currentLocation?.locationId && nearbyLocation
+    ? dwellState.currentLocation.locationId === nearbyLocation.id
+    : null
 
-  // Validate location data to prevent crashes from corrupted DB data
-  if (nearbyLocation && !isValidNearbyLocation(nearbyLocation)) {
-    captureException(new Error('Invalid location data from database'), {
-      operation: 'backgroundLocationTask',
-      locationData: JSON.stringify(nearbyLocation),
-    })
-    return
-  }
+  // Save diagnostics for debug button
+  try {
+    await AsyncStorage.setItem(TASK_DIAGNOSTICS_KEY, JSON.stringify({
+      lastFired: new Date(now).toISOString(),
+      lat: latitude.toFixed(5),
+      lon: longitude.toFixed(5),
+      nearbyLocationName: nearbyLocation?.name || null,
+      nearbyLocationId: nearbyLocation?.id || null,
+      distToVenueM: distToVenue,
+      dwellAction: null, // updated below
+      dwellCurrentLocation: dwellState.currentLocation?.locationName || null,
+      dwellCurrentId: dwellState.currentLocation?.locationId || null,
+      arrivedAt: dwellState.arrivedAt ? new Date(dwellState.arrivedAt).toISOString() : null,
+      dwellElapsedMin,
+      notificationSent: dwellState.notificationSent,
+      promptMinutes,
+      isStationaryAtLocation,
+      sameVenueId: sameAsCurrentId,
+    }))
+  } catch { /* non-critical */ }
 
   // Update dwell state using pure function
   const updateResult = updateDwellState(
@@ -616,6 +711,14 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     promptMinutes,
     now
   )
+
+  // Update diagnostics with action result
+  try {
+    const diag = JSON.parse(await AsyncStorage.getItem(TASK_DIAGNOSTICS_KEY) || '{}')
+    diag.dwellAction = updateResult.action
+    diag.shouldNotify = updateResult.shouldNotify
+    await AsyncStorage.setItem(TASK_DIAGNOSTICS_KEY, JSON.stringify(diag))
+  } catch { /* non-critical */ }
 
   // Handle notifications and side effects based on the update result
   if (updateResult.shouldNotify && nearbyLocation) {
@@ -648,6 +751,20 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     // This is adequate for serial background task execution but is not truly atomic.
     if (!(await verifySettingsUnchanged(settings))) {
       return // Settings changed, don't modify state
+    }
+
+    // Auto-checkout: user has left the location they were checked into
+    if (dwellState.currentLocation?.locationId) {
+      try {
+        await supabase.rpc('checkout_from_location', {
+          p_location_id: dwellState.currentLocation.locationId,
+        })
+      } catch (err) {
+        captureException(err, {
+          operation: 'autoCheckoutOnDeparture',
+          locationId: dwellState.currentLocation.locationId,
+        })
+      }
     }
 
     // Save departed state
@@ -778,6 +895,19 @@ export async function startBackgroundLocationTracking(
       }
     }
 
+    // Ensure notification permission is granted (needed for check-in prompts)
+    const { status: notifStatus } = await Notifications.getPermissionsAsync()
+    if (notifStatus !== 'granted') {
+      const { status: newNotifStatus } = await Notifications.requestPermissionsAsync()
+      if (newNotifStatus !== 'granted') {
+        return {
+          success: false,
+          error: 'Notification permission is required for check-in prompts. Please enable notifications in Settings.',
+          errorCode: 'PERMISSION_DENIED',
+        }
+      }
+    }
+
     // Check if already running
     const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
     if (isRunning) {
@@ -814,12 +944,14 @@ export async function startBackgroundLocationTracking(
     await saveDwellState(createInitialDwellState(userId))
 
     // Start background location updates
+    // distanceInterval must be 0 so iOS delivers time-based updates even when
+    // the user is stationary - which is exactly when dwell check-ins should fire.
     await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-      accuracy: Location.Accuracy.Balanced,
+      accuracy: Location.Accuracy.High,
       timeInterval: TIME_INTERVAL_MS,
-      distanceInterval: DISTANCE_INTERVAL_METERS,
+      distanceInterval: 0,
       deferredUpdatesInterval: TIME_INTERVAL_MS,
-      deferredUpdatesDistance: DISTANCE_INTERVAL_METERS,
+      deferredUpdatesDistance: 0,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: 'Backtrack',
@@ -853,10 +985,11 @@ export async function stopBackgroundLocationTracking(): Promise<void> {
       await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
     }
 
-    // Purge all stored location data for privacy
-    // DWELL_STATE_KEY is in SecureStore, TRACKING_SETTINGS_KEY in AsyncStorage
-    await secureDelete(DWELL_STATE_KEY)
+    // Purge all stored location data
+    await AsyncStorage.removeItem(DWELL_STATE_KEY)
     await AsyncStorage.removeItem(TRACKING_SETTINGS_KEY)
+    // Also clean up any legacy SecureStore entries
+    await secureDelete(DWELL_STATE_KEY)
   } catch (error) {
     captureException(error, { operation: 'stopBackgroundLocationTracking' })
   }
@@ -982,6 +1115,18 @@ export async function recoverLocationTracking(): Promise<{
   } catch (err) {
     captureException(err, { operation: 'recoverLocationTracking' })
     return { success: false, message: 'Recovery failed due to an unexpected error.' }
+  }
+}
+
+/**
+ * Get background task diagnostics for debugging
+ */
+export async function getTaskDiagnostics(): Promise<Record<string, unknown> | null> {
+  try {
+    const stored = await AsyncStorage.getItem(TASK_DIAGNOSTICS_KEY)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
   }
 }
 

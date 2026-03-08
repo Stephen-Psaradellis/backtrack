@@ -11,8 +11,12 @@
  */
 
 import React, { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, Switch, Alert, Modal, TouchableOpacity, Platform } from 'react-native'
-import { Picker } from '@react-native-picker/picker'
+import { View, Text, StyleSheet, Switch, Alert, Modal, TouchableOpacity, Platform, ActionSheetIOS } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import * as Notifications from 'expo-notifications'
+import * as Location from 'expo-location'
+import { searchNearbyPlaces } from '../../services/locationService'
+import { getTaskDiagnostics } from '../../services/backgroundLocation'
 
 import { useCheckinSettings } from '../../hooks/useCheckinSettings'
 import { LoadingSpinner } from '../LoadingSpinner'
@@ -177,23 +181,148 @@ export function LocationTrackingSettings({
           <Text style={styles.pickerLabel}>
             Ask me to check in after being at same location for...
           </Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={settings.checkin_prompt_minutes}
-              onValueChange={handlePromptMinutesChange}
-              enabled={!isUpdating}
-              style={styles.picker}
-              testID={`${testID}-picker`}
-            >
-              {PROMPT_MINUTE_OPTIONS.map((option) => (
-                <Picker.Item
-                  key={option.value}
-                  label={option.label}
-                  value={option.value}
-                />
-              ))}
-            </Picker>
-          </View>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              if (isUpdating) return
+              const labels = PROMPT_MINUTE_OPTIONS.map((o) => o.label)
+              if (Platform.OS === 'ios') {
+                ActionSheetIOS.showActionSheetWithOptions(
+                  {
+                    options: [...labels, 'Cancel'],
+                    cancelButtonIndex: labels.length,
+                    title: 'Check-in prompt delay',
+                  },
+                  (index) => {
+                    if (index < labels.length) {
+                      handlePromptMinutesChange(PROMPT_MINUTE_OPTIONS[index].value)
+                    }
+                  }
+                )
+              } else {
+                Alert.alert(
+                  'Check-in prompt delay',
+                  'Ask me to check in after...',
+                  [
+                    ...PROMPT_MINUTE_OPTIONS.map((o) => ({
+                      text: o.label,
+                      onPress: () => handlePromptMinutesChange(o.value),
+                    })),
+                    { text: 'Cancel', style: 'cancel' as const },
+                  ]
+                )
+              }
+            }}
+            disabled={isUpdating}
+            testID={`${testID}-picker`}
+          >
+            <Text style={styles.pickerButtonText}>
+              {PROMPT_MINUTE_OPTIONS.find((o) => o.value === settings.checkin_prompt_minutes)?.label ?? `${settings.checkin_prompt_minutes} minutes`}
+            </Text>
+            <Ionicons name="chevron-down" size={18} color={darkTheme.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Debug buttons */}
+      {settings.always_on_tracking_enabled && (
+        <View style={styles.debugButtons}>
+          <TouchableOpacity
+            style={styles.testNotifButton}
+            onPress={async () => {
+              try {
+                // 1. Get current location
+                const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+                const { latitude, longitude } = loc.coords
+
+                // 2. Check background task status
+                const TaskManager = await import('expo-task-manager')
+                const isTaskRunning = await Location.hasStartedLocationUpdatesAsync('BACKTRACK_BACKGROUND_LOCATION').catch(() => false)
+
+                // 3. Try Google Places
+                const result = await searchNearbyPlaces({
+                  latitude,
+                  longitude,
+                  radius_meters: 500,
+                  max_results: 5,
+                })
+
+                const places = result.success
+                  ? result.places.map(p => p.displayName?.text || 'unnamed').join(', ')
+                  : `Failed: ${result.error?.message || 'unknown'}`
+
+                Alert.alert(
+                  'Dwell Debug',
+                  `Location: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}\n\n` +
+                  `Background task running: ${isTaskRunning}\n\n` +
+                  `Nearby places (500m): ${result.success ? result.places.length : 0}\n${places}`
+                )
+              } catch (err: any) {
+                Alert.alert('Debug failed', err.message || String(err))
+              }
+            }}
+            testID={`${testID}-test-dwell`}
+          >
+            <Ionicons name="bug-outline" size={16} color={darkTheme.textMuted} />
+            <Text style={styles.testNotifText}>Test dwell detection</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.testNotifButton}
+            onPress={async () => {
+              try {
+                const diag = await getTaskDiagnostics()
+                if (!diag) {
+                  Alert.alert('No Data', 'Background task has not fired yet. Wait a couple minutes and check again.')
+                  return
+                }
+                Alert.alert(
+                  'Background Task Diagnostics',
+                  `Last fired: ${diag.lastFired}\n` +
+                  `Location: ${diag.lat}, ${diag.lon}\n` +
+                  `Nearby: ${diag.nearbyLocationName || 'none'} (${diag.distToVenueM || '?'}m)\n` +
+                  `Dwell action: ${diag.dwellAction}\n` +
+                  `Should notify: ${diag.shouldNotify}\n` +
+                  `Dwell at: ${diag.dwellCurrentLocation || 'none'} (id: ${diag.dwellCurrentId?.slice(0, 8) || '?'})\n` +
+                  `Same venue?: ${diag.sameVenueId}\n` +
+                  `Arrived: ${diag.arrivedAt || 'n/a'}\n` +
+                  `Dwell elapsed: ${diag.dwellElapsedMin || '0'} min / ${diag.promptMinutes} min\n` +
+                  `Notif sent: ${diag.notificationSent}\n` +
+                  `Stationary shortcut: ${diag.isStationaryAtLocation}`
+                )
+              } catch (err: any) {
+                Alert.alert('Error', err.message || String(err))
+              }
+            }}
+            testID={`${testID}-diagnostics`}
+          >
+            <Ionicons name="analytics-outline" size={16} color={darkTheme.textMuted} />
+            <Text style={styles.testNotifText}>View task diagnostics</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.testNotifButton}
+            onPress={async () => {
+              try {
+                await Notifications.scheduleNotificationAsync({
+                  content: {
+                    title: 'Test Notification',
+                    body: 'If you see this, notifications are working!',
+                    sound: 'default',
+                    interruptionLevel: 'active',
+                  },
+                  trigger: null,
+                })
+                Alert.alert('Sent', 'Test notification scheduled. You should see it now.')
+              } catch (err: any) {
+                Alert.alert('Notification Failed', err.message || String(err))
+              }
+            }}
+            testID={`${testID}-test-notif`}
+          >
+            <Ionicons name="notifications-outline" size={16} color={darkTheme.textMuted} />
+            <Text style={styles.testNotifText}>Send test notification</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -317,16 +446,40 @@ const styles = StyleSheet.create({
     color: darkTheme.textSecondary,
     marginBottom: 8,
   },
-  pickerWrapper: {
+  pickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  picker: {
-    height: 50,
+  pickerButtonText: {
+    fontSize: 16,
     color: darkTheme.textPrimary,
+    fontWeight: '500',
+  },
+  debugButtons: {
+    gap: 8,
+    marginTop: 8,
+  },
+  testNotifButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignSelf: 'flex-start' as const,
+  },
+  testNotifText: {
+    fontSize: 13,
+    color: darkTheme.textMuted,
   },
   infoText: {
     fontSize: 13,

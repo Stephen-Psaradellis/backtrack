@@ -39,7 +39,7 @@ LogBox.ignoreLogs([
 
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider, useToast } from './contexts/ToastContext'
-import { AppNavigator, getNavigationIntegration } from './navigation/AppNavigator'
+import { AppNavigator, getNavigationIntegration, navigationRef } from './navigation/AppNavigator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerForPushNotifications } from './services/notifications'
 import { processOfflineQueue } from './lib/offlineMessageQueue'
@@ -273,15 +273,37 @@ function NotificationRegistration({ children }: { children: React.ReactNode }): 
       // Listen for when user taps on a notification
       notificationResponseListener.current = Notifications.addNotificationResponseReceivedListener(
         (response) => {
-          // The notification data contains the deep-link URL
-          // Deep-linking navigation is handled by React Navigation's linking config
-          // which will be set up in AppNavigator (subtask-5-1)
           const data = response.notification.request.content.data
+          if (!data) return
 
-          // Navigation will be handled automatically by linking config
-          // when the app receives the notification URL
-          if (__DEV__ && data) {
-            // Debug logging in development only
+          try {
+            if (data.type === 'checkin_prompt' && data.locationId && data.locationName) {
+              // Navigate to the location's check-in screen
+              navigationRef.current?.navigate('Main', {
+                screen: 'Ledger',
+                params: {
+                  locationId: data.locationId as string,
+                  locationName: data.locationName as string,
+                },
+              })
+            } else if (data.url && typeof data.url === 'string') {
+              // Handle deep-link URLs from push notifications (match/message)
+              const matchPost = data.url.match(/backtrack:\/\/post\/(.+)/)
+              const matchConvo = data.url.match(/backtrack:\/\/conversation\/(.+)/)
+              if (matchPost) {
+                navigationRef.current?.navigate('Main', {
+                  screen: 'PostDetail',
+                  params: { postId: matchPost[1] },
+                })
+              } else if (matchConvo) {
+                navigationRef.current?.navigate('Main', {
+                  screen: 'Chat',
+                  params: { conversationId: matchConvo[1] },
+                })
+              }
+            }
+          } catch {
+            // Navigation not ready yet - app will show default screen
           }
         }
       )
