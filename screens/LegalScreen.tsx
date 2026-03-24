@@ -265,7 +265,8 @@ type LegalScreenRouteProp = RouteProp<MainStackParamList, 'Legal'>
 export function LegalScreen(): React.ReactNode {
   const navigation = useNavigation()
   const route = useRoute<LegalScreenRouteProp>()
-  const { type } = route.params || { type: 'privacy' }
+  const rawType = route.params?.type
+  const type = rawType === 'privacy' || rawType === 'terms' ? rawType : 'privacy'
 
   const isPrivacy = type === 'privacy'
   const title = isPrivacy ? 'Privacy Policy' : 'Terms of Service'

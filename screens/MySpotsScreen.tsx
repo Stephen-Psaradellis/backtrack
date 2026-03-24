@@ -131,32 +131,42 @@ export function MySpotsScreen(): React.ReactNode {
 
       // Fetch posts at recent locations
       if (recentLocations.length > 0) {
-        const recentLocationIds = recentLocations.map(l => l.id)
+        const recentLocationIds = recentLocations
+          .map(l => l.id)
+          .filter((id): id is string => !!id)
 
-        const { data: recentPosts } = await supabase
-          .from('posts')
-          .select('*')
-          .in('location_id', recentLocationIds)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(10)
+        if (recentLocationIds.length > 0) {
+          const { data: recentPosts } = await supabase
+            .from('posts')
+            .select('*')
+            .in('location_id', recentLocationIds)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(10)
 
-        setPostsAtRecent(recentPosts || [])
+          setPostsAtRecent(recentPosts || [])
+        }
       }
 
       // Fetch posts at regular locations
       if (fellowRegulars.length > 0) {
-        const regularLocationIds = [...new Set(fellowRegulars.map(r => r.location_id))]
+        const regularLocationIds = [...new Set(
+          fellowRegulars
+            .map(r => r.location_id)
+            .filter((id): id is string => !!id)
+        )]
 
-        const { data: regularPosts } = await supabase
-          .from('posts')
-          .select('*')
-          .in('location_id', regularLocationIds)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(10)
+        if (regularLocationIds.length > 0) {
+          const { data: regularPosts } = await supabase
+            .from('posts')
+            .select('*')
+            .in('location_id', regularLocationIds)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(10)
 
-        setPostsAtRegulars(regularPosts || [])
+          setPostsAtRegulars(regularPosts || [])
+        }
       }
 
       // Fetch new matches (conversations where user is consumer)
@@ -169,7 +179,7 @@ export function MySpotsScreen(): React.ReactNode {
 
       setNewMatches(conversations || [])
     } catch (error) {
-      console.error('Error fetching my spots data:', error)
+      if (__DEV__) console.error('Error fetching my spots data:', error)
     } finally {
       setIsLoadingData(false)
     }

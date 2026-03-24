@@ -39,9 +39,10 @@ import { useCheckin } from '../../hooks/useCheckin'
 import { supabase } from '../../lib/supabase'
 import { successFeedback, errorFeedback, selectionFeedback } from '../../lib/haptics'
 import {
-  searchGooglePlaces,
+  searchNearbyPlaces,
   transformGooglePlaces,
   cacheVenueToSupabase,
+  type GooglePlaceTransformed,
 } from '../../services/locationService'
 import { darkTheme } from '../../constants/glassStyles'
 import { colors } from '../../constants/theme'
@@ -64,13 +65,15 @@ interface NearbyLocation {
   address: string | null
   fromGooglePlaces?: boolean
   googlePlaceId?: string
+  /** Cached transformed place data to avoid re-fetching from Google */
+  placeData?: GooglePlaceTransformed
 }
 
-// Search radius for finding locations (increased from 200m to 500m for GPS accuracy tolerance)
-const CHECKIN_SEARCH_RADIUS_METERS = 500
+// Search radius for finding locations (200m to account for indoor GPS drift)
+const CHECKIN_SEARCH_RADIUS_METERS = 200
 
-// Google Places search radius (larger to find nearby venues)
-const GOOGLE_PLACES_SEARCH_RADIUS_METERS = 1000
+// Google Places search radius (200m to account for indoor GPS drift)
+const GOOGLE_PLACES_SEARCH_RADIUS_METERS = 200
 
 // ============================================================================
 // COMPONENT
@@ -127,13 +130,14 @@ export function CheckInButton({
   }, [])
 
   /**
-   * Search Google Places for nearby venues when no database locations found
+   * Search Google Places for nearby venues when no database locations found.
+   * Uses Nearby Search API (by type + location) instead of Text Search.
    */
   const searchGooglePlacesNearby = useCallback(async (lat: number, lon: number): Promise<NearbyLocation[]> => {
     try {
-      // Search for bars, restaurants, cafes near the user's location
-      const result = await searchGooglePlaces({
-        query: 'bar restaurant cafe nightclub pub',
+      // Use Nearby Search to find venues by type near the user's location
+      // Return all nearby POIs - no type filtering needed at 200m radius
+      const result = await searchNearbyPlaces({
         latitude: lat,
         longitude: lon,
         radius_meters: GOOGLE_PLACES_SEARCH_RADIUS_METERS,
@@ -144,7 +148,9 @@ export function CheckInButton({
         return []
       }
 
-      const transformed = transformGooglePlaces(result.places)
+      // Skip establishment filtering - at 200m everything is relevant
+      // transformGooglePlaces with filterEstablishments=false keeps all results
+      const transformed = transformGooglePlaces(result.places, false)
 
       // Calculate distance and format for our interface
       return transformed.map(place => {
@@ -165,6 +171,7 @@ export function CheckInButton({
           address: place.address,
           fromGooglePlaces: true,
           googlePlaceId: place.google_place_id,
+          placeData: place, // Store for direct caching later
         }
       }).sort((a, b) => a.distance - b.distance)
     } catch {
@@ -173,31 +180,22 @@ export function CheckInButton({
   }, [])
 
   /**
-   * Create a location in the database from a Google Places result
+   * Create a location in the database from a Google Places result.
+   * Uses cached placeData from the initial nearby search to avoid a redundant API call.
    */
   const createLocationFromGooglePlace = useCallback(async (location: NearbyLocation): Promise<string | null> => {
     if (!location.fromGooglePlaces || !location.googlePlaceId) {
       return location.id
     }
 
+    if (!location.placeData) {
+      return null
+    }
+
     setIsCreatingLocation(true)
 
     try {
-      // Search Google Places again to get full details
-      const result = await searchGooglePlaces({
-        query: location.name,
-        max_results: 1,
-      })
-
-      if (!result.success || result.places.length === 0) {
-        return null
-      }
-
-      const transformed = transformGooglePlaces(result.places)
-      const place = transformed.find(p => p.google_place_id === location.googlePlaceId) || transformed[0]
-
-      // Cache to Supabase
-      const cacheResult = await cacheVenueToSupabase(supabase, place)
+      const cacheResult = await cacheVenueToSupabase(supabase, location.placeData)
 
       if (!cacheResult.success || !cacheResult.location) {
         return null
@@ -319,7 +317,10 @@ export function CheckInButton({
       const createdId = await createLocationFromGooglePlace(nearbyLocation)
       if (!createdId) {
         await errorFeedback()
-        Alert.alert('Error', 'Failed to add this venue. Please try again.')
+        Alert.alert(
+          'Venue Error',
+          'Could not save this venue to your account. Check your internet connection and try again.'
+        )
         setNearbyLocation(null)
         return
       }
@@ -334,11 +335,15 @@ export function CheckInButton({
       } else if (result.verified && result.accuracyInfo) {
         // Show verification details on successful check-in
         const accuracyStatus = result.accuracyInfo.status
-        if (accuracyStatus === 'poor' || accuracyStatus === 'fair') {
-          // Subtle notification that GPS wasn't great
+        if (accuracyStatus === 'poor') {
           Alert.alert(
             'Checked In',
-            `You're now checked in at ${nearbyLocation.name}.\n\nNote: GPS signal was ${accuracyStatus}. If you have issues, try checking in again outdoors.`
+            `You're checked in at ${nearbyLocation.name}.\n\nYour GPS signal is weak. If this isn't the right spot, try again outdoors or away from tall buildings.`
+          )
+        } else if (accuracyStatus === 'fair') {
+          Alert.alert(
+            'Checked In',
+            `You're checked in at ${nearbyLocation.name}.\n\nGPS accuracy is moderate — your location may be slightly off.`
           )
         }
       }
@@ -349,10 +354,10 @@ export function CheckInButton({
       if (result.accuracyInfo) {
         const accuracy = result.accuracyInfo.reported
         if (accuracy > 75) {
-          errorMessage = `GPS accuracy too low (${Math.round(accuracy)}m).\n\nTry:\n• Moving outdoors\n• Moving away from buildings\n• Waiting a few seconds and trying again`
+          errorMessage = `Your GPS is off by ~${Math.round(accuracy)}m, which is too far to verify your location.\n\nTo improve accuracy:\n• Step outside or near a window\n• Move away from tall buildings\n• Wait a moment and try again`
         }
       }
-      Alert.alert('Check-In Failed', errorMessage)
+      Alert.alert('Location Too Inaccurate', errorMessage)
     }
 
     setNearbyLocation(null)

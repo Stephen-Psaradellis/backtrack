@@ -308,8 +308,8 @@ export function updateDwellState(
       state: {
         ...currentState,
         currentLocation: {
-          latitude: reduceCoordinatePrecision(nearbyLocation.latitude, 2),
-          longitude: reduceCoordinatePrecision(nearbyLocation.longitude, 2),
+          latitude: reduceCoordinatePrecision(nearbyLocation.latitude, 4),
+          longitude: reduceCoordinatePrecision(nearbyLocation.longitude, 4),
           locationId: nearbyLocation.id,
           locationName: nearbyLocation.name,
         },

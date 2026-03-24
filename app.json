@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -16,6 +15,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.backtrack.social",
+      "config": {
+        "googleMapsApiKey": "${EXPO_PUBLIC_GCP_MAPS_API_KEY}"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Backtrack needs your location to show nearby venues where you can post or browse missed connections.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Backtrack uses your location to discover nearby venues and help you find missed connections.",

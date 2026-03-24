@@ -29,15 +29,15 @@ appId: app.backtrack.social
 # Verify My Avatar section exists
 - assertVisible: "My Avatar"
 
-# Try to tap Edit Avatar button (using testID for reliability)
+# Try to tap Create Avatar button (using testID for reliability)
 # If user doesn't have avatar, try Create Avatar button
 - runFlow:
     when:
       visible:
-        id: "profile-edit-avatar-button"
+        id: "profile-create-avatar-button"
     commands:
       - tapOn:
-          id: "profile-edit-avatar-button"
+          id: "profile-create-avatar-button"
 
 - runFlow:
     when:

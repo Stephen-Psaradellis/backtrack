@@ -155,7 +155,7 @@ export function useAchievements(): UseAchievementsResult {
 
       setAllDefinitions(data || [])
     } catch (err) {
-      console.error('Error loading achievement definitions:', err)
+      if (__DEV__) console.error('Error loading achievement definitions:', err)
       setError('Failed to load achievements')
     }
   }, [])
@@ -180,7 +180,7 @@ export function useAchievements(): UseAchievementsResult {
 
       setUserAchievements(data || [])
     } catch (err) {
-      console.error('Error loading user achievements:', err)
+      if (__DEV__) console.error('Error loading user achievements:', err)
       setError('Failed to load your achievements')
     }
   }, [user?.id])
@@ -279,7 +279,7 @@ export function useAchievements(): UseAchievementsResult {
         trust_days: accountAgeDays,
       })
     } catch (err) {
-      console.error('Error calculating progress:', err)
+      if (__DEV__) console.error('Error calculating progress:', err)
     }
   }, [user?.id])
 
@@ -392,7 +392,7 @@ export function useAchievements(): UseAchievementsResult {
       // Return array of newly awarded achievement IDs
       return (data || []).map((a: any) => a.achievement_id)
     } catch (err) {
-      console.error('Error checking achievements:', err)
+      if (__DEV__) console.error('Error checking achievements:', err)
       setError('Failed to check achievements')
       return []
     } finally {
@@ -418,7 +418,7 @@ export function useAchievements(): UseAchievementsResult {
 
       setLeaderboard(data || [])
     } catch (err) {
-      console.error('Error loading leaderboard:', err)
+      if (__DEV__) console.error('Error loading leaderboard:', err)
       setError('Failed to load leaderboard')
     } finally {
       setLeaderboardLoading(false)

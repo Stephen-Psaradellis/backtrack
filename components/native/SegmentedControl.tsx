@@ -32,7 +32,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
 
   // Validate segments count
   if (segments.length < 2 || segments.length > 5) {
-    console.warn('SegmentedControl: segments should have 2-5 items');
+    if (__DEV__) console.warn('SegmentedControl: segments should have 2-5 items');
   }
 
   // Calculate indicator width and position

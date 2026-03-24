@@ -11,14 +11,14 @@
  * - Uses standard Animated API (not reanimated)
  */
 
-import React, { useRef, useState, useCallback } from 'react'
+import React, { useRef, useState, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   Animated,
   PanResponder,
-  Dimensions,
+  useWindowDimensions,
   ViewStyle,
 } from 'react-native'
 import { darkTheme } from '../constants/glassStyles'
@@ -60,9 +60,6 @@ export interface SwipeableCardStackProps<T extends Post | PostWithDetails> {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const SCREEN_WIDTH = Dimensions.get('window').width
-const SCREEN_HEIGHT = Dimensions.get('window').height
 
 /** Horizontal swipe threshold to trigger action (in pixels) */
 const SWIPE_THRESHOLD = 120
@@ -106,6 +103,8 @@ export function SwipeableCardStack<T extends Post | PostWithDetails>({
   // STATE
   // ---------------------------------------------------------------------------
 
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions()
+  const styles = useMemo(() => createStyles(SCREEN_WIDTH, SCREEN_HEIGHT), [SCREEN_WIDTH, SCREEN_HEIGHT])
   const [currentIndex, setCurrentIndex] = useState(0)
   const position = useRef(new Animated.ValueXY()).current
   const rotate = useRef(new Animated.Value(0)).current
@@ -409,7 +408,7 @@ export function SwipeableCardStack<T extends Post | PostWithDetails>({
 // STYLES
 // ============================================================================
 
-const styles = StyleSheet.create({
+const createStyles = (SCREEN_WIDTH: number, SCREEN_HEIGHT: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: darkTheme.background,

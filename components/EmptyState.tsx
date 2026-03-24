@@ -139,13 +139,9 @@ export function EmptyLedger({
 }): JSX.Element {
   return (
     <View style={splashStyles.container} testID={props.testID || 'ledger-empty'}>
-      {/* Decorative background circles */}
-      <View style={splashStyles.decorCircleOuter} accessible={false} />
-      <View style={splashStyles.decorCircleInner} accessible={false} />
-
       {/* Icon badge */}
       <View style={splashStyles.iconBadge} accessible={false}>
-        <Ionicons name="create-outline" size={36} color="#FFFFFF" accessible={false} />
+        <Ionicons name="add" size={32} color="#FFFFFF" accessible={false} />
       </View>
 
       {/* Title */}
@@ -177,60 +173,38 @@ const splashStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    paddingVertical: 64,
-    backgroundColor: darkTheme.surface,
-    borderRadius: 24,
+    paddingVertical: 48,
     marginHorizontal: 16,
     marginVertical: 24,
-    minHeight: 400,
-  },
-  decorCircleOuter: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(255, 107, 71, 0.08)',
-  },
-  decorCircleInner: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255, 107, 71, 0.12)',
   },
   iconBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: darkTheme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: darkTheme.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
     color: darkTheme.textPrimary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   message: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: darkTheme.primary,
+    fontSize: 15,
+    fontWeight: '400',
+    color: darkTheme.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
     paddingHorizontal: 16,
   },
   buttonContainer: {
-    marginTop: 32,
+    marginTop: 28,
     width: '100%',
-    maxWidth: 240,
+    maxWidth: 220,
   },
 })
 

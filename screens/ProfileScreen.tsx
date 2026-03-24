@@ -44,8 +44,11 @@ import { colors, spacing } from '../constants/theme'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { successFeedback, errorFeedback } from '../lib/haptics'
+import { captureException } from '../lib/sentry'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { Avatar, loadCurrentAvatar, type StoredAvatar } from 'react-native-bitmoji'
+import { AvatarDisplay } from '../components/AvatarDisplay'
+import { loadCachedAvatar } from '../hooks/useAvatarGenerator'
+import { hasGeneratedAvatar, createStoredAvatar, type StoredAvatar, type GeneratedAvatar } from '../types/avatar'
 import { ProfilePhotoGallery } from '../components/ProfilePhotoGallery'
 import { VerifiedBadge } from '../components/VerifiedBadge'
 import { VerificationPrompt } from '../components/VerificationPrompt'
@@ -102,7 +105,7 @@ export function ProfileScreen(): React.ReactNode {
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
-  const [userAvatar, setUserAvatar] = useState<StoredAvatar | null>(null)
+  const [userAvatar, setUserAvatar] = useState<GeneratedAvatar | null>(null)
   const [isLoadingAvatar, setIsLoadingAvatar] = useState(true)
 
   // Achievements
@@ -127,16 +130,15 @@ export function ProfileScreen(): React.ReactNode {
       async function loadAvatar() {
         setIsLoadingAvatar(true)
         try {
-          const config = await loadCurrentAvatar()
-          // Wrap config in StoredAvatar structure
-          setUserAvatar({
-            id: 'current-avatar',
-            config,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          })
+          // Try loading from profile first, then cache
+          if (profile?.avatar?.generatedAvatar) {
+            setUserAvatar(profile.avatar.generatedAvatar)
+          } else {
+            const cached = await loadCachedAvatar()
+            setUserAvatar(cached)
+          }
         } catch (err) {
-          console.error('[ProfileScreen] Failed to load avatar:', err)
+          if (__DEV__) console.error('[ProfileScreen] Failed to load avatar:', err)
         } finally {
           setIsLoadingAvatar(false)
         }
@@ -144,9 +146,9 @@ export function ProfileScreen(): React.ReactNode {
       loadAvatar()
       // Load leaderboard on screen focus
       loadLeaderboard().catch((err) => {
-        console.error('[ProfileScreen] Failed to load leaderboard:', err)
+        if (__DEV__) console.error('[ProfileScreen] Failed to load leaderboard:', err)
       })
-    }, [loadLeaderboard])
+    }, [loadLeaderboard, profile?.avatar])
   )
 
   // ---------------------------------------------------------------------------
@@ -212,7 +214,8 @@ export function ProfileScreen(): React.ReactNode {
         await successFeedback()
         setIsEditing(false)
       }
-    } catch {
+    } catch (error) {
+      captureException(error, { operation: 'handleSaveProfile' })
       await errorFeedback()
       setErrors({ general: 'An unexpected error occurred' })
     } finally {
@@ -493,19 +496,22 @@ export function ProfileScreen(): React.ReactNode {
               </View>
             ) : userAvatar ? (
               <View style={styles.avatarConfigured} testID="profile-avatar-preview">
-                <Avatar config={userAvatar.config} size="lg" />
+                <AvatarDisplay
+                  avatar={createStoredAvatar(userAvatar)}
+                  size="lg"
+                />
                 <TouchableOpacity
                   style={styles.editAvatarButton}
                   onPress={handleOpenAvatarCreator}
                   disabled={isSavingAvatar}
-                  testID="profile-edit-avatar-button"
+                  testID="profile-create-avatar-button"
                 >
                   <LinearGradient
                     colors={[colors.primary[500], colors.primary[600]]}
                     style={styles.editAvatarGradient}
                   >
                     <Ionicons name="brush" size={16} color="#FFF" />
-                    <Text style={styles.editAvatarText}>Edit Avatar</Text>
+                    <Text style={styles.editAvatarText}>Create Avatar</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>

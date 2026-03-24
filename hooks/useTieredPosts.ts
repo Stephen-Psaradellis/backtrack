@@ -39,7 +39,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 
 import { supabase } from '../lib/supabase'
 import type { VerificationTier, UUID, Timestamp } from '../types/database'
-import type { StoredAvatar } from 'react-native-bitmoji'
+import type { StoredAvatar } from '../types/avatar'
 
 // ============================================================================
 // TYPES

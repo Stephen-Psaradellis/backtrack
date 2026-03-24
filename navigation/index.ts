@@ -37,7 +37,7 @@ export type {
   ChatScreenProps,
   AvatarCreatorScreenProps,
   FeedTabScreenProps,
-  MySpotsTabScreenProps,
+  HistoryTabScreenProps,
   MapTabScreenProps,
   ChatsTabScreenProps,
   ProfileTabScreenProps,

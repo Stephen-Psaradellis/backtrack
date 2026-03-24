@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  Dimensions,
+  useWindowDimensions,
   Animated,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
@@ -14,8 +14,6 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { darkTheme } from '../../constants/glassStyles'
 import { colors } from '../../constants/theme'
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 // ============================================================================
 // Types
@@ -74,11 +72,12 @@ const SLIDES: OnboardingSlide[] = [
 
 interface SlideProps {
   item: OnboardingSlide
+  screenWidth: number
 }
 
-const Slide = memo(function Slide({ item }: SlideProps) {
+const Slide = memo(function Slide({ item, screenWidth }: SlideProps) {
   return (
-    <View style={styles.slide}>
+    <View style={[styles.slide, { width: screenWidth }]}>
       <View style={styles.iconContainer}>
         <Ionicons name={item.icon} size={64} color={colors.primary[500]} />
       </View>
@@ -127,16 +126,17 @@ function WelcomeScreenComponent({ onComplete }: WelcomeScreenProps) {
   const flatListRef = useRef<FlatList<OnboardingSlide>>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const scrollX = useRef(new Animated.Value(0)).current
+  const { width: screenWidth } = useWindowDimensions()
 
   const isLastSlide = currentIndex === SLIDES.length - 1
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offsetX = event.nativeEvent.contentOffset.x
-      const index = Math.round(offsetX / SCREEN_WIDTH)
+      const index = Math.round(offsetX / screenWidth)
       setCurrentIndex(index)
     },
-    []
+    [screenWidth]
   )
 
   const handleNext = useCallback(() => {
@@ -155,8 +155,8 @@ function WelcomeScreenComponent({ onComplete }: WelcomeScreenProps) {
   }, [onComplete])
 
   const renderItem = useCallback(
-    ({ item }: { item: OnboardingSlide }) => <Slide item={item} />,
-    []
+    ({ item }: { item: OnboardingSlide }) => <Slide item={item} screenWidth={screenWidth} />,
+    [screenWidth]
   )
 
   const keyExtractor = useCallback((item: OnboardingSlide) => item.id, [])
@@ -196,8 +196,8 @@ function WelcomeScreenComponent({ onComplete }: WelcomeScreenProps) {
         scrollEventThrottle={16}
         bounces={false}
         getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
+          length: screenWidth,
+          offset: screenWidth * index,
           index,
         })}
       />
@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
 
   // Slide
   slide: {
-    width: SCREEN_WIDTH,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',

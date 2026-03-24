@@ -97,14 +97,16 @@ const mockCheckinUsers: LiveCheckinUser[] = [
   {
     user_id: 'user-1',
     display_name: 'Alice',
-    avatar: 'avatar-1',
+    avatar: { id: 'avatar-1', generatedAvatar: { url: '', svg: '', prompt: '', style: '', createdAt: 0, updatedAt: 0 } },
+    is_verified: false,
     checkin_id: 'checkin-1',
     checked_in_at: '2026-02-16T12:00:00Z',
   },
   {
     user_id: 'user-2',
     display_name: 'Bob',
-    avatar: 'avatar-2',
+    avatar: { id: 'avatar-2', generatedAvatar: { url: '', svg: '', prompt: '', style: '', createdAt: 0, updatedAt: 0 } },
+    is_verified: false,
     checkin_id: 'checkin-2',
     checked_in_at: '2026-02-16T12:05:00Z',
   },

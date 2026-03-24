@@ -2,13 +2,8 @@
  * useCheckin Hook
  *
  * Custom hook for managing user check-ins at locations.
- * Handles GPS-verified check-ins, check-outs, and active check-in state.
- *
- * Features:
- * - Check in to a location with GPS verification (200m radius)
- * - Auto-checkout from other locations when checking in
- * - Get current active check-in
- * - Check out from a location
+ * Delegates to CheckinContext for shared state — all consumers see the same
+ * activeCheckin, so GlobalHeader and CheckInButton stay in sync.
  *
  * @example
  * ```tsx
@@ -32,15 +27,11 @@
  * ```
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import * as Location from 'expo-location'
-
-import { supabase } from '../lib/supabase'
-import { reduceCoordinatePrecision } from '../lib/utils/geoPrivacy'
 import type { ActiveCheckin } from '../types/database'
+import { useCheckinContext } from '../contexts/CheckinContext'
 
 // ============================================================================
-// TYPES
+// TYPES (kept here so existing imports from consumers don't break)
 // ============================================================================
 
 /**
@@ -113,248 +104,9 @@ export interface UseCheckinResult {
 // ============================================================================
 
 /**
- * Hook for managing user check-ins at locations
+ * Hook for managing user check-ins at locations.
+ * Thin wrapper over CheckinContext — all state is shared across consumers.
  */
 export function useCheckin(): UseCheckinResult {
-  // State
-  const [activeCheckin, setActiveCheckin] = useState<ActiveCheckin | null>(null)
-  const [isCheckingIn, setIsCheckingIn] = useState(false)
-  const [isCheckingOut, setIsCheckingOut] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Refs to prevent state updates after unmount
-  const isMountedRef = useRef(true)
-
-  /**
-   * Fetch the current active check-in from the database
-   */
-  const getActiveCheckin = useCallback(async () => {
-    if (!isMountedRef.current) return
-
-    try {
-      const { data, error: fetchError } = await supabase.rpc('get_active_checkin')
-
-      if (fetchError) {
-        if (isMountedRef.current) {
-          setError(fetchError.message)
-        }
-        return
-      }
-
-      if (isMountedRef.current) {
-        if (data?.success && data?.checkin) {
-          setActiveCheckin(data.checkin as ActiveCheckin)
-        } else {
-          setActiveCheckin(null)
-        }
-        setError(null)
-      }
-    } catch (err) {
-      if (isMountedRef.current) {
-        setError('Failed to fetch active check-in')
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false)
-      }
-    }
-  }, [])
-
-  /**
-   * Check in to a location with GPS verification
-   */
-  const checkIn = useCallback(async (locationId: string): Promise<CheckinResult> => {
-    setIsCheckingIn(true)
-    setError(null)
-
-    try {
-      // Request location permission
-      const { status } = await Location.requestForegroundPermissionsAsync()
-      if (status !== 'granted') {
-        const result: CheckinResult = {
-          success: false,
-          checkinId: null,
-          verified: false,
-          alreadyCheckedIn: false,
-          distanceMeters: null,
-          effectiveRadius: null,
-          accuracyInfo: null,
-          error: 'Location permission required to check in',
-        }
-        setError(result.error)
-        return result
-      }
-
-      // Get current location with high accuracy
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      })
-
-      // Reduce coordinate precision for privacy (GDPR compliance)
-      // 4 decimal places = ~11m resolution for check-in verification
-      // Note: Different from background tracking which uses 2 decimals (~1.1km)
-      const reducedLat = reduceCoordinatePrecision(location.coords.latitude, 4)
-      const reducedLon = reduceCoordinatePrecision(location.coords.longitude, 4)
-
-      // Call the RPC function with reduced precision coordinates
-      const { data, error: rpcError } = await supabase.rpc('checkin_to_location', {
-        p_location_id: locationId,
-        p_user_lat: reducedLat,
-        p_user_lon: reducedLon,
-        p_accuracy: location.coords.accuracy,
-      })
-
-      if (rpcError) {
-        const result: CheckinResult = {
-          success: false,
-          checkinId: null,
-          verified: false,
-          alreadyCheckedIn: false,
-          distanceMeters: null,
-          effectiveRadius: null,
-          accuracyInfo: null,
-          error: rpcError.message,
-        }
-        setError(result.error)
-        return result
-      }
-
-      if (!data.success) {
-        const result: CheckinResult = {
-          success: false,
-          checkinId: null,
-          verified: false,
-          alreadyCheckedIn: false,
-          distanceMeters: null,
-          effectiveRadius: null,
-          accuracyInfo: data.accuracy_info || null,
-          error: data.error || 'Check-in failed',
-        }
-        setError(result.error)
-        return result
-      }
-
-      // Refresh active check-in state
-      await getActiveCheckin()
-
-      return {
-        success: true,
-        checkinId: data.checkin_id,
-        verified: data.verified,
-        alreadyCheckedIn: data.already_checked_in || false,
-        distanceMeters: data.distance_meters,
-        effectiveRadius: data.effective_radius || null,
-        accuracyInfo: data.accuracy_info || null,
-        error: null,
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Check-in failed'
-      setError(errorMessage)
-      return {
-        success: false,
-        checkinId: null,
-        verified: false,
-        alreadyCheckedIn: false,
-        distanceMeters: null,
-        effectiveRadius: null,
-        accuracyInfo: null,
-        error: errorMessage,
-      }
-    } finally {
-      setIsCheckingIn(false)
-    }
-  }, [getActiveCheckin])
-
-  /**
-   * Check out from a location (or all locations if no locationId)
-   */
-  const checkOut = useCallback(async (locationId?: string): Promise<CheckoutResult> => {
-    setIsCheckingOut(true)
-    setError(null)
-
-    try {
-      const { data, error: rpcError } = await supabase.rpc('checkout_from_location', {
-        p_location_id: locationId || null,
-      })
-
-      if (rpcError) {
-        const result: CheckoutResult = {
-          success: false,
-          checkouts: 0,
-          error: rpcError.message,
-        }
-        setError(result.error)
-        return result
-      }
-
-      if (!data.success) {
-        const result: CheckoutResult = {
-          success: false,
-          checkouts: 0,
-          error: data.error || 'Check-out failed',
-        }
-        setError(result.error)
-        return result
-      }
-
-      // Clear active check-in if checking out from current location
-      if (!locationId || activeCheckin?.location_id === locationId) {
-        setActiveCheckin(null)
-      }
-
-      return {
-        success: true,
-        checkouts: data.checkouts,
-        error: null,
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Check-out failed'
-      setError(errorMessage)
-      return {
-        success: false,
-        checkouts: 0,
-        error: errorMessage,
-      }
-    } finally {
-      setIsCheckingOut(false)
-    }
-  }, [activeCheckin])
-
-  /**
-   * Check if user is checked in at a specific location
-   */
-  const isCheckedInAt = useCallback((locationId: string): boolean => {
-    return activeCheckin?.location_id === locationId
-  }, [activeCheckin])
-
-  /**
-   * Clear error state
-   */
-  const clearError = useCallback(() => {
-    setError(null)
-  }, [])
-
-  // Fetch active check-in on mount
-  useEffect(() => {
-    isMountedRef.current = true
-    getActiveCheckin()
-
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [getActiveCheckin])
-
-  return {
-    activeCheckin,
-    isCheckingIn,
-    isCheckingOut,
-    isLoading,
-    error,
-    checkIn,
-    checkOut,
-    getActiveCheckin,
-    isCheckedInAt,
-    clearError,
-  }
+  return useCheckinContext()
 }

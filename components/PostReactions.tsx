@@ -61,6 +61,8 @@ export interface PostReactionsProps {
   userId: string | null
   /** Additional container style */
   style?: ViewStyle
+  /** Show compact emoji-only mode (no labels) */
+  compact?: boolean
   /** Test ID for testing */
   testID?: string
 }
@@ -89,6 +91,7 @@ export function PostReactions({
   postId,
   userId,
   style,
+  compact = false,
   testID = 'post-reactions',
 }: PostReactionsProps) {
   // ---------------------------------------------------------------------------
@@ -128,7 +131,7 @@ export function PostReactions({
         .eq('post_id', postId)
 
       if (error) {
-        console.error('Error loading reactions:', error)
+        if (__DEV__) console.error('Error loading reactions:', error)
         return
       }
 
@@ -148,7 +151,7 @@ export function PostReactions({
 
       setReactions(reactionMap)
     } catch (err) {
-      console.error('Error loading reactions:', err)
+      if (__DEV__) console.error('Error loading reactions:', err)
     }
   }, [postId, userId])
 
@@ -206,7 +209,7 @@ export function PostReactions({
             .eq('reaction_type', reactionType)
 
           if (error) {
-            console.error('Error removing reaction:', error)
+            if (__DEV__) console.error('Error removing reaction:', error)
             // Revert optimistic update
             setReactions(reactions)
           }
@@ -219,13 +222,13 @@ export function PostReactions({
           })
 
           if (error) {
-            console.error('Error adding reaction:', error)
+            if (__DEV__) console.error('Error adding reaction:', error)
             // Revert optimistic update
             setReactions(reactions)
           }
         }
       } catch (err) {
-        console.error('Error toggling reaction:', err)
+        if (__DEV__) console.error('Error toggling reaction:', err)
         // Revert optimistic update on error
         setReactions(reactions)
       } finally {
@@ -261,7 +264,7 @@ export function PostReactions({
           >
             <TouchableOpacity
               style={[
-                styles.reactionButton,
+                compact ? styles.reactionButtonCompact : styles.reactionButton,
                 isActive && styles.reactionButtonActive,
               ]}
               onPress={() => toggleReaction(type)}
@@ -275,12 +278,14 @@ export function PostReactions({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.emoji}>{emoji}</Text>
-              <Text
-                style={[styles.label, isActive && styles.labelActive]}
-                numberOfLines={1}
-              >
-                {label}
-              </Text>
+              {!compact && (
+                <Text
+                  style={[styles.label, isActive && styles.labelActive]}
+                  numberOfLines={1}
+                >
+                  {label}
+                </Text>
+              )}
               {count > 0 && (
                 <View
                   style={[
@@ -329,6 +334,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: darkTheme.cardBorder,
     gap: 6,
+  },
+  reactionButtonCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    backgroundColor: darkTheme.surfaceElevated,
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
+    gap: 4,
   },
   reactionButtonActive: {
     backgroundColor: `${darkTheme.primary}20`,

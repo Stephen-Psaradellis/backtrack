@@ -2,7 +2,7 @@
  * Animated Tab Bar
  *
  * Custom bottom tab bar with animated indicator, icons, and text labels.
- * 5-tab layout: Feed, Spots, Map, Chats, Me
+ * 5-tab layout: Feed, History, Map, Chats, Me
  * Uses react-native-reanimated for performant UI-thread animations.
  */
 
@@ -31,7 +31,7 @@ import { darkTheme } from '../../constants/glassStyles';
 // Icon mapping for 5-tab layout
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   FeedTab: { active: 'home', inactive: 'home-outline' },
-  MySpotsTab: { active: 'bookmark', inactive: 'bookmark-outline' },
+  HistoryTab: { active: 'time', inactive: 'time-outline' },
   MapTab: { active: 'map', inactive: 'map-outline' },
   ChatsTab: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
   ProfileTab: { active: 'person', inactive: 'person-outline' },
@@ -40,7 +40,7 @@ const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inacti
 // User-facing text labels for each tab
 const TAB_LABELS: Record<string, string> = {
   FeedTab: 'Feed',
-  MySpotsTab: 'Spots',
+  HistoryTab: 'History',
   MapTab: 'Map',
   ChatsTab: 'Chats',
   ProfileTab: 'Me',

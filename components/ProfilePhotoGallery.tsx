@@ -28,7 +28,7 @@ import {
   Alert,
   ActionSheetIOS,
   Platform,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useProfilePhotos } from '../hooks/useProfilePhotos'
@@ -61,23 +61,27 @@ interface PhotoTileProps {
   isDeleting: boolean
   /** Number of matches this photo is shared with (0 = private) */
   shareCount: number
+  /** Tile size in pixels */
+  tileSize: number
 }
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const SCREEN_WIDTH = Dimensions.get('window').width
 const GRID_PADDING = 16
 const GRID_GAP = 8
 const NUM_COLUMNS = 3
-const TILE_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS
+
+function getTileSize(screenWidth: number) {
+  return (screenWidth - GRID_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS
+}
 
 // ============================================================================
 // PHOTO TILE COMPONENT
 // ============================================================================
 
-function PhotoTile({ photo, onDelete, onSetPrimary, isDeleting, shareCount }: PhotoTileProps) {
+function PhotoTile({ photo, onDelete, onSetPrimary, isDeleting, shareCount, tileSize }: PhotoTileProps) {
   const handleLongPress = useCallback(async () => {
     await lightFeedback()
 
@@ -168,7 +172,7 @@ function PhotoTile({ photo, onDelete, onSetPrimary, isDeleting, shareCount }: Ph
 
   return (
     <TouchableOpacity
-      style={styles.photoTile}
+      style={[styles.photoTile, { width: tileSize, height: tileSize }]}
       onLongPress={handleLongPress}
       delayLongPress={400}
       activeOpacity={0.8}
@@ -234,13 +238,15 @@ function PhotoTile({ photo, onDelete, onSetPrimary, isDeleting, shareCount }: Ph
 function AddPhotoTile({
   onPress,
   disabled,
+  tileSize,
 }: {
   onPress: () => void
   disabled: boolean
+  tileSize: number
 }) {
   return (
     <TouchableOpacity
-      style={[styles.addTile, disabled && styles.addTileDisabled]}
+      style={[styles.addTile, { width: tileSize, height: tileSize }, disabled && styles.addTileDisabled]}
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.7}
@@ -267,6 +273,8 @@ export function ProfilePhotoGallery({
   showAddButton = true,
   testID = 'profile-photo-gallery',
 }: ProfilePhotoGalleryProps) {
+  const { width: screenWidth } = useWindowDimensions()
+  const tileSize = getTileSize(screenWidth)
   const {
     photos,
     loading,
@@ -444,6 +452,7 @@ export function ProfilePhotoGallery({
             onSetPrimary={handleSetPrimary}
             isDeleting={deletingPhotoId === photo.id}
             shareCount={shareCounts[photo.id] ?? 0}
+            tileSize={tileSize}
           />
         ))}
 
@@ -452,6 +461,7 @@ export function ProfilePhotoGallery({
           <AddPhotoTile
             onPress={handleAddPhoto}
             disabled={uploading}
+            tileSize={tileSize}
           />
         )}
       </View>
@@ -534,8 +544,6 @@ const styles = StyleSheet.create({
     gap: GRID_GAP,
   },
   photoTile: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -625,8 +633,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addTile: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: colors.primary[400],

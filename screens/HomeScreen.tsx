@@ -54,8 +54,9 @@ export function HomeScreen(): React.ReactNode {
         if (seen === null) {
           setShowCoachMark(true)
         }
-      } catch {
-        // Fail silently - don't block the user
+      } catch (error) {
+        // Non-critical: coach mark check failure shouldn't block the user
+        if (__DEV__) console.error('[HomeScreen] Failed to check coach mark:', error)
       }
     }
     checkCoachMark()
@@ -65,8 +66,9 @@ export function HomeScreen(): React.ReactNode {
     setShowCoachMark(false)
     try {
       await AsyncStorage.setItem(COACH_MARK_KEY, 'true')
-    } catch {
-      // Fail silently
+    } catch (error) {
+      // Non-critical: failing to persist coach mark dismissal just means it shows again
+      if (__DEV__) console.error('[HomeScreen] Failed to save coach mark:', error)
     }
   }, [])
 

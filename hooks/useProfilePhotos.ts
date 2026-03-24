@@ -232,7 +232,7 @@ export function useProfilePhotos(): UseProfilePhotosResult {
       const fetchedPhotos = await getProfilePhotos()
       setPhotos(fetchedPhotos)
     } catch (err) {
-      console.error('Error loading photos:', err)
+      if (__DEV__) console.error('Error loading photos:', err)
       setError('Failed to load photos')
     }
   }, [])
@@ -249,7 +249,7 @@ export function useProfilePhotos(): UseProfilePhotosResult {
           setPhotos(fetchedPhotos)
         }
       } catch (err) {
-        console.error('Error loading photos:', err)
+        if (__DEV__) console.error('Error loading photos:', err)
         if (isMounted) {
           setError('Failed to load photos')
         }

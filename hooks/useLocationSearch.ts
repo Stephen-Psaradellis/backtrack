@@ -360,6 +360,12 @@ export function useLocationSearch(
         setResults(searchResult.combined_results)
         setIsOffline(searchResult.is_offline)
         setLastSearchedAt(Date.now())
+        // Surface partial errors (e.g. Google API failed but Supabase returned results)
+        if (searchResult.error && searchResult.combined_results.length === 0) {
+          setError(searchResult.error)
+        } else {
+          setError(null)
+        }
       }
     } catch (err) {
       // Don't update state if request was aborted

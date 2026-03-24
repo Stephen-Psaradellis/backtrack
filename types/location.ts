@@ -214,6 +214,8 @@ export interface VenueSearchResults {
   is_offline: boolean
   /** Total count of results before pagination */
   total_count: number
+  /** Error message if search partially failed (e.g. Google API error) */
+  error: string | null
 }
 
 /**
@@ -379,7 +381,6 @@ export const GOOGLE_PLACES_FIELD_MASK = [
   'places.location',
   'places.types',
   'places.primaryType',
-  'places.currentOpeningHours',
 ].join(',')
 
 /**

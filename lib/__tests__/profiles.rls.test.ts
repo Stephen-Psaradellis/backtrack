@@ -85,7 +85,7 @@ describe('Profiles RLS Policies', () => {
       expect(error).toBeNull()
       expect(data).toHaveLength(1)
       expect((data as Profile[])[0].avatar).toBeDefined()
-      expect((data as Profile[])[0].avatar?.features).toBeDefined()
+      expect((data as Profile[])[0].avatar?.generatedAvatar).toBeDefined()
     })
   })
 

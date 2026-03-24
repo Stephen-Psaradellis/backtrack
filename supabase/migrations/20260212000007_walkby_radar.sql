@@ -27,10 +27,12 @@ CREATE TABLE IF NOT EXISTS proximity_encounters (
     encounter_type TEXT NOT NULL CHECK (encounter_type IN ('walkby', 'same_venue', 'repeated')),
     notified BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-
-    -- Unique constraint: max 1 encounter per pair per day
-    CONSTRAINT unique_daily_encounter UNIQUE (user_id, encountered_user_id, DATE(created_at))
+    encounter_date DATE GENERATED ALWAYS AS ((created_at AT TIME ZONE 'UTC')::DATE) STORED
 );
+
+-- Unique constraint: max 1 encounter per pair per day (uses generated column)
+CREATE UNIQUE INDEX IF NOT EXISTS unique_daily_encounter
+    ON proximity_encounters (user_id, encountered_user_id, encounter_date);
 
 COMMENT ON TABLE proximity_encounters IS
     'Records proximity encounters between users for walk-by radar notifications';

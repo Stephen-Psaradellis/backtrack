@@ -156,9 +156,36 @@ export function useNearbyPosts(
       p_limit: DEFAULT_LIMIT,
     })
 
-    // If RPC succeeds, use the data
+    // If RPC succeeds, map columns to Post shape
     if (!rpcError) {
-      return data ?? []
+      return (data ?? []).map((row: any) => ({
+        id: row.post_id ?? row.id,
+        producer_id: row.producer_id,
+        location_id: row.location_id,
+        selfie_url: row.selfie_url,
+        photo_id: row.photo_id,
+        target_avatar_v2: row.target_avatar_v2,
+        target_description: row.target_description,
+        message: row.message,
+        note: row.note,
+        sighting_date: row.sighting_date,
+        time_granularity: row.time_granularity,
+        seen_at: row.seen_at,
+        is_active: row.is_active,
+        created_at: row.post_created_at ?? row.created_at,
+        expires_at: row.expires_at,
+        // Attach distance and location for FeedScreen use
+        distance: row.distance_meters,
+        dist_meters: row.distance_meters,
+        location: row.location_name ? {
+          id: row.location_id,
+          name: row.location_name,
+          address: row.location_address,
+          latitude: row.location_latitude,
+          longitude: row.location_longitude,
+          google_place_id: row.google_place_id,
+        } : undefined,
+      }))
     }
 
     // If RPC function doesn't exist, use fallback query

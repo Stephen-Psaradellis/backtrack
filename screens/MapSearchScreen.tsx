@@ -421,6 +421,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: darkTheme.cardBorder,
     gap: 12,
+    zIndex: 50,
+    elevation: 50,
   },
   starButton: {
     width: 44,
@@ -434,6 +436,8 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     flex: 1,
+    zIndex: 50,
+    elevation: 50,
   },
   mapContainer: {
     flex: 1,

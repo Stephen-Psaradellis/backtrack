@@ -46,7 +46,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { Avatar, type StoredAvatar } from 'react-native-bitmoji'
+import { AvatarDisplay } from '../../../components/AvatarDisplay'
+import type { StoredAvatar } from '../../../types/avatar'
 import { Button, GhostButton } from '../../../components/Button'
 import { useProfilePhotos, type ProfilePhotoWithTimeout } from '../../../hooks/useProfilePhotos'
 import { pickSelfieFromCamera, pickSelfieFromGallery } from '../../../utils/imagePicker'
@@ -386,7 +387,7 @@ export const SealStep = memo(function SealStep({
           testID={`${testID}-edit-moment`}
         >
           <View style={styles.avatarThumbnail}>
-            {avatar && <Avatar config={avatar.config} size="sm" />}
+            {avatar && <AvatarDisplay avatar={avatar} size="sm" />}
           </View>
           <View style={styles.reviewRowContent}>
             <Text style={styles.reviewRowLabel}>Your message</Text>

@@ -43,5 +43,5 @@ AS $$
   );
 $$;
 
-COMMENT ON FUNCTION is_user_blocked IS
+COMMENT ON FUNCTION is_user_blocked(UUID) IS
   'Efficiently checks if target user is blocked by or has blocked the current user. Uses UNION ALL instead of OR for better query planning.';

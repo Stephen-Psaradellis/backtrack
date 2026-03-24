@@ -26,7 +26,7 @@ import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar'
 import { AuthScreen } from '../screens/AuthScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
 import { FeedScreen } from '../screens/FeedScreen'
-import { MySpotsScreen } from '../screens/MySpotsScreen'
+import { HistoryScreen } from '../screens/HistoryScreen'
 import { LedgerScreen } from '../screens/LedgerScreen'
 import { PostDetailScreen } from '../screens/PostDetailScreen'
 import { ChatScreen } from '../screens/ChatScreen'
@@ -138,7 +138,7 @@ function HeaderAvatar({ onPress }: { onPress?: () => void }) {
 
 /**
  * Main tab navigator for authenticated users
- * 5-tab icon-only layout: Feed, MySpots, Map, Chats, Profile
+ * 5-tab icon-only layout: Feed, History, Map, Chats, Profile
  */
 function MainTabNavigator() {
   return (
@@ -157,10 +157,10 @@ function MainTabNavigator() {
         }}
       />
       <MainTabs.Screen
-        name={SCREENS.MySpotsTab}
-        component={MySpotsScreen}
+        name={SCREENS.HistoryTab}
+        component={HistoryScreen}
         options={{
-          title: TAB_LABELS.MySpotsTab,
+          title: TAB_LABELS.HistoryTab,
           headerShown: false, // Uses GlobalHeader
         }}
       />
@@ -479,7 +479,7 @@ const linking: LinkingOptions<RootStackParamList> = {
           MainTabs: {
             screens: {
               FeedTab: 'feed',
-              MySpotsTab: 'myspots',
+              HistoryTab: 'history',
               MapTab: 'map',
               ChatsTab: 'chats',
               ProfileTab: 'profile',

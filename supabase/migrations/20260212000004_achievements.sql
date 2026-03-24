@@ -242,9 +242,9 @@ BEGIN
     -- Safety achievements (trust days)
     (ad.requirement_type = 'trust_days' AND v_account_age_days >= ad.requirement_value)
   )
-  RETURNING user_achievements.achievement_id, ad.name, ad.tier
-  FROM achievement_definitions ad
-  WHERE ad.id = user_achievements.achievement_id;
+  RETURNING user_achievements.achievement_id,
+    (SELECT name FROM achievement_definitions WHERE id = user_achievements.achievement_id),
+    (SELECT tier::text FROM achievement_definitions WHERE id = user_achievements.achievement_id);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

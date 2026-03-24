@@ -225,9 +225,11 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
       break;
     // Straight (no taper)
     case BottomStyle.JEANS:
+      legTaper = 1.5;
+      break;
     case BottomStyle.CHINOS:
     case BottomStyle.DRESS_PANTS:
-      legTaper = 0;
+      legTaper = 0.5;
       break;
     // Wide
     case BottomStyle.CARGO:
@@ -276,13 +278,13 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
   const pantsPath = `
     M ${leftWaist} ${waistY}
     Q ${poseLeftHip - 2} ${hipY - 5} ${poseLeftHip} ${hipY}
-    Q ${leftLegX - legWidth - legTaper / 2} ${(hipY + poseBottomY) / 2} ${leftLegX - legWidth + legTaper} ${poseBottomY}
+    C ${poseLeftHip - 1} ${hipY + 8}, ${leftLegX - legWidth - legTaper / 2 - 1} ${(hipY + poseBottomY) / 2 - 5}, ${leftLegX - legWidth + legTaper} ${poseBottomY}
     L ${leftLegX + legWidth - legTaper} ${poseBottomY}
-    Q ${leftLegX + legWidth} ${(hipY + poseBottomY) / 2} ${centerX - crotchHalf} ${hipY + 5}
-    L ${centerX + crotchHalf} ${hipY + 5}
-    Q ${rightLegX - legWidth} ${(hipY + poseBottomY) / 2} ${rightLegX - legWidth + legTaper} ${poseBottomY}
+    C ${leftLegX + legWidth + 1} ${(hipY + poseBottomY) / 2 - 5}, ${centerX - crotchHalf + 1} ${hipY + 12}, ${centerX - crotchHalf} ${hipY + 5}
+    Q ${centerX} ${hipY + 8} ${centerX + crotchHalf} ${hipY + 5}
+    C ${centerX + crotchHalf - 1} ${hipY + 12}, ${rightLegX - legWidth - 1} ${(hipY + poseBottomY) / 2 - 5}, ${rightLegX - legWidth + legTaper} ${poseBottomY}
     L ${rightLegX + legWidth - legTaper} ${poseBottomY}
-    Q ${rightLegX + legWidth + legTaper / 2} ${(hipY + poseBottomY) / 2} ${poseRightHip} ${hipY}
+    C ${rightLegX + legWidth + legTaper / 2 + 1} ${(hipY + poseBottomY) / 2 - 5}, ${poseRightHip + 1} ${hipY + 8}, ${poseRightHip} ${hipY}
     Q ${poseRightHip + 2} ${hipY - 5} ${rightWaist} ${waistY}
     Z
   `;
@@ -358,9 +360,10 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
       />
 
       {/* Style-specific details */}
-      {/* Cargo pockets */}
+      {/* Cargo pockets — side pocket rectangles at mid-thigh */}
       {style === BottomStyle.CARGO && (
         <G>
+          {/* Left leg side pocket */}
           <Rect
             x={leftLegX - legWidth + 2}
             y={(hipY + poseBottomY) / 2 - 5}
@@ -369,6 +372,23 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
             fill={shadowColor}
             opacity={0.2}
           />
+          <Path
+            d={`M ${leftLegX - legWidth + 2} ${(hipY + poseBottomY) / 2 + 1} L ${leftLegX - legWidth + 2 + legWidth * 1.5} ${(hipY + poseBottomY) / 2 + 1}`}
+            stroke={deepShadow}
+            strokeWidth={0.5}
+            fill="none"
+            opacity={0.25}
+          />
+          {/* Left pocket flap */}
+          <Rect
+            x={leftLegX - legWidth + 2}
+            y={(hipY + poseBottomY) / 2 - 5}
+            width={legWidth * 1.5}
+            height={3}
+            fill={shadowColor}
+            opacity={0.3}
+          />
+          {/* Right leg side pocket */}
           <Rect
             x={rightLegX - legWidth / 2}
             y={(hipY + poseBottomY) / 2 - 5}
@@ -376,6 +396,22 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
             height={12}
             fill={shadowColor}
             opacity={0.2}
+          />
+          <Path
+            d={`M ${rightLegX - legWidth / 2} ${(hipY + poseBottomY) / 2 + 1} L ${rightLegX - legWidth / 2 + legWidth * 1.5} ${(hipY + poseBottomY) / 2 + 1}`}
+            stroke={deepShadow}
+            strokeWidth={0.5}
+            fill="none"
+            opacity={0.25}
+          />
+          {/* Right pocket flap */}
+          <Rect
+            x={rightLegX - legWidth / 2}
+            y={(hipY + poseBottomY) / 2 - 5}
+            width={legWidth * 1.5}
+            height={3}
+            fill={shadowColor}
+            opacity={0.3}
           />
         </G>
       )}
@@ -423,28 +459,86 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
             fill={highlightColor}
             opacity={0.1}
           />
+          {/* Pocket outlines at hip */}
+          <Path
+            d={`M ${leftLegX - legWidth + 3} ${hipY + 2} Q ${leftLegX - legWidth + 6} ${hipY + 8} ${leftLegX - legWidth / 2} ${hipY + 6}`}
+            stroke={shadowColor}
+            strokeWidth={0.6}
+            fill="none"
+            opacity={0.2}
+          />
+          <Path
+            d={`M ${rightLegX + legWidth - 3} ${hipY + 2} Q ${rightLegX + legWidth - 6} ${hipY + 8} ${rightLegX + legWidth / 2} ${hipY + 6}`}
+            stroke={shadowColor}
+            strokeWidth={0.6}
+            fill="none"
+            opacity={0.2}
+          />
+          {/* Center seam line per leg */}
+          <Path
+            d={`M ${leftLegX} ${hipY + 10} L ${leftLegX} ${poseBottomY - 2}`}
+            stroke={shadowColor}
+            strokeWidth={0.5}
+            fill="none"
+            opacity={0.1}
+          />
+          <Path
+            d={`M ${rightLegX} ${hipY + 10} L ${rightLegX} ${poseBottomY - 2}`}
+            stroke={shadowColor}
+            strokeWidth={0.5}
+            fill="none"
+            opacity={0.1}
+          />
+          {/* Fly detail */}
+          <Path
+            d={`M ${centerX} ${waistY + 5} L ${centerX} ${waistY + 16}`}
+            stroke={shadowColor}
+            strokeWidth={0.6}
+            fill="none"
+            opacity={0.15}
+          />
         </G>
       ) : null}
 
 
-      {/* Jogger/sweatpants cuff */}
+      {/* Jogger/sweatpants cuff and drawstring */}
       {(style === BottomStyle.JOGGERS || style === BottomStyle.SWEATPANTS) && length === 'full' && (
         <G>
+          {/* Elastic cuffs at ankles — bunched shape */}
           <Path
-            d={`M ${leftLegX - legWidth + legTaper} ${poseBottomY - 4}
-                Q ${leftLegX} ${poseBottomY - 3} ${leftLegX + legWidth - legTaper} ${poseBottomY - 4}
+            d={`M ${leftLegX - legWidth + legTaper} ${poseBottomY - 5}
+                Q ${leftLegX - legWidth + legTaper - 1} ${poseBottomY - 3} ${leftLegX - legWidth + legTaper + 1} ${poseBottomY - 2}
+                Q ${leftLegX} ${poseBottomY - 1} ${leftLegX + legWidth - legTaper - 1} ${poseBottomY - 2}
+                Q ${leftLegX + legWidth - legTaper + 1} ${poseBottomY - 3} ${leftLegX + legWidth - legTaper} ${poseBottomY - 5}
                 L ${leftLegX + legWidth - legTaper} ${poseBottomY}
                 Q ${leftLegX} ${poseBottomY + 1} ${leftLegX - legWidth + legTaper} ${poseBottomY}
                 Z`}
             fill={shadowColor}
           />
           <Path
-            d={`M ${rightLegX - legWidth + legTaper} ${poseBottomY - 4}
-                Q ${rightLegX} ${poseBottomY - 3} ${rightLegX + legWidth - legTaper} ${poseBottomY - 4}
+            d={`M ${rightLegX - legWidth + legTaper} ${poseBottomY - 5}
+                Q ${rightLegX - legWidth + legTaper - 1} ${poseBottomY - 3} ${rightLegX - legWidth + legTaper + 1} ${poseBottomY - 2}
+                Q ${rightLegX} ${poseBottomY - 1} ${rightLegX + legWidth - legTaper - 1} ${poseBottomY - 2}
+                Q ${rightLegX + legWidth - legTaper + 1} ${poseBottomY - 3} ${rightLegX + legWidth - legTaper} ${poseBottomY - 5}
                 L ${rightLegX + legWidth - legTaper} ${poseBottomY}
                 Q ${rightLegX} ${poseBottomY + 1} ${rightLegX - legWidth + legTaper} ${poseBottomY}
                 Z`}
             fill={shadowColor}
+          />
+          {/* Drawstring at waist */}
+          <Path
+            d={`M ${centerX - 3} ${waistY + 3} Q ${centerX - 4} ${waistY + 7} ${centerX - 6} ${waistY + 10}`}
+            stroke={shadowColor}
+            strokeWidth={0.8}
+            fill="none"
+            opacity={0.3}
+          />
+          <Path
+            d={`M ${centerX + 3} ${waistY + 3} Q ${centerX + 4} ${waistY + 7} ${centerX + 6} ${waistY + 10}`}
+            stroke={shadowColor}
+            strokeWidth={0.8}
+            fill="none"
+            opacity={0.3}
           />
         </G>
       )}
@@ -452,20 +546,42 @@ export function Bottoms({ style, bodyType, legPose, color, scale = 1 }: BottomsP
 
 
 
-      {/* Dress pants crease line */}
-      {style === BottomStyle.DRESS_PANTS && (
+      {/* Dress pants / chinos front crease line */}
+      {(style === BottomStyle.DRESS_PANTS || style === BottomStyle.CHINOS) && (
         <G>
           <Path d={`M ${leftLegX} ${hipY + 5} L ${leftLegX} ${poseBottomY - 2}`} stroke={highlightColor} strokeWidth={0.8} fill="none" opacity={0.25} />
           <Path d={`M ${rightLegX} ${hipY + 5} L ${rightLegX} ${poseBottomY - 2}`} stroke={highlightColor} strokeWidth={0.8} fill="none" opacity={0.25} />
         </G>
       )}
 
-
-      {/* Leggings subtle sheen */}
+      {/* Leggings subtle sheen + side seam */}
       {style === BottomStyle.LEGGINGS && (
         <G>
           <Ellipse cx={leftLegX + 2} cy={(hipY + poseBottomY) / 2} rx={legWidth * 0.5} ry={18} fill={highlightColor} opacity={0.15} />
           <Ellipse cx={rightLegX + 2} cy={(hipY + poseBottomY) / 2} rx={legWidth * 0.5} ry={18} fill={highlightColor} opacity={0.15} />
+          {/* Subtle side seam lines */}
+          <Path d={`M ${leftLegX - legWidth + legTaper} ${hipY + 8} L ${leftLegX - legWidth + legTaper} ${poseBottomY - 1}`} stroke={shadowColor} strokeWidth={0.4} fill="none" opacity={0.1} />
+          <Path d={`M ${rightLegX + legWidth - legTaper} ${hipY + 8} L ${rightLegX + legWidth - legTaper} ${poseBottomY - 1}`} stroke={shadowColor} strokeWidth={0.4} fill="none" opacity={0.1} />
+        </G>
+      )}
+
+      {/* Shorts hem fold detail */}
+      {(style === BottomStyle.SHORTS || style === BottomStyle.SHORTS_ATHLETIC) && (
+        <G>
+          <Path
+            d={`M ${leftLegX - legWidth + legTaper} ${poseBottomY - 3} Q ${leftLegX} ${poseBottomY - 2} ${leftLegX + legWidth - legTaper} ${poseBottomY - 3}`}
+            stroke={shadowColor}
+            strokeWidth={0.8}
+            fill="none"
+            opacity={0.2}
+          />
+          <Path
+            d={`M ${rightLegX - legWidth + legTaper} ${poseBottomY - 3} Q ${rightLegX} ${poseBottomY - 2} ${rightLegX + legWidth - legTaper} ${poseBottomY - 3}`}
+            stroke={shadowColor}
+            strokeWidth={0.8}
+            fill="none"
+            opacity={0.2}
+          />
         </G>
       )}
 

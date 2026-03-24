@@ -163,24 +163,12 @@ export function useCheckinSettings(
             data.checkin_prompt_minutes
           )
           if (!result.success) {
-            // Use the specific error message from the tracking service
+            // Show error but keep setting enabled so user can configure timer
+            // and grant permissions later
             setError({
               code: "BACKGROUND_ERROR",
               message: result.error || "Could not start background tracking. Please grant location permissions.",
             })
-            // Revert in database
-            await supabase.rpc("update_tracking_settings", {
-              p_always_on_enabled: false,
-              p_prompt_minutes: data.checkin_prompt_minutes,
-            })
-            // Also update local state to reflect the reverted setting
-            if (isMountedRef.current) {
-              setSettings({
-                always_on_tracking_enabled: false,
-                checkin_prompt_minutes: data.checkin_prompt_minutes,
-              })
-            }
-            return false
           }
         } else if (!isNowEnabled && wasEnabled) {
           await stopBackgroundLocationTracking()

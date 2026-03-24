@@ -186,7 +186,7 @@ SELECT
     l.address AS location_address,
     lr2.weekly_visit_count,
     p.display_name,
-    p.own_avatar,
+    p.avatar,
     p.is_verified,
     p.regulars_visibility
 FROM location_regulars lr1

@@ -78,9 +78,11 @@ class RealtimeManager {
 
     // Check channel limit
     if (this.channels.size >= this.maxChannels) {
-      console.warn(
-        `[RealtimeManager] Max channels (${this.maxChannels}) reached. Consider unsubscribing unused channels.`
-      )
+      if (__DEV__) {
+        console.warn(
+          `[RealtimeManager] Max channels (${this.maxChannels}) reached. Consider unsubscribing unused channels.`
+        )
+      }
       // Remove oldest channel with refCount = 0
       for (const [id, managed] of this.channels.entries()) {
         if (managed.refCount === 0) {
@@ -132,7 +134,7 @@ class RealtimeManager {
   unsubscribe(channelId: string): void {
     const managed = this.channels.get(channelId)
     if (!managed) {
-      console.warn(`[RealtimeManager] Channel not found: ${channelId}`)
+      if (__DEV__) console.warn(`[RealtimeManager] Channel not found: ${channelId}`)
       return
     }
 

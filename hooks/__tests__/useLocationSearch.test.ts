@@ -483,6 +483,7 @@ describe('useLocationSearch', () => {
         ] as never,
         is_offline: false,
         total_count: 1,
+        error: null,
       })
 
       const { result } = renderHook(() => useLocationSearch())

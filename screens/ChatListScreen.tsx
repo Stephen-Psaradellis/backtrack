@@ -39,7 +39,7 @@ import { FloatingActionButtons } from '../components/navigation/FloatingActionBu
 import { PressableScale } from '../components/native/PressableScale'
 import { darkTheme } from '../constants/glassStyles'
 import { spacing } from '../constants/theme'
-import { Avatar } from 'react-native-bitmoji'
+import { AvatarDisplay } from '../components/AvatarDisplay'
 import { VerifiedBadge } from '../components/VerifiedBadge'
 import { lightFeedback } from '../lib/haptics'
 import { EmptyChats, ErrorState } from '../components/EmptyState'
@@ -210,7 +210,7 @@ export function ChatListScreen(): React.ReactNode {
             <View style={styles.avatarContainer}>
               {item.post_target_avatar_v2 ? (
                 <>
-                  <Avatar config={item.post_target_avatar_v2.config} size="md" />
+                  <AvatarDisplay avatar={item.post_target_avatar_v2} size="md" />
                   {item.other_user_is_verified && (
                     <View style={styles.verifiedBadgeContainer}>
                       <VerifiedBadge />

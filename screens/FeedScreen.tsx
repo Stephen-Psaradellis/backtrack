@@ -34,7 +34,7 @@ import { FloatingActionButtons } from '../components/navigation/FloatingActionBu
 import { PostCard } from '../components/PostCard'
 import { SwipeableCardStack } from '../components/SwipeableCardStack'
 import { EmptyFeed } from '../components/EmptyState'
-import { TimeFilterChips, isInTimeRange, type TimeFilter } from '../components/TimeFilterChips'
+import { isInTimeRange, type TimeFilter } from '../components/TimeFilterChips'
 import { TrendingVenues } from '../components/TrendingVenues'
 import { HangoutsList } from '../components/HangoutsList'
 import { CreateHangoutModal } from '../components/CreateHangoutModal'
@@ -68,10 +68,20 @@ const RADIUS_OPTIONS = [
 /** Sort options for feed filtering - UX-017 */
 type SortOption = 'newest' | 'closest' | 'best_match'
 
-const SORT_OPTIONS: { label: string; value: SortOption; icon: string }[] = [
-  { label: 'Newest', value: 'newest', icon: 'time-outline' },
-  { label: 'Closest', value: 'closest', icon: 'navigate-outline' },
-  { label: 'Best Match', value: 'best_match', icon: 'star-outline' },
+const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+  { label: 'Newest', value: 'newest' },
+  { label: 'Closest', value: 'closest' },
+  { label: 'Best Match', value: 'best_match' },
+]
+
+/** Time filter options for cycling */
+const TIME_FILTERS: { label: string; value: TimeFilter }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Now', value: 'now' },
+  { label: 'Today', value: 'today' },
+  { label: 'Last Night', value: 'last_night' },
+  { label: 'Weekend', value: 'weekend' },
+  { label: 'Week', value: 'this_week' },
 ]
 
 /** View mode options */
@@ -244,29 +254,27 @@ export function FeedScreen(): React.ReactNode {
     setRefreshing(false)
   }, [refetch])
 
-  const handleRadiusChange = useCallback(async (radius: number) => {
+  const handleCycleRadius = useCallback(async () => {
     await selectionFeedback()
-    setSelectedRadius(radius)
-    // Disable tiered expansion when user manually selects a radius
+    const currentIndex = RADIUS_OPTIONS.findIndex(o => o.value === selectedRadius)
+    const nextIndex = (currentIndex + 1) % RADIUS_OPTIONS.length
+    setSelectedRadius(RADIUS_OPTIONS[nextIndex].value)
     setEnableTieredExpansion(false)
-  }, [])
+  }, [selectedRadius])
 
-  const handleEnableTieredExpansion = useCallback(async () => {
+  const handleCycleSort = useCallback(async () => {
     await selectionFeedback()
-    setEnableTieredExpansion(true)
-    // Reset to default radius when enabling tiered expansion
-    setSelectedRadius(DEFAULT_RADIUS_METERS)
-  }, [])
+    const currentIndex = SORT_OPTIONS.findIndex(o => o.value === sortBy)
+    const nextIndex = (currentIndex + 1) % SORT_OPTIONS.length
+    setSortBy(SORT_OPTIONS[nextIndex].value)
+  }, [sortBy])
 
-  const handleSortChange = useCallback(async (sort: SortOption) => {
+  const handleCycleTimeFilter = useCallback(async () => {
     await selectionFeedback()
-    setSortBy(sort)
-  }, [])
-
-  const handleTimeFilterChange = useCallback(async (filter: TimeFilter) => {
-    await selectionFeedback()
-    setTimeFilter(filter)
-  }, [])
+    const currentIndex = TIME_FILTERS.findIndex(o => o.value === timeFilter)
+    const nextIndex = (currentIndex + 1) % TIME_FILTERS.length
+    setTimeFilter(TIME_FILTERS[nextIndex].value)
+  }, [timeFilter])
 
   const handleToggleTrending = useCallback(async () => {
     await selectionFeedback()
@@ -281,7 +289,7 @@ export function FeedScreen(): React.ReactNode {
   const handleCheckIn = useCallback(async () => {
     await selectionFeedback()
     // TODO: Implement check-in flow when check-in feature is added
-    console.log('Check-in flow not yet implemented')
+    if (__DEV__) console.log('Check-in flow not yet implemented')
   }, [])
 
   const handleCreatePost = useCallback(async () => {
@@ -346,6 +354,7 @@ export function FeedScreen(): React.ReactNode {
             onPress={handlePostPress}
             showLocation={true}
             detailLevel={detailLevel}
+            distance={distance}
             testID={`feed-post-${item.id}`}
           />
         </AnimatedPostItem>
@@ -356,164 +365,67 @@ export function FeedScreen(): React.ReactNode {
 
   const keyExtractor = useCallback((item: Post) => item.id, [])
 
-  /** View mode toggle button */
-  const renderViewModeToggle = useCallback(() => {
-    const icon = viewMode === 'list' ? 'layers-outline' : viewMode === 'cards' ? 'people-outline' : 'list-outline'
-    return (
-      <TouchableOpacity
-        style={styles.viewModeToggle}
-        onPress={handleToggleViewMode}
-        activeOpacity={0.7}
-        testID="feed-view-mode-toggle"
-        accessibilityRole="button"
-        accessibilityLabel={`Switch view mode, currently ${viewMode === 'list' ? 'list view' : viewMode === 'cards' ? 'card view' : 'hangouts view'}`}
-        accessibilityHint="Double tap to change how posts are displayed"
-      >
-        <Ionicons
-          name={icon}
-          size={20}
-          color={darkTheme.textSecondary}
-        />
-      </TouchableOpacity>
-    )
-  }, [viewMode, handleToggleViewMode])
-
-  /** Active tier indicator - shows which radius is actually being used */
-  const renderActiveTierIndicator = useCallback(() => {
-    if (!usingTieredExpansion) return null
-
-    const isExpanded = effectiveRadius > selectedRadius
+  /** Compact filter pills - single row replacing 3 filter sections */
+  const renderCompactFilters = useCallback(() => {
+    const radiusLabel = RADIUS_OPTIONS.find(o => o.value === selectedRadius)?.label ?? 'Area'
+    const timeLabel = TIME_FILTERS.find(o => o.value === timeFilter)?.label ?? 'All'
+    const sortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? 'Newest'
+    const viewIcon = viewMode === 'list' ? 'list-outline' : viewMode === 'cards' ? 'layers-outline' : 'people-outline'
 
     return (
-      <View style={styles.tierIndicator}>
-        <View style={styles.tierIndicatorContent}>
-          <Ionicons
-            name={isExpanded ? "expand-outline" : "locate-outline"}
-            size={14}
-            color={isExpanded ? darkTheme.warning : darkTheme.success}
-          />
-          <Text style={styles.tierIndicatorText}>
-            {isExpanded
-              ? `Expanded to ${activeTier.description} • ${posts.length} post${posts.length !== 1 ? 's' : ''} found`
-              : `Showing posts within ${activeTier.description}`
-            }
-          </Text>
-        </View>
-        {isExpanded && (
-          <TouchableOpacity
-            onPress={handleEnableTieredExpansion}
-            style={styles.tierIndicatorReset}
-            activeOpacity={0.7}
-            testID="feed-tier-reset"
-            accessibilityRole="button"
-            accessibilityLabel="Reset to automatic radius"
-          >
-            <Ionicons name="refresh-outline" size={14} color={darkTheme.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
-    )
-  }, [usingTieredExpansion, effectiveRadius, selectedRadius, activeTier, posts.length, handleEnableTieredExpansion])
-
-  /** Radius selector chips - UX-016 with tiered expansion */
-  const renderRadiusSelector = useCallback(() => (
-    <View style={styles.filterSection}>
-      <View style={styles.filterRow}>
-        <Ionicons name="radio-outline" size={16} color={darkTheme.textMuted} />
-        <Text style={styles.filterLabel}>Radius</Text>
+      <View style={styles.compactFiltersRow} testID="feed-compact-filters">
         <TouchableOpacity
-          style={[styles.tierToggle, usingTieredExpansion && styles.tierToggleActive]}
-          onPress={handleEnableTieredExpansion}
+          style={styles.filterPill}
+          onPress={handleCycleRadius}
           activeOpacity={0.7}
-          testID="feed-tier-toggle"
+          testID="feed-filter-radius"
           accessibilityRole="button"
-          accessibilityLabel={`Auto-expand ${usingTieredExpansion ? 'enabled' : 'disabled'}`}
-          accessibilityHint="Toggle automatic radius expansion"
+          accessibilityLabel={`Radius: ${radiusLabel}. Tap to change.`}
         >
-          <Ionicons
-            name="expand-outline"
-            size={12}
-            color={usingTieredExpansion ? darkTheme.primary : darkTheme.textMuted}
-          />
-          <Text style={[styles.tierToggleText, usingTieredExpansion && styles.tierToggleTextActive]}>
-            Auto
-          </Text>
+          <Ionicons name="location-outline" size={14} color={darkTheme.accent} />
+          <Text style={styles.filterPillText}>{radiusLabel}</Text>
+          <Ionicons name="chevron-down" size={12} color={darkTheme.textMuted} />
         </TouchableOpacity>
-        {renderViewModeToggle()}
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsContainer}
-      >
-        {RADIUS_OPTIONS.map((option) => {
-          const isSelected = selectedRadius === option.value && !usingTieredExpansion
-          return (
-            <TouchableOpacity
-              key={option.value}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-              onPress={() => handleRadiusChange(option.value)}
-              activeOpacity={0.7}
-              testID={`feed-radius-${option.value}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Search radius ${option.label}, ${option.description}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              <View style={styles.chipContent}>
-                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                  {option.label}
-                </Text>
-                <Text style={[styles.chipSubtext, isSelected && styles.chipSubtextSelected]}>
-                  {option.description}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )
-        })}
-      </ScrollView>
-      {renderActiveTierIndicator()}
-    </View>
-  ), [selectedRadius, handleRadiusChange, renderViewModeToggle, viewMode, usingTieredExpansion, handleEnableTieredExpansion, renderActiveTierIndicator])
 
-  /** Sort option chips - UX-017 */
-  const renderSortSelector = useCallback(() => (
-    <View style={styles.filterSection}>
-      <View style={styles.filterRow}>
-        <Ionicons name="funnel-outline" size={16} color={darkTheme.textMuted} />
-        <Text style={styles.filterLabel}>Sort</Text>
+        <TouchableOpacity
+          style={styles.filterPill}
+          onPress={handleCycleTimeFilter}
+          activeOpacity={0.7}
+          testID="feed-filter-time"
+          accessibilityRole="button"
+          accessibilityLabel={`Time: ${timeLabel}. Tap to change.`}
+        >
+          <Ionicons name="time-outline" size={14} color={darkTheme.accent} />
+          <Text style={styles.filterPillText}>{timeLabel}</Text>
+          <Ionicons name="chevron-down" size={12} color={darkTheme.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.filterPill}
+          onPress={handleCycleSort}
+          activeOpacity={0.7}
+          testID="feed-filter-sort"
+          accessibilityRole="button"
+          accessibilityLabel={`Sort: ${sortLabel}. Tap to change.`}
+        >
+          <Ionicons name="swap-vertical-outline" size={14} color={darkTheme.accent} />
+          <Text style={styles.filterPillText}>{sortLabel}</Text>
+          <Ionicons name="chevron-down" size={12} color={darkTheme.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.filterPillIcon}
+          onPress={handleToggleViewMode}
+          activeOpacity={0.7}
+          testID="feed-view-mode-toggle"
+          accessibilityRole="button"
+          accessibilityLabel={`View mode: ${viewMode}`}
+        >
+          <Ionicons name={viewIcon} size={18} color={darkTheme.textSecondary} />
+        </TouchableOpacity>
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsContainer}
-      >
-        {SORT_OPTIONS.map((option) => {
-          const isSelected = sortBy === option.value
-          return (
-            <TouchableOpacity
-              key={option.value}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-              onPress={() => handleSortChange(option.value)}
-              activeOpacity={0.7}
-              testID={`feed-sort-${option.value}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Sort by ${option.label}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              <Ionicons
-                name={option.icon as any}
-                size={14}
-                color={isSelected ? '#FFFFFF' : darkTheme.textSecondary}
-              />
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          )
-        })}
-      </ScrollView>
-    </View>
-  ), [sortBy, handleSortChange])
+    )
+  }, [selectedRadius, timeFilter, sortBy, viewMode, handleCycleRadius, handleCycleTimeFilter, handleCycleSort, handleToggleViewMode])
 
   /** Trending section rendered above filters */
   const renderTrendingSection = useCallback(() => {
@@ -553,17 +465,9 @@ export function FeedScreen(): React.ReactNode {
   const renderListHeader = useCallback(() => (
     <View testID="feed-list-header">
       {renderTrendingSection()}
-      <View style={styles.filtersBar} testID="feed-filters-bar">
-        {renderRadiusSelector()}
-        <TimeFilterChips
-          selectedFilter={timeFilter}
-          onFilterChange={handleTimeFilterChange}
-          testID="feed-time-filter"
-        />
-        {renderSortSelector()}
-      </View>
+      {renderCompactFilters()}
     </View>
-  ), [renderTrendingSection, renderRadiusSelector, renderSortSelector, timeFilter, handleTimeFilterChange])
+  ), [renderTrendingSection, renderCompactFilters])
 
   const renderEmptyState = useCallback(() => {
     if (isLoading) return null
@@ -667,23 +571,36 @@ export function FeedScreen(): React.ReactNode {
         />
       ) : viewMode === 'cards' ? (
         <View style={styles.cardsContainer}>
-          {renderListHeader()}
-          <SwipeableCardStack
-            posts={sortedPosts}
-            onSwipeRight={handleSwipeRight}
-            onSwipeLeft={handleSwipeLeft}
-            renderCard={renderSwipeableCard}
-            testID="feed-card-stack"
-          />
+          <ScrollView
+            style={styles.cardsHeader}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {renderListHeader()}
+          </ScrollView>
+          <View style={styles.cardsStackArea}>
+            <SwipeableCardStack
+              posts={sortedPosts}
+              onSwipeRight={handleSwipeRight}
+              onSwipeLeft={handleSwipeLeft}
+              renderCard={renderSwipeableCard}
+              testID="feed-card-stack"
+            />
+          </View>
         </View>
       ) : (
-        <HangoutsList
-          hangouts={nearbyHangouts}
-          onCreatePress={handleCreateHangout}
-          onRefresh={refetchNearby}
-          isRefreshing={hangoutsLoading}
-          testID="feed-hangouts-list"
-        />
+        <View style={styles.hangoutsContainer}>
+          <View style={styles.hangoutsHeader}>
+            {renderListHeader()}
+          </View>
+          <HangoutsList
+            hangouts={nearbyHangouts}
+            onCreatePress={handleCreateHangout}
+            onRefresh={refetchNearby}
+            isRefreshing={hangoutsLoading}
+            testID="feed-hangouts-list"
+          />
+        </View>
       )}
 
       {/* Create Hangout Modal */}
@@ -759,129 +676,37 @@ const styles = StyleSheet.create({
     color: darkTheme.textPrimary,
   },
 
-  // Filters bar
-  filtersBar: {
-    paddingTop: spacing[1],
-    paddingBottom: spacing[1],
-    gap: spacing[1.5],
-  },
-  filterSection: {
-    gap: spacing[1.5],
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1.5],
-    paddingHorizontal: spacing[0.5],
-    flex: 1,
-  },
-  tierToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
-    paddingHorizontal: spacing[2],
-    paddingVertical: spacing[1.5],
-    backgroundColor: darkTheme.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: darkTheme.cardBorder,
-  },
-  tierToggleActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    borderColor: darkTheme.primary,
-  },
-  tierToggleText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: darkTheme.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tierToggleTextActive: {
-    color: darkTheme.primary,
-  },
-  viewModeToggle: {
-    marginLeft: 'auto',
-    padding: spacing[2],
-    backgroundColor: darkTheme.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: darkTheme.cardBorder,
-  },
-  tierIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing[2],
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2.5],
-    backgroundColor: darkTheme.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: darkTheme.cardBorder,
-  },
-  tierIndicatorContent: {
+  // Compact filter pills row
+  compactFiltersRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
-    flex: 1,
-  },
-  tierIndicatorText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: darkTheme.textSecondary,
-    flex: 1,
-  },
-  tierIndicatorReset: {
-    padding: spacing[1.5],
-    marginLeft: spacing[2],
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: darkTheme.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    gap: spacing[2],
-    paddingVertical: spacing[1],
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1.5],
-    paddingHorizontal: spacing[3.5],
     paddingVertical: spacing[2],
-    borderRadius: 20,
+    paddingHorizontal: spacing[0.5],
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing[2.5],
+    paddingVertical: spacing[1.5],
+    borderRadius: 16,
     backgroundColor: darkTheme.surface,
     borderWidth: 1,
     borderColor: darkTheme.cardBorder,
   },
-  chipSelected: {
-    backgroundColor: darkTheme.primary,
-    borderColor: darkTheme.primary,
-  },
-  chipContent: {
-    alignItems: 'center',
-  },
-  chipText: {
+  filterPillText: {
     fontSize: 13,
     fontWeight: '600',
     color: darkTheme.textSecondary,
   },
-  chipTextSelected: {
-    color: '#FFFFFF',
-  },
-  chipSubtext: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: darkTheme.textMuted,
-    marginTop: 2,
-  },
-  chipSubtextSelected: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  filterPillIcon: {
+    marginLeft: 'auto',
+    padding: spacing[1.5],
+    backgroundColor: darkTheme.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: darkTheme.cardBorder,
   },
 
   // Error state (empty state now uses EmptyFeed component)
@@ -909,6 +734,19 @@ const styles = StyleSheet.create({
   // Cards view container
   cardsContainer: {
     flex: 1,
+  },
+  cardsHeader: {
+    flexGrow: 0,
+    paddingHorizontal: spacing[4],
+  },
+  cardsStackArea: {
+    flex: 1,
+  },
+  hangoutsContainer: {
+    flex: 1,
+  },
+  hangoutsHeader: {
+    paddingHorizontal: spacing[4],
   },
 })
 

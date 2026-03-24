@@ -37,8 +37,8 @@ interface EyesProps extends SvgPartProps {
 
 const LEFT_EYE_X = 39;
 const RIGHT_EYE_X = 61;
-const EYE_Y = 44;
-const EYE_RADIUS = 5;
+const EYE_Y = 50; // moved down ~8% for proper face proportions (was 46)
+const EYE_RADIUS = 3.2; // reduced from 3.8 (28% face width instead of 42%)
 
 function DefaultEye({ cx, cy, eyeColor, radius = EYE_RADIUS, lookDirection = 0 }: {
   cx: number;
@@ -50,7 +50,7 @@ function DefaultEye({ cx, cy, eyeColor, radius = EYE_RADIUS, lookDirection = 0 }
   const irisRadius = radius * 0.65;
   const pupilRadius = radius * 0.3;
   const highlightRadius = irisRadius * 0.3;
-  const limbalRingColor = adjustBrightness(eyeColor, -40);
+  const limbalRingColor = adjustBrightness(eyeColor, -50);
 
   return (
     <G>
@@ -61,8 +61,36 @@ function DefaultEye({ cx, cy, eyeColor, radius = EYE_RADIUS, lookDirection = 0 }
         rx={radius}
         ry={radius * 0.85}
         fill="#ffffff"
-        stroke="#555555"
+        stroke="#cccccc"
+        strokeWidth={0.25}
+      />
+
+      {/* Upper eyelid line - subtle curved path */}
+      <Path
+        d={`M${cx - radius},${cy - radius * 0.4} Q${cx},${cy - radius * 0.9} ${cx + radius},${cy - radius * 0.4}`}
+        fill="none"
+        stroke="#3a3a3a"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+
+      {/* Upper eyelid crease - subtle line above eyelid */}
+      <Path
+        d={`M${cx - radius * 0.9},${cy - radius * 0.9} Q${cx},${cy - radius * 1.2} ${cx + radius * 0.9},${cy - radius * 0.9}`}
+        fill="none"
+        stroke="#5a5a5a"
         strokeWidth={0.5}
+        strokeLinecap="round"
+        opacity={0.4}
+      />
+
+      {/* Lash line on upper lid - darker and slightly thicker */}
+      <Path
+        d={`M${cx - radius * 0.95},${cy - radius * 0.45} Q${cx},${cy - radius * 0.92} ${cx + radius * 0.95},${cy - radius * 0.45}`}
+        fill="none"
+        stroke="#2a2a2a"
+        strokeWidth={0.8}
+        strokeLinecap="round"
       />
 
       {/* Iris - flat colored circle with limbal ring */}
@@ -73,31 +101,51 @@ function DefaultEye({ cx, cy, eyeColor, radius = EYE_RADIUS, lookDirection = 0 }
         fill={eyeColor}
       />
 
-      {/* Limbal ring - thin dark outline around iris */}
+      {/* Limbal ring - darker ring around iris edge */}
       <Circle
         cx={cx + lookDirection}
         cy={cy}
         r={irisRadius}
         fill="none"
         stroke={limbalRingColor}
-        strokeWidth={0.4}
+        strokeWidth={0.5}
       />
 
-      {/* Pupil - simple black circle */}
+      {/* Inner iris ring for depth */}
+      <Circle
+        cx={cx + lookDirection}
+        cy={cy}
+        r={irisRadius * 0.75}
+        fill="none"
+        stroke={adjustBrightness(eyeColor, -20)}
+        strokeWidth={0.3}
+        opacity={0.4}
+      />
+
+      {/* Pupil - black circle with slight gradient */}
       <Circle
         cx={cx + lookDirection}
         cy={cy}
         r={pupilRadius}
-        fill="#111111"
+        fill="#0a0a0a"
       />
 
-      {/* Single highlight - white circle upper-left */}
+      {/* Light reflection dot at 10 o'clock - white circle */}
       <Circle
-        cx={cx + lookDirection - irisRadius * 0.4}
-        cy={cy - irisRadius * 0.4}
-        r={highlightRadius}
+        cx={cx + lookDirection - irisRadius * 0.35}
+        cy={cy - irisRadius * 0.45}
+        r={highlightRadius * 0.9}
         fill="white"
-        opacity={0.85}
+        opacity={0.9}
+      />
+
+      {/* Secondary reflection - smaller, lower */}
+      <Circle
+        cx={cx + lookDirection + irisRadius * 0.25}
+        cy={cy + irisRadius * 0.15}
+        r={highlightRadius * 0.5}
+        fill="white"
+        opacity={0.6}
       />
     </G>
   );
@@ -115,9 +163,9 @@ function ClosedEye({ cx, cy }: { cx: number; cy: number }) {
         ry={w * 0.5}
         fill="#00000008"
       />
-      {/* Main closed line - gentle downward curve */}
+      {/* Main closed line - smooth gentle curve */}
       <Path
-        d={`M${cx - w},${cy} Q${cx},${cy + w * 0.5} ${cx + w},${cy}`}
+        d={`M${cx - w},${cy} Q${cx},${cy + w * 0.35} ${cx + w},${cy}`}
         fill="none"
         stroke="#3a3a3a"
         strokeWidth={1.5}
@@ -126,7 +174,7 @@ function ClosedEye({ cx, cy }: { cx: number; cy: number }) {
       {/* Small lashes */}
       <G stroke="#2c2c2c" strokeWidth={0.5} strokeLinecap="round">
         <Path d={`M${cx - w * 0.8},${cy} L${cx - w},${cy - 1.5}`} />
-        <Path d={`M${cx},${cy + w * 0.4} L${cx},${cy - 0.8}`} />
+        <Path d={`M${cx},${cy + w * 0.3} L${cx},${cy - 0.8}`} />
         <Path d={`M${cx + w * 0.8},${cy} L${cx + w},${cy - 1.5}`} />
       </G>
     </G>

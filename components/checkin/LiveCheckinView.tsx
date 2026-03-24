@@ -30,7 +30,7 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { useLiveCheckins } from '../../hooks/useLiveCheckins'
 import { useCheckin } from '../../hooks/useCheckin'
-import { Avatar } from 'react-native-bitmoji'
+import { AvatarDisplay } from '../AvatarDisplay'
 import { LoadingSpinner } from '../LoadingSpinner'
 import { selectionFeedback } from '../../lib/haptics'
 import type { LiveCheckinUser } from '../../types/database'
@@ -96,7 +96,7 @@ export function LiveCheckinView({
     <View style={styles.userItem}>
       <View style={styles.userAvatar}>
         {item.avatar ? (
-          <Avatar config={item.avatar.config} size="sm" />
+          <AvatarDisplay avatar={item.avatar} size="sm" />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={20} color={darkTheme.textMuted} />

@@ -21,7 +21,6 @@ import {
   TextStyle,
   TouchableOpacity,
   Animated,
-  Dimensions,
 } from 'react-native'
 
 import {
@@ -90,8 +89,6 @@ export interface ControlledOfflineIndicatorProps
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const SCREEN_WIDTH = Dimensions.get('window').width
 
 /**
  * Default messages for different states

@@ -58,6 +58,11 @@ import { calculateDistance } from '../lib/utils/geo'
 const GOOGLE_PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText'
 
 /**
+ * Google Places API v1 base URL for searchNearby endpoint
+ */
+const GOOGLE_PLACES_NEARBY_API_URL = 'https://places.googleapis.com/v1/places:searchNearby'
+
+/**
  * Error messages for location service operations
  */
 export const LOCATION_SERVICE_ERRORS = {
@@ -510,6 +515,17 @@ export async function searchGooglePlaces(
     })
 
     if (!response.ok) {
+      let errorBody = ''
+      try {
+        errorBody = await response.text()
+      } catch {
+        // Ignore body read failure
+      }
+
+      if (__DEV__) {
+        console.error(`[locationService] Google Places API error (${response.status}):`, errorBody)
+      }
+
       const errorType = getErrorType(null, response.status)
       const errorMessage = response.status === 429
         ? LOCATION_SERVICE_ERRORS.API_QUOTA_EXCEEDED
@@ -518,7 +534,7 @@ export async function searchGooglePlaces(
       return {
         success: false,
         places: [],
-        error: createLocationError(errorType, `${errorMessage} (Status: ${response.status})`),
+        error: createLocationError(errorType, `${errorMessage} (Status: ${response.status})`, errorBody),
       }
     }
 
@@ -540,6 +556,108 @@ export async function searchGooglePlaces(
       places: [],
       error: createLocationError(errorType, errorMessage, err),
     }
+  }
+}
+
+/**
+ * Search for nearby places using Google Places Nearby Search API v1.
+ *
+ * Unlike searchText, this endpoint finds places by type and location
+ * without requiring a text query. Ideal for check-in flows where we
+ * want to discover what venues are physically near the user.
+ *
+ * @param params - Search parameters
+ * @param params.latitude - Required latitude for center of search
+ * @param params.longitude - Required longitude for center of search
+ * @param params.radius_meters - Search radius in meters (default: 1000)
+ * @param params.max_results - Maximum results (default: 20)
+ * @param params.includedTypes - Google Places types to include (e.g. ['bar', 'restaurant'])
+ * @returns Promise with search result
+ */
+export async function searchNearbyPlaces(params: {
+  latitude: number
+  longitude: number
+  radius_meters?: number
+  max_results?: number
+  includedTypes?: string[]
+  excludedPrimaryTypes?: string[]
+}): Promise<GooglePlacesSearchResult> {
+  const { latitude, longitude, radius_meters = 1000, max_results = 20, includedTypes, excludedPrimaryTypes } = params
+
+  if (!isValidCoordinates(latitude, longitude)) {
+    return {
+      success: false,
+      places: [],
+      error: createLocationError('invalid_request', LOCATION_SERVICE_ERRORS.INVALID_COORDINATES),
+    }
+  }
+
+  const apiKey = getGooglePlacesApiKey()
+  if (!apiKey) {
+    return {
+      success: false,
+      places: [],
+      error: createLocationError('api_error', LOCATION_SERVICE_ERRORS.API_KEY_MISSING),
+    }
+  }
+
+  const requestBody: Record<string, unknown> = {
+    maxResultCount: max_results,
+    locationRestriction: {
+      circle: {
+        center: { latitude, longitude },
+        radius: radius_meters,
+      },
+    },
+  }
+
+  if (includedTypes && includedTypes.length > 0) {
+    requestBody.includedTypes = includedTypes
+  }
+
+  if (excludedPrimaryTypes && excludedPrimaryTypes.length > 0) {
+    requestBody.excludedPrimaryTypes = excludedPrimaryTypes
+  }
+
+  try {
+    const response = await fetch(GOOGLE_PLACES_NEARBY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': GOOGLE_PLACES_FIELD_MASK,
+      },
+      body: JSON.stringify(requestBody),
+    })
+
+    if (!response.ok) {
+      let errorBody = ''
+      try { errorBody = await response.text() } catch { /* ignore */ }
+
+      if (__DEV__) {
+        console.error(`[locationService] Nearby Search error (${response.status}):`, errorBody)
+      }
+
+      const errorType = getErrorType(null, response.status)
+      const errorMessage = response.status === 429
+        ? LOCATION_SERVICE_ERRORS.API_QUOTA_EXCEEDED
+        : LOCATION_SERVICE_ERRORS.API_REQUEST_FAILED
+
+      return {
+        success: false,
+        places: [],
+        error: createLocationError(errorType, `${errorMessage} (Status: ${response.status})`, errorBody),
+      }
+    }
+
+    const data: GooglePlacesSearchResponse = await response.json()
+    return { success: true, places: data.places ?? [], error: null }
+  } catch (err) {
+    const errorType = getErrorType(err)
+    const errorMessage = errorType === 'network_error'
+      ? LOCATION_SERVICE_ERRORS.NETWORK_ERROR
+      : LOCATION_SERVICE_ERRORS.API_REQUEST_FAILED
+    return { success: false, places: [], error: createLocationError(errorType, errorMessage, err) }
   }
 }
 
@@ -682,18 +800,40 @@ export async function cacheVenueToSupabase(
     // Convert to database insert format
     const locationInsert = toLocationInsert(place)
 
-    // Upsert to locations table with google_place_id as conflict column
-    // Note: We don't update post_count on conflict as it's managed by triggers
+    // First try to find existing location by google_place_id
+    const { data: existing } = await supabase
+      .from('locations')
+      .select()
+      .eq('google_place_id', place.google_place_id)
+      .single()
+
+    if (existing) {
+      return {
+        success: true,
+        location: existing as Location,
+        error: null,
+      }
+    }
+
+    // Insert new location (no update policy for authenticated users, so avoid upsert)
     const { data, error } = await supabase
       .from('locations')
-      .upsert(locationInsert, {
-        onConflict: 'google_place_id',
-        ignoreDuplicates: false,
-      })
+      .insert(locationInsert)
       .select()
       .single()
 
     if (error) {
+      // Race condition: another user may have inserted it simultaneously
+      if (error.code === '23505') {
+        const { data: raceData } = await supabase
+          .from('locations')
+          .select()
+          .eq('google_place_id', place.google_place_id)
+          .single()
+        if (raceData) {
+          return { success: true, location: raceData as Location, error: null }
+        }
+      }
       return {
         success: false,
         location: null,
@@ -752,45 +892,46 @@ export async function cacheVenuesToSupabase(
     // Convert all places to database insert format
     const locationInserts = places.map(toLocationInsert)
 
-    // Batch upsert to locations table with google_place_id as conflict column
-    const { data, error } = await supabase
+    // Find which places already exist
+    const placeIds = places.map(p => p.google_place_id)
+    const { data: existingData } = await supabase
       .from('locations')
-      .upsert(locationInserts, {
-        onConflict: 'google_place_id',
-        ignoreDuplicates: false,
-      })
       .select()
+      .in('google_place_id', placeIds)
 
-    if (error) {
-      // Return error result for all places
-      return places.map(place => ({
-        success: false,
-        location: null,
-        error: `Failed to cache venues: ${error.message}`,
-      }))
+    const existingByPlaceId = new Map<string, Location>()
+    for (const loc of (existingData ?? []) as Location[]) {
+      existingByPlaceId.set(loc.google_place_id, loc)
     }
 
-    // Map results back to places by google_place_id
-    const locationsByPlaceId = new Map<string, Location>()
-    for (const location of (data ?? []) as Location[]) {
-      locationsByPlaceId.set(location.google_place_id, location)
+    // Only insert truly new venues
+    const newInserts = locationInserts.filter(
+      ins => !existingByPlaceId.has(ins.google_place_id!)
+    )
+
+    if (newInserts.length > 0) {
+      const { data: insertedData, error } = await supabase
+        .from('locations')
+        .insert(newInserts)
+        .select()
+
+      if (!error && insertedData) {
+        for (const loc of insertedData as Location[]) {
+          existingByPlaceId.set(loc.google_place_id, loc)
+        }
+      }
     }
 
     // Build result array matching input order
     return places.map(place => {
-      const location = locationsByPlaceId.get(place.google_place_id)
+      const location = existingByPlaceId.get(place.google_place_id)
       if (location) {
-        return {
-          success: true,
-          location,
-          error: null,
-        }
+        return { success: true, location, error: null }
       }
-      // This shouldn't happen, but handle gracefully
       return {
         success: false,
         location: null,
-        error: `Venue not found in upsert results: ${place.google_place_id}`,
+        error: `Failed to cache venue: ${place.name}`,
       }
     })
   } catch (err) {
@@ -1122,6 +1263,7 @@ export async function searchVenues(
       combined_results: [],
       is_offline: isOffline,
       total_count: 0,
+      error: null,
     }
   }
 
@@ -1129,6 +1271,7 @@ export async function searchVenues(
   let googleVenues: Venue[] = []
   let cachedVenues: Venue[] = []
   let effectiveIsOffline = isOffline
+  let searchError: string | null = null
 
   // Fetch from both sources in parallel
   const [googleResult, supabaseResult] = await Promise.allSettled([
@@ -1146,11 +1289,17 @@ export async function searchVenues(
     googleVenues = transformedPlaces.map(place =>
       googlePlaceToVenue(place, latitude, longitude)
     )
-  } else if (googleResult.status === 'rejected' || !isOffline) {
-    // If Google API failed (not explicitly offline), mark as effective offline
-    if (googleResult.status === 'rejected') {
-      effectiveIsOffline = true
-    }
+  } else if (googleResult.status === 'fulfilled' && !googleResult.value.success && !isOffline) {
+    // Google API returned an error (not offline) — capture the error message
+    effectiveIsOffline = true
+    const apiError = googleResult.value.error
+    searchError = apiError?.message ?? LOCATION_SERVICE_ERRORS.API_REQUEST_FAILED
+  } else if (googleResult.status === 'rejected') {
+    // Google API threw an exception
+    effectiveIsOffline = true
+    searchError = googleResult.reason instanceof Error
+      ? googleResult.reason.message
+      : LOCATION_SERVICE_ERRORS.API_REQUEST_FAILED
   }
 
   // Process Supabase results
@@ -1158,6 +1307,14 @@ export async function searchVenues(
     cachedVenues = supabaseResult.value.map(location =>
       locationToVenue(location, latitude, longitude, 'supabase')
     )
+  } else if (supabaseResult.status === 'rejected') {
+    // If Supabase also failed, report it
+    const supaError = supabaseResult.reason instanceof Error
+      ? supabaseResult.reason.message
+      : LOCATION_SERVICE_ERRORS.DATABASE_ERROR
+    searchError = searchError
+      ? `${searchError}; ${supaError}`
+      : supaError
   }
 
   // Apply venue type filtering if specified
@@ -1218,6 +1375,7 @@ export async function searchVenues(
     combined_results: combinedResults,
     is_offline: effectiveIsOffline,
     total_count: combinedResults.length,
+    error: searchError,
   }
 }
 
@@ -1397,6 +1555,7 @@ export async function fetchPopularVenues(
 export default {
   // Google Places API functions
   searchGooglePlaces,
+  searchNearbyPlaces,
   // Hybrid search functions
   searchVenues,
   searchSupabaseVenues,

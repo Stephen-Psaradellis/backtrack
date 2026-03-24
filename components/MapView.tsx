@@ -41,7 +41,7 @@
  * ```
  */
 
-import React, { useCallback, useRef, useMemo } from 'react'
+import React, { useCallback, useRef, useMemo, useState } from 'react'
 import {
   View,
   StyleSheet,
@@ -415,11 +415,14 @@ export function MapView({
   testID = 'map-view',
 }: MapViewProps): JSX.Element {
   // ---------------------------------------------------------------------------
-  // REFS
+  // REFS & STATE
   // ---------------------------------------------------------------------------
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null)
+
+  // iOS Google Maps blank tile fix: force re-layout after map is ready
+  const [mapReady, setMapReady] = useState(false)
 
   // ---------------------------------------------------------------------------
   // HANDLERS
@@ -499,8 +502,11 @@ export function MapView({
 
   /**
    * Handle map ready
+   * On iOS with Google Maps, tiles can render blank until a layout change.
+   * Toggling mapReady forces a style update that triggers tile rendering.
    */
   const handleMapReady = useCallback(() => {
+    setMapReady(true)
     onMapReady?.()
   }, [onMapReady])
 
@@ -609,15 +615,20 @@ export function MapView({
   // Both iOS and Android use Google Maps (PROVIDER_GOOGLE) for POI click support
   // ---------------------------------------------------------------------------
 
+  // Only pass region prop when explicitly set (not undefined).
+  // Passing region={undefined} alongside initialRegion causes blank tiles on iOS Google Maps.
+  const regionProps = region
+    ? { region }
+    : { initialRegion }
+
   return (
     <View style={[styles.container, style]} testID={testID}>
       <RNMapView
         ref={mapRef}
-        style={[styles.map, mapStyle]}
+        style={[styles.map, mapStyle, !mapReady && Platform.OS === 'ios' && { marginBottom: 1 }]}
         provider={PROVIDER_GOOGLE}
         customMapStyle={customMapStyle}
-        initialRegion={initialRegion}
-        region={region}
+        {...regionProps}
         showsUserLocation={showsUserLocation}
         followsUserLocation={followsUserLocation}
         showsMyLocationButton={showsMyLocationButton}

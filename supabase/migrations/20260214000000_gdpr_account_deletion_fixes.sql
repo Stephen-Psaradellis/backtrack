@@ -10,6 +10,8 @@ COMMENT ON COLUMN scheduled_account_deletions.auth_deleted_at IS
 
 -- Update delete_user_account function to include missing tables
 -- Makes deletion robust by checking table existence
+-- Drop existing function first as return type may differ
+DROP FUNCTION IF EXISTS delete_user_account(UUID);
 CREATE OR REPLACE FUNCTION delete_user_account(target_user_id UUID)
 RETURNS void
 LANGUAGE plpgsql

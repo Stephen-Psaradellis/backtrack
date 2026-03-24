@@ -53,16 +53,23 @@ export const ClothingRenderer = memo(function ClothingRenderer({
   const clothingRx = bodyDims.shoulderWidth / 2 + 16;
   const clothingRy = bodyDims.torsoLength * 0.6 + 10;
 
-  // Shoulder-width clothing body path — extends above neckline to fill entire body clip
-  // The bodyClothingClip starts at y=72 (neck), so clothing fill must start at/above y=72
-  // to prevent skin triangles at the shoulders
+  // Shoulder-width clothing body path with natural shoulder slope and body contour
+  // Natural shoulders slope down from neck, not flat horizontal line
   const clothingTopY = 68; // above neck base to ensure full coverage
+  const shoulderY = 76; // natural shoulder height (below neck)
+  const waistY = 105; // waist level
+  const hemY = 105 + clothingRy * 0.8; // bottom hem
+
+  // Natural body contour path with curved shoulders and tapered waist
   const clothingBodyPath = `
-    M ${50 - clothingRx},${clothingTopY}
-    L ${50 + clothingRx},${clothingTopY}
-    Q ${50 + clothingRx + 1},${105} ${50 + clothingRx * 0.7},${105 + clothingRy * 0.8}
-    Q ${50},${105 + clothingRy + 2} ${50 - clothingRx * 0.7},${105 + clothingRy * 0.8}
-    Q ${50 - clothingRx - 1},${105} ${50 - clothingRx},${clothingTopY}
+    M ${50},${clothingTopY}
+    C ${50 - clothingRx * 0.3},${clothingTopY + 2} ${50 - clothingRx * 0.6},${shoulderY - 2} ${50 - clothingRx},${shoulderY + 2}
+    Q ${50 - clothingRx + 2},${(shoulderY + waistY) / 2} ${50 - clothingRx * 0.85},${waistY}
+    Q ${50 - clothingRx * 0.7},${waistY + 6} ${50 - clothingRx * 0.7},${hemY}
+    Q ${50},${hemY + 2} ${50 + clothingRx * 0.7},${hemY}
+    Q ${50 + clothingRx * 0.7},${waistY + 6} ${50 + clothingRx * 0.85},${waistY}
+    Q ${50 + clothingRx - 2},${(shoulderY + waistY) / 2} ${50 + clothingRx},${shoulderY + 2}
+    C ${50 + clothingRx * 0.6},${shoulderY - 2} ${50 + clothingRx * 0.3},${clothingTopY + 2} ${50},${clothingTopY}
     Z
   `;
 
@@ -86,6 +93,12 @@ export const ClothingRenderer = memo(function ClothingRenderer({
           <Ellipse cx="50" cy="100" rx="35" ry="22" fill={`url(#${ids.clothingHigh})`} />
           {/* Center fold for dimension */}
           <Path d="M50,92 Q48,102 50,114" fill="none" stroke={shadow} strokeWidth={1} opacity={0.12} />
+          {/* Elbow wrinkle suggestions */}
+          <Path d="M20,95 Q22,97 20,99" fill="none" stroke={shadow} strokeWidth={0.6} opacity={0.08} />
+          <Path d="M80,95 Q78,97 80,99" fill="none" stroke={shadow} strokeWidth={0.6} opacity={0.08} />
+          {/* Shoulder seam lines */}
+          <Path d="M ${50 - clothingRx},${shoulderY + 2} Q ${50 - clothingRx * 0.6},${shoulderY + 4} ${50 - clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
+          <Path d="M ${50 + clothingRx},${shoulderY + 2} Q ${50 + clothingRx * 0.6},${shoulderY + 4} ${50 + clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
           {/* Hood behind neck — raised */}
           <Path d="M30,80 Q25,85 25,90 L75,90 Q75,85 70,80" fill={shadow} />
           {/* Hood depth shadow */}
@@ -95,12 +108,21 @@ export const ClothingRenderer = memo(function ClothingRenderer({
           <Path d="M42,93 L40,97 M42,93 L44,97" fill="none" stroke={shadow} strokeWidth={1} />
           <Path d="M58,83 L58,95" fill="none" stroke={shadow} strokeWidth={1.5} />
           <Path d="M58,93 L56,97 M58,93 L60,97" fill="none" stroke={shadow} strokeWidth={1} />
+          {/* Hoodie string detail - dangling from center */}
+          <Path d="M48,84 L48,96" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.5} />
+          <Path d="M52,84 L52,96" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.5} />
+          <Path d="M48,96 L47,98" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.4} />
+          <Path d="M52,96 L53,98" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.4} />
           {/* Collar with depth — raised */}
           <Path d="M38,80 Q50,87 62,80" fill="none" stroke={deepShadow} strokeWidth={3} />
           <Path d="M38,80 Q50,86 62,80" fill="none" stroke={shadow} strokeWidth={1.5} />
           {/* Side seams */}
           <Path d="M15,100 Q18,95 20,100" fill="none" stroke={shadow} strokeWidth={1} opacity={0.3} />
           <Path d="M85,100 Q82,95 80,100" fill="none" stroke={shadow} strokeWidth={1} opacity={0.3} />
+          {/* Fabric fold lines at waist */}
+          <Path d="M30,112 Q35,110 40,112" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.1} />
+          <Path d="M60,111 Q65,109 70,111" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.12} />
+          <Path d="M35,116 Q42,114 48,116" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.1} />
         </G>
       );
 
@@ -115,13 +137,20 @@ export const ClothingRenderer = memo(function ClothingRenderer({
             </LinearGradient>
           </Defs>
           <Path d={clothingBodyPath} fill={`url(#${ids.clothingGrad})`} stroke={deepShadow} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-          {/* V-neck cutout with skin shadow — raised */}
-          <Path d="M42,78 L50,92 L58,78" fill={skinTone} />
-          <Path d="M43,79 L50,90 L57,79" fill={skinShadow} opacity={0.2} />
-          {/* V-neck edge definition */}
-          <Path d="M42,78 L50,92 L58,78" fill="none" stroke={shadow} strokeWidth={1} />
+          {/* V-neck cutout with skin shadow — sharp V angle */}
+          <Path d="M40,${shoulderY + 1} L50,96 L60,${shoulderY + 1}" fill={skinTone} />
+          <Path d="M41,${shoulderY + 2} L50,94 L59,${shoulderY + 2}" fill={skinShadow} opacity={0.2} />
+          {/* V-neck edge definition with proper angle */}
+          <Path d="M40,${shoulderY + 1} L50,96 L60,${shoulderY + 1}" fill="none" stroke={shadow} strokeWidth={1.2} />
+          {/* Shoulder seam lines */}
+          <Path d="M ${50 - clothingRx},${shoulderY + 2} Q ${50 - clothingRx * 0.6},${shoulderY + 4} ${50 - clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
+          <Path d="M ${50 + clothingRx},${shoulderY + 2} Q ${50 + clothingRx * 0.6},${shoulderY + 4} ${50 + clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
           {/* Collar bone shadow hint */}
-          <Path d="M44,82 Q50,84 56,82" fill="none" stroke={skinShadow} strokeWidth={0.5} opacity={0.3} />
+          <Path d="M43,81 Q50,83 57,81" fill="none" stroke={skinShadow} strokeWidth={0.5} opacity={0.3} />
+          {/* Fabric fold suggestion */}
+          <Path d="M32,108 Q38,106 42,108" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.12} />
+          <Path d="M58,107 Q63,105 68,107" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.1} />
+          <Path d="M40,114 Q46,112 52,114" fill="none" stroke={shadow} strokeWidth={0.6} opacity={0.1} />
         </G>
       );
 
@@ -136,11 +165,14 @@ export const ClothingRenderer = memo(function ClothingRenderer({
             </LinearGradient>
           </Defs>
           <Path d={clothingBodyPath} fill={`url(#${ids.clothingGrad})`} stroke={deepShadow} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-          {/* Scoop neck cutout with depth — raised */}
+          {/* Scoop neck cutout with natural curve */}
           <Ellipse cx="50" cy="81" rx="10" ry="5" fill={skinTone} />
           <Ellipse cx="50" cy="82" rx="9" ry="4" fill={skinShadow} opacity={0.15} />
-          {/* Neckline edge */}
+          {/* Neckline edge with curved shape */}
           <Path d="M40,81 Q50,86 60,81" fill="none" stroke={shadow} strokeWidth={1} />
+          {/* Shoulder seam lines */}
+          <Path d="M ${50 - clothingRx},${shoulderY + 2} Q ${50 - clothingRx * 0.6},${shoulderY + 4} ${50 - clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
+          <Path d="M ${50 + clothingRx},${shoulderY + 2} Q ${50 + clothingRx * 0.6},${shoulderY + 4} ${50 + clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
         </G>
       );
 
@@ -266,6 +298,12 @@ export const ClothingRenderer = memo(function ClothingRenderer({
           <Circle cx="50" cy="98" r="0.6" fill={deepShadow} />
           <Circle cx="50" cy="104" r="1.3" fill={shadow} />
           <Circle cx="50" cy="104" r="0.6" fill={deepShadow} />
+          <Circle cx="50" cy="110" r="1.3" fill={shadow} />
+          <Circle cx="50" cy="110" r="0.6" fill={deepShadow} />
+          {/* Fabric fold lines */}
+          <Path d="M28,110 Q34,108 38,110" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.12} />
+          <Path d="M62,109 Q67,107 72,109" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.1} />
+          <Path d="M35,115 Q42,113 48,115" fill="none" stroke={shadow} strokeWidth={0.6} opacity={0.1} />
         </G>
       );
 
@@ -324,12 +362,18 @@ export const ClothingRenderer = memo(function ClothingRenderer({
           <Path d="M64,77 L59,83 L55,79" fill={color} />
           <Path d="M36,77 L41,83 L45,79" fill="none" stroke={shadow} strokeWidth={1} />
           <Path d="M64,77 L59,83 L55,79" fill="none" stroke={shadow} strokeWidth={1} />
+          {/* Collar fold shadow — softer than button-up */}
+          <Path d="M37,78 L41,82" fill="none" stroke={deepShadow} strokeWidth={0.4} opacity={0.35} />
+          <Path d="M63,78 L59,82" fill="none" stroke={deepShadow} strokeWidth={0.4} opacity={0.35} />
           {/* Button placket */}
           <Path d="M48,79 L48,95 L52,95 L52,79" fill={adjustBrightness(color, -10)} opacity={0.3} />
           {/* Buttons */}
           <Circle cx="50" cy="83" r="1.2" fill={shadow} />
           <Circle cx="50" cy="88" r="1.2" fill={shadow} />
           <Circle cx="50" cy="93" r="1.2" fill={shadow} />
+          {/* Fabric fold lines */}
+          <Path d="M30,108 Q36,106 40,108" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.1} />
+          <Path d="M60,107 Q65,105 70,107" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.12} />
         </G>
       );
 
@@ -403,14 +447,15 @@ export const ClothingRenderer = memo(function ClothingRenderer({
           <Path d={clothingBodyPath} fill={`url(#${ids.clothingGrad})`} stroke={deepShadow} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
           {/* Center fold for dimension */}
           <Path d="M50,92 Q48,100 50,110" fill="none" stroke={shadow} strokeWidth={1} opacity={0.12} />
-          {/* Tall neck tube — raised */}
-          <Rect x="41" y="70" width="18" height="14" rx="5" fill={color} />
-          <Rect x="42" y="71" width="16" height="12" rx="4" fill={shadow} opacity={0.3} />
-          {/* Ribbing lines on neck */}
-          <Path d="M42,74 Q50,76 58,74" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
-          <Path d="M42,77 Q50,79 58,77" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
-          <Path d="M42,80 Q50,82 58,80" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
-          <Path d="M42,83 Q50,85 58,83" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
+          {/* Tall neck tube — raised, taller coverage */}
+          <Rect x="40" y="67" width="20" height="18" rx="6" fill={color} />
+          <Rect x="41" y="68" width="18" height="16" rx="5" fill={shadow} opacity={0.3} />
+          {/* Ribbing texture lines on neck */}
+          <Path d="M41,71 Q50,73 59,71" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
+          <Path d="M41,74 Q50,76 59,74" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
+          <Path d="M41,77 Q50,79 59,77" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
+          <Path d="M41,80 Q50,82 59,80" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
+          <Path d="M41,83 Q50,85 59,83" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.4} />
           {/* Knit texture */}
           <Path d="M20,95 L80,95" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.2} />
           <Path d="M18,100 L82,100" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.2} />
@@ -679,14 +724,24 @@ export const ClothingRenderer = memo(function ClothingRenderer({
           <Ellipse cx="50" cy="100" rx="35" ry="22" fill={`url(#${ids.clothingHigh})`} />
           {/* Center fold for dimension */}
           <Path d="M50,90 Q48,100 50,112" fill="none" stroke={shadow} strokeWidth={1} opacity={0.15} />
-          {/* Crew neck with depth — raised to overlap neck base */}
+          {/* Crew neck with depth — natural curved neckline */}
           <Ellipse cx="50" cy="80" rx="9" ry="4.5" fill={skinTone} />
           <Ellipse cx="50" cy="81" rx="8" ry="3.5" fill={skinShadow} opacity={0.15} />
-          {/* Neckline edge */}
-          <Path d="M41,80 Q50,84 59,80" fill="none" stroke={shadow} strokeWidth={1} />
+          {/* Crew neck curve */}
+          <Path d="M41,80 Q46,85 50,85 Q54,85 59,80" fill="none" stroke={shadow} strokeWidth={1} />
+          {/* Shoulder seam lines */}
+          <Path d="M ${50 - clothingRx},${shoulderY + 2} Q ${50 - clothingRx * 0.6},${shoulderY + 4} ${50 - clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
+          <Path d="M ${50 + clothingRx},${shoulderY + 2} Q ${50 + clothingRx * 0.6},${shoulderY + 4} ${50 + clothingRx * 0.4},${shoulderY + 6}" fill="none" stroke={shadow} strokeWidth={0.5} opacity={0.15} />
           {/* Sleeve hints */}
           <Path d="M12,98 Q15,95 18,100" fill="none" stroke={shadow} strokeWidth={1} opacity={0.3} />
           <Path d="M88,98 Q85,95 82,100" fill="none" stroke={shadow} strokeWidth={1} opacity={0.3} />
+          {/* Elbow wrinkle suggestions */}
+          <Path d="M20,95 Q22,97 20,99" fill="none" stroke={shadow} strokeWidth={0.6} opacity={0.08} />
+          <Path d="M80,95 Q78,97 80,99" fill="none" stroke={shadow} strokeWidth={0.6} opacity={0.08} />
+          {/* Fabric fold lines at waist */}
+          <Path d="M30,108 Q37,106 42,108" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.12} />
+          <Path d="M58,107 Q64,105 70,107" fill="none" stroke={shadow} strokeWidth={0.7} opacity={0.1} />
+          <Path d="M38,114 Q44,112 50,114" fill="none" stroke={shadow} strokeWidth={0.6} opacity={0.1} />
         </G>
       );
   }

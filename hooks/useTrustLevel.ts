@@ -246,7 +246,7 @@ export function useTrustLevel(): TrustLevelState {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch trust level'
       setError(message)
-      console.error('[useTrustLevel] Error fetching trust level:', err)
+      if (__DEV__) console.error('[useTrustLevel] Error fetching trust level:', err)
     } finally {
       setIsLoading(false)
     }

@@ -30,6 +30,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { darkTheme } from '@/constants/glassStyles';
 import { colors } from '@/constants/theme';
 import type { MainStackParamList } from '@/navigation/types';
+import type { StoredAvatar, AvatarConfig } from '@/types/avatar';
 import {
   saveCurrentAvatar,
   CategoryTabs,
@@ -38,8 +39,6 @@ import {
   PreviewPanel,
   useAvatarEditor,
   EDITOR_CATEGORIES,
-  type StoredAvatar,
-  type AvatarConfig,
   type CategoryTab,
   type EditorCategory,
   type SubcategoryConfig,
@@ -315,7 +314,7 @@ export default function AvatarEditorScreen({ navigation, route }: Props) {
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
-          Edit Avatar
+          Create Avatar
         </Text>
 
         <TouchableOpacity

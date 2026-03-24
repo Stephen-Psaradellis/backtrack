@@ -36,7 +36,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { queryKeys } from './useQueryConfig'
-import type { StoredAvatar } from 'react-native-bitmoji'
+import type { StoredAvatar } from '../types/avatar'
 
 // ============================================================================
 // Types

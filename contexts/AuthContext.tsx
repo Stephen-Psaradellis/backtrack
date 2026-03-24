@@ -23,6 +23,7 @@ import React, {
 } from 'react'
 import { type Session, type User, type AuthError } from '@supabase/supabase-js'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as SecureStore from 'expo-secure-store'
 
 import { supabase } from '../lib/supabase'
 import type { Profile, ProfileUpdate, AuthState } from '../lib/types'
@@ -351,7 +352,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         // STEP 1: Check AsyncStorage cache first (instant, no network)
         let cachedSession: Session | null = null
         try {
-          const cachedData = await AsyncStorage.getItem(CACHED_SESSION_KEY)
+          const cachedData = await SecureStore.getItemAsync(CACHED_SESSION_KEY)
           if (cachedData) {
             cachedSession = JSON.parse(cachedData) as Session
 
@@ -393,7 +394,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
             // Cache the fresh session for next startup
             try {
-              await AsyncStorage.setItem(CACHED_SESSION_KEY, JSON.stringify(freshSession))
+              await SecureStore.setItemAsync(CACHED_SESSION_KEY, JSON.stringify(freshSession))
             } catch {
               // Cache write failed - non-critical
             }
@@ -414,7 +415,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
             // Clear cached session
             try {
-              await AsyncStorage.removeItem(CACHED_SESSION_KEY)
+              await SecureStore.deleteItemAsync(CACHED_SESSION_KEY)
             } catch {
               // Cache clear failed - non-critical
             }
@@ -452,7 +453,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       if (newSession?.user) {
         // Cache the new session
         try {
-          await AsyncStorage.setItem(CACHED_SESSION_KEY, JSON.stringify(newSession))
+          await SecureStore.setItemAsync(CACHED_SESSION_KEY, JSON.stringify(newSession))
         } catch {
           // Cache write failed - non-critical
         }
@@ -467,7 +468,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         // Clear profile and cache when user signs out
         setProfile(null)
         try {
-          await AsyncStorage.removeItem(CACHED_SESSION_KEY)
+          await SecureStore.deleteItemAsync(CACHED_SESSION_KEY)
         } catch {
           // Cache clear failed - non-critical
         }
@@ -486,7 +487,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           // Token was refreshed - update cache
           if (newSession) {
             try {
-              await AsyncStorage.setItem(CACHED_SESSION_KEY, JSON.stringify(newSession))
+              await SecureStore.setItemAsync(CACHED_SESSION_KEY, JSON.stringify(newSession))
             } catch {
               // Cache write failed - non-critical
             }

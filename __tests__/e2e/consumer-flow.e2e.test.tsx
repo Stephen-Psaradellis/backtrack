@@ -500,7 +500,7 @@ describe('E2E: Complete Consumer Flow', () => {
         expect(screen.getByTestId('profile-avatar-preview')).toBeTruthy()
       })
 
-      expect(screen.getByTestId('profile-edit-avatar-button')).toBeTruthy()
+      expect(screen.getByTestId('profile-create-avatar-button')).toBeTruthy()
     })
   })
 

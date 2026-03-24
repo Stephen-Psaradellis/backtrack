@@ -80,15 +80,17 @@ export function Mouth({ style, lipColor = LIP_COLOR, scale = 1 }: MouthProps) {
               <G>
                 {/* Mouth shadow */}
                 <Path
-                  d={`M${MOUTH_X - 10},${MOUTH_Y + 1} Q${MOUTH_X},${MOUTH_Y + 11} ${MOUTH_X + 10},${MOUTH_Y + 1}`}
+                  d={`M${MOUTH_X - 8},${MOUTH_Y + 1} Q${MOUTH_X},${MOUTH_Y + 9} ${MOUTH_X + 8},${MOUTH_Y + 1}`}
                   fill="none"
                   stroke="#00000015"
                   strokeWidth={4}
                   strokeLinecap="round"
                 />
-                {/* Upper lip line */}
+                {/* Upper lip line with pronounced cupid's bow */}
                 <Path
-                  d={`M${MOUTH_X - 10},${MOUTH_Y} Q${MOUTH_X - 5},${MOUTH_Y - 1} ${MOUTH_X},${MOUTH_Y - 0.5} Q${MOUTH_X + 5},${MOUTH_Y - 1} ${MOUTH_X + 10},${MOUTH_Y}`}
+                  d={`M${MOUTH_X - 8},${MOUTH_Y} Q${MOUTH_X - 4},${MOUTH_Y - 1.2} ${MOUTH_X - 1.5},${MOUTH_Y - 0.3}
+                      Q${MOUTH_X},${MOUTH_Y + 0.2} ${MOUTH_X + 1.5},${MOUTH_Y - 0.3}
+                      Q${MOUTH_X + 4},${MOUTH_Y - 1.2} ${MOUTH_X + 8},${MOUTH_Y}`}
                   fill="none"
                   stroke={lipColor}
                   strokeWidth={2}
@@ -96,22 +98,31 @@ export function Mouth({ style, lipColor = LIP_COLOR, scale = 1 }: MouthProps) {
                 />
                 {/* Lower lip curve */}
                 <Path
-                  d={`M${MOUTH_X - 10},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 10} ${MOUTH_X + 10},${MOUTH_Y}`}
+                  d={`M${MOUTH_X - 8},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 8} ${MOUTH_X + 8},${MOUTH_Y}`}
                   fill="none"
                   stroke={lipColor}
                   strokeWidth={2.5}
                   strokeLinecap="round"
                 />
-                {/* Cupid's bow detail */}
+                {/* Cupid's bow definition - center dip */}
                 <Path
-                  d={`M${MOUTH_X - 2},${MOUTH_Y - 0.5} Q${MOUTH_X},${MOUTH_Y + 0.5} ${MOUTH_X + 2},${MOUTH_Y - 0.5}`}
+                  d={`M${MOUTH_X - 1.5},${MOUTH_Y - 0.3} Q${MOUTH_X},${MOUTH_Y + 0.4} ${MOUTH_X + 1.5},${MOUTH_Y - 0.3}`}
+                  fill="none"
+                  stroke={lipShadow}
+                  strokeWidth={0.9}
+                  opacity={0.7}
+                />
+                {/* Lip shadow below lower lip */}
+                <Path
+                  d={`M${MOUTH_X - 6},${MOUTH_Y + 8.5} Q${MOUTH_X},${MOUTH_Y + 9} ${MOUTH_X + 6},${MOUTH_Y + 8.5}`}
                   fill="none"
                   stroke={lipShadow}
                   strokeWidth={0.8}
+                  opacity={0.3}
                 />
-                {/* Lip highlight */}
+                {/* Lip highlight on lower lip */}
                 <Path
-                  d={`M${MOUTH_X - 4},${MOUTH_Y + 4} Q${MOUTH_X},${MOUTH_Y + 6} ${MOUTH_X + 4},${MOUTH_Y + 4}`}
+                  d={`M${MOUTH_X - 4},${MOUTH_Y + 4} Q${MOUTH_X},${MOUTH_Y + 5.5} ${MOUTH_X + 4},${MOUTH_Y + 4}`}
                   fill="none"
                   stroke={lipHighlight}
                   strokeWidth={1}
@@ -123,28 +134,28 @@ export function Mouth({ style, lipColor = LIP_COLOR, scale = 1 }: MouthProps) {
           case MouthStyle.BIG_SMILE:
             return (
               <G>
-                {/* Mouth interior with gradient */}
+                {/* Mouth interior with gradient - reduced width */}
                 <Path
-                  d={`M${MOUTH_X - 12},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 14} ${MOUTH_X + 12},${MOUTH_Y}`}
+                  d={`M${MOUTH_X - 10},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 12} ${MOUTH_X + 10},${MOUTH_Y}`}
                   fill={`url(#${mouthInteriorGradientId})`}
                 />
-                {/* Teeth row with gradient */}
+                {/* Teeth row with gradient - reduced width */}
                 <Path
-                  d={`M${MOUTH_X - 9},${MOUTH_Y + 0.5} L${MOUTH_X + 9},${MOUTH_Y + 0.5} L${MOUTH_X + 7},${MOUTH_Y + 5} L${MOUTH_X - 7},${MOUTH_Y + 5} Z`}
+                  d={`M${MOUTH_X - 7.5},${MOUTH_Y + 0.5} L${MOUTH_X + 7.5},${MOUTH_Y + 0.5} L${MOUTH_X + 6},${MOUTH_Y + 5} L${MOUTH_X - 6},${MOUTH_Y + 5} Z`}
                   fill={`url(#${teethGradientId})`}
                 />
-                {/* Tooth separators */}
-                <G stroke="#d8d8d0" strokeWidth={0.3} opacity={0.5}>
-                  <Path d={`M${MOUTH_X - 5},${MOUTH_Y + 0.5} L${MOUTH_X - 4.5},${MOUTH_Y + 5}`} />
-                  <Path d={`M${MOUTH_X - 1.5},${MOUTH_Y + 0.5} L${MOUTH_X - 1},${MOUTH_Y + 5}`} />
-                  <Path d={`M${MOUTH_X + 1.5},${MOUTH_Y + 0.5} L${MOUTH_X + 1},${MOUTH_Y + 5}`} />
-                  <Path d={`M${MOUTH_X + 5},${MOUTH_Y + 0.5} L${MOUTH_X + 4.5},${MOUTH_Y + 5}`} />
+                {/* Tooth separators - subtle hints */}
+                <G stroke="#d8d8d0" strokeWidth={0.25} opacity={0.4}>
+                  <Path d={`M${MOUTH_X - 4},${MOUTH_Y + 0.5} L${MOUTH_X - 3.8},${MOUTH_Y + 5}`} />
+                  <Path d={`M${MOUTH_X - 1.2},${MOUTH_Y + 0.5} L${MOUTH_X - 1},${MOUTH_Y + 5}`} />
+                  <Path d={`M${MOUTH_X + 1.2},${MOUTH_Y + 0.5} L${MOUTH_X + 1},${MOUTH_Y + 5}`} />
+                  <Path d={`M${MOUTH_X + 4},${MOUTH_Y + 0.5} L${MOUTH_X + 3.8},${MOUTH_Y + 5}`} />
                 </G>
-                {/* Upper lip with cupid's bow */}
+                {/* Upper lip with pronounced cupid's bow */}
                 <Path
-                  d={`M${MOUTH_X - 12},${MOUTH_Y} Q${MOUTH_X - 6},${MOUTH_Y - 2} ${MOUTH_X - 1},${MOUTH_Y - 1}
-                      Q${MOUTH_X},${MOUTH_Y} ${MOUTH_X + 1},${MOUTH_Y - 1}
-                      Q${MOUTH_X + 6},${MOUTH_Y - 2} ${MOUTH_X + 12},${MOUTH_Y}`}
+                  d={`M${MOUTH_X - 10},${MOUTH_Y} Q${MOUTH_X - 5},${MOUTH_Y - 2} ${MOUTH_X - 1.5},${MOUTH_Y - 0.8}
+                      Q${MOUTH_X},${MOUTH_Y + 0.2} ${MOUTH_X + 1.5},${MOUTH_Y - 0.8}
+                      Q${MOUTH_X + 5},${MOUTH_Y - 2} ${MOUTH_X + 10},${MOUTH_Y}`}
                   fill="none"
                   stroke={lipColor}
                   strokeWidth={2.2}
@@ -152,14 +163,22 @@ export function Mouth({ style, lipColor = LIP_COLOR, scale = 1 }: MouthProps) {
                 />
                 {/* Lower lip outline */}
                 <Path
-                  d={`M${MOUTH_X - 12},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 14} ${MOUTH_X + 12},${MOUTH_Y}`}
+                  d={`M${MOUTH_X - 10},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 12} ${MOUTH_X + 10},${MOUTH_Y}`}
                   fill="none"
                   stroke={lipShadow}
                   strokeWidth={1.5}
                 />
+                {/* Lip shadow below lower lip */}
+                <Path
+                  d={`M${MOUTH_X - 8},${MOUTH_Y + 12.5} Q${MOUTH_X},${MOUTH_Y + 13} ${MOUTH_X + 8},${MOUTH_Y + 12.5}`}
+                  fill="none"
+                  stroke={lipShadow}
+                  strokeWidth={0.8}
+                  opacity={0.3}
+                />
                 {/* Lip corner shadow */}
-                <Circle cx={MOUTH_X - 11} cy={MOUTH_Y + 1} r={1} fill={lipDeepShadow} opacity={0.3} />
-                <Circle cx={MOUTH_X + 11} cy={MOUTH_Y + 1} r={1} fill={lipDeepShadow} opacity={0.3} />
+                <Circle cx={MOUTH_X - 9.5} cy={MOUTH_Y + 1} r={1} fill={lipDeepShadow} opacity={0.3} />
+                <Circle cx={MOUTH_X + 9.5} cy={MOUTH_Y + 1} r={1} fill={lipDeepShadow} opacity={0.3} />
               </G>
             );
 
@@ -827,35 +846,53 @@ export function Mouth({ style, lipColor = LIP_COLOR, scale = 1 }: MouthProps) {
               <G>
                 {/* Shadow */}
                 <Path
-                  d={`M${MOUTH_X - 8},${MOUTH_Y + 1} Q${MOUTH_X},${MOUTH_Y + 7} ${MOUTH_X + 8},${MOUTH_Y + 1}`}
+                  d={`M${MOUTH_X - 7},${MOUTH_Y + 1} Q${MOUTH_X},${MOUTH_Y + 6} ${MOUTH_X + 7},${MOUTH_Y + 1}`}
                   fill="none"
                   stroke="#00000010"
                   strokeWidth={3}
                   strokeLinecap="round"
                 />
-                {/* Default smile */}
+                {/* Default smile - reduced width */}
                 <Path
-                  d={`M${MOUTH_X - 8},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 6} ${MOUTH_X + 8},${MOUTH_Y}`}
+                  d={`M${MOUTH_X - 7},${MOUTH_Y} Q${MOUTH_X},${MOUTH_Y + 5.5} ${MOUTH_X + 7},${MOUTH_Y}`}
                   fill="none"
                   stroke={lipColor}
                   strokeWidth={2.2}
                   strokeLinecap="round"
                 />
-                {/* Upper lip hint */}
+                {/* Upper lip with cupid's bow */}
                 <Path
-                  d={`M${MOUTH_X - 6},${MOUTH_Y - 0.5} Q${MOUTH_X},${MOUTH_Y - 1} ${MOUTH_X + 6},${MOUTH_Y - 0.5}`}
+                  d={`M${MOUTH_X - 5.5},${MOUTH_Y - 0.3} Q${MOUTH_X - 2},${MOUTH_Y - 0.8} ${MOUTH_X - 1.2},${MOUTH_Y - 0.2}
+                      Q${MOUTH_X},${MOUTH_Y + 0.2} ${MOUTH_X + 1.2},${MOUTH_Y - 0.2}
+                      Q${MOUTH_X + 2},${MOUTH_Y - 0.8} ${MOUTH_X + 5.5},${MOUTH_Y - 0.3}`}
                   fill="none"
                   stroke={lipShadow}
                   strokeWidth={0.8}
+                  opacity={0.5}
+                />
+                {/* Cupid's bow center definition */}
+                <Path
+                  d={`M${MOUTH_X - 1.2},${MOUTH_Y - 0.2} Q${MOUTH_X},${MOUTH_Y + 0.4} ${MOUTH_X + 1.2},${MOUTH_Y - 0.2}`}
+                  fill="none"
+                  stroke={lipShadow}
+                  strokeWidth={0.7}
                   opacity={0.4}
+                />
+                {/* Lip shadow below lower lip */}
+                <Path
+                  d={`M${MOUTH_X - 5},${MOUTH_Y + 6} Q${MOUTH_X},${MOUTH_Y + 6.5} ${MOUTH_X + 5},${MOUTH_Y + 6}`}
+                  fill="none"
+                  stroke={lipShadow}
+                  strokeWidth={0.7}
+                  opacity={0.25}
                 />
                 {/* Lower lip highlight */}
                 <Path
-                  d={`M${MOUTH_X - 4},${MOUTH_Y + 3} Q${MOUTH_X},${MOUTH_Y + 4.5} ${MOUTH_X + 4},${MOUTH_Y + 3}`}
+                  d={`M${MOUTH_X - 3.5},${MOUTH_Y + 3} Q${MOUTH_X},${MOUTH_Y + 4} ${MOUTH_X + 3.5},${MOUTH_Y + 3}`}
                   fill="none"
                   stroke={lipHighlight}
                   strokeWidth={0.8}
-                  opacity={0.3}
+                  opacity={0.35}
                 />
               </G>
             );

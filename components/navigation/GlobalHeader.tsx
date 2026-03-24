@@ -15,6 +15,7 @@
 import React, { useCallback } from 'react';
 import {
   View,
+  Text,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
@@ -23,7 +24,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { Avatar } from 'react-native-bitmoji';
+import { AvatarDisplay } from '../AvatarDisplay';
 import { CheckInButton } from '../checkin';
 import { BacktrackLogo } from '../ui/BacktrackLogo';
 import { selectionFeedback } from '../../lib/haptics';
@@ -31,6 +32,7 @@ import { colors, shadows } from '../../constants/theme';
 import { darkTheme } from '../../constants/glassStyles';
 import type { MainTabNavigationProp } from '../../navigation/types';
 import { useGhostMode } from '../../hooks/useGhostMode';
+import { useCheckin } from '../../hooks/useCheckin';
 
 // ============================================================================
 // TYPES
@@ -67,6 +69,7 @@ function GlobalHeaderInner({
   // what GlobalHeader renders.
   const { profile } = useAuth();
   const { isGhostMode } = useGhostMode();
+  const { activeCheckin } = useCheckin();
 
   const hasAvatar = profile?.avatar;
 
@@ -143,8 +146,8 @@ function GlobalHeaderInner({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           {hasAvatar ? (
-            <Avatar
-              config={profile.avatar?.config}
+            <AvatarDisplay
+              avatar={profile.avatar}
               size="sm"
             />
           ) : (
@@ -154,6 +157,16 @@ function GlobalHeaderInner({
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Checked-in location banner */}
+      {activeCheckin && (
+        <View style={styles.checkinBanner}>
+          <Ionicons name="location" size={14} color={colors.primary[500]} />
+          <Text style={styles.checkinBannerText} numberOfLines={1}>
+            {activeCheckin.location_name}
+          </Text>
+        </View>
+      )}
 
       {/* Bottom Row: [Check In] [Live View] (conditional) */}
       {(showCheckIn || showLiveView) && (
@@ -238,6 +251,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: darkTheme.cardBorder,
+  },
+  checkinBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 6,
+  },
+  checkinBannerText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary[500],
+    maxWidth: '80%',
   },
   bottomRow: {
     flexDirection: 'row',

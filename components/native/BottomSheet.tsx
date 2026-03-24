@@ -14,14 +14,13 @@ import {
   Animated,
   PanResponder,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, borderRadius, typography, spacing } from '../../constants/theme';
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const BACKDROP_OPACITY = 0.5;
 const ANIMATION_DURATION = 300;
 const DRAG_THRESHOLD = 100; // Pixels to drag down before dismissing
@@ -50,6 +49,7 @@ export default function BottomSheet({
   closeOnBackdrop = true,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
+  const { height: SCREEN_HEIGHT } = useWindowDimensions();
   const sheetHeight = snapPoints[0] || 400;
 
   // Animation values

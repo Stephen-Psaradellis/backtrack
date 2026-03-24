@@ -124,7 +124,7 @@ export const Toast: React.FC<ToastProps> = ({
       Haptics.notificationAsync(config.hapticType);
     } catch (error) {
       // Haptics may not be available on all devices
-      console.warn('Haptic feedback unavailable:', error);
+      if (__DEV__) console.warn('Haptic feedback unavailable:', error);
     }
 
     // Animate in

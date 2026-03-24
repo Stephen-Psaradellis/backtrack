@@ -172,8 +172,9 @@ function createArm(
   const sw = shoulderWidth / 2;
   const ww = wristWidth / 2;
 
-  // Mid-arm width (at elbow area) - smooth taper
-  const midWidth = (shoulderWidth + wristWidth) / 4; // Average of the half-widths
+  // Mid-arm width (at elbow area) - smooth taper with proper wrist narrowing
+  const elbowWidth = (shoulderWidth * 0.7 + wristWidth * 0.3); // Elbow is wider than wrist
+  const midWidth = elbowWidth / 2; // Smooth transition point
 
   // Calculate perpendicular vectors for shoulder→elbow segment
   const dx1 = elbow.x - shoulder.x;
@@ -191,12 +192,12 @@ function createArm(
 
   // Outer edge: shoulder outer → elbow outer → wrist outer
   const shoulderOuter = { x: shoulder.x - perpX1 * sw, y: shoulder.y - perpY1 * sw };
-  const elbowOuter = { x: elbow.x - perpX2 * midWidth, y: elbow.y - perpY2 * midWidth };
+  const elbowOuter = { x: elbow.x - perpX2 * (elbowWidth / 2), y: elbow.y - perpY2 * (elbowWidth / 2) };
   const wristOuter = { x: wrist.x - perpX2 * ww, y: wrist.y - perpY2 * ww };
 
   // Inner edge: shoulder inner → elbow inner → wrist inner
   const shoulderInner = { x: shoulder.x + perpX1 * sw, y: shoulder.y + perpY1 * sw };
-  const elbowInner = { x: elbow.x + perpX2 * midWidth, y: elbow.y + perpY2 * midWidth };
+  const elbowInner = { x: elbow.x + perpX2 * (elbowWidth / 2), y: elbow.y + perpY2 * (elbowWidth / 2) };
   const wristInner = { x: wrist.x + perpX2 * ww, y: wrist.y + perpY2 * ww };
 
   // Control points for smooth curves (use elbow as guide)
@@ -267,14 +268,34 @@ export function Arms({ pose, bodyType, skinTone, legPose, scale = 1 }: ArmsProps
       <Path
         d={leftArmPath}
         fill={`url(#${ids.leftArmGradient})`}
-        stroke="none"
+        stroke={adjustBrightness(skinTone, -15)}
+        strokeWidth={0.5}
+        strokeOpacity={0.4}
+      />
+      {/* Elbow shadow hint for left arm */}
+      <Path
+        d={`M ${joints.leftElbow.x - 2} ${joints.leftElbow.y - 1} Q ${joints.leftElbow.x} ${joints.leftElbow.y} ${joints.leftElbow.x + 2} ${joints.leftElbow.y - 1}`}
+        fill="none"
+        stroke={shadowColor}
+        strokeWidth={0.4}
+        opacity={0.12}
       />
 
       {/* Right arm - single continuous path */}
       <Path
         d={rightArmPath}
         fill={`url(#${ids.rightArmGradient})`}
-        stroke="none"
+        stroke={adjustBrightness(skinTone, -15)}
+        strokeWidth={0.5}
+        strokeOpacity={0.4}
+      />
+      {/* Elbow shadow hint for right arm */}
+      <Path
+        d={`M ${joints.rightElbow.x - 2} ${joints.rightElbow.y - 1} Q ${joints.rightElbow.x} ${joints.rightElbow.y} ${joints.rightElbow.x + 2} ${joints.rightElbow.y - 1}`}
+        fill="none"
+        stroke={shadowColor}
+        strokeWidth={0.4}
+        opacity={0.12}
       />
     </G>
   );

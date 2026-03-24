@@ -202,7 +202,7 @@ export function useEventAttendance(
       )
 
       if (attendeesError) {
-        console.error('Error fetching attendees:', attendeesError)
+        if (__DEV__) console.error('Error fetching attendees:', attendeesError)
         setError({
           code: 'FETCH_ERROR',
           message: attendeesError.message,
@@ -230,7 +230,7 @@ export function useEventAttendance(
         setUserStatus(userAttendee?.status || null)
       }
     } catch (err) {
-      console.error('Error fetching attendees:', err)
+      if (__DEV__) console.error('Error fetching attendees:', err)
       setError({
         code: 'FETCH_ERROR',
         message: err instanceof Error ? err.message : 'Failed to fetch attendees',

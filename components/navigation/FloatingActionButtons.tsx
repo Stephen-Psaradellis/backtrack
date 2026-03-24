@@ -77,7 +77,7 @@ function FloatingActionButtonsBase({
   isVisible = true,
 }: FloatingActionButtonsProps): React.ReactNode {
   const insets = useSafeAreaInsets()
-  const { activeCheckin } = useCheckin()
+  const { activeCheckin, getActiveCheckin } = useCheckin()
   const [showLiveView, setShowLiveView] = useState(false)
 
   // Hide FABs on screens where they are not relevant (e.g., Profile, Chats)
@@ -93,8 +93,10 @@ function FloatingActionButtonsBase({
    */
   const handleLiveViewPress = useCallback(async () => {
     await selectionFeedback()
+    // Re-fetch active checkin to ensure we have latest state (useCheckin is per-instance)
+    await getActiveCheckin()
     setShowLiveView(true)
-  }, [])
+  }, [getActiveCheckin])
 
   /**
    * Handle Live View modal close

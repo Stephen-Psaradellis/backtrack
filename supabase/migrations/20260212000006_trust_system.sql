@@ -85,7 +85,7 @@ BEGIN
   -- Posts created: 5pt each, max 250pts (50 posts)
   SELECT COUNT(*)::INTEGER INTO v_post_count
   FROM posts
-  WHERE user_id = p_user_id;
+  WHERE producer_id = p_user_id;
   v_points := v_points + LEAST(v_post_count * 5, 250);
 
   -- Matches/conversations: 10pt each, max 200pts (20 matches)
@@ -111,7 +111,7 @@ BEGIN
   -- Reports received penalty: -20pt each (no limit)
   SELECT COUNT(*)::INTEGER INTO v_report_count
   FROM reports
-  WHERE reported_user_id = p_user_id;
+  WHERE reported_id = p_user_id AND reported_type = 'user';
   v_points := v_points - (v_report_count * 20);
 
   -- Ensure points don't go negative

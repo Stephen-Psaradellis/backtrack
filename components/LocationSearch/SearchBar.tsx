@@ -664,12 +664,21 @@ const styles = StyleSheet.create({
 
   // Suggestions Container
   suggestionsContainer: {
-    marginTop: 8,
+    position: 'absolute',
+    top: 52,
+    left: 0,
+    right: 0,
     backgroundColor: COLORS.cardBackground,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: 'hidden',
+    zIndex: 100,
+    elevation: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
 
   // Suggestion Item

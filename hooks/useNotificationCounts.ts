@@ -159,7 +159,7 @@ export function useNotificationCounts(): UseNotificationCountsResult {
       }
     } catch (err) {
       // Silently fail - not critical
-      console.warn('Failed to mark notifications as seen:', err)
+      if (__DEV__) console.warn('Failed to mark notifications as seen:', err)
     }
   }, [])
 

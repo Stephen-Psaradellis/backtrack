@@ -39,7 +39,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { Avatar, type StoredAvatar } from 'react-native-bitmoji'
+import { AvatarDisplay } from './AvatarDisplay'
+import type { StoredAvatar } from '../types/avatar'
 import { Button, OutlineButton } from './Button'
 import { PressableScale } from './native/PressableScale'
 import { lightFeedback } from '../lib/haptics'
@@ -356,7 +357,7 @@ export const LocationCard = memo(function LocationCard({
                     key={index}
                     style={[styles.avatarThumb, { marginLeft: index > 0 ? -8 : 0 }]}
                   >
-                    <Avatar config={avatar.config} size="sm" />
+                    <AvatarDisplay avatar={avatar} size="sm" />
                   </View>
                 ))}
                 {recentAvatars.length > 3 && (

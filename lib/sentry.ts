@@ -52,16 +52,18 @@ function getSentryDsn(): string | undefined {
     dsn.includes('YOUR_PROJECT_ID') ||
     dsn === 'https://YOUR_SENTRY_DSN_HERE@sentry.io/YOUR_PROJECT_ID'
   ) {
-    console.error(
-      '[Sentry] DSN is set to placeholder value. ' +
-      'Get your real DSN from https://sentry.io/settings/[your-org]/projects/[your-project]/keys/'
-    )
+    if (__DEV__) {
+      console.error(
+        '[Sentry] DSN is set to placeholder value. ' +
+        'Get your real DSN from https://sentry.io/settings/[your-org]/projects/[your-project]/keys/'
+      )
+    }
     return undefined
   }
 
   // Basic DSN format validation (should be https://...)
   if (!dsn.startsWith('https://')) {
-    console.error('[Sentry] Invalid DSN format. DSN must start with https://')
+    if (__DEV__) console.error('[Sentry] Invalid DSN format. DSN must start with https://')
     return undefined
   }
 
@@ -199,11 +201,8 @@ let isInitialized = false
  * ```
  */
 export function initSentry(routingInstrumentation?: any): boolean {
-  // Don't initialize in development mode
+  // Skip Sentry in development and test environments
   if (__DEV__) {
-    if (process.env.NODE_ENV !== 'test') {
-      console.log('[Sentry] Skipped initialization in development mode')
-    }
     return false
   }
 
@@ -215,21 +214,20 @@ export function initSentry(routingInstrumentation?: any): boolean {
   // Get DSN from environment
   const dsn = getSentryDsn()
   if (!dsn) {
-    console.warn('[Sentry] No DSN configured. Error tracking is disabled.')
+    if (__DEV__) console.warn('[Sentry] No DSN configured. Error tracking is disabled.')
     return false
   }
 
   try {
     Sentry.init({
       dsn,
-      // Set environment based on build type
       environment: __DEV__ ? 'development' : 'production',
       // Set release version for source map association
       release: `backtrack@${getAppVersion()}`,
       // Set dist for identifying specific builds
       dist: getBuildNumber(),
-      // Performance monitoring: 100% in dev, 20% in production
-      tracesSampleRate: __DEV__ ? 1.0 : 0.2,
+      // Performance monitoring: 10% in dev, 20% in production
+      tracesSampleRate: __DEV__ ? 0.1 : 0.2,
       // Profiling: sample 20% of traces for detailed performance analysis
       profilesSampleRate: 0.2,
       // React Navigation integration (v7 API)
@@ -257,8 +255,8 @@ export function initSentry(routingInstrumentation?: any): boolean {
         }
         return event
       },
-      // Don't send events in debug builds
-      enabled: !__DEV__,
+      // Enable in all environments (dev uses reduced sampling)
+      enabled: true,
       // Attach stack traces to messages
       attachStacktrace: true,
       // Enable automatic performance tracing
@@ -274,7 +272,7 @@ export function initSentry(routingInstrumentation?: any): boolean {
     isInitialized = true
     return true
   } catch (error) {
-    console.error('[Sentry] Failed to initialize:', error)
+    if (__DEV__) console.error('[Sentry] Failed to initialize:', error)
     return false
   }
 }
@@ -308,10 +306,9 @@ export function captureException(
   error: unknown,
   context?: Record<string, unknown>
 ): void {
-  // In development, just log the error
+  // In development, also log to console
   if (__DEV__) {
-    console.error('[Sentry] Would capture exception:', error, context)
-    return
+    console.error('[Sentry] Capturing exception:', error, context)
   }
 
   // Ensure error is an Error object
@@ -347,10 +344,9 @@ export function captureMessage(
   level: Sentry.SeverityLevel = 'info',
   context?: Record<string, unknown>
 ): void {
-  // In development, just log the message
+  // In development, also log to console
   if (__DEV__) {
-    console.log(`[Sentry] Would capture message (${level}):`, message, context)
-    return
+    console.log(`[Sentry] Capturing message (${level}):`, message, context)
   }
 
   // Redact sensitive data from context
@@ -385,8 +381,7 @@ export function captureMessage(
  */
 export function setUserContext(userId: string | null): void {
   if (__DEV__) {
-    console.log('[Sentry] Would set user context:', userId ? 'user_set' : 'cleared')
-    return
+    console.log('[Sentry] Setting user context:', userId ? 'user_set' : 'cleared')
   }
 
   if (userId) {
@@ -434,7 +429,7 @@ export function addBreadcrumb(
   data?: Record<string, unknown>
 ): void {
   if (__DEV__) {
-    return // Don't clutter dev console
+    // Still send breadcrumbs in dev, just don't log them
   }
 
   // Redact sensitive data
@@ -492,7 +487,7 @@ export function reportReactError(
   // Always attempt to report - don't gate on __DEV__ since ErrorBoundary
   // errors are critical and we need visibility even if init state is unclear
   if (!isInitialized) {
-    console.error('[Sentry] Not initialized, cannot report:', error.message)
+    if (__DEV__) console.error('[Sentry] Not initialized, cannot report:', error.message)
     return
   }
 

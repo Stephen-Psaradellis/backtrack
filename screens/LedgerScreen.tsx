@@ -47,8 +47,6 @@ import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyLedger, ErrorState } from '../components/EmptyState'
 import { Button } from '../components/Button'
 import { supabase, sortPostsWithDeprioritization } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
-import { getHiddenUserIds } from '../lib/moderation'
 import { TimeFilterOption, getFilterCutoffDate } from '../utils/dateTime'
 import { darkTheme } from '../constants/glassStyles'
 import type { LedgerRouteProp, MainStackNavigationProp } from '../navigation/types'
@@ -101,12 +99,14 @@ export function LedgerScreen(): React.ReactNode {
 
   const route = useRoute<LedgerRouteProp>()
   const navigation = useNavigation<MainStackNavigationProp>()
-  const { userId } = useAuth()
-
   // Check-in state for tiered matching
   const { activeCheckin, isCheckedInAt } = useCheckin()
 
   const { locationId: rawLocationId, locationName } = route.params
+
+  // Validate route params to prevent injection from deep links
+  // Allow UUIDs and Google Place IDs (alphanumeric + dashes/underscores)
+  const validatedLocationId = rawLocationId && /^[a-zA-Z0-9_-]+$/.test(rawLocationId) ? rawLocationId : null
 
   // ---------------------------------------------------------------------------
   // STATE
@@ -119,6 +119,7 @@ export function LedgerScreen(): React.ReactNode {
   const [error, setError] = useState<string | null>(null)
   const [sortOrder] = useState<SortOption>('newest')
   const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('any_time')
+  const hasLoadedOnce = React.useRef(false)
 
   // ---------------------------------------------------------------------------
   // LOCATION ID RESOLUTION
@@ -130,25 +131,25 @@ export function LedgerScreen(): React.ReactNode {
    */
   useEffect(() => {
     const resolveLocationId = async () => {
-      if (!rawLocationId) {
+      if (!validatedLocationId) {
         setResolvedLocationId('')
         setLoading(false)
         return
       }
 
       // Check if it looks like a UUID (contains dashes in UUID format)
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawLocationId)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(validatedLocationId)
 
       if (isUuid) {
         // It's already a UUID, use it directly
-        setResolvedLocationId(rawLocationId)
+        setResolvedLocationId(validatedLocationId)
       } else {
         // It's likely a Google Place ID, look up the location
         try {
           const { data, error: lookupError } = await supabase
             .from('locations')
             .select('id')
-            .eq('google_place_id', rawLocationId)
+            .eq('google_place_id', validatedLocationId)
             .single()
 
           if (lookupError || !data) {
@@ -165,10 +166,10 @@ export function LedgerScreen(): React.ReactNode {
     }
 
     resolveLocationId()
-  }, [rawLocationId])
+  }, [validatedLocationId])
 
   // Use resolved ID for queries, fallback to raw ID for display purposes
-  const locationId = resolvedLocationId ?? rawLocationId
+  const locationId = resolvedLocationId ?? validatedLocationId
 
   // ---------------------------------------------------------------------------
   // DATA FETCHING
@@ -193,22 +194,16 @@ export function LedgerScreen(): React.ReactNode {
       return
     }
 
-    if (!isRefresh) {
+    // Only show full loading spinner on initial load, not filter changes
+    if (!isRefresh && !hasLoadedOnce.current) {
       setLoading(true)
     }
     setError(null)
 
     try {
-      // Get list of hidden user IDs (blocked users + users who blocked us)
-      let hiddenUserIds: string[] = []
-      if (userId) {
-        const hiddenResult = await getHiddenUserIds(userId)
-        if (hiddenResult.success) {
-          hiddenUserIds = hiddenResult.hiddenUserIds
-        }
-      }
-
-      // Build query for posts at this location
+      // Build the posts query
+      // Note: RLS policy "posts_select_active_not_blocked" already filters
+      // blocked users, so no need for separate getHiddenUserIds() call
       let query = supabase
         .from('posts')
         .select('*')
@@ -217,18 +212,9 @@ export function LedgerScreen(): React.ReactNode {
         .order('created_at', { ascending: sortOrder === 'oldest' })
         .limit(PAGE_SIZE)
 
-      // Filter out posts from hidden users if there are any
-      if (hiddenUserIds.length > 0) {
-        // Use 'not in' filter to exclude posts from blocked users
-        query = query.not('producer_id', 'in', `(${hiddenUserIds.join(',')})`)
-      }
-
       // Apply time-based filtering if a filter is selected (not 'any_time')
       const cutoffDate = getFilterCutoffDate(timeFilter)
       if (cutoffDate) {
-        // Filter by sighting_date if present, otherwise fall back to created_at
-        // This uses an OR condition: posts with sighting_date >= cutoff OR
-        // posts without sighting_date but created_at >= cutoff
         query = query.or(
           `sighting_date.gte.${cutoffDate.toISOString()},and(sighting_date.is.null,created_at.gte.${cutoffDate.toISOString()})`
         )
@@ -255,8 +241,9 @@ export function LedgerScreen(): React.ReactNode {
     } finally {
       setLoading(false)
       setRefreshing(false)
+      hasLoadedOnce.current = true
     }
-  }, [resolvedLocationId, sortOrder, userId, timeFilter])
+  }, [resolvedLocationId, sortOrder, timeFilter])
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -305,8 +292,8 @@ export function LedgerScreen(): React.ReactNode {
    * Pass the raw location ID (could be UUID or Google Place ID)
    */
   const handleCreatePost = useCallback(() => {
-    navigation.navigate('CreatePost', { locationId: rawLocationId })
-  }, [navigation, rawLocationId])
+    navigation.navigate('CreatePost', { locationId: validatedLocationId || '' })
+  }, [navigation, validatedLocationId])
 
   /**
    * Handle retry on error
@@ -356,17 +343,14 @@ export function LedgerScreen(): React.ReactNode {
     // Use resolvedLocationId (UUID) for check-in, not rawLocationId (could be Google Place ID)
     const isCheckedInHere = resolvedLocationId ? isCheckedInAt(resolvedLocationId) : false
     if (isCheckedInHere && activeCheckin?.verified) {
-      subtitleText += ' • You\'re checked in'
+      subtitleText += ' \u2022 Checked in'
     }
 
     return (
       <View testID="ledger-header">
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>{locationName}</Text>
-              <Text style={styles.headerSubtitle}>{subtitleText}</Text>
-            </View>
+            <Text style={styles.headerSubtitle}>{subtitleText}</Text>
             {resolvedLocationId ? (
               <CheckinButton
                 locationId={resolvedLocationId}
@@ -423,7 +407,7 @@ export function LedgerScreen(): React.ReactNode {
         <Button
           title="Create a Post"
           onPress={handleCreatePost}
-          variant="outline"
+          variant="primary"
           size="small"
           testID="ledger-create-post-button"
         />
@@ -545,24 +529,14 @@ const styles = StyleSheet.create({
 
   // Header styles
   header: {
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 4,
-    marginBottom: 8,
   },
   headerTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
-  },
-  headerTitleContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 15,

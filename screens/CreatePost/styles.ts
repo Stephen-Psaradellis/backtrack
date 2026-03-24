@@ -11,7 +11,7 @@
  * Step-specific styles remain co-located with their respective components.
  */
 
-import { StyleSheet, Platform, Dimensions } from 'react-native'
+import { StyleSheet, Platform, Dimensions, useWindowDimensions } from 'react-native'
 import { darkTheme } from '../../constants/glassStyles'
 
 // ============================================================================
@@ -19,9 +19,19 @@ import { darkTheme } from '../../constants/glassStyles'
 // ============================================================================
 
 /**
- * Screen dimensions
+ * Screen dimensions - use useScreenWidth() hook in components for reactive updates.
+ * This static value is kept for backward compatibility in non-component code.
  */
 export const SCREEN_WIDTH = Dimensions.get('window').width
+
+/**
+ * Hook to get reactive screen width that updates on orientation change.
+ * Prefer this over the static SCREEN_WIDTH constant.
+ */
+export function useScreenWidth(): number {
+  const { width } = useWindowDimensions()
+  return width
+}
 
 /**
  * Common colors used throughout the CreatePost flow - Dark theme

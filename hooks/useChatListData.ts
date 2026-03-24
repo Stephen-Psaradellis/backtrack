@@ -31,7 +31,7 @@ import { useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { queryKeys } from './useQueryConfig'
-import type { StoredAvatar } from 'react-native-bitmoji'
+import type { StoredAvatar } from '../types/avatar'
 import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/supabase-js'
 import type { Message } from '../types/database'
 

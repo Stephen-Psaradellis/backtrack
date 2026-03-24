@@ -15,8 +15,8 @@
 
 import type { User, Session, SupabaseClient } from '@supabase/supabase-js'
 import type { Profile, Post, Location as LocationEntity } from '../../types/database'
-import type { StoredAvatar } from 'react-native-bitmoji'
-import { DEFAULT_MALE_CONFIG } from 'react-native-bitmoji'
+import type { StoredAvatar } from '../../types/avatar'
+import { DEFAULT_MALE_CONFIG } from '../../types/avatar'
 
 // ============================================================================
 // TYPE DEFINITIONS

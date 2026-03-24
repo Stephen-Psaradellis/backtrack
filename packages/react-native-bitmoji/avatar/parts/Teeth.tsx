@@ -74,16 +74,35 @@ const SingleTooth = memo(function SingleTooth({
   const fillColor = variant === 'gold' ? GOLD_COLOR : variant === 'silver' ? SILVER_COLOR : `url(#${gradientId})`;
 
   return (
-    <Rect
-      x={x}
-      y={y}
-      width={width}
-      height={toothHeight}
-      rx={0.5}
-      fill={fillColor}
-      stroke={adjustBrightness(color, -20)}
-      strokeWidth={0.2}
-    />
+    <G>
+      <Rect
+        x={x}
+        y={y}
+        width={width}
+        height={toothHeight}
+        rx={0.8}
+        fill={fillColor}
+        stroke={adjustBrightness(color, -20)}
+        strokeWidth={0.2}
+      />
+      {/* Tooth enamel highlight */}
+      <Rect
+        x={x + 0.3}
+        y={y + 0.3}
+        width={width * 0.4}
+        height={toothHeight * 0.5}
+        rx={0.3}
+        fill="#ffffff"
+        opacity={0.15}
+      />
+      {/* Subtle tooth line suggestion - hint at individual teeth */}
+      <Path
+        d={`M${x + width},${y + 0.5} L${x + width},${y + toothHeight - 0.5}`}
+        stroke={adjustBrightness(color, -15)}
+        strokeWidth={0.15}
+        opacity={0.3}
+      />
+    </G>
   );
 });
 
@@ -104,10 +123,10 @@ export const Teeth = memo(function Teeth({
   const teethHighlight = adjustBrightness(color, 15);
   const teethShadow = adjustBrightness(color, -15);
 
-  // Base tooth dimensions
-  const toothWidth = 2.2;
+  // Base tooth dimensions - reduced width to match smaller mouth
+  const toothWidth = 1.9; // reduced from 2.2
   const toothHeight = 3;
-  const toothGap = 0.3;
+  const toothGap = 0.25; // slightly reduced gap
   const startX = 50 - (toothWidth * 3 + toothGap * 2.5) + offsetX;
   const upperY = 62 + offsetY;
   const lowerY = 67 + offsetY;
@@ -318,12 +337,30 @@ export const Teeth = memo(function Teeth({
         </LinearGradient>
       </Defs>
 
+      {/* Gumline shadow - subtle gradient from gum pink to tooth area */}
+      {show !== 'lower' && (
+        <Path
+          d={`M${startX - 0.5},${upperY} L${startX + 6 * (toothWidth + toothGap)},${upperY}`}
+          stroke={GUM_COLOR}
+          strokeWidth={0.6}
+          opacity={0.4}
+        />
+      )}
+
       {/* Render appropriate teeth based on style */}
       {style === TeethStyle.GRILLZ || style === TeethStyle.GRILLZ_DIAMOND ? (
         renderGrillz()
       ) : (
         <>
           {renderUpperTeeth()}
+          {/* Subtle tooth separation lines */}
+          {show !== 'lower' && (
+            <G opacity={0.15} stroke={teethShadow} strokeWidth={0.25}>
+              <Path d={`M${startX + 2 * (toothWidth + toothGap)},${upperY + 0.5} L${startX + 2 * (toothWidth + toothGap)},${upperY + toothHeight - 0.5}`} />
+              <Path d={`M${startX + 3 * (toothWidth + toothGap)},${upperY + 0.5} L${startX + 3 * (toothWidth + toothGap)},${upperY + toothHeight - 0.5}`} />
+              <Path d={`M${startX + 4 * (toothWidth + toothGap)},${upperY + 0.5} L${startX + 4 * (toothWidth + toothGap)},${upperY + toothHeight - 0.5}`} />
+            </G>
+          )}
           {renderLowerTeeth()}
           {renderBraces()}
           {renderFangs()}

@@ -358,16 +358,29 @@ function SingleShoe({
 
   return (
     <G transform={`translate(${position.x}, ${position.y})`}>
-      {/* Main shoe body */}
-      {paths.main && <Path d={paths.main} fill={`url(#${gradientId})`} stroke={adjustBrightness(color, -40)} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />}
-
-      {/* Sole */}
-      {paths.sole && <Path d={paths.sole} fill={`url(#${soleGradientId})`} />}
+      {/* Sole (rendered first, below shoe body) */}
+      {paths.sole && (
+        <>
+          <Path d={paths.sole} fill={`url(#${soleGradientId})`} stroke="#0a0a0a" strokeWidth={0.5} />
+          {/* Sole tread detail */}
+          <Path
+            d={paths.sole}
+            stroke="#2a2a2a"
+            strokeWidth={0.3}
+            strokeDasharray="1,1.5"
+            fill="none"
+            opacity={0.6}
+          />
+        </>
+      )}
 
       {/* Heel for heeled shoes */}
-      {paths.heel && <Path d={paths.heel} fill={shadowColor} />}
+      {paths.heel && <Path d={paths.heel} fill={shadowColor} stroke="#0a0a0a" strokeWidth={0.5} />}
 
-      {/* Shoe details */}
+      {/* Main shoe body */}
+      {paths.main && <Path d={paths.main} fill={`url(#${gradientId})`} stroke={adjustBrightness(color, -40)} strokeWidth={0.8} strokeLinecap="round" strokeLinejoin="round" />}
+
+      {/* Shoe details (seams, panels) */}
       {paths.details.map((detail, index) => (
         <Path
           key={index}
@@ -391,7 +404,19 @@ function SingleShoe({
         />
       ))}
 
-      {/* Highlight */}
+      {/* Ankle transition shadow (where leg meets shoe) */}
+      {paths.main && (
+        <Ellipse
+          cx={0}
+          cy={-2}
+          rx={3.5}
+          ry={1.2}
+          fill={shadowColor}
+          opacity={0.15}
+        />
+      )}
+
+      {/* Highlight for shoe material sheen */}
       {paths.main && (
         <Ellipse
           cx={isLeft ? 3 : -3}

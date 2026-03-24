@@ -5,7 +5,7 @@
  * Defines step configuration, form data structure, and validation constants.
  */
 
-import type { StoredAvatar } from 'react-native-bitmoji'
+import type { StoredAvatar } from '../../types/avatar'
 import type { LocationItem } from '../../components/LocationPicker'
 import type { TimeGranularity } from '../../types/database'
 

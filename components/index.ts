@@ -63,23 +63,9 @@ export {
   type LocationItem,
 } from './LocationPicker'
 
-// SVG Avatar System (bitmoji-style)
-export {
-  Avatar as BitmojiAvatar,
-  FullBodyAvatar,
-} from 'react-native-bitmoji'
-
-export type {
-  AvatarConfig,
-  StoredAvatar,
-  AvatarSize as BitmojiAvatarSize,
-} from 'react-native-bitmoji'
-
-export {
-  DEFAULT_MALE_CONFIG,
-  DEFAULT_FEMALE_CONFIG,
-  AVATAR_SIZE_MAP,
-} from 'react-native-bitmoji'
+// Avatar Display (AI-generated avatar system)
+export { AvatarDisplay } from './AvatarDisplay'
+export type { AvatarDisplayProps } from './AvatarDisplay'
 
 // Selfie Camera
 export {

@@ -15,7 +15,7 @@
 // IMPORTANT: gesture-handler must be imported at the very top
 import 'react-native-gesture-handler'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './hooks/useQueryConfig'
 import { initSentry, setUserContext, wrapWithSentry } from './lib/sentry'
@@ -38,6 +38,7 @@ LogBox.ignoreLogs([
 ])
 
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { CheckinProvider } from './contexts/CheckinContext'
 import { ToastProvider, useToast } from './contexts/ToastContext'
 import { AppNavigator, getNavigationIntegration, navigationRef } from './navigation/AppNavigator'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -237,6 +238,7 @@ function NotificationRegistration({ children }: { children: React.ReactNode }): 
   const { userId, isAuthenticated } = useAuth()
   const [notificationsReady, setNotificationsReady] = useState(false)
   const notificationResponseListener = useRef<{ remove: () => void } | null>(null)
+  const pendingNavigation = useRef<{ screen: string; params: Record<string, unknown> } | null>(null)
 
   // Wait for notifications module to be ready
   useEffect(() => {
@@ -265,6 +267,68 @@ function NotificationRegistration({ children }: { children: React.ReactNode }): 
     }
   }, [isAuthenticated, userId, notificationsReady])
 
+  /**
+   * Navigate from notification data, queuing if navigation isn't ready yet.
+   */
+  const navigateFromNotification = useCallback((screen: string, params: Record<string, unknown>) => {
+    const nav = navigationRef.current
+    if (nav && nav.isReady()) {
+      nav.navigate('Main' as never, { screen, params } as never)
+    } else {
+      // Navigation not ready — queue it and retry once it mounts
+      pendingNavigation.current = { screen, params }
+      const interval = setInterval(() => {
+        const n = navigationRef.current
+        if (n && n.isReady()) {
+          clearInterval(interval)
+          if (pendingNavigation.current) {
+            n.navigate('Main' as never, {
+              screen: pendingNavigation.current.screen,
+              params: pendingNavigation.current.params,
+            } as never)
+            pendingNavigation.current = null
+          }
+        }
+      }, 200)
+      // Give up after 5 seconds
+      setTimeout(() => clearInterval(interval), 5000)
+    }
+  }, [])
+
+  /**
+   * Process notification response data into navigation action
+   */
+  const handleNotificationResponse = useCallback((data: Record<string, unknown>) => {
+    if (data.type === 'checkin_prompt' && data.locationId && data.locationName) {
+      navigateFromNotification('Ledger', {
+        locationId: data.locationId as string,
+        locationName: data.locationName as string,
+      })
+    } else if (data.url && typeof data.url === 'string') {
+      const matchPost = data.url.match(/backtrack:\/\/post\/(.+)/)
+      const matchConvo = data.url.match(/backtrack:\/\/conversation\/(.+)/)
+      if (matchPost) {
+        navigateFromNotification('PostDetail', { postId: matchPost[1] })
+      } else if (matchConvo) {
+        navigateFromNotification('Chat', { conversationId: matchConvo[1] })
+      }
+    }
+  }, [navigateFromNotification])
+
+  // Handle the notification that cold-started the app (if any)
+  useEffect(() => {
+    if (!notificationsReady || !Notifications) return
+
+    Notifications.getLastNotificationResponseAsync?.().then((response) => {
+      if (response) {
+        const data = response.notification.request.content.data
+        if (data) handleNotificationResponse(data as Record<string, unknown>)
+      }
+    }).catch(() => {
+      // Ignore — not all SDK versions support this
+    })
+  }, [notificationsReady, handleNotificationResponse])
+
   // Set up notification response listener for deep-linking
   useEffect(() => {
     if (!notificationsReady || !Notifications) return
@@ -275,36 +339,7 @@ function NotificationRegistration({ children }: { children: React.ReactNode }): 
         (response) => {
           const data = response.notification.request.content.data
           if (!data) return
-
-          try {
-            if (data.type === 'checkin_prompt' && data.locationId && data.locationName) {
-              // Navigate to the location's check-in screen
-              navigationRef.current?.navigate('Main', {
-                screen: 'Ledger',
-                params: {
-                  locationId: data.locationId as string,
-                  locationName: data.locationName as string,
-                },
-              })
-            } else if (data.url && typeof data.url === 'string') {
-              // Handle deep-link URLs from push notifications (match/message)
-              const matchPost = data.url.match(/backtrack:\/\/post\/(.+)/)
-              const matchConvo = data.url.match(/backtrack:\/\/conversation\/(.+)/)
-              if (matchPost) {
-                navigationRef.current?.navigate('Main', {
-                  screen: 'PostDetail',
-                  params: { postId: matchPost[1] },
-                })
-              } else if (matchConvo) {
-                navigationRef.current?.navigate('Main', {
-                  screen: 'Chat',
-                  params: { conversationId: matchConvo[1] },
-                })
-              }
-            }
-          } catch {
-            // Navigation not ready yet - app will show default screen
-          }
+          handleNotificationResponse(data as Record<string, unknown>)
         }
       )
     } catch (error) {
@@ -393,14 +428,16 @@ function App() {
         >
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <ToastProvider>
-                <OfflineQueueProcessor>
-                  <NotificationRegistration>
-                    <AppNavigator />
-                    <StatusBar style="light" />
-                  </NotificationRegistration>
-                </OfflineQueueProcessor>
-              </ToastProvider>
+              <CheckinProvider>
+                <ToastProvider>
+                  <OfflineQueueProcessor>
+                    <NotificationRegistration>
+                      <AppNavigator />
+                      <StatusBar style="light" />
+                    </NotificationRegistration>
+                  </OfflineQueueProcessor>
+                </ToastProvider>
+              </CheckinProvider>
             </AuthProvider>
           </QueryClientProvider>
         </ErrorBoundary>

@@ -33,8 +33,8 @@ import {
   Animated,
   ViewStyle,
 } from 'react-native'
-import { Avatar } from 'react-native-bitmoji'
 import { darkTheme } from '../constants/glassStyles'
+import { AvatarDisplay } from './AvatarDisplay'
 import type { StoredAvatar } from '../types/avatar'
 
 // ============================================================================
@@ -210,8 +210,8 @@ export function AvatarComparison({
             </Text>
             <View style={styles.avatarWrapper}>
               {targetAvatar ? (
-                <Avatar
-                  config={targetAvatar.config}
+                <AvatarDisplay
+                  avatar={targetAvatar}
                   size="lg"
                   testID={`${testID}-target-avatar`}
                 />
@@ -240,8 +240,8 @@ export function AvatarComparison({
             </Text>
             <View style={styles.avatarWrapper}>
               {myAvatar ? (
-                <Avatar
-                  config={myAvatar.config}
+                <AvatarDisplay
+                  avatar={myAvatar}
                   size="lg"
                   testID={`${testID}-my-avatar`}
                 />

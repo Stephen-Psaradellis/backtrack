@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { G, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { G, Path, Defs, LinearGradient, Stop, Ellipse } from 'react-native-svg';
 import { LegPose, BodyType, SvgPartProps } from '../types';
 import {
   getProportions,
@@ -55,8 +55,9 @@ function getLegPaths(pose: LegPose, bodyType: BodyType): LegPath {
   const aw = proportions.ankleWidth;
   const kneeWidth = (tw + cw) / 2; // knee width is midpoint between thigh and calf
 
-  const leftHipX = centerX - hipWidth / 4;
-  const rightHipX = centerX + hipWidth / 4;
+  const legGap = 1.5; // extra separation so legs don't touch
+  const leftHipX = centerX - hipWidth / 4 - legGap;
+  const rightHipX = centerX + hipWidth / 4 + legGap;
 
   // Helper to create tapered thigh with organic curves
   const createThigh = (
@@ -83,7 +84,7 @@ function getLegPaths(pose: LegPose, bodyType: BodyType): LegPath {
     `;
   };
 
-  // Helper to create tapered calf with organic curves
+  // Helper to create tapered calf with organic curves and ankle taper
   const createCalf = (
     kneeX: number,
     kneeY: number,
@@ -94,15 +95,18 @@ function getLegPaths(pose: LegPose, bodyType: BodyType): LegPath {
     const dir = isLeft ? -1 : 1;
     const midY = (kneeY + ankleY) / 2;
     const midX = (kneeX + ankleX) / 2;
-    const bulge = 1.5; // calf muscle bulge
+    const bulge = 2.5; // calf muscle bulge (prominent at upper 1/3)
+    // Upper calf control point shifted higher for more realistic gastrocnemius shape
+    const upperCalfY = kneeY + (ankleY - kneeY) * 0.3;
+    // Dramatic taper to ankle
     return `
       M ${kneeX - dir * kneeWidth / 2} ${kneeY}
-      C ${midX - dir * (kneeWidth / 2 + bulge)} ${midY - (ankleY - kneeY) * 0.2},
-        ${midX - dir * (aw / 2 + bulge * 0.5)} ${midY + (ankleY - kneeY) * 0.1},
+      C ${midX - dir * (kneeWidth / 2 + bulge)} ${upperCalfY},
+        ${midX - dir * (aw / 2 + 1.2)} ${midY + (ankleY - kneeY) * 0.2},
         ${ankleX - dir * aw / 2} ${ankleY}
       L ${ankleX + dir * aw / 2} ${ankleY}
-      C ${midX + dir * (aw / 2 + bulge * 0.5)} ${midY + (ankleY - kneeY) * 0.1},
-        ${midX + dir * (kneeWidth / 2 + bulge)} ${midY - (ankleY - kneeY) * 0.2},
+      C ${midX + dir * (aw / 2 + 1.2)} ${midY + (ankleY - kneeY) * 0.2},
+        ${midX + dir * (kneeWidth / 2 + bulge)} ${upperCalfY},
         ${kneeX + dir * kneeWidth / 2} ${kneeY}
       Z
     `;
@@ -372,8 +376,8 @@ export function Legs({ pose, bodyType, skinTone, scale = 1 }: LegsProps) {
         d={paths.leftThigh}
         fill={skinTone}
         stroke={outlineColor}
-        strokeWidth={proportions.outlineWidth}
-        strokeOpacity={SHADING.outlineOpacity}
+        strokeWidth={proportions.outlineWidth * 0.6}
+        strokeOpacity={SHADING.outlineOpacity * 0.5}
       />
       <Path
         d={paths.leftThigh}
@@ -384,8 +388,8 @@ export function Legs({ pose, bodyType, skinTone, scale = 1 }: LegsProps) {
         d={paths.leftCalf}
         fill={skinTone}
         stroke={outlineColor}
-        strokeWidth={proportions.outlineWidth}
-        strokeOpacity={SHADING.outlineOpacity}
+        strokeWidth={proportions.outlineWidth * 0.6}
+        strokeOpacity={SHADING.outlineOpacity * 0.5}
       />
       <Path
         d={paths.leftCalf}
@@ -398,8 +402,8 @@ export function Legs({ pose, bodyType, skinTone, scale = 1 }: LegsProps) {
         d={paths.rightThigh}
         fill={skinTone}
         stroke={outlineColor}
-        strokeWidth={proportions.outlineWidth}
-        strokeOpacity={SHADING.outlineOpacity}
+        strokeWidth={proportions.outlineWidth * 0.6}
+        strokeOpacity={SHADING.outlineOpacity * 0.5}
       />
       <Path
         d={paths.rightThigh}
@@ -410,13 +414,45 @@ export function Legs({ pose, bodyType, skinTone, scale = 1 }: LegsProps) {
         d={paths.rightCalf}
         fill={skinTone}
         stroke={outlineColor}
-        strokeWidth={proportions.outlineWidth}
-        strokeOpacity={SHADING.outlineOpacity}
+        strokeWidth={proportions.outlineWidth * 0.6}
+        strokeOpacity={SHADING.outlineOpacity * 0.5}
       />
       <Path
         d={paths.rightCalf}
         fill={`url(#${ids.rightCalfGradient})`}
         stroke="none"
+      />
+
+      {/* Knee joint hints - shadow line and subtle contour */}
+      <Ellipse
+        cx={paths.leftKnee.x}
+        cy={paths.leftKnee.y}
+        rx={proportions.calfWidth / 2 + 1.5}
+        ry={2.2}
+        fill={shadowColor}
+        opacity={0.1}
+      />
+      <Path
+        d={`M ${paths.leftKnee.x - 3} ${paths.leftKnee.y} Q ${paths.leftKnee.x} ${paths.leftKnee.y + 0.5} ${paths.leftKnee.x + 3} ${paths.leftKnee.y}`}
+        fill="none"
+        stroke={shadowColor}
+        strokeWidth={0.4}
+        opacity={0.15}
+      />
+      <Ellipse
+        cx={paths.rightKnee.x}
+        cy={paths.rightKnee.y}
+        rx={proportions.calfWidth / 2 + 1.5}
+        ry={2.2}
+        fill={shadowColor}
+        opacity={0.1}
+      />
+      <Path
+        d={`M ${paths.rightKnee.x - 3} ${paths.rightKnee.y} Q ${paths.rightKnee.x} ${paths.rightKnee.y + 0.5} ${paths.rightKnee.x + 3} ${paths.rightKnee.y}`}
+        fill="none"
+        stroke={shadowColor}
+        strokeWidth={0.4}
+        opacity={0.15}
       />
     </G>
   );

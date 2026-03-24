@@ -103,13 +103,13 @@ export const VenueStories = memo(function VenueStories({
       })
 
       if (error) {
-        console.error('Error fetching venue stories:', error)
+        if (__DEV__) console.error('Error fetching venue stories:', error)
         return
       }
 
       setStories(data || [])
     } catch (err) {
-      console.error('Unexpected error fetching venue stories:', err)
+      if (__DEV__) console.error('Unexpected error fetching venue stories:', err)
     } finally {
       setLoading(false)
     }
@@ -200,7 +200,7 @@ export const VenueStories = memo(function VenueStories({
       })
 
       if (error) {
-        console.error('Error creating story:', error)
+        if (__DEV__) console.error('Error creating story:', error)
         Alert.alert(
           'Error',
           'Failed to post your story. Make sure you have checked in at this venue within the last 24 hours.'
@@ -213,7 +213,7 @@ export const VenueStories = memo(function VenueStories({
       handleCloseModal()
       fetchStories()
     } catch (err) {
-      console.error('Unexpected error creating story:', err)
+      if (__DEV__) console.error('Unexpected error creating story:', err)
       Alert.alert('Error', 'An unexpected error occurred. Please try again.')
     } finally {
       setSubmitting(false)

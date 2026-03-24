@@ -5,7 +5,7 @@
  * These types mirror the Supabase PostgreSQL schema defined in migrations.
  */
 
-import type { StoredAvatar } from 'react-native-bitmoji'
+import type { StoredAvatar } from './avatar'
 
 // ============================================================================
 // COMMON TYPES

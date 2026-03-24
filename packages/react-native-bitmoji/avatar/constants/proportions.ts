@@ -1,7 +1,7 @@
 /**
  * Avatar Proportion Constants
  *
- * 6.5-head-tall cartoon proportion system (Bitmoji-style).
+ * 7-head-tall cartoon proportion system (Bitmoji-style).
  * ALL body measurements are derived from HEAD_UNIT.
  * ViewBox is 0-100 x, 0-200 y.
  */
@@ -9,8 +9,8 @@
 import { BodyType } from '../types';
 
 // === Core Unit ===
-export const HEAD_UNIT = 15; // head height in viewBox units
-export const BODY_HEADS = 6.5; // total height = 6.5 heads
+export const HEAD_UNIT = 13; // head height in viewBox units
+export const BODY_HEADS = 7; // total height = 7 heads
 export const VIEWBOX_WIDTH = 100;
 export const VIEWBOX_HEIGHT = 200;
 export const CENTER_X = 50;
@@ -18,7 +18,7 @@ export const CENTER_X = 50;
 // === Vertical Layout (top to bottom) ===
 // Head occupies ~1.2 heads at top of viewBox
 export const HEAD_TOP_Y = 8;
-export const HEAD_CENTER_Y = HEAD_TOP_Y + HEAD_UNIT * 0.6; // ~17
+export const HEAD_CENTER_Y = HEAD_TOP_Y + HEAD_UNIT * 0.7; // ~17.1 (eyes moved down ~8%)
 export const CHIN_Y = HEAD_TOP_Y + HEAD_UNIT * 1.2; // ~26
 export const NECK_Y = CHIN_Y + 4; // ~30 — but in full body, head is shifted up
 

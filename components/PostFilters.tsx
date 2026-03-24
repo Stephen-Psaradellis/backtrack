@@ -90,20 +90,20 @@ interface FilterChipProps {
 // ============================================================================
 
 /**
- * iOS-style colors
+ * Dark theme colors matching app design system
  */
 const COLORS = {
   primary: '#FF6B47',
   secondary: '#8E8E93',
-  background: '#F2F2F7',
-  cardBackground: '#FFFFFF',
-  border: '#E5E5EA',
-  text: '#000000',
-  textSecondary: '#8E8E93',
+  background: 'transparent',
+  cardBackground: 'rgba(255, 255, 255, 0.06)',
+  border: 'rgba(255, 255, 255, 0.10)',
+  text: 'rgba(255, 255, 255, 0.7)',
+  textSecondary: 'rgba(255, 255, 255, 0.5)',
   selectedBackground: '#FF6B47',
   selectedText: '#FFFFFF',
-  disabledBackground: '#E5E5EA',
-  disabledText: '#C7C7CC',
+  disabledBackground: 'rgba(255, 255, 255, 0.04)',
+  disabledText: 'rgba(255, 255, 255, 0.2)',
 } as const
 
 // ============================================================================
@@ -227,9 +227,7 @@ const styles = StyleSheet.create({
   // Container
   container: {
     backgroundColor: COLORS.background,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
+    paddingVertical: 10,
   },
 
   // Scroll content

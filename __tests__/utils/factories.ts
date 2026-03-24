@@ -5,7 +5,7 @@
  * All factories return valid mock objects with sensible defaults and allow partial overrides.
  */
 
-import type { StoredAvatar } from 'react-native-bitmoji'
+import type { StoredAvatar } from '../../types/avatar'
 import type {
   Profile,
   Conversation,
@@ -75,28 +75,19 @@ export function getTimestampOffset(hours: number): Timestamp {
  * Create a mock StoredAvatar object
  */
 export function createMockAvatar(overrides?: Partial<StoredAvatar>): StoredAvatar {
+  const now = Date.now()
   return {
     id: generateTestUUID(),
-    metadata: {
-      version: 2,
-      created: getCurrentTimestamp(),
-      ...overrides?.metadata,
+    generatedAvatar: {
+      url: 'https://example.com/avatar.svg',
+      svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#F5D0C5"/></svg>',
+      prompt: 'flat vector avatar portrait, androgynous, medium skin',
+      style: 'digital_illustration',
+      createdAt: now,
+      updatedAt: now,
     },
-    features: {
-      body: 'body_01',
-      face: 'face_01',
-      hair: 'hair_01',
-      outfit: 'outfit_01',
-      accessories: [],
-      ...overrides?.features,
-    },
-    colors: {
-      skinTone: '#F5D0C5',
-      hairColor: '#4A3428',
-      outfitPrimary: '#2C5F8D',
-      outfitSecondary: '#FFFFFF',
-      ...overrides?.colors,
-    },
+    createdAt: now,
+    updatedAt: now,
     ...overrides,
   }
 }

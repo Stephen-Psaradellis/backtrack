@@ -45,7 +45,7 @@ import { useLocation } from '../../hooks/useLocation'
 import { useVisitedLocations, useNearbyLocations } from '../../hooks/useNearbyLocations'
 import { supabase } from '../../lib/supabase'
 import { recordLocationVisit } from '../../lib/utils/geo'
-import type { StoredAvatar } from 'react-native-bitmoji'
+import type { StoredAvatar } from '../../types/avatar'
 import type { MainStackNavigationProp, CreatePostRouteProp } from '../../navigation/types'
 import type { Location as LocationEntity, LocationWithVisit } from '../../lib/types'
 import type { TimeGranularity } from '../../types/database'
@@ -89,6 +89,10 @@ export interface UseCreatePostFormResult {
   currentStep: CreatePostStep
   /** Whether form is currently submitting */
   isSubmitting: boolean
+  /** Whether user can post at selected location (null = no location selected) */
+  canPost: boolean | null
+  /** Whether we're checking post permission */
+  checkingCanPost: boolean
 
   // ---------------------------------------------------------------------------
   // Computed Values
@@ -220,6 +224,8 @@ export function useCreatePostForm(
   const [formData, setFormData] = useState<CreatePostFormData>(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [preselectedLocation, setPreselectedLocation] = useState<LocationEntity | null>(null)
+  const [canPost, setCanPost] = useState<boolean | null>(null)
+  const [checkingCanPost, setCheckingCanPost] = useState(false)
 
   // Fetch recently visited locations (within 3 hours) for post creation
   const {
@@ -296,13 +302,13 @@ export function useCreatePostForm(
   const isCurrentStepValid = useMemo(() => {
     switch (currentStep) {
       case 'scene':
-        // Scene requires location, time is optional
+        // Scene requires location + permission to post, time is optional
         // If a date is set, validate it's not in the future
         if (formData.sightingDate) {
           const validation = validateSightingDate(formData.sightingDate)
           if (!validation.valid) return false
         }
-        return formData.location !== null
+        return formData.location !== null && canPost === true
       case 'moment':
         // Moment requires avatar and note (min length)
         return formData.targetAvatar !== null && formData.note.trim().length >= MIN_NOTE_LENGTH
@@ -339,6 +345,41 @@ export function useCreatePostForm(
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedLocationId])
+
+  /**
+   * Check if user can create a post at the selected location
+   */
+  useEffect(() => {
+    const locationId = formData.location?.id
+    if (!locationId) {
+      setCanPost(null)
+      return
+    }
+
+    let cancelled = false
+    setCheckingCanPost(true)
+
+    supabase
+      .rpc('can_create_post', { p_location_id: locationId })
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          setCanPost(false)
+        } else {
+          setCanPost(data === true)
+        }
+        setCheckingCanPost(false)
+
+        if (!error && data !== true) {
+          Alert.alert(
+            'Cannot Post Here',
+            'You must be a regular at this location or have checked in within the last 12 hours to create a post.',
+          )
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [formData.location?.id])
 
   /**
    * Record check-ins for nearby locations when user views the location list.
@@ -559,7 +600,8 @@ export function useCreatePostForm(
           .single()
 
         if (locationError) {
-          throw new Error('Failed to save location')
+          if (__DEV__) console.error('Location insert error:', locationError)
+          throw new Error(`Failed to save location: ${locationError.message}`)
         }
 
         locationId = newLocation.id
@@ -590,7 +632,12 @@ export function useCreatePostForm(
 
       if (postError) {
         trackEvent(AnalyticsEvent.POST_CREATION_ERROR, { error_type: 'database_error' })
-        throw new Error('Failed to create post')
+        if (__DEV__) console.error('Post creation error:', postError)
+        // RLS violation means user isn't checked in or a regular at this location
+        if (postError.code === '42501') {
+          throw new Error('You must check in at this location before creating a post.')
+        }
+        throw new Error(`Failed to create post: ${postError.message}`)
       }
 
       // Track successful post creation (no PII - just metadata)
@@ -637,6 +684,8 @@ export function useCreatePostForm(
     formData,
     currentStep,
     isSubmitting,
+    canPost,
+    checkingCanPost,
 
     // Computed Values
     currentStepIndex,

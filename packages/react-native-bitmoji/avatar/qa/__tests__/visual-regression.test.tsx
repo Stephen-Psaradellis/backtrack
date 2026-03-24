@@ -7,7 +7,6 @@
 
 import React from 'react';
 import { render as rtlRender } from '@testing-library/react';
-import renderer from 'react-test-renderer';
 import { Avatar } from '../../Avatar';
 import { FullBodyAvatar } from '../../FullBodyAvatar';
 import {
@@ -476,8 +475,8 @@ describe('FullBodyAvatar snapshots', () => {
   Object.values(BodyType).forEach(bodyType => {
     it(`renders ${bodyType} body type`, () => {
       const config = { ...DEFAULT_MALE_CONFIG, bodyType };
-      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
-      expect(tree.toJSON()).toBeTruthy();
+      const { toJSON } = render(<FullBodyAvatar config={config} size="md" />);
+      expect(toJSON()).toBeTruthy();
     });
   });
 
@@ -486,8 +485,8 @@ describe('FullBodyAvatar snapshots', () => {
     Object.values(BodyType).forEach(bodyType => {
       it(`renders ${clothing} on ${bodyType}`, () => {
         const config = { ...DEFAULT_MALE_CONFIG, bodyType, clothing };
-        const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
-        expect(tree.toJSON()).toBeTruthy();
+        const { toJSON } = render(<FullBodyAvatar config={config} size="md" />);
+        expect(toJSON()).toBeTruthy();
       });
     });
   });
@@ -496,8 +495,8 @@ describe('FullBodyAvatar snapshots', () => {
   Object.values(ArmPose).forEach(armPose => {
     it(`renders ${armPose} arm pose`, () => {
       const config = { ...DEFAULT_MALE_CONFIG, armPose };
-      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
-      expect(tree.toJSON()).toBeTruthy();
+      const { toJSON } = render(<FullBodyAvatar config={config} size="md" />);
+      expect(toJSON()).toBeTruthy();
     });
   });
 
@@ -505,8 +504,8 @@ describe('FullBodyAvatar snapshots', () => {
   Object.values(LegPose).forEach(legPose => {
     it(`renders ${legPose} leg pose`, () => {
       const config = { ...DEFAULT_MALE_CONFIG, legPose };
-      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
-      expect(tree.toJSON()).toBeTruthy();
+      const { toJSON } = render(<FullBodyAvatar config={config} size="md" />);
+      expect(toJSON()).toBeTruthy();
     });
   });
 
@@ -514,8 +513,8 @@ describe('FullBodyAvatar snapshots', () => {
   Object.values(ShoeStyle).forEach(shoeStyle => {
     it(`renders ${shoeStyle} shoe style`, () => {
       const config = { ...DEFAULT_MALE_CONFIG, shoeStyle };
-      const tree = renderer.create(<FullBodyAvatar config={config} size="md" />);
-      expect(tree.toJSON()).toBeTruthy();
+      const { toJSON } = render(<FullBodyAvatar config={config} size="md" />);
+      expect(toJSON()).toBeTruthy();
     });
   });
 });

@@ -4,6 +4,7 @@
  * Tests the check-in management hook.
  */
 
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
@@ -28,7 +29,24 @@ vi.mock('../../lib/supabase', () => ({
   },
 }))
 
+// Mock AuthContext so CheckinProvider can access userId
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({ userId: 'test-user-id', isAuthenticated: true }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
+// Mock background location service (used by CheckinContext on checkout)
+vi.mock('../../services/backgroundLocation', () => ({
+  isBackgroundLocationRunning: vi.fn().mockResolvedValue(false),
+  startBackgroundLocationTracking: vi.fn().mockResolvedValue({ success: true }),
+}))
+
 import { useCheckin } from '../useCheckin'
+import { CheckinProvider } from '../../contexts/CheckinContext'
+
+// Wrapper that provides CheckinContext
+const wrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement(CheckinProvider, null, children)
 
 describe('useCheckin', () => {
   beforeEach(() => {
@@ -60,13 +78,13 @@ describe('useCheckin', () => {
 
   describe('initial state', () => {
     it('should start with loading true', () => {
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       expect(result.current.isLoading).toBe(true)
     })
 
     it('should start with no active checkin', async () => {
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -76,7 +94,7 @@ describe('useCheckin', () => {
     })
 
     it('should fetch active checkin on mount', async () => {
-      renderHook(() => useCheckin())
+      renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(mockRpc).toHaveBeenCalledWith('get_active_checkin')
@@ -101,7 +119,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.activeCheckin).toEqual(mockCheckin)
@@ -132,7 +150,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -168,7 +186,7 @@ describe('useCheckin', () => {
           )
       )
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -184,7 +202,7 @@ describe('useCheckin', () => {
     it('should fail when location permission denied', async () => {
       mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -216,7 +234,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -249,7 +267,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -267,7 +285,7 @@ describe('useCheckin', () => {
     it('should handle exception during check-in', async () => {
       mockGetCurrentPositionAsync.mockRejectedValue(new Error('GPS unavailable'))
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -301,7 +319,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -327,7 +345,7 @@ describe('useCheckin', () => {
           )
       )
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -357,7 +375,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -389,7 +407,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -418,7 +436,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -457,7 +475,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.activeCheckin).toEqual(mockCheckin)
@@ -487,7 +505,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -522,7 +540,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.activeCheckin).not.toBeNull()
@@ -533,7 +551,7 @@ describe('useCheckin', () => {
     })
 
     it('should return false when not checked in anywhere', async () => {
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -555,7 +573,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.error).toBe('Database error')
@@ -581,7 +599,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.error).toBe('Database error')
@@ -596,7 +614,7 @@ describe('useCheckin', () => {
         return Promise.resolve({ data: null, error: null })
       })
 
-      const { result } = renderHook(() => useCheckin())
+      const { result } = renderHook(() => useCheckin(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.error).toBe('Failed to fetch active check-in')

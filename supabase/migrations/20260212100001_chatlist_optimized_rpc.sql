@@ -163,10 +163,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION get_user_conversations_with_details(UUID) IS
-  'Get all conversations for a user with complete details in one query. ' ||
-  'Includes last message, unread count, other user profile, post avatar, and location. ' ||
-  'Respects blocking - excludes conversations with blocked users. ' ||
-  'SECURITY: Validates auth.uid() matches p_user_id.';
+  'Get all conversations for a user with complete details in one query. Includes last message, unread count, other user profile, post avatar, and location. Respects blocking - excludes conversations with blocked users. SECURITY: Validates auth.uid() matches p_user_id.';
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION get_user_conversations_with_details(UUID) TO authenticated;

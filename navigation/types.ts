@@ -9,7 +9,8 @@ import type { NativeStackScreenProps, NativeStackNavigationProp } from '@react-n
 import type { BottomTabScreenProps, BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { CompositeScreenProps, CompositeNavigationProp, NavigatorScreenParams } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
-import type { AvatarConfig } from '../types/avatar'
+import type { AvatarConfig, GeneratedAvatar } from '../types/avatar'
+import type { AvatarTraits } from '../lib/recraftApi'
 
 // ============================================================================
 // STACK NAVIGATOR PARAM LISTS
@@ -56,6 +57,12 @@ export type MainStackParamList = {
     /** Whether avatar creation is required (true for first-time setup, false for editing) */
     required?: boolean
   }
+  /** Avatar selection screen (choose from generated options) */
+  AvatarSelection: {
+    avatars: GeneratedAvatar[]
+    traits: AvatarTraits
+    required?: boolean
+  }
   /** Legal documents screen (privacy policy, terms of service) */
   Legal: {
     /** Type of legal document to display */
@@ -88,8 +95,8 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   /** Feed tab - Browse all posts */
   FeedTab: undefined
-  /** My Spots tab - User's posts and matches with notification badges */
-  MySpotsTab: undefined
+  /** History tab - Chronological activity feed with deep-linked items */
+  HistoryTab: undefined
   /** Map tab - Map view with location discovery */
   MapTab: undefined
   /** Chat list tab - All conversations */
@@ -119,8 +126,8 @@ export type FeedTabScreenProps = CompositeScreenProps<
   NativeStackScreenProps<MainStackParamList>
 >
 
-export type MySpotsTabScreenProps = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'MySpotsTab'>,
+export type HistoryTabScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'HistoryTab'>,
   NativeStackScreenProps<MainStackParamList>
 >
 
@@ -201,12 +208,13 @@ export const SCREENS = {
   PostDetail: 'PostDetail' as const,
   Chat: 'Chat' as const,
   AvatarCreator: 'AvatarCreator' as const,
+  AvatarSelection: 'AvatarSelection' as const,
   Legal: 'Legal' as const,
   Settings: 'Settings' as const,
 
   // Tabs (5-tab icon-only layout)
   FeedTab: 'FeedTab' as const,
-  MySpotsTab: 'MySpotsTab' as const,
+  HistoryTab: 'HistoryTab' as const,
   MapTab: 'MapTab' as const,
   ChatsTab: 'ChatsTab' as const,
   ProfileTab: 'ProfileTab' as const,
@@ -217,7 +225,7 @@ export const SCREENS = {
  */
 export const TAB_ICONS = {
   FeedTab: { focused: 'home', unfocused: 'home-outline' },
-  MySpotsTab: { focused: 'notifications', unfocused: 'notifications-outline' },
+  HistoryTab: { focused: 'notifications', unfocused: 'notifications-outline' },
   MapTab: { focused: 'map', unfocused: 'map-outline' },
   ChatsTab: { focused: 'chatbubbles', unfocused: 'chatbubbles-outline' },
   ProfileTab: { focused: 'person', unfocused: 'person-outline' },
@@ -228,7 +236,7 @@ export const TAB_ICONS = {
  */
 export const TAB_LABELS: Record<keyof MainTabParamList, string> = {
   FeedTab: 'Feed',
-  MySpotsTab: 'My Spots',
+  HistoryTab: 'History',
   MapTab: 'Map',
   ChatsTab: 'Chats',
   ProfileTab: 'Profile',
@@ -300,6 +308,7 @@ export function isMainScreen(screenName: string): screenName is keyof MainStackP
     'PostDetail',
     'Chat',
     'AvatarCreator',
+    'AvatarSelection',
     'Settings',
   ]
   return mainScreens.includes(screenName as keyof MainStackParamList)

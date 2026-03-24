@@ -38,7 +38,7 @@ import {
 } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 
-import { Avatar } from 'react-native-bitmoji'
+import { AvatarDisplay } from '../components/AvatarDisplay'
 import { successFeedback, errorFeedback, warningFeedback } from '../lib/haptics'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { ErrorState } from '../components/EmptyState'
@@ -104,7 +104,9 @@ export function PostDetailScreen(): React.ReactNode {
   const navigation = useNavigation<MainStackNavigationProp>()
   const { userId } = useAuth()
 
-  const { postId } = route.params
+  const { postId: rawPostId } = route.params
+  // Validate postId from deep links
+  const postId = rawPostId && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawPostId) ? rawPostId : null
 
   // ---------------------------------------------------------------------------
   // STATE
@@ -128,6 +130,11 @@ export function PostDetailScreen(): React.ReactNode {
    * Fetch post details and user profile from Supabase
    */
   const fetchPost = useCallback(async (isRefresh = false) => {
+    if (!postId) {
+      setError('Invalid post ID.')
+      setLoading(false)
+      return
+    }
     if (!isRefresh) {
       setLoading(true)
     }
@@ -392,8 +399,8 @@ export function PostDetailScreen(): React.ReactNode {
       {/* Avatar Section */}
       <View style={styles.avatarSection} testID="post-detail-avatar-section">
         {post.target_avatar_v2 && (
-          <Avatar
-            config={post.target_avatar_v2.config}
+          <AvatarDisplay
+            avatar={post.target_avatar_v2}
             size="lg"
           />
         )}
@@ -521,6 +528,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   avatarSection: {
     alignItems: 'center',

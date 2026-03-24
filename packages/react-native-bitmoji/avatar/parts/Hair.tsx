@@ -350,8 +350,9 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
         {/* Main hair gradient - top to bottom */}
         <LinearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
           <Stop offset="0%" stopColor={highlight} />
-          <Stop offset="30%" stopColor={hairColor} />
-          <Stop offset="70%" stopColor={shadow} />
+          <Stop offset="25%" stopColor={hairColor} />
+          <Stop offset="50%" stopColor={hairColor} />
+          <Stop offset="75%" stopColor={shadow} />
           <Stop offset="100%" stopColor={deepShadow} />
         </LinearGradient>
         {/* Highlight for top shine */}
@@ -377,10 +378,10 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
           case HairStyle.SHAVED:
             return (
               <G>
-                <Path d="M25,30 Q25,12 50,10 Q75,12 75,30 Q75,35 70,38 L30,38 Q25,35 25,30 Z" fill={hairColor} opacity={0.25} />
+                <Path d="M22,33 Q22,10 50,8 Q78,10 78,33 Q78,38 72,41 L28,41 Q22,38 22,33 Z" fill={hairColor} opacity={0.25} />
                 {/* Stubble texture */}
-                <Path d="M28,28 Q50,22 72,28" fill="none" stroke={hairColor} strokeWidth={0.5} strokeDasharray="1,2" opacity={0.4} />
-                <Path d="M30,32 Q50,28 70,32" fill="none" stroke={hairColor} strokeWidth={0.5} strokeDasharray="1,2" opacity={0.3} />
+                <Path d="M26,30 Q50,22 74,30" fill="none" stroke={hairColor} strokeWidth={0.5} strokeDasharray="1,2" opacity={0.4} />
+                <Path d="M28,35 Q50,30 72,35" fill="none" stroke={hairColor} strokeWidth={0.5} strokeDasharray="1,2" opacity={0.3} />
               </G>
             );
 
@@ -388,102 +389,159 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Depth shadow layer behind main shape */}
-                <Path d="M24,33 Q24,13 50,11 Q76,13 76,33 Q76,37 73,39 L66,29 Q50,23 34,29 L27,39 Q24,37 24,33 Z" fill={deepShadow} opacity={0.18} />
+                <Path d="M21,36 Q21,11 50,9 Q79,11 79,36 Q79,40 75,42 L66,32 Q50,27 34,32 L25,42 Q21,40 21,36 Z" fill={deepShadow} opacity={0.18} />
                 {/* Main shape with natural hairline edge - slightly irregular bottom */}
-                <Path d="M25,32 Q25,14 50,12 Q75,14 75,32 Q75,36 72,38 L68,36 Q62,34 56,35 Q50,30 44,35 Q38,34 32,36 L28,38 Q25,36 25,32 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M22,34 Q22,12 50,10 Q78,12 78,34 Q78,39 74,41 L68,39 Q62,37 56,38 Q50,35 44,38 Q38,37 32,39 L26,41 Q22,39 22,34 Z" fill={`url(#${mainGradientId})`} />
                 {/* Crown highlight ellipse */}
-                <Ellipse cx={50} cy={20} rx={14} ry={6} fill={highlight} opacity={0.18} />
+                <Ellipse cx={50} cy={20} rx={16} ry={7} fill={highlight} opacity={0.18} />
                 {/* Buzzcut texture lines */}
-                <Path d="M30,28 Q50,20 70,28" fill="none" stroke={highlight} strokeWidth={0.5} opacity={0.3} />
-                <Path d="M32,24 Q50,18 68,24" fill="none" stroke={highlight} strokeWidth={0.5} opacity={0.25} />
+                <Path d="M28,30 Q50,20 72,30" fill="none" stroke={highlight} strokeWidth={0.5} opacity={0.3} />
+                <Path d="M30,26 Q50,18 70,26" fill="none" stroke={highlight} strokeWidth={0.5} opacity={0.25} />
                 {/* Side fade */}
-                <Path d="M26,32 Q28,28 30,32" fill={shadow} opacity={0.3} />
-                <Path d="M74,32 Q72,28 70,32" fill={shadow} opacity={0.3} />
+                <Path d="M23,34 Q26,30 28,34" fill={shadow} opacity={0.3} />
+                <Path d="M77,34 Q74,30 72,34" fill={shadow} opacity={0.3} />
               </G>
             );
 
           case HairStyle.SHORT_CREW:
             return (
               <G>
-                {/* Depth shadow layer behind main shape */}
-                <Path d="M23,35 Q23,11 50,9 Q77,11 77,35 Q77,39 73,41 L69,33 Q50,25 31,33 L27,41 Q23,39 23,35 Z" fill={deepShadow} opacity={0.18} />
-                {/* Main shape with natural hairline edge */}
-                <Path d="M24,34 Q24,12 50,10 Q76,12 76,34 Q76,38 72,40 L68,36 Q62,34 56,35 Q50,28 44,35 Q38,34 32,36 L28,40 Q24,38 24,34 Z" fill={`url(#${mainGradientId})`} />
-                {/* Top highlight */}
-                <Path d="M30,22 Q50,14 70,22 Q50,18 30,22 Z" fill={`url(#${highlightGradientId})`} />
-                {/* Crown highlight ellipse */}
-                <Ellipse cx={50} cy={18} rx={16} ry={7} fill={highlight} opacity={0.16} />
-                {/* Hair texture strands */}
-                <HairStrands startX={30} startY={20} endX={70} endY={28} count={12} color={highlight} opacity={0.2} />
-                {/* Side definition */}
-                <Path d="M26,30 Q28,26 32,28" fill="none" stroke={shadow} strokeWidth={1} opacity={0.25} />
-                <Path d="M74,30 Q72,26 68,28" fill="none" stroke={shadow} strokeWidth={1} opacity={0.25} />
+                {/* LAYER 1: Depth shadow layer */}
+                <Path d="M20,38 Q20,9 50,7 Q80,9 80,38 Q80,42 75,44 L69,36 Q50,29 31,36 L25,44 Q20,42 20,38 Z" fill={deepShadow} opacity={0.18} />
+
+                {/* LAYER 2: Main shape with natural hairline */}
+                <Path d="M21,37 Q21,10 50,8 Q79,10 79,37 Q79,41 74,43 L68,39 Q62,37 56,38 Q50,33 44,38 Q38,37 32,39 L26,43 Q21,41 21,37 Z" fill={`url(#${mainGradientId})`} />
+
+                {/* LAYER 3: Wispy hairline strands */}
+                <Path d="M28,39 L27,42" fill="none" stroke={hairColor} strokeWidth={1} opacity={0.6} />
+                <Path d="M35,37 L34,40" fill="none" stroke={hairColor} strokeWidth={1} opacity={0.6} />
+                <Path d="M42,36 L41,39" fill="none" stroke={hairColor} strokeWidth={1} opacity={0.6} />
+                <Path d="M58,36 L59,39" fill="none" stroke={hairColor} strokeWidth={1} opacity={0.6} />
+                <Path d="M65,37 L66,40" fill="none" stroke={hairColor} strokeWidth={1} opacity={0.6} />
+                <Path d="M72,39 L73,42" fill="none" stroke={hairColor} strokeWidth={1} opacity={0.6} />
+
+                {/* LAYER 4: Crown highlight ellipse */}
+                <Ellipse cx={50} cy={18} rx={18} ry={8} fill={highlight} opacity={0.16} />
+
+                {/* LAYER 5: Hair texture strands - layered groups */}
+                <HairStrands startX={28} startY={20} endX={72} endY={30} count={12} color={shadow} opacity={0.15} />
+                <HairStrands startX={30} startY={18} endX={70} endY={28} count={10} color={highlight} opacity={0.2} />
+
+                {/* LAYER 6: Side fade definition */}
+                <Path d="M23,33 Q26,28 30,30" fill="none" stroke={shadow} strokeWidth={1} opacity={0.25} />
+                <Path d="M77,33 Q74,28 70,30" fill="none" stroke={shadow} strokeWidth={1} opacity={0.25} />
               </G>
             );
 
           case HairStyle.SHORT_SPIKY:
             return (
               <G>
-                {/* Base spikes with gradient */}
-                <Path d="M28,35 L32,8 L38,28 L45,5 L50,25 L55,6 L62,28 L68,10 L72,35 Q50,30 28,35 Z" fill={`url(#${mainGradientId})`} />
-                {/* Spike highlights */}
-                <Path d="M33,12 L36,26" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
-                <Path d="M46,10 L49,24" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
-                <Path d="M56,10 L54,24" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
-                <Path d="M67,14 L64,26" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
-                {/* Spike shadows */}
-                <Path d="M35,14 L38,28" fill="none" stroke={deepShadow} strokeWidth={1} opacity={0.3} />
-                <Path d="M48,12 L50,25" fill="none" stroke={deepShadow} strokeWidth={1} opacity={0.3} />
-                <Path d="M58,12 L62,28" fill="none" stroke={deepShadow} strokeWidth={1} opacity={0.3} />
-                {/* Base texture */}
-                <Path d="M30,34 Q50,30 70,34" fill="none" stroke={shadow} strokeWidth={2} opacity={0.2} />
+                {/* LAYER 1: Shadow base for depth */}
+                <Path d="M24,38 L29,10 L36,32 L43,5 L50,27 L57,6 L64,32 L71,12 L76,38 Q50,34 24,38 Z" fill={deepShadow} opacity={0.2} />
+
+                {/* LAYER 2: Base spikes with gradient */}
+                <Path d="M24,38 L29,8 L36,30 L43,3 L50,25 L57,4 L64,30 L71,10 L76,38 Q50,32 24,38 Z" fill={`url(#${mainGradientId})`} />
+
+                {/* LAYER 3: Individual spike shapes using bezier curves */}
+                <Path d="M28,10 C27,8 28,6 29,8 C30,6 31,8 30,10 L28,10 Z" fill={hairColor} opacity={0.9} />
+                <Path d="M42,5 C41,3 42,1 43,3 C44,1 45,3 44,5 L42,5 Z" fill={hairColor} opacity={0.9} />
+                <Path d="M49,25 C48,23 49,21 50,23 C51,21 52,23 51,25 L49,25 Z" fill={hairColor} opacity={0.9} />
+                <Path d="M56,6 C55,4 56,2 57,4 C58,2 59,4 58,6 L56,6 Z" fill={hairColor} opacity={0.9} />
+                <Path d="M70,12 C69,10 70,8 71,10 C72,8 73,10 72,12 L70,12 Z" fill={hairColor} opacity={0.9} />
+
+                {/* LAYER 4: Spike shadows on sides */}
+                <Path d="M32,14 L36,30" fill="none" stroke={deepShadow} strokeWidth={1.5} opacity={0.3} />
+                <Path d="M46,10 L50,25" fill="none" stroke={deepShadow} strokeWidth={1.5} opacity={0.3} />
+                <Path d="M60,10 L64,30" fill="none" stroke={deepShadow} strokeWidth={1.5} opacity={0.3} />
+
+                {/* LAYER 5: Spike highlight strands in center */}
+                <Path d="M30,12 L34,28" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
+                <Path d="M44,8 L48,24" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
+                <Path d="M58,8 L55,24" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
+                <Path d="M70,14 L66,28" fill="none" stroke={brightHighlight} strokeWidth={1.5} opacity={0.4} />
+
+                {/* LAYER 6: Bright spike tips */}
+                <Path d="M29,8 L29,10" fill="none" stroke={brightHighlight} strokeWidth={1.2} opacity={0.5} />
+                <Path d="M43,3 L43,5" fill="none" stroke={brightHighlight} strokeWidth={1.2} opacity={0.5} />
+                <Path d="M57,4 L57,6" fill="none" stroke={brightHighlight} strokeWidth={1.2} opacity={0.5} />
+                <Path d="M71,10 L71,12" fill="none" stroke={brightHighlight} strokeWidth={1.2} opacity={0.5} />
+
+                {/* LAYER 7: Base texture and hairline */}
+                <Path d="M26,37 Q50,32 74,37" fill="none" stroke={shadow} strokeWidth={2} opacity={0.2} />
               </G>
             );
 
           case HairStyle.SHORT_CURLY:
             return (
               <G>
-                {/* Base curly shape */}
-                <Path d="M22,36 Q20,25 25,18 Q28,12 35,10 Q45,6 55,10 Q65,8 72,18 Q78,25 76,36 Q72,32 68,34 Q65,28 60,30 Q55,24 50,28 Q45,24 40,30 Q35,28 32,34 Q28,32 22,36 Z" fill={hairColor} />
-                {/* Individual curls with depth */}
-                <Circle cx="30" cy="22" r="5" fill={hairColor} />
-                <Circle cx="30" cy="22" r="3" fill={highlight} opacity={0.3} />
-                <Circle cx="40" cy="17" r="5" fill={hairColor} />
-                <Circle cx="40" cy="17" r="3" fill={highlight} opacity={0.3} />
-                <Circle cx="50" cy="15" r="5.5" fill={hairColor} />
-                <Circle cx="50" cy="15" r="3.5" fill={highlight} opacity={0.35} />
-                <Circle cx="60" cy="17" r="5" fill={hairColor} />
-                <Circle cx="60" cy="17" r="3" fill={highlight} opacity={0.3} />
-                <Circle cx="70" cy="22" r="5" fill={hairColor} />
-                <Circle cx="70" cy="22" r="3" fill={highlight} opacity={0.3} />
-                {/* Extra small curls for texture */}
-                <Circle cx="35" cy="26" r="3" fill={shadow} opacity={0.4} />
-                <Circle cx="45" cy="22" r="3" fill={shadow} opacity={0.4} />
-                <Circle cx="55" cy="22" r="3" fill={shadow} opacity={0.4} />
-                <Circle cx="65" cy="26" r="3" fill={shadow} opacity={0.4} />
-                {/* Top highlights */}
-                <CurlyTexture cx={50} cy={20} radius={25} color={highlight} count={10} />
+                {/* LAYER 1: Shadow base */}
+                <Path d="M19,39 Q17,25 22,16 Q26,10 33,8 Q43,4 55,8 Q65,6 73,16 Q80,25 78,39 Q74,35 70,37 Q67,30 62,32 Q57,26 50,30 Q43,26 38,32 Q33,30 30,37 Q26,35 19,39 Z" fill={deepShadow} opacity={0.15} />
+
+                {/* LAYER 2: Main curly base */}
+                <Path d="M19,39 Q17,25 22,16 Q26,10 33,8 Q43,4 55,8 Q65,6 73,16 Q80,25 78,39 Q74,35 70,37 Q67,30 62,32 Q57,26 50,30 Q43,26 38,32 Q33,30 30,37 Q26,35 19,39 Z" fill={hairColor} />
+
+                {/* LAYER 3: Main curl groups - larger curls with depth */}
+                <Circle cx="27" cy="24" r="6" fill={hairColor} />
+                <Circle cx="27" cy="24" r="3.5" fill={highlight} opacity={0.3} />
+                <Circle cx="38" cy="17" r="5.5" fill={hairColor} />
+                <Circle cx="38" cy="17" r="3" fill={highlight} opacity={0.3} />
+                <Circle cx="50" cy="14" r="6" fill={hairColor} />
+                <Circle cx="50" cy="14" r="4" fill={highlight} opacity={0.35} />
+                <Circle cx="62" cy="17" r="5.5" fill={hairColor} />
+                <Circle cx="62" cy="17" r="3" fill={highlight} opacity={0.3} />
+                <Circle cx="73" cy="24" r="6" fill={hairColor} />
+                <Circle cx="73" cy="24" r="3.5" fill={highlight} opacity={0.3} />
+
+                {/* LAYER 4: Small shadow curls for depth */}
+                <Circle cx="33" cy="28" r="3.5" fill={shadow} opacity={0.4} />
+                <Circle cx="44" cy="24" r="3.5" fill={shadow} opacity={0.4} />
+                <Circle cx="56" cy="24" r="3.5" fill={shadow} opacity={0.4} />
+                <Circle cx="67" cy="28" r="3.5" fill={shadow} opacity={0.4} />
+
+                {/* LAYER 5: Highlight curls on top */}
+                <Circle cx="32" cy="20" r="2.5" fill={brightHighlight} opacity={0.3} />
+                <Circle cx="45" cy="16" r="2.5" fill={brightHighlight} opacity={0.3} />
+                <Circle cx="55" cy="16" r="2.5" fill={brightHighlight} opacity={0.3} />
+                <Circle cx="68" cy="20" r="2.5" fill={brightHighlight} opacity={0.3} />
+
+                {/* LAYER 6: Curly texture overlay */}
+                <CurlyTexture cx={50} cy={20} radius={28} color={highlight} count={10} />
               </G>
             );
 
           case HairStyle.MEDIUM_MESSY:
             return (
               <G>
-                {/* Main messy shape with irregular hairline */}
-                <Path d="M20,44 Q18,25 25,16 Q35,6 50,8 Q65,6 75,16 Q82,25 80,44 L75,40 Q72,36 70,38 Q62,34 56,35 Q50,32 44,35 Q38,34 30,38 Q28,36 25,40 Z" fill={`url(#${mainGradientId})`} />
-                {/* Messy strands sticking up */}
-                <Path d="M25,20 L22,10" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
-                <Path d="M25,20 L23,11" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
-                <Path d="M35,15 L33,4" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
-                <Path d="M35,15 L34,5" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
-                <Path d="M50,14 L50,2" fill="none" stroke={hairColor} strokeWidth={5} strokeLinecap="round" />
-                <Path d="M50,14 L50,3" fill="none" stroke={highlight} strokeWidth={2.5} strokeLinecap="round" opacity={0.4} />
-                <Path d="M65,15 L67,4" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
-                <Path d="M65,15 L66,5" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
-                <Path d="M75,20 L78,10" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
-                <Path d="M75,20 L77,11" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
-                {/* Messy texture */}
-                <HairStrands startX={25} startY={25} endX={75} endY={38} count={15} color={shadow} opacity={0.2} curvature={5} />
+                {/* LAYER 1: Shadow base */}
+                <Path d="M17,47 Q15,25 22,14 Q33,4 50,6 Q67,4 78,14 Q85,25 83,47 L77,43 Q74,38 72,40 Q64,36 58,37 Q52,34 46,37 Q40,36 32,40 Q30,38 27,43 Z" fill={deepShadow} opacity={0.15} />
+
+                {/* LAYER 2: Main messy shape with irregular hairline */}
+                <Path d="M17,47 Q15,25 22,14 Q33,4 50,6 Q67,4 78,14 Q85,25 83,47 L77,43 Q74,38 72,40 Q64,36 58,37 Q52,34 46,37 Q40,36 32,40 Q30,38 27,43 Z" fill={`url(#${mainGradientId})`} />
+
+                {/* LAYER 3: Dark base strands sticking up */}
+                <Path d="M22,18 L18,8" fill="none" stroke={shadow} strokeWidth={5} strokeLinecap="round" opacity={0.3} />
+                <Path d="M35,13 L33,2" fill="none" stroke={shadow} strokeWidth={5} strokeLinecap="round" opacity={0.3} />
+                <Path d="M50,12 L50,0" fill="none" stroke={shadow} strokeWidth={6} strokeLinecap="round" opacity={0.3} />
+                <Path d="M65,13 L67,2" fill="none" stroke={shadow} strokeWidth={5} strokeLinecap="round" opacity={0.3} />
+                <Path d="M78,18 L82,8" fill="none" stroke={shadow} strokeWidth={5} strokeLinecap="round" opacity={0.3} />
+
+                {/* LAYER 4: Main color strands */}
+                <Path d="M22,18 L18,8" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
+                <Path d="M35,13 L33,2" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
+                <Path d="M50,12 L50,0" fill="none" stroke={hairColor} strokeWidth={5} strokeLinecap="round" />
+                <Path d="M65,13 L67,2" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
+                <Path d="M78,18 L82,8" fill="none" stroke={hairColor} strokeWidth={4} strokeLinecap="round" />
+
+                {/* LAYER 5: Highlight strands on top */}
+                <Path d="M22,18 L19,9" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
+                <Path d="M35,13 L34,3" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
+                <Path d="M50,12 L50,1" fill="none" stroke={highlight} strokeWidth={2.5} strokeLinecap="round" opacity={0.4} />
+                <Path d="M65,13 L66,3" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
+                <Path d="M78,18 L81,9" fill="none" stroke={highlight} strokeWidth={2} strokeLinecap="round" opacity={0.4} />
+
+                {/* LAYER 6: Internal messy texture */}
+                <HairStrands startX={22} startY={25} endX={78} endY={40} count={15} color={shadow} opacity={0.2} curvature={5} />
+                <HairStrands startX={26} startY={22} endX={74} endY={38} count={12} color={highlight} opacity={0.15} curvature={4} />
               </G>
             );
 
@@ -491,11 +549,17 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Top crown cap with natural hairline - the long draping part is in HairBehind */}
-                <Path d="M22,42 Q20,15 50,10 Q80,15 78,42 Q75,38 72,40 Q62,37 56,38 Q50,35 44,38 Q38,37 28,40 Q25,38 22,42 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M18,45 Q16,13 50,8 Q84,13 82,45 Q78,41 74,43 Q64,39 58,40 Q52,37 46,40 Q40,39 28,43 Q24,41 18,45 Z" fill={`url(#${mainGradientId})`} />
                 {/* Crown highlight ellipse */}
-                <Ellipse cx={50} cy={18} rx={20} ry={8} fill={highlight} opacity={0.18} />
+                <Ellipse cx={50} cy={18} rx={22} ry={9} fill={highlight} opacity={0.18} />
                 {/* Top radial highlight */}
-                <Ellipse cx={50} cy={18} rx={18} ry={8} fill={`url(#${highlightGradientId})`} />
+                <Ellipse cx={50} cy={18} rx={20} ry={9} fill={`url(#${highlightGradientId})`} />
+                {/* Front framing pieces - side wisps layered over face */}
+                <Path d="M22,36 Q20,50 22,64 L24,62 Q24,48 24,36" fill={hairColor} opacity={0.9} />
+                <Path d="M78,36 Q80,50 78,64 L76,62 Q76,48 76,36" fill={hairColor} opacity={0.9} />
+                {/* Wispy strand texture on framing pieces */}
+                <HairStrands startX={22} startY={38} endX={23} endY={62} count={3} color={highlight} opacity={0.25} />
+                <HairStrands startX={77} startY={38} endX={78} endY={62} count={3} color={highlight} opacity={0.25} />
               </G>
             );
 
@@ -503,55 +567,102 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Top crown cap with natural hairline - the wavy body is in HairBehind */}
-                <Path d="M22,42 Q20,15 50,10 Q80,15 78,42 Q75,38 72,40 Q62,37 56,38 Q50,35 44,38 Q38,37 28,40 Q25,38 22,42 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M18,45 Q16,13 50,8 Q84,13 82,45 Q78,41 74,43 Q64,39 58,40 Q52,37 46,40 Q40,39 28,43 Q24,41 18,45 Z" fill={`url(#${mainGradientId})`} />
                 {/* Crown highlight ellipse */}
-                <Ellipse cx={50} cy={20} rx={20} ry={8} fill={highlight} opacity={0.18} />
+                <Ellipse cx={50} cy={18} rx={22} ry={9} fill={highlight} opacity={0.18} />
                 {/* Top radial highlight */}
-                <Ellipse cx={50} cy={20} rx={18} ry={8} fill={`url(#${highlightGradientId})`} />
+                <Ellipse cx={50} cy={18} rx={20} ry={9} fill={`url(#${highlightGradientId})`} />
+                {/* Front framing wavy pieces - layered over face */}
+                <Path d="M22,36 Q19,44 21,52 Q18,60 22,68 L24,66 Q22,58 24,50 Q22,42 24,36" fill={hairColor} opacity={0.9} />
+                <Path d="M78,36 Q81,44 79,52 Q82,60 78,68 L76,66 Q78,58 76,50 Q78,42 76,36" fill={hairColor} opacity={0.9} />
+                {/* Wavy texture on framing pieces */}
+                <Path d="M22,40 Q20,48 22,56 Q20,64 22,68" fill="none" stroke={highlight} strokeWidth={0.8} opacity={0.3} />
+                <Path d="M78,40 Q80,48 78,56 Q80,64 78,68" fill="none" stroke={highlight} strokeWidth={0.8} opacity={0.3} />
               </G>
             );
 
           case HairStyle.LONG_CURLY:
             return (
               <G>
-                {/* Curly crown cap with natural hairline */}
-                <Path d="M22,42 Q20,15 50,10 Q80,15 78,42 Q75,38 72,40 Q62,37 56,38 Q50,35 44,38 Q38,37 28,40 Q25,38 22,42 Z" fill={hairColor} />
-                {/* Curls at the crown for volume */}
-                <Circle cx="30" cy="22" r="5" fill={hairColor} />
-                <Circle cx="30" cy="22" r="3" fill={highlight} opacity={0.3} />
-                <Circle cx="40" cy="17" r="5" fill={hairColor} />
-                <Circle cx="40" cy="17" r="3" fill={highlight} opacity={0.3} />
-                <Circle cx="50" cy="15" r="5.5" fill={hairColor} />
-                <Circle cx="50" cy="15" r="3.5" fill={highlight} opacity={0.35} />
-                <Circle cx="60" cy="17" r="5" fill={hairColor} />
-                <Circle cx="60" cy="17" r="3" fill={highlight} opacity={0.3} />
-                <Circle cx="70" cy="22" r="5" fill={hairColor} />
-                <Circle cx="70" cy="22" r="3" fill={highlight} opacity={0.3} />
-                {/* Crown highlight */}
-                <Ellipse cx={50} cy={18} rx={18} ry={8} fill={`url(#${highlightGradientId})`} />
+                {/* LAYER 1: Shadow base */}
+                <Path d="M18,45 Q16,13 50,8 Q84,13 82,45 Q78,41 74,43 Q64,39 58,40 Q52,37 46,40 Q40,39 28,43 Q24,41 18,45 Z" fill={deepShadow} opacity={0.15} />
+
+                {/* LAYER 2: Main curly crown cap */}
+                <Path d="M18,45 Q16,13 50,8 Q84,13 82,45 Q78,41 74,43 Q64,39 58,40 Q52,37 46,40 Q40,39 28,43 Q24,41 18,45 Z" fill={hairColor} />
+
+                {/* LAYER 3: Main curl groups at crown - darker base */}
+                <Circle cx="27" cy="22" r="6.5" fill={shadow} opacity={0.4} />
+                <Circle cx="38" cy="16" r="6" fill={shadow} opacity={0.4} />
+                <Circle cx="50" cy="13" r="6.5" fill={shadow} opacity={0.4} />
+                <Circle cx="62" cy="16" r="6" fill={shadow} opacity={0.4} />
+                <Circle cx="73" cy="22" r="6.5" fill={shadow} opacity={0.4} />
+
+                {/* LAYER 4: Main curl colors */}
+                <Circle cx="27" cy="22" r="6" fill={hairColor} />
+                <Circle cx="38" cy="16" r="5.5" fill={hairColor} />
+                <Circle cx="50" cy="13" r="6" fill={hairColor} />
+                <Circle cx="62" cy="16" r="5.5" fill={hairColor} />
+                <Circle cx="73" cy="22" r="6" fill={hairColor} />
+
+                {/* LAYER 5: Highlight centers */}
+                <Circle cx="27" cy="22" r="3.5" fill={highlight} opacity={0.3} />
+                <Circle cx="38" cy="16" r="3" fill={highlight} opacity={0.3} />
+                <Circle cx="50" cy="13" r="4" fill={highlight} opacity={0.35} />
+                <Circle cx="62" cy="16" r="3" fill={highlight} opacity={0.3} />
+                <Circle cx="73" cy="22" r="3.5" fill={highlight} opacity={0.3} />
+
+                {/* LAYER 6: Additional small curls for texture */}
+                <Circle cx="32" cy="18" r="3.5" fill={hairColor} />
+                <Circle cx="44" cy="14" r="3.5" fill={hairColor} />
+                <Circle cx="56" cy="14" r="3.5" fill={hairColor} />
+                <Circle cx="68" cy="18" r="3.5" fill={hairColor} />
+
+                {/* LAYER 7: Crown highlight */}
+                <Ellipse cx={50} cy={18} rx={22} ry={9} fill={`url(#${highlightGradientId})`} />
+
+                {/* LAYER 8: Front framing curly pieces - NOT covering face */}
+                <Circle cx="24" cy="40" r="4" fill={hairColor} />
+                <Circle cx="24" cy="40" r="2" fill={highlight} opacity={0.3} />
+                <Circle cx="76" cy="40" r="4" fill={hairColor} />
+                <Circle cx="76" cy="40" r="2" fill={highlight} opacity={0.3} />
               </G>
             );
 
           case HairStyle.LONG_PONYTAIL:
             return (
               <G>
-                {/* Ponytail depth shadow layer */}
+                {/* LAYER 1: Ponytail depth shadow */}
                 <Path d="M44,21 Q39,36 41,96 L59,96 Q61,36 56,21" fill={deepShadow} opacity={0.18} />
-                {/* Ponytail body with gradient */}
+
+                {/* LAYER 2: Ponytail body with gradient */}
                 <Path d="M45,20 Q40,35 42,95 L58,95 Q60,35 55,20" fill={`url(#${mainGradientId})`} />
-                {/* Hair tie */}
+
+                {/* LAYER 3: Hair tie shadow */}
                 <Ellipse cx="50" cy="22" rx="7" ry="3.5" fill={deepShadow} />
                 <Ellipse cx="50" cy="22" rx="5" ry="2" fill={shadow} opacity={0.5} />
-                {/* Front hair section with natural hairline */}
-                <Path d="M24,38 Q22,16 50,12 Q78,16 76,38 L72,36 Q62,34 56,35 Q50,28 44,35 Q38,34 28,36 Z" fill={`url(#${sideGradientId})`} />
-                {/* Crown highlight ellipse */}
-                <Ellipse cx={50} cy={18} rx={16} ry={6} fill={highlight} opacity={0.18} />
-                {/* Top radial highlight */}
-                <Ellipse cx={50} cy={18} rx={15} ry={6} fill={`url(#${highlightGradientId})`} />
-                {/* Ponytail strands */}
+
+                {/* LAYER 4: Front hair section with natural hairline */}
+                <Path d="M20,41 Q18,14 50,9 Q82,14 80,41 L74,39 Q64,36 58,37 Q52,30 46,37 Q40,36 26,39 Z" fill={`url(#${sideGradientId})`} />
+
+                {/* LAYER 5: Wispy hairline strands at forehead */}
+                <Path d="M28,37 L27,39" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M35,35 L34,37" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M42,34 L41,36" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M58,34 L59,36" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M65,35 L66,37" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M72,37 L73,39" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+
+                {/* LAYER 6: Crown highlights */}
+                <Ellipse cx={50} cy={18} rx={18} ry={7} fill={highlight} opacity={0.18} />
+                <Ellipse cx={50} cy={18} rx={17} ry={7} fill={`url(#${highlightGradientId})`} />
+
+                {/* LAYER 7: Ponytail strand texture - multiple layers */}
+                <HairStrands startX={44} startY={26} endX={47} endY={92} count={5} color={shadow} opacity={0.15} />
                 <HairStrands startX={45} startY={25} endX={48} endY={90} count={5} color={highlight} opacity={0.2} />
+                <HairStrands startX={53} startY={26} endX={56} endY={92} count={5} color={shadow} opacity={0.15} />
                 <HairStrands startX={52} startY={25} endX={55} endY={90} count={5} color={highlight} opacity={0.2} />
-                {/* Ponytail side shadows */}
+
+                {/* LAYER 8: Ponytail side definition */}
                 <Path d="M42,30 Q40,55 42,90" fill="none" stroke={shadow} strokeWidth={2} opacity={0.3} />
                 <Path d="M58,30 Q60,55 58,90" fill="none" stroke={shadow} strokeWidth={2} opacity={0.3} />
               </G>
@@ -560,97 +671,153 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
           case HairStyle.LONG_BUN:
             return (
               <G>
-                {/* Front hair section with natural hairline */}
-                <Path d="M24,38 Q22,16 50,12 Q78,16 76,38 L72,36 Q62,34 56,35 Q50,28 44,35 Q38,34 28,36 Z" fill={`url(#${sideGradientId})`} />
-                {/* Top highlight */}
-                <Ellipse cx={50} cy={18} rx={15} ry={6} fill={`url(#${highlightGradientId})`} />
-                {/* Bun base */}
+                {/* LAYER 1: Front hair section with natural hairline */}
+                <Path d="M20,41 Q18,14 50,9 Q82,14 80,41 L74,39 Q64,36 58,37 Q52,30 46,37 Q40,36 26,39 Z" fill={`url(#${sideGradientId})`} />
+
+                {/* LAYER 2: Wispy hairline strands */}
+                <Path d="M28,37 L27,39" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M35,35 L34,37" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M42,34 L41,36" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M58,34 L59,36" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M65,35 L66,37" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+                <Path d="M72,37 L73,39" fill="none" stroke={hairColor} strokeWidth={0.8} opacity={0.6} />
+
+                {/* LAYER 3: Bun shadow underneath */}
+                <Ellipse cx="50" cy="14" rx="8" ry="3" fill={deepShadow} opacity={0.3} />
+
+                {/* LAYER 4: Hair gathered to bun */}
+                <Path d="M40,16 Q45,12 50,18 Q55,12 60,16" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.3} />
+
+                {/* LAYER 5: Bun base shadow */}
+                <Circle cx="50" cy="6.5" r="12.5" fill={deepShadow} opacity={0.2} />
+
+                {/* LAYER 6: Bun main body */}
                 <Circle cx="50" cy="6" r="12" fill={hairColor} />
-                {/* Bun swirl texture */}
+
+                {/* LAYER 7: Bun swirl texture - darker strands */}
                 <Path d="M42,6 Q50,-2 58,6 Q50,10 42,6" fill="none" stroke={shadow} strokeWidth={2} opacity={0.4} />
                 <Path d="M45,3 Q50,0 55,3" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.3} />
-                {/* Bun highlight */}
+                <Path d="M44,8 Q50,4 56,8" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.25} />
+
+                {/* LAYER 8: Bun highlight on top */}
                 <Circle cx="48" cy="4" r="4" fill={brightHighlight} opacity={0.25} />
-                {/* Bun shadow underneath */}
-                <Ellipse cx="50" cy="14" rx="8" ry="3" fill={deepShadow} opacity={0.3} />
-                {/* Hair gathered to bun */}
-                <Path d="M40,16 Q45,12 50,18 Q55,12 60,16" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.3} />
+                <Ellipse cx="50" cy="6" rx="8" ry="4" fill={highlight} opacity={0.15} />
+
+                {/* LAYER 9: Crown highlight */}
+                <Ellipse cx={50} cy={18} rx={15} ry={6} fill={`url(#${highlightGradientId})`} />
               </G>
             );
 
           case HairStyle.AFRO:
             return (
               <G>
-                {/* Main voluminous afro silhouette — single solid mass */}
-                <Path d="M20,42 Q14,34 16,22 Q18,10 30,4 Q40,0 50,2 Q60,0 70,4 Q82,10 84,22 Q86,34 80,42 Q84,48 82,54 L78,52 Q76,42 76,38 L24,38 Q24,42 22,52 L18,54 Q16,48 20,42 Z" fill={`url(#${mainGradientId})`} />
-                {/* Bumpy edge texture — semicircles along outline for curly silhouette */}
-                <Circle cx="18" cy="40" r="5" fill={hairColor} />
-                <Circle cx="16" cy="32" r="4.5" fill={hairColor} />
-                <Circle cx="20" cy="22" r="4" fill={hairColor} />
-                <Circle cx="26" cy="12" r="4.5" fill={hairColor} />
-                <Circle cx="34" cy="5" r="4" fill={hairColor} />
-                <Circle cx="42" cy="2" r="3.5" fill={hairColor} />
-                <Circle cx="50" cy="1" r="4" fill={hairColor} />
-                <Circle cx="58" cy="2" r="3.5" fill={hairColor} />
-                <Circle cx="66" cy="5" r="4" fill={hairColor} />
-                <Circle cx="74" cy="12" r="4.5" fill={hairColor} />
-                <Circle cx="80" cy="22" r="4" fill={hairColor} />
-                <Circle cx="84" cy="32" r="4.5" fill={hairColor} />
-                <Circle cx="82" cy="40" r="5" fill={hairColor} />
-                {/* Side edge bumps */}
-                <Circle cx="14" cy="36" r="3.5" fill={hairColor} />
-                <Circle cx="15" cy="28" r="3" fill={hairColor} />
-                <Circle cx="86" cy="36" r="3.5" fill={hairColor} />
-                <Circle cx="85" cy="28" r="3" fill={hairColor} />
-                <Circle cx="82" cy="48" r="4" fill={hairColor} />
-                <Circle cx="18" cy="48" r="4" fill={hairColor} />
-                {/* Subtle internal curl suggestions — barely visible */}
-                <Circle cx="35" cy="18" r="6" fill={highlight} opacity={0.15} />
-                <Circle cx="55" cy="14" r="7" fill={highlight} opacity={0.12} />
-                <Circle cx="45" cy="8" r="5" fill={highlight} opacity={0.15} />
-                <Circle cx="65" cy="22" r="6" fill={highlight} opacity={0.12} />
-                <Circle cx="25" cy="28" r="5" fill={highlight} opacity={0.15} />
-                {/* Crown highlight for volume */}
-                <Ellipse cx={50} cy={14} rx={20} ry={8} fill={`url(#${highlightGradientId})`} />
+                {/* LAYER 1: Deep shadow base for depth */}
+                <Path d="M16,42 Q8,32 10,18 Q12,4 26,-2 Q36,-6 50,-4 Q64,-6 74,-2 Q88,4 90,18 Q92,32 84,42 Q86,46 84,50 L80,48 Q78,42 76,38 L24,38 Q22,42 20,48 L16,50 Q14,46 16,42 Z" fill={deepShadow} opacity={0.3} />
+
+                {/* LAYER 2: Main afro volume — halo around head with FACE CUTOUT */}
+                <G>
+                  <Defs>
+                    <ClipPath id={`afro-clip-${gradientId}`}>
+                      {/* Define afro volume shape */}
+                      <Path d="M16,42 Q8,32 10,18 Q12,4 26,-2 Q36,-6 50,-4 Q64,-6 74,-2 Q88,4 90,18 Q92,32 84,42 Q86,46 84,50 L80,48 Q78,42 76,38 L24,38 Q22,42 20,48 L16,50 Q14,46 16,42 Z" />
+                      {/* Subtract face area - oval cutout */}
+                      <Ellipse cx="50" cy="48" rx="27" ry="32" fill="black" />
+                    </ClipPath>
+                  </Defs>
+                  <Path
+                    d="M16,42 Q8,32 10,18 Q12,4 26,-2 Q36,-6 50,-4 Q64,-6 74,-2 Q88,4 90,18 Q92,32 84,42 Q86,46 84,50 L80,48 Q78,42 76,38 L24,38 Q22,42 20,48 L16,50 Q14,46 16,42 Z"
+                    fill={`url(#${mainGradientId})`}
+                    clipPath={`url(#afro-clip-${gradientId})`}
+                  />
+                </G>
+
+                {/* LAYER 3: Bumpy curly edge texture — circles along outline */}
+                <Circle cx="14" cy="42" r="6" fill={hairColor} />
+                <Circle cx="10" cy="32" r="5.5" fill={hairColor} />
+                <Circle cx="14" cy="20" r="5" fill={hairColor} />
+                <Circle cx="22" cy="8" r="5.5" fill={hairColor} />
+                <Circle cx="30" cy="0" r="5" fill={hairColor} />
+                <Circle cx="40" cy="-4" r="4.5" fill={hairColor} />
+                <Circle cx="50" cy="-5" r="5" fill={hairColor} />
+                <Circle cx="60" cy="-4" r="4.5" fill={hairColor} />
+                <Circle cx="70" cy="0" r="5" fill={hairColor} />
+                <Circle cx="78" cy="8" r="5.5" fill={hairColor} />
+                <Circle cx="86" cy="20" r="5" fill={hairColor} />
+                <Circle cx="90" cy="32" r="5.5" fill={hairColor} />
+                <Circle cx="86" cy="42" r="6" fill={hairColor} />
+                <Circle cx="8" cy="36" r="4.5" fill={hairColor} />
+                <Circle cx="9" cy="26" r="4" fill={hairColor} />
+                <Circle cx="92" cy="36" r="4.5" fill={hairColor} />
+                <Circle cx="91" cy="26" r="4" fill={hairColor} />
+                <Circle cx="86" cy="50" r="5" fill={hairColor} />
+                <Circle cx="14" cy="50" r="5" fill={hairColor} />
+                <Circle cx="6" cy="30" r="3.5" fill={hairColor} />
+                <Circle cx="94" cy="30" r="3.5" fill={hairColor} />
+                <Circle cx="18" cy="4" r="4" fill={hairColor} />
+                <Circle cx="82" cy="4" r="4" fill={hairColor} />
+
+                {/* LAYER 4: Curl texture groups - NOT covering face */}
+                <CurlyTexture cx={18} cy={22} radius={12} color={shadow} count={8} />
+                <CurlyTexture cx={82} cy={22} radius={12} color={shadow} count={8} />
+                <CurlyTexture cx={50} cy={2} radius={18} color={highlight} count={12} />
+                <CurlyTexture cx={32} cy={10} radius={10} color={highlight} count={6} />
+                <CurlyTexture cx={68} cy={10} radius={10} color={highlight} count={6} />
+
+                {/* LAYER 5: Crown highlight for shine */}
+                <Ellipse cx={50} cy={10} rx={24} ry={10} fill={`url(#${highlightGradientId})`} />
               </G>
             );
 
           case HairStyle.SHORT_SIDE_PART:
             return (
               <G>
-                {/* Lower hairline (3-4 units down from default) with side part */}
-                <Path d="M24,43 Q24,14 50,12 Q76,14 76,43 Q76,46 72,48 L68,44 Q58,40 50,41 Q42,40 32,44 L28,48 Q24,46 24,43 Z" fill={`url(#${mainGradientId})`} />
+                {/* Lower hairline with side part - wider coverage */}
+                <Path d="M21,46 Q21,12 50,9 Q79,12 79,46 Q79,49 74,51 L68,47 Q58,43 50,44 Q42,43 32,47 L26,51 Q21,49 21,46 Z" fill={`url(#${mainGradientId})`} />
                 {/* Side part line — left side */}
-                <Path d="M38,14 Q37,22 36,38" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.3} />
-                <Ellipse cx={50} cy={22} rx={15} ry={6} fill={`url(#${highlightGradientId})`} />
+                <Path d="M38,12 Q37,22 36,41" fill="none" stroke={shadow} strokeWidth={0.8} opacity={0.3} />
+                <Ellipse cx={50} cy={22} rx={17} ry={7} fill={`url(#${highlightGradientId})`} />
                 {/* Hairline shadow at hair-skin boundary */}
-                <Ellipse cx={50} cy={44} rx={22} ry={3} fill={shadow} opacity={0.05} />
+                <Ellipse cx={50} cy={47} rx={24} ry={3} fill={shadow} opacity={0.05} />
               </G>
             );
 
           case HairStyle.MOHAWK:
             return (
               <G>
-                {/* Shaved sides - subtle stubble covering more of the head */}
-                <Path d="M26,42 Q26,24 35,22 L35,44 Q30,44 26,42 Z" fill={hairColor} opacity={0.1} />
-                <Path d="M74,42 Q74,24 65,22 L65,44 Q70,44 74,42 Z" fill={hairColor} opacity={0.1} />
-                {/* Main mohawk crest — tall narrow spiky shape, base lowered 4 units */}
-                <Path d={`M43,42
-                  L42,28 L40,18 L43,10 L47,2 L50,-4
-                  L53,2 L57,10 L60,18 L58,28
-                  L57,42 Q50,40 43,42 Z`}
+                {/* Shaved sides - subtle stubble */}
+                <Path d="M22,44 Q22,22 34,20 L34,46 Q28,46 22,44 Z" fill={hairColor} opacity={0.1} />
+                <Path d="M78,44 Q78,22 66,20 L66,46 Q72,46 78,44 Z" fill={hairColor} opacity={0.1} />
+
+                {/* LAYER 1: Shadow base for depth */}
+                <Path d="M46,42 C46,42 45,28 44,18 C44,10 46,2 50,-8 C54,2 56,10 56,18 C55,28 54,42 54,42 Q50,40 46,42 Z" fill={deepShadow} opacity={0.2} />
+
+                {/* LAYER 2: Main mohawk crest with tapered spiky shape */}
+                <Path d={`M46,42
+                  C46,42 45,28 44,18
+                  C44,10 46,4 48,0 C49,-4 50,-8 50,-8
+                  C50,-8 51,-4 52,0 C54,4 56,10 56,18
+                  C55,28 54,42 54,42
+                  Q50,40 46,42 Z`}
                   fill={`url(#${mainGradientId})`} />
-                {/* Hairline shadow at crest base */}
-                <Ellipse cx={50} cy={42} rx={10} ry={2} fill={shadow} opacity={0.05} />
-                {/* Spiky tips along the top edge */}
-                <Path d="M43,10 L41,5 L44,8" fill={hairColor} stroke={hairColor} strokeWidth={0.5} />
-                <Path d="M57,10 L59,5 L56,8" fill={hairColor} stroke={hairColor} strokeWidth={0.5} />
-                <Path d="M47,2 L46,-2 L48,1" fill={hairColor} stroke={hairColor} strokeWidth={0.5} />
-                <Path d="M53,2 L54,-2 L52,1" fill={hairColor} stroke={hairColor} strokeWidth={0.5} />
-                {/* Center highlight */}
-                <Path d="M48,36 L47,18 Q49,4 50,-2 Q51,4 53,18 L52,36" fill={highlight} opacity={0.2} />
-                {/* Top glow */}
-                <Ellipse cx={50} cy={4} rx={4} ry={3} fill={brightHighlight} opacity={0.25} />
+
+                {/* LAYER 3: Tapered spiky peaks using bezier curves */}
+                <Path d="M47,8 C46,6 45,2 46,0 C47,2 48,6 48,8" fill={hairColor} opacity={0.9} />
+                <Path d="M53,8 C54,6 55,2 54,0 C53,2 52,6 52,8" fill={hairColor} opacity={0.9} />
+                <Path d="M49,2 C48.5,0 48,-3 49,-5 C50,-3 50.5,0 50,2" fill={hairColor} opacity={0.9} />
+                <Path d="M51,2 C51.5,0 52,-3 51,-5 C50,-3 49.5,0 50,2" fill={hairColor} opacity={0.9} />
+                <Path d="M50,-5 C49.5,-6 49,-8 50,-10 C51,-8 50.5,-6 50,-5" fill={hairColor} opacity={0.9} />
+
+                {/* LAYER 4: Highlight strands running up the center */}
+                <Path d="M49,40 C49,32 48.5,18 49,8 C49.2,2 49.8,-5 50,-8 C50.2,-5 50.8,2 51,8 C51.5,18 51,32 51,40" fill={highlight} opacity={0.25} />
+                <Path d="M49.5,38 C49.5,30 49,20 49.5,10 Q50,-4 50.5,10 C51,20 50.5,30 50.5,38" fill={brightHighlight} opacity={0.15} />
+
+                {/* LAYER 5: Hairline shadow at base */}
+                <Ellipse cx={50} cy={44} rx={8} ry={2} fill={shadow} opacity={0.05} />
+
+                {/* LAYER 6: Top spike highlights */}
+                <Path d="M48,4 L47,1" fill="none" stroke={brightHighlight} strokeWidth={0.8} opacity={0.4} />
+                <Path d="M52,4 L53,1" fill="none" stroke={brightHighlight} strokeWidth={0.8} opacity={0.4} />
+                <Path d="M50,0 L50,-4" fill="none" stroke={brightHighlight} strokeWidth={1} opacity={0.4} />
               </G>
             );
 
@@ -706,7 +873,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             );
 
           case HairStyle.HIJAB:
-            // Hijab front layer: wide side panels that frame the face along the jawline
+            // Hijab front layer: proper draping fabric shape with fold lines
             // The back drape is rendered in HairBehind
             {
               const hijabColor = hairColor || '#805ad5';
@@ -722,19 +889,31 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
                       <Stop offset="100%" stopColor={hijabDark} />
                     </LinearGradient>
                   </Defs>
-                  {/* Top crown - wide, covers forehead and wraps around */}
-                  <Path d="M20,34 Q18,14 50,6 Q82,14 80,34 Q76,30 50,28 Q24,30 20,34 Z" fill={`url(#hijab_${gradientId})`} />
-                  {/* Left side panel - wide drape covering ear area and jawline */}
-                  <Path d="M24,30 Q16,36 12,50 Q10,65 12,80 L10,95 L28,95 L30,80 Q30,60 28,44 Q26,36 24,30 Z" fill={`url(#hijab_${gradientId})`} />
-                  {/* Right side panel - mirror */}
-                  <Path d="M76,30 Q84,36 88,50 Q90,65 88,80 L90,95 L72,95 L70,80 Q70,60 72,44 Q74,36 76,30 Z" fill={`url(#hijab_${gradientId})`} />
-                  {/* Subtle inner edge along face - soft shadow, not a line */}
-                  <Path d="M28,32 Q24,44 24,56 Q26,70 32,78 Q42,84 50,84 Q58,84 68,78 Q74,70 76,56 Q76,44 72,32" fill="none" stroke={hijabDeep} strokeWidth={1.2} opacity={0.3} />
-                  {/* Top highlight */}
+
+                  {/* LAYER 1: Top crown - fabric wrapping over forehead */}
+                  <Path d="M16,36 Q14,12 50,3 Q86,12 84,36 Q78,30 50,26 Q22,30 16,36 Z" fill={`url(#hijab_${gradientId})`} />
+
+                  {/* LAYER 2: Left side drape - flowing fabric framing face */}
+                  <Path d="M24,30 Q16,36 12,50 Q10,65 12,80 L10,95 L26,95 L27,80 Q27,58 26,42 Q25,34 24,30 Z" fill={`url(#hijab_${gradientId})`} />
+
+                  {/* LAYER 3: Right side drape - mirror */}
+                  <Path d="M76,30 Q84,36 88,50 Q90,65 88,80 L90,95 L74,95 L73,80 Q73,58 74,42 Q75,34 76,30 Z" fill={`url(#hijab_${gradientId})`} />
+
+                  {/* LAYER 4: Fabric fold lines for depth */}
+                  <Path d="M16,50 Q18,65 16,82" fill="none" stroke={hijabDeep} strokeWidth={1.5} opacity={0.25} />
+                  <Path d="M84,50 Q82,65 84,82" fill="none" stroke={hijabDeep} strokeWidth={1.5} opacity={0.25} />
+                  <Path d="M20,40 Q22,55 20,70" fill="none" stroke={hijabDeep} strokeWidth={1.2} opacity={0.2} />
+                  <Path d="M80,40 Q78,55 80,70" fill="none" stroke={hijabDeep} strokeWidth={1.2} opacity={0.2} />
+
+                  {/* LAYER 5: Inner edge along face - subtle definition */}
+                  <Path d="M26,34 Q22,46 22,58 Q24,72 30,80 Q40,86 50,86 Q60,86 70,80 Q76,72 78,58 Q78,46 74,34" fill="none" stroke={hijabDeep} strokeWidth={0.8} opacity={0.15} />
+
+                  {/* LAYER 6: Top fabric highlight */}
                   <Ellipse cx={50} cy={14} rx={18} ry={6} fill={hijabHighlight} opacity={0.2} />
-                  {/* Fabric fold shadows */}
-                  <Path d="M16,50 Q18,65 16,82" fill="none" stroke={hijabDeep} strokeWidth={1.5} opacity={0.2} />
-                  <Path d="M84,50 Q82,65 84,82" fill="none" stroke={hijabDeep} strokeWidth={1.5} opacity={0.2} />
+
+                  {/* LAYER 7: Draping shadows on sides */}
+                  <Path d="M12,48 Q10,58 12,68" fill="none" stroke={hijabDeep} strokeWidth={2} opacity={0.2} />
+                  <Path d="M88,48 Q90,58 88,68" fill="none" stroke={hijabDeep} strokeWidth={2} opacity={0.2} />
                 </G>
               );
             }
@@ -774,7 +953,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Front hair pulled back */}
-                <Path d="M24,38 Q22,16 50,12 Q78,16 76,38 L72,36 Q50,28 28,36 Z" fill={`url(#${sideGradientId})`} />
+                <Path d="M20,41 Q18,14 50,9 Q82,14 80,41 L74,39 Q50,30 26,39 Z" fill={`url(#${sideGradientId})`} />
                 {/* Top bun */}
                 <Circle cx={50} cy={12} r={9} fill={hairColor} />
                 <Path d="M43,12 Q50,5 57,12 Q50,16 43,12" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.35} />
@@ -790,7 +969,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Main top section with natural hairline */}
-                <Path d="M22,38 Q20,14 50,10 Q80,14 78,38 L74,36 Q68,34 62,35 Q56,33 50,33 Q44,33 38,35 Q32,34 26,36 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M19,41 Q17,12 50,8 Q83,12 81,41 L76,39 Q70,36 64,37 Q58,35 50,35 Q42,35 36,37 Q30,36 24,39 Z" fill={`url(#${mainGradientId})`} />
                 {/* Layered face-framing pieces - left */}
                 <Path d="M26,32 Q22,45 24,58 Q23,62 26,60" fill={hairColor} />
                 <Path d="M26,34 Q24,44 25,55" fill="none" stroke={shadow} strokeWidth={1.2} opacity={0.3} />
@@ -808,7 +987,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Short cropped top with lower hairline */}
-                <Path d="M26,34 Q26,14 50,10 Q74,14 74,34 L70,34 Q50,26 30,34 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M23,37 Q23,12 50,8 Q77,12 77,37 L72,37 Q50,28 28,37 Z" fill={`url(#${mainGradientId})`} />
                 {/* Subtle edge definition */}
                 <Path d="M30,28 Q50,24 70,28" fill="none" stroke={shadow} strokeWidth={0.8} strokeLinecap="round" opacity={0.15} />
                 <Ellipse cx={50} cy={18} rx={14} ry={5} fill={`url(#${highlightGradientId})`} />
@@ -819,7 +998,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Main hair frame */}
-                <Path d="M20,40 Q18,14 50,10 Q82,14 80,40 L80,70 Q78,78 50,76 Q22,78 20,70 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M17,43 Q15,12 50,7 Q85,12 83,43 L83,72 Q80,80 50,78 Q20,80 17,72 Z" fill={`url(#${mainGradientId})`} />
                 {/* Center part */}
                 <Path d="M50,12 L50,32" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.35} />
                 {/* Left curtain bang */}
@@ -836,7 +1015,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Main shag shape */}
-                <Path d="M20,40 Q18,14 50,10 Q82,14 80,40 L80,68 Q75,74 50,72 Q25,74 20,68 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M17,43 Q15,12 50,7 Q85,12 83,43 L83,70 Q78,76 50,74 Q22,76 17,70 Z" fill={`url(#${mainGradientId})`} />
                 {/* Choppy face-framing layers - left */}
                 <Path d="M24,34 Q20,44 22,56 L26,52 Q24,42 28,34" fill={hairColor} />
                 {/* Choppy face-framing layers - right */}
@@ -853,7 +1032,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Top hair section */}
-                <Path d="M24,38 Q22,16 50,12 Q78,16 76,38 L72,36 Q50,28 28,36 Z" fill={`url(#${sideGradientId})`} />
+                <Path d="M20,41 Q18,14 50,9 Q82,14 80,41 L74,39 Q50,30 26,39 Z" fill={`url(#${sideGradientId})`} />
                 {/* Left braid falling forward */}
                 <Path d="M28,36 Q24,50 26,70 Q24,82 28,90" fill={hairColor} strokeWidth={5} stroke={hairColor} strokeLinecap="round" />
                 <Path d="M28,40 L26,44 L30,48 L26,52 L30,56 L26,60 L30,64 L26,68 L30,72 L26,76 L30,80 L28,84" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.3} />
@@ -868,7 +1047,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Short cropped top */}
-                <Path d="M26,36 Q26,14 50,10 Q74,14 74,36 L70,34 Q50,26 30,34 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M23,39 Q23,12 50,8 Q77,12 77,39 L72,37 Q50,28 28,37 Z" fill={`url(#${mainGradientId})`} />
                 {/* Straight horizontal bangs */}
                 <Path d="M30,32 L70,32 L70,28 L30,28 Z" fill={hairColor} />
                 <Path d="M30,30 L70,30" fill="none" stroke={shadow} strokeWidth={1} opacity={0.3} />
@@ -880,7 +1059,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Main lob shape framing face with natural hairline */}
-                <Path d="M20,38 Q18,14 50,10 Q82,14 80,38 Q78,34 75,36 Q65,32 56,33 Q50,30 44,33 Q35,32 25,36 Q22,34 20,38 L20,62 Q22,68 30,70 Q40,72 50,70 Q60,72 70,70 Q78,68 80,62 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M17,41 Q15,12 50,7 Q85,12 83,41 Q80,37 77,39 Q67,34 58,35 Q52,32 46,35 Q37,34 27,39 Q24,37 17,41 L17,64 Q20,70 30,72 Q40,74 50,72 Q60,74 70,72 Q80,70 83,64 Z" fill={`url(#${mainGradientId})`} />
                 {/* Face-framing sides */}
                 <Path d="M24,34 Q22,48 24,62" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.25} />
                 <Path d="M76,34 Q78,48 76,62" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.25} />
@@ -895,7 +1074,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Long straight hair with center part */}
-                <Path d="M18,40 Q16,14 50,10 Q84,14 82,40 L82,80 Q80,88 50,86 Q20,88 18,80 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M15,43 Q13,12 50,7 Q87,12 85,43 L85,82 Q82,90 50,88 Q18,90 15,82 Z" fill={`url(#${mainGradientId})`} />
                 {/* Center part line */}
                 <Path d="M50,10 L50,34" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.4} />
                 {/* Left curtain */}
@@ -913,7 +1092,7 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
             return (
               <G>
                 {/* Short pixie base */}
-                <Path d="M28,36 Q28,16 50,12 Q72,16 72,36 L68,34 Q50,26 32,34 Z" fill={`url(#${mainGradientId})`} />
+                <Path d="M25,39 Q25,14 50,9 Q75,14 75,39 L70,37 Q50,28 30,37 Z" fill={`url(#${mainGradientId})`} />
                 {/* Textured fringe at forehead - soft waves */}
                 <Path d="M34,30 Q37,24 40,29 Q43,23 47,28 Q50,22 53,28 Q57,23 60,29 Q63,24 66,30" fill="none" stroke={hairColor} strokeWidth={2.5} strokeLinecap="round" />
                 {/* Side texture */}
@@ -926,8 +1105,8 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
           default:
             return (
               <G>
-                <Path d="M24,39 Q24,12 50,10 Q76,12 76,39 Q76,42 72,44 L68,40 Q58,36 50,37 Q42,36 32,40 L28,44 Q24,42 24,39 Z" fill={`url(#${mainGradientId})`} />
-                <Ellipse cx={50} cy={20} rx={15} ry={6} fill={`url(#${highlightGradientId})`} />
+                <Path d="M21,42 Q21,10 50,7 Q79,10 79,42 Q79,45 74,47 L68,43 Q58,39 50,40 Q42,39 32,43 L26,47 Q21,45 21,42 Z" fill={`url(#${mainGradientId})`} />
+                <Ellipse cx={50} cy={20} rx={18} ry={7} fill={`url(#${highlightGradientId})`} />
               </G>
             );
         }
@@ -940,9 +1119,9 @@ export function Hair({ style, hairColor, hairTreatment = HairTreatment.NONE, hai
           {/* Very soft hairline blend — large radius, low opacity */}
           <Ellipse
             cx={50}
-            cy={34}
-            rx={28}
-            ry={8}
+            cy={38}
+            rx={30}
+            ry={10}
             fill={hairlineShadowColor}
             opacity={0.04}
           />
@@ -1037,17 +1216,17 @@ export function HairBehind({ style, hairColor, hairTreatment = HairTreatment.NON
             return (
               <G>
                 {/* Left side drape */}
-                <Path d="M24,30 Q18,30 16,40 L16,90 Q16,95 24,95 L26,95 L26,70 Q26,50 24,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M22,28 Q15,28 13,38 L13,90 Q13,95 22,95 L24,95 L24,70 Q24,48 22,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Right side drape */}
-                <Path d="M76,30 Q82,30 84,40 L84,90 Q84,95 76,95 L74,95 L74,70 Q74,50 76,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M78,28 Q85,28 87,38 L87,90 Q87,95 78,95 L76,95 L76,70 Q76,48 78,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Bottom connection behind neck */}
-                <Path d="M26,75 L26,95 L74,95 L74,75 Q50,80 26,75 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M24,75 L24,95 L76,95 L76,75 Q50,80 24,75 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Vertical strand texture */}
-                <Path d="M20,40 L20,90" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.2} />
+                <Path d="M17,38 L17,90" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.2} />
                 <Path d="M30,75 L30,92" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.15} />
                 <Path d="M50,78 L50,92" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.15} />
                 <Path d="M70,75 L70,92" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.15} />
-                <Path d="M80,40 L80,90" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.2} />
+                <Path d="M83,38 L83,90" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.2} />
               </G>
             );
 
@@ -1058,14 +1237,14 @@ export function HairBehind({ style, hairColor, hairTreatment = HairTreatment.NON
             return (
               <G>
                 {/* Left side drape */}
-                <Path d="M24,30 Q18,30 16,40 L16,90 Q16,95 24,95 L26,95 L26,70 Q26,50 24,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M22,28 Q15,28 13,38 L13,90 Q13,95 22,95 L24,95 L24,70 Q24,48 22,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Right side drape */}
-                <Path d="M76,30 Q82,30 84,40 L84,90 Q84,95 76,95 L74,95 L74,70 Q74,50 76,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M78,28 Q85,28 87,38 L87,90 Q87,95 78,95 L76,95 L76,70 Q76,48 78,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Bottom connection behind neck */}
-                <Path d="M26,75 L26,95 L74,95 L74,75 Q50,80 26,75 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M24,75 L24,95 L76,95 L76,75 Q50,80 24,75 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Wavy strand texture */}
-                <Path d="M20,40 Q23,55 19,70 Q23,85 21,92" fill="none" stroke={shadow} strokeWidth={2} opacity={0.2} />
-                <Path d="M80,40 Q77,55 81,70 Q77,85 79,92" fill="none" stroke={shadow} strokeWidth={2} opacity={0.2} />
+                <Path d="M17,38 Q20,55 16,70 Q20,85 18,92" fill="none" stroke={shadow} strokeWidth={2} opacity={0.2} />
+                <Path d="M83,38 Q80,55 84,70 Q80,85 82,92" fill="none" stroke={shadow} strokeWidth={2} opacity={0.2} />
                 <Path d="M30,75 Q33,83 29,92" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.15} />
                 <Path d="M70,75 Q67,83 71,92" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.15} />
               </G>
@@ -1083,16 +1262,16 @@ export function HairBehind({ style, hairColor, hairTreatment = HairTreatment.NON
             return (
               <G>
                 {/* Left volume */}
-                <Ellipse cx="18" cy="50" rx="16" ry="30" fill={`url(#${mainBehindGradientId})`} />
+                <Ellipse cx="14" cy="48" rx="19" ry="32" fill={`url(#${mainBehindGradientId})`} />
                 {/* Right volume */}
-                <Ellipse cx="82" cy="50" rx="16" ry="30" fill={`url(#${mainBehindGradientId})`} />
+                <Ellipse cx="86" cy="48" rx="19" ry="32" fill={`url(#${mainBehindGradientId})`} />
                 {/* Bottom volume below chin */}
-                <Ellipse cx="50" cy="85" rx="32" ry="16" fill={`url(#${mainBehindGradientId})`} />
+                <Ellipse cx="50" cy="85" rx="35" ry="18" fill={`url(#${mainBehindGradientId})`} />
                 {/* Top volume above head */}
-                <Ellipse cx="50" cy="12" rx="30" ry="12" fill={`url(#${mainBehindGradientId})`} />
+                <Ellipse cx="50" cy="8" rx="34" ry="14" fill={`url(#${mainBehindGradientId})`} />
                 {/* Curly texture */}
-                <CurlyTexture cx={18} cy={50} radius={12} color={shadow} count={8} />
-                <CurlyTexture cx={82} cy={50} radius={12} color={shadow} count={8} />
+                <CurlyTexture cx={14} cy={48} radius={15} color={shadow} count={8} />
+                <CurlyTexture cx={86} cy={48} radius={15} color={shadow} count={8} />
                 <CurlyTexture cx={50} cy={85} radius={20} color={shadow} count={10} />
               </G>
             );
@@ -1108,11 +1287,11 @@ export function HairBehind({ style, hairColor, hairTreatment = HairTreatment.NON
             return (
               <G>
                 {/* Left side drape */}
-                <Path d="M24,30 Q18,30 16,40 L16,90 Q16,95 24,95 L26,95 L26,70 Q26,50 24,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M22,28 Q15,28 13,38 L13,90 Q13,95 22,95 L24,95 L24,70 Q24,48 22,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Right side drape */}
-                <Path d="M76,30 Q82,30 84,40 L84,90 Q84,95 76,95 L74,95 L74,70 Q74,50 76,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M78,28 Q85,28 87,38 L87,90 Q87,95 78,95 L76,95 L76,70 Q76,48 78,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Bottom connection behind neck */}
-                <Path d="M26,75 L26,95 L74,95 L74,75 Q50,80 26,75 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M24,75 L24,95 L76,95 L76,75 Q50,80 24,75 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Braided/loc strand texture */}
                 <Path d="M20,40 L20,90" fill="none" stroke={shadow} strokeWidth={3} opacity={0.25} />
                 <Path d="M30,75 L30,92" fill="none" stroke={shadow} strokeWidth={3} opacity={0.2} />
@@ -1135,11 +1314,11 @@ export function HairBehind({ style, hairColor, hairTreatment = HairTreatment.NON
             return (
               <G>
                 {/* Left side */}
-                <Path d="M24,30 Q20,30 18,38 L18,72 Q18,76 24,76 L26,76 L26,50 Q26,38 24,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M22,28 Q17,28 15,36 L15,72 Q15,76 22,76 L24,76 L24,48 Q24,36 22,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Right side */}
-                <Path d="M76,30 Q80,30 82,38 L82,72 Q82,76 76,76 L74,76 L74,50 Q74,38 76,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M78,28 Q83,28 85,36 L85,72 Q85,76 78,76 L76,76 L76,48 Q76,36 78,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Bottom behind neck */}
-                <Path d="M26,68 L26,76 L74,76 L74,68 Q50,72 26,68 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M24,68 L24,76 L76,76 L76,68 Q50,72 24,68 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Shorter texture */}
                 <Path d="M22,40 L22,72" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.2} />
                 <Path d="M30,68 L30,74" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.15} />
@@ -1155,11 +1334,11 @@ export function HairBehind({ style, hairColor, hairTreatment = HairTreatment.NON
             return (
               <G>
                 {/* Left side */}
-                <Path d="M24,40 Q20,40 18,48 L18,90 Q18,95 24,95 L26,95 L26,70 Q26,55 24,40 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M22,38 Q17,38 15,46 L15,90 Q15,95 22,95 L24,95 L24,70 Q24,53 22,38 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Right side */}
-                <Path d="M76,40 Q80,40 82,48 L82,90 Q82,95 76,95 L74,95 L74,70 Q74,55 76,40 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M78,38 Q83,38 85,46 L85,90 Q85,95 78,95 L76,95 L76,70 Q76,53 78,38 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Bottom connection */}
-                <Path d="M26,75 L26,95 L74,95 L74,75 Q50,80 26,75 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M24,75 L24,95 L76,95 L76,75 Q50,80 24,75 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Half-up texture */}
                 <Path d="M22,50 L22,90" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.2} />
                 <Path d="M50,78 L50,92" fill="none" stroke={shadow} strokeWidth={1.5} opacity={0.15} />
@@ -1215,11 +1394,11 @@ export function HairBehind({ style, hairColor, hairTreatment = HairTreatment.NON
             return (
               <G>
                 {/* Left side drape */}
-                <Path d="M24,30 Q18,30 16,40 L16,90 Q16,95 24,95 L26,95 L26,70 Q26,50 24,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M22,28 Q15,28 13,38 L13,90 Q13,95 22,95 L24,95 L24,70 Q24,48 22,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Right side drape */}
-                <Path d="M76,30 Q82,30 84,40 L84,90 Q84,95 76,95 L74,95 L74,70 Q74,50 76,30 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M78,28 Q85,28 87,38 L87,90 Q87,95 78,95 L76,95 L76,70 Q76,48 78,28 Z" fill={`url(#${mainBehindGradientId})`} />
                 {/* Bottom connection */}
-                <Path d="M26,75 L26,95 L74,95 L74,75 Q50,80 26,75 Z" fill={`url(#${mainBehindGradientId})`} />
+                <Path d="M24,75 L24,95 L76,95 L76,75 Q50,80 24,75 Z" fill={`url(#${mainBehindGradientId})`} />
               </G>
             );
         }

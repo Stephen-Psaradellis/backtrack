@@ -42,8 +42,8 @@ export type {
   Database,
 } from '../types/database'
 
-// Avatar types (SVG-based avatar system)
-export type { AvatarConfig, StoredAvatar } from 'react-native-bitmoji'
+// Avatar types (AI-generated avatar system)
+export type { AvatarConfig, StoredAvatar, GeneratedAvatar } from '../types/avatar'
 
 // ============================================================================
 // APPLICATION-SPECIFIC TYPES
@@ -147,7 +147,7 @@ export interface AuthFormData {
  */
 export interface CreatePostFormData {
   locationId: string
-  targetAvatar: import('react-native-bitmoji').StoredAvatar | null
+  targetAvatar: import('../types/avatar').StoredAvatar | null
   note: string
   selfieUri: string | null
 }

@@ -12,11 +12,12 @@ import {
   Modal,
   StyleSheet,
   Animated,
-  Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Avatar, type StoredAvatar } from 'react-native-bitmoji';
+import { AvatarDisplay } from './AvatarDisplay';
+import type { StoredAvatar } from '../types/avatar';
 import { darkTheme, darkGradients, darkButtonStyles, darkTypography } from '../constants/glassStyles';
 import { spacing } from '../constants/theme';
 import { mediumFeedback } from '../lib/haptics';
@@ -46,7 +47,6 @@ export interface MatchCelebrationProps {
 // CONSTANTS
 // ============================================================================
 
-const { width, height } = Dimensions.get('window');
 const CONFETTI_COUNT = 25;
 const AVATAR_SIZE = 120;
 
@@ -83,6 +83,8 @@ export function MatchCelebration({
   locationName,
   testID = 'match-celebration',
 }: MatchCelebrationProps): React.ReactNode {
+  const { width, height } = useWindowDimensions();
+
   // Animation values
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -239,10 +241,10 @@ export function MatchCelebration({
           <View style={styles.avatarsContainer} testID={`${testID}-avatars`}>
             <View style={styles.avatarWrapper}>
               {myAvatar ? (
-                <Avatar
+                <AvatarDisplay
                   avatar={myAvatar}
-                  size={AVATAR_SIZE}
-                  style={styles.avatar}
+                  pixelSize={AVATAR_SIZE}
+                  testID={`${testID}-my-avatar`}
                 />
               ) : (
                 <View style={[styles.avatarPlaceholder, styles.avatar]}>
@@ -257,10 +259,10 @@ export function MatchCelebration({
 
             <View style={styles.avatarWrapper}>
               {matchedAvatar ? (
-                <Avatar
+                <AvatarDisplay
                   avatar={matchedAvatar}
-                  size={AVATAR_SIZE}
-                  style={styles.avatar}
+                  pixelSize={AVATAR_SIZE}
+                  testID={`${testID}-matched-avatar`}
                 />
               ) : (
                 <View style={[styles.avatarPlaceholder, styles.avatar]}>

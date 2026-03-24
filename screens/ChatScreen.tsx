@@ -334,7 +334,9 @@ export function ChatScreen(): React.ReactNode {
   const { userId } = useAuth()
   const { showToast } = useToast()
 
-  const { conversationId } = route.params
+  const { conversationId: rawConversationId } = route.params
+  // Validate conversationId from deep links
+  const conversationId = rawConversationId && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawConversationId) ? rawConversationId : null
 
   // Tutorial tooltip state for messaging onboarding
   const tutorial = useTutorialState('messaging')

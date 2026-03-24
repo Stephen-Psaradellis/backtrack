@@ -38,6 +38,7 @@ import { colors } from '../constants/theme'
 
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { captureException } from '../lib/sentry'
 import { successFeedback, errorFeedback, warningFeedback, lightFeedback } from '../lib/haptics'
 import {
   clearTutorialCompletion,
@@ -106,7 +107,7 @@ export function SettingsScreen(): React.ReactNode {
           const status = await getDeletionStatus()
           setDeletionStatus(status)
         } catch (err) {
-          console.error('[SettingsScreen] Failed to check deletion status:', err)
+          if (__DEV__) console.error('[SettingsScreen] Failed to check deletion status:', err)
           // Non-critical: silently ignore, UI stays in default state
         }
       }
@@ -143,7 +144,8 @@ export function SettingsScreen(): React.ReactNode {
                   variant: 'error',
                 })
               }
-            } catch {
+            } catch (error) {
+              captureException(error, { operation: 'handleSignOut' })
               await errorFeedback()
               showToast({
                 message: 'An unexpected error occurred.',
@@ -205,7 +207,8 @@ export function SettingsScreen(): React.ReactNode {
                         })
                         setIsDeletingAccount(false)
                       }
-                    } catch {
+                    } catch (error) {
+                      captureException(error, { operation: 'handleDeleteAccount' })
                       await errorFeedback()
                       showToast({
                         message: 'An unexpected error occurred',
@@ -272,7 +275,8 @@ export function SettingsScreen(): React.ReactNode {
             variant: 'error',
           })
         }
-      } catch {
+      } catch (error) {
+        captureException(error, { operation: 'handleReplayTutorial' })
         await errorFeedback()
         showToast({
           message: 'An unexpected error occurred.',

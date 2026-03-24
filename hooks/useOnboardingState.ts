@@ -56,7 +56,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { AvatarConfig, DEFAULT_MALE_CONFIG } from '../types/avatar'
+import { type AvatarConfig, DEFAULT_MALE_CONFIG } from '../types/avatar'
 import { trackEvent, AnalyticsEvent } from '../lib/analytics'
 
 // ============================================================================
