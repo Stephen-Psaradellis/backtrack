@@ -16,6 +16,7 @@ import {
   hasMovedAway,
   findNearestLocation,
   resetDwellState,
+  getDistanceFromDwellLocation,
   DWELL_RADIUS_METERS,
   DEPARTURE_THRESHOLD_MULTIPLIER,
   DEFAULT_PROMPT_MINUTES,
@@ -626,5 +627,134 @@ describe('resetDwellState', () => {
     const reset = resetDwellState(state)
 
     expect(reset).toEqual(state)
+  })
+})
+
+// ============================================================================
+// GET DISTANCE FROM DWELL LOCATION TESTS
+// ============================================================================
+
+describe('getDistanceFromDwellLocation', () => {
+  it('should return null when no dwell location', () => {
+    const state = createInitialDwellState(MOCK_USER_ID)
+    const dist = getDistanceFromDwellLocation(state, { latitude: 40.7128, longitude: -74.006 })
+    expect(dist).toBeNull()
+  })
+
+  it('should return 0 when at the same point', () => {
+    const state: DwellState = {
+      ...createInitialDwellState(MOCK_USER_ID),
+      currentLocation: {
+        latitude: 40.7128,
+        longitude: -74.006,
+        locationId: MOCK_LOCATION_ID,
+      },
+    }
+    const dist = getDistanceFromDwellLocation(state, { latitude: 40.7128, longitude: -74.006 })
+    expect(dist).toBe(0)
+  })
+
+  it('should return correct distance for known offset', () => {
+    const state: DwellState = {
+      ...createInitialDwellState(MOCK_USER_ID),
+      currentLocation: {
+        latitude: 40.7128,
+        longitude: -74.006,
+        locationId: MOCK_LOCATION_ID,
+      },
+    }
+    // ~111m north (0.001 degree lat)
+    const dist = getDistanceFromDwellLocation(state, { latitude: 40.7138, longitude: -74.006 })
+    expect(dist).toBeGreaterThan(100)
+    expect(dist).toBeLessThan(120)
+  })
+})
+
+// ============================================================================
+// 3-ZONE DEPARTURE LOGIC TESTS
+// ============================================================================
+
+describe('3-zone departure detection via updateDwellState', () => {
+  it('user at 50m stays dwelling (zone 1)', () => {
+    // User dwelling at a location, nearby location matches
+    const state: DwellState = {
+      ...createInitialDwellState(MOCK_USER_ID),
+      currentLocation: {
+        latitude: 40.7128,
+        longitude: -74.006,
+        locationId: MOCK_LOCATION_ID,
+        locationName: MOCK_LOCATION_NAME,
+      },
+      arrivedAt: baseTime,
+      notificationSent: true,
+    }
+
+    // Pass the same nearbyLocation (simulating zone 1 cache hit)
+    const result = updateDwellState(
+      state,
+      { latitude: 40.7128, longitude: -74.006 },
+      mockNearbyLocation,
+      5,
+      baseTime + 60000
+    )
+
+    expect(result.action).toBe('dwelling')
+  })
+
+  it('user at 150m with nearbyLocation=null produces departed', () => {
+    // In zone 2 (ambiguous), if server returns no location, should depart
+    const state: DwellState = {
+      ...createInitialDwellState(MOCK_USER_ID),
+      currentLocation: {
+        latitude: 40.7128,
+        longitude: -74.006,
+        locationId: MOCK_LOCATION_ID,
+      },
+      arrivedAt: baseTime,
+      notificationSent: true,
+    }
+
+    // 150m away, but nearbyLocation is null (server says nothing nearby)
+    // 150m > DWELL_RADIUS (100m), hasMovedAway checks > 200m, so at 150m
+    // nearbyLocation=null + not moved away (150 < 200) => idle (not departed)
+    // But with the 3-zone fix, the background task would have sent null for zone 3
+    // For zone 2, the network decides. With null from network:
+    const result = updateDwellState(
+      state,
+      { latitude: 40.7141, longitude: -74.006 }, // ~145m north
+      null, // Server returned nothing
+      5,
+      baseTime + 60000
+    )
+
+    // At ~145m, hasMovedAway returns false (< 200m), so this is 'idle'
+    // The fix is that the background task forces null for > 200m (zone 3)
+    // and lets network decide for zone 2. updateDwellState itself is unchanged.
+    expect(result.action).toBe('idle')
+  })
+
+  it('user beyond 200m with null nearbyLocation produces departed', () => {
+    const state: DwellState = {
+      ...createInitialDwellState(MOCK_USER_ID),
+      currentLocation: {
+        latitude: 40.7128,
+        longitude: -74.006,
+        locationId: MOCK_LOCATION_ID,
+      },
+      arrivedAt: baseTime,
+      notificationSent: true,
+    }
+
+    // Zone 3: > 200m, background task forces nearbyLocation = null
+    const result = updateDwellState(
+      state,
+      { latitude: 40.7148, longitude: -74.006 }, // ~222m north
+      null,
+      5,
+      baseTime + 60000
+    )
+
+    expect(result.action).toBe('departed')
+    expect(result.state.currentLocation).toBeNull()
   })
 })

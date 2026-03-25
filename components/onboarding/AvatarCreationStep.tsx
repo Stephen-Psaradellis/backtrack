@@ -5,7 +5,7 @@
  * Tab-based UI with reduced "Quick Create" subset.
  */
 
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import {
   View,
   Text,
@@ -163,7 +163,10 @@ export function AvatarCreationStep({
   const [hairColor, setHairColor] = useState(DEFAULT_TRAITS.hairColor)
   const [expression, setExpression] = useState(DEFAULT_TRAITS.expression)
   const [clothing, setClothing] = useState(DEFAULT_TRAITS.clothing)
-  const [previewAvatar, setPreviewAvatar] = useState<GeneratedAvatar | null>(null)
+  const [generatedAvatars, setGeneratedAvatars] = useState<GeneratedAvatar[]>([])
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+
+  const selectedAvatar = selectedIndex !== null ? generatedAvatars[selectedIndex] : null
 
   const getTraits = useCallback((): AvatarTraits => ({
     ...DEFAULT_TRAITS,
@@ -175,14 +178,17 @@ export function AvatarCreationStep({
 
   const handleGenerate = useCallback(async () => {
     const results = await avatarGen.generate(getTraits())
-    if (results.length > 0) setPreviewAvatar(results[0])
+    if (results.length > 0) {
+      setGeneratedAvatars(results)
+      setSelectedIndex(0)
+    }
   }, [avatarGen, getTraits])
 
   const handleComplete = useCallback(async () => {
-    if (!previewAvatar) return
-    const storedAvatar = createStoredAvatar(previewAvatar)
+    if (!selectedAvatar) return
+    const storedAvatar = createStoredAvatar(selectedAvatar)
     onComplete(storedAvatar)
-  }, [previewAvatar, onComplete])
+  }, [selectedAvatar, onComplete])
 
   const renderTabContent = () => {
     switch (selectedTab) {
@@ -234,12 +240,42 @@ export function AvatarCreationStep({
 
       {/* Avatar Preview */}
       <View style={styles.previewContainer}>
-        <View style={styles.avatarWrapper}>
-          <AvatarDisplay
-            avatar={previewAvatar ? createStoredAvatar(previewAvatar) : null}
-            size="xl"
-          />
-        </View>
+        {generatedAvatars.length > 1 ? (
+          <>
+            <Text style={styles.pickLabel}>Tap to select your favorite</Text>
+            <View style={styles.avatarOptionsRow}>
+              {generatedAvatars.map((avatar, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.avatarOption,
+                    selectedIndex === index && styles.avatarOptionSelected,
+                  ]}
+                  onPress={() => setSelectedIndex(index)}
+                  activeOpacity={0.8}
+                  testID={`avatar-option-${index}`}
+                >
+                  <AvatarDisplay
+                    avatar={createStoredAvatar(avatar)}
+                    size="lg"
+                  />
+                  {selectedIndex === index && (
+                    <View style={styles.checkBadge}>
+                      <Ionicons name="checkmark-circle" size={24} color={colors.primary[500]} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        ) : (
+          <View style={styles.avatarWrapper}>
+            <AvatarDisplay
+              avatar={selectedAvatar ? createStoredAvatar(selectedAvatar) : null}
+              size="xl"
+            />
+          </View>
+        )}
         {avatarGen.error && (
           <Text style={styles.errorText}>{avatarGen.error}</Text>
         )}
@@ -270,7 +306,7 @@ export function AvatarCreationStep({
           >
             <Ionicons name="sparkles" size={20} color="#FFF" />
             <Text style={styles.generateButtonText}>
-              {previewAvatar ? 'Regenerate Avatar' : 'Generate Avatar'}
+              {generatedAvatars.length > 0 ? 'Regenerate Avatar' : 'Generate Avatar'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -282,9 +318,9 @@ export function AvatarCreationStep({
       {/* Bottom Buttons */}
       <View style={styles.bottomButtons}>
         <TouchableOpacity
-          style={[styles.saveButton, !previewAvatar && styles.saveButtonDisabled]}
+          style={[styles.saveButton, !selectedAvatar && styles.saveButtonDisabled]}
           onPress={handleComplete}
-          disabled={!previewAvatar || avatarGen.isSaving}
+          disabled={!selectedAvatar || avatarGen.isSaving}
           activeOpacity={0.8}
         >
           <Text style={styles.saveButtonText}>
@@ -314,6 +350,11 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 20 },
   previewContainer: { alignItems: 'center', paddingVertical: 16, backgroundColor: darkTheme.surface, borderBottomWidth: 1, borderBottomColor: darkTheme.glassBorder },
   avatarWrapper: { marginBottom: 12 },
+  pickLabel: { fontSize: 14, color: darkTheme.textSecondary, marginBottom: 12 },
+  avatarOptionsRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingHorizontal: 20 },
+  avatarOption: { borderRadius: 16, backgroundColor: darkTheme.surfaceElevated, padding: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
+  avatarOptionSelected: { borderColor: colors.primary[500], backgroundColor: `${colors.primary[500]}15` },
+  checkBadge: { position: 'absolute', top: -6, right: -6, backgroundColor: darkTheme.background, borderRadius: 12 },
   errorText: { fontSize: 13, color: '#EF4444', textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
   generateContainer: { paddingHorizontal: 16, paddingVertical: 24 },
   generateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary[500], paddingVertical: 16, borderRadius: 14 },

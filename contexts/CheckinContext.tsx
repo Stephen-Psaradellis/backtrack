@@ -18,6 +18,7 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react'
+import { AppState, type AppStateStatus } from 'react-native'
 import * as Location from 'expo-location'
 
 import { supabase } from '../lib/supabase'
@@ -275,6 +276,18 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
     return () => {
       isMountedRef.current = false
     }
+  }, [getActiveCheckin])
+
+  // Re-fetch active check-in when app returns to foreground
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'active' && isMountedRef.current) {
+        getActiveCheckin()
+      }
+    }
+
+    const subscription = AppState.addEventListener('change', handleAppState)
+    return () => subscription.remove()
   }, [getActiveCheckin])
 
   // Auto-expire client-side checkin after 3 hours

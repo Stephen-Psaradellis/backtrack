@@ -41,7 +41,8 @@ import {
   createInitialDwellState,
   updateDwellState,
   calculateDistance,
-  hasMovedAway,
+  getDistanceFromDwellLocation,
+  DWELL_RADIUS_METERS as DWELL_DETECTION_RADIUS,
 } from './dwellDetection'
 
 // ============================================================================
@@ -637,22 +638,52 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   const dwellState = await getDwellState()
   const promptMinutes = settings.promptMinutes || DEFAULT_PROMPT_MINUTES
 
-  // TASK-06: Movement threshold optimization
-  // If user is stationary and already dwelling at a location, reuse it to skip network call.
-  // Otherwise fetch nearby locations from the server.
+  // Retry any pending checkout from a previous failed attempt
+  if (dwellState.pendingCheckout && dwellState.currentLocation?.locationId) {
+    try {
+      const { data: retryResult } = await supabase.rpc('checkout_from_location', {
+        p_location_id: dwellState.currentLocation.locationId,
+      })
+      if (retryResult?.success) {
+        // Checkout succeeded — clear state and continue
+        await saveDwellState({
+          ...createInitialDwellState(settings.userId),
+          userId: settings.userId,
+        })
+        // Re-read cleared state for the rest of this tick
+        const clearedState = await getDwellState()
+        Object.assign(dwellState, clearedState)
+      }
+      // If retry also failed, we'll try again next tick
+    } catch (err) {
+      captureException(err, {
+        operation: 'pendingCheckoutRetry',
+        locationId: dwellState.currentLocation.locationId,
+      })
+    }
+  }
+
+  // 3-zone departure detection:
+  //   Zone 1 (< DWELL_RADIUS): At venue — reuse cached location, skip network
+  //   Zone 2 (DWELL_RADIUS .. 2*DWELL_RADIUS): Ambiguous — ask server
+  //   Zone 3 (> 2*DWELL_RADIUS): Departed — force null, guaranteed departure
   let nearbyLocation: NearbyLocation | null = null
-  const isStationaryAtLocation = dwellState.currentLocation && !hasMovedAway(dwellState, { latitude, longitude })
+  const distFromDwell = getDistanceFromDwellLocation(dwellState, { latitude, longitude })
+  const isStationaryAtLocation = distFromDwell !== null && distFromDwell < DWELL_DETECTION_RADIUS
 
   if (isStationaryAtLocation) {
-    // Reuse existing location - skip network call
+    // Zone 1: At venue — reuse existing location, skip network call
     nearbyLocation = {
       id: dwellState.currentLocation!.locationId!,
       name: dwellState.currentLocation!.locationName!,
       latitude: dwellState.currentLocation!.latitude,
       longitude: dwellState.currentLocation!.longitude,
     }
+  } else if (distFromDwell !== null && distFromDwell > DWELL_DETECTION_RADIUS * 2) {
+    // Zone 3: Clearly departed — force null so updateDwellState produces 'departed'
+    nearbyLocation = null
   } else {
-    // User moved or no current location - fetch from network
+    // Zone 2 (ambiguous) or no current dwell location — ask the network
     const netState = await NetInfo.fetch()
     if (!netState.isConnected) {
       return
@@ -668,7 +699,6 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
       })
       return
     }
-
   }
 
   // Calculate dwell time for diagnostics
@@ -755,20 +785,39 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 
     // Auto-checkout: user has left the location they were checked into
     if (dwellState.currentLocation?.locationId) {
+      let checkoutSucceeded = false
       try {
-        await supabase.rpc('checkout_from_location', {
+        const { data: checkoutResult, error: checkoutError } = await supabase.rpc('checkout_from_location', {
           p_location_id: dwellState.currentLocation.locationId,
         })
+        checkoutSucceeded = !checkoutError && checkoutResult?.success
+        if (checkoutError) {
+          captureException(new Error(checkoutError.message), {
+            operation: 'autoCheckoutOnDeparture',
+            locationId: dwellState.currentLocation.locationId,
+          })
+        }
       } catch (err) {
         captureException(err, {
           operation: 'autoCheckoutOnDeparture',
           locationId: dwellState.currentLocation.locationId,
         })
       }
-    }
 
-    // Save departed state
-    await saveDwellState({ ...updateResult.state, userId: settings.userId })
+      if (checkoutSucceeded) {
+        // Save departed state — clear everything
+        await saveDwellState({ ...updateResult.state, userId: settings.userId })
+      } else {
+        // Preserve dwell state with pendingCheckout so next tick retries
+        await saveDwellState({
+          ...dwellState,
+          pendingCheckout: true,
+        })
+      }
+    } else {
+      // No locationId to checkout from — just clear state
+      await saveDwellState({ ...updateResult.state, userId: settings.userId })
+    }
   }
   // For 'dwelling' (no notification yet) and 'idle' actions, state unchanged
 })

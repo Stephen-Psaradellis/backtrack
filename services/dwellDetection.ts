@@ -64,6 +64,8 @@ export interface DwellState {
   notificationSent: boolean
   /** User ID for tracking */
   userId: string | null
+  /** True when a checkout RPC failed and needs retry */
+  pendingCheckout?: boolean
 }
 
 /**
@@ -229,6 +231,30 @@ export function isAtSameLocation(
   }
 
   return state.currentLocation.locationId === nearbyLocation.id
+}
+
+/**
+ * Calculate distance from the current dwell location to a set of coordinates.
+ * Returns null if there is no active dwell location.
+ *
+ * @param state - Current dwell state
+ * @param currentCoords - Current user coordinates
+ * @returns Distance in meters, or null if not dwelling
+ */
+export function getDistanceFromDwellLocation(
+  state: DwellState,
+  currentCoords: LocationCoords
+): number | null {
+  if (!state.currentLocation) {
+    return null
+  }
+
+  return calculateDistance(
+    currentCoords.latitude,
+    currentCoords.longitude,
+    state.currentLocation.latitude,
+    state.currentLocation.longitude
+  )
 }
 
 /**

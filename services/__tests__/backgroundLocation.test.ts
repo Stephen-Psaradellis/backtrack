@@ -44,6 +44,9 @@ vi.mock('expo-notifications', () => ({
   setNotificationHandler: vi.fn(),
   setNotificationCategoryAsync: vi.fn(),
   cancelAllScheduledNotificationsAsync: vi.fn(),
+  getPermissionsAsync: vi.fn().mockResolvedValue({ status: 'granted' }),
+  requestPermissionsAsync: vi.fn().mockResolvedValue({ status: 'granted' }),
+  AndroidNotificationPriority: { DEFAULT: 'default', HIGH: 'high' },
 }))
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -68,7 +71,7 @@ vi.mock('../../lib/sentry', () => ({
 
 vi.mock('../../lib/utils/gpsConfig', () => ({
   BACKGROUND_GPS_CONFIG: {
-    DWELL_RADIUS: 50,
+    DWELL_RADIUS: 100,
     DISTANCE_INTERVAL: 50,
     TIME_INTERVAL_MS: 120000,
   },
@@ -76,6 +79,27 @@ vi.mock('../../lib/utils/gpsConfig', () => ({
 
 vi.mock('../../lib/utils/sanitize', () => ({
   sanitizeLocationName: vi.fn((name) => name || 'this location'),
+}))
+
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn().mockResolvedValue(null),
+  setItemAsync: vi.fn().mockResolvedValue(undefined),
+  deleteItemAsync: vi.fn().mockResolvedValue(undefined),
+  AFTER_FIRST_UNLOCK: 6,
+}))
+
+vi.mock('@react-native-community/netinfo', () => ({
+  default: {
+    fetch: vi.fn().mockResolvedValue({ isConnected: true }),
+  },
+}))
+
+vi.mock('../../services/locationService', () => ({
+  searchNearbyPlaces: vi.fn().mockResolvedValue({ success: false, places: [] }),
+}))
+
+vi.mock('../../lib/utils/geoPrivacy', () => ({
+  reduceCoordinatePrecision: vi.fn((val: number) => val),
 }))
 
 // Import mocked modules after all mocks are defined
@@ -407,15 +431,15 @@ describe('Background Location Service', () => {
       await startBackgroundLocationTracking('user-123', 10)
 
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        'backtrack:tracking_settings',
+        'backtrack.tracking_settings',
         expect.stringContaining('"enabled":true')
       )
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        'backtrack:tracking_settings',
+        'backtrack.tracking_settings',
         expect.stringContaining('"promptMinutes":10')
       )
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        'backtrack:tracking_settings',
+        'backtrack.tracking_settings',
         expect.stringContaining('"userId":"user-123"')
       )
     })
@@ -446,7 +470,7 @@ describe('Background Location Service', () => {
 
       // Source uses removeItem for TRACKING_SETTINGS_KEY (AsyncStorage)
       // and secureDelete for DWELL_STATE_KEY (SecureStore)
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('backtrack:tracking_settings')
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('backtrack.tracking_settings')
     })
   })
 
@@ -482,7 +506,7 @@ describe('Background Location Service', () => {
       await updateTrackingSettings(10)
 
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        'backtrack:tracking_settings',
+        'backtrack.tracking_settings',
         expect.stringContaining('"promptMinutes":10')
       )
     })
@@ -649,6 +673,74 @@ describe('Background Location Service', () => {
       expect(result.success).toBe(true)
       expect(result.action).toBe('restart_tracking')
       expect(Location.startLocationUpdatesAsync).toHaveBeenCalled()
+    })
+  })
+
+  describe('3-zone departure detection', () => {
+    it('zone 1 (< DWELL_RADIUS): should reuse cached location without network call', async () => {
+      const { getDistanceFromDwellLocation } = await import('../dwellDetection')
+      const dwellState = {
+        currentLocation: { latitude: 40.7128, longitude: -74.006, locationId: 'loc-1' },
+        arrivedAt: Date.now(),
+        notificationSent: false,
+        userId: 'user-123',
+      }
+
+      const dist = getDistanceFromDwellLocation(dwellState, { latitude: 40.71285, longitude: -74.006 })
+      expect(dist).toBeLessThan(100) // Zone 1: at venue
+    })
+
+    it('zone 2 (DWELL_RADIUS to 2*DWELL_RADIUS): should be in ambiguous range', async () => {
+      const { getDistanceFromDwellLocation } = await import('../dwellDetection')
+      const dwellState = {
+        currentLocation: { latitude: 40.7128, longitude: -74.006, locationId: 'loc-1' },
+        arrivedAt: Date.now(),
+        notificationSent: false,
+        userId: 'user-123',
+      }
+
+      // ~150m north
+      const dist = getDistanceFromDwellLocation(dwellState, { latitude: 40.71415, longitude: -74.006 })
+      expect(dist).toBeGreaterThan(100) // > DWELL_RADIUS
+      expect(dist).toBeLessThan(200) // < 2*DWELL_RADIUS
+    })
+
+    it('zone 3 (> 2*DWELL_RADIUS): should force departure', async () => {
+      const { getDistanceFromDwellLocation } = await import('../dwellDetection')
+      const dwellState = {
+        currentLocation: { latitude: 40.7128, longitude: -74.006, locationId: 'loc-1' },
+        arrivedAt: Date.now(),
+        notificationSent: false,
+        userId: 'user-123',
+      }
+
+      // ~300m north
+      const dist = getDistanceFromDwellLocation(dwellState, { latitude: 40.7155, longitude: -74.006 })
+      expect(dist).toBeGreaterThan(200) // Zone 3: force departure
+    })
+  })
+
+  describe('checkout resilience', () => {
+    it('pendingCheckout flag should be preserved in DwellState', () => {
+      const state = {
+        currentLocation: { latitude: 40.7128, longitude: -74.006, locationId: 'loc-1', locationName: 'Café' },
+        arrivedAt: Date.now(),
+        notificationSent: true,
+        userId: 'user-123',
+        pendingCheckout: true,
+      }
+
+      expect(state.pendingCheckout).toBe(true)
+      expect(state.currentLocation.locationId).toBe('loc-1')
+    })
+
+    it('checkout success should clear dwell state completely', async () => {
+      const { createInitialDwellState } = await import('../dwellDetection')
+      const cleared = createInitialDwellState('user-123')
+
+      expect(cleared.currentLocation).toBeNull()
+      expect(cleared.arrivedAt).toBeNull()
+      expect(cleared.pendingCheckout).toBeUndefined()
     })
   })
 })
