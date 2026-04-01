@@ -19,7 +19,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Platform,
   StatusBar,
   TouchableOpacity,
@@ -44,15 +43,7 @@ import { useTrendingVenues } from '../hooks/useTrendingVenues'
 import { useHangouts } from '../hooks/useHangouts'
 import { useLocation } from '../hooks/useLocation'
 import { useCheckin } from '../hooks/useCheckin'
-import * as Location from 'expo-location'
-import { selectionFeedback, successFeedback, errorFeedback } from '../lib/haptics'
-import { supabase } from '../lib/supabase'
-import {
-  searchNearbyPlaces,
-  transformGooglePlaces,
-  cacheVenueToSupabase,
-  type GooglePlaceTransformed,
-} from '../services/locationService'
+import { selectionFeedback } from '../lib/haptics'
 import { colors, spacing } from '../constants/theme'
 import { darkTheme } from '../constants/glassStyles'
 import { SkeletonPostCard } from '../components/Skeleton'
@@ -190,7 +181,7 @@ export function FeedScreen(): React.ReactNode {
     5
   )
   const { nearbyHangouts, isLoadingNearby: hangoutsLoading, refetchNearby } = useHangouts(selectedRadius)
-  const { activeCheckin, checkIn, checkOut, isCheckingIn } = useCheckin()
+  const { activeCheckin } = useCheckin()
   const [refreshing, setRefreshing] = React.useState(false)
 
   // ---------------------------------------------------------------------------
@@ -297,148 +288,9 @@ export function FeedScreen(): React.ReactNode {
 
   const handleCheckIn = useCallback(async () => {
     await selectionFeedback()
-
-    // If already checked in, offer checkout
-    if (activeCheckin) {
-      Alert.alert(
-        'Check Out',
-        `Are you sure you want to check out from ${activeCheckin.location_name}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Check Out',
-            style: 'destructive',
-            onPress: async () => {
-              const result = await checkOut(activeCheckin.location_id)
-              if (result.success) {
-                await successFeedback()
-              } else {
-                await errorFeedback()
-                Alert.alert('Error', result.error || 'Failed to check out')
-              }
-            },
-          },
-        ]
-      )
-      return
-    }
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync()
-      if (status !== 'granted') {
-        await errorFeedback()
-        Alert.alert(
-          'Location Required',
-          'Location permission is required to check in. Please enable it in your device settings.'
-        )
-        return
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      })
-
-      const lat = location.coords.latitude
-      const lon = location.coords.longitude
-
-      // Search for nearby locations in our database
-      const { data: dbLocations } = await supabase.rpc('get_locations_near_point', {
-        p_lat: lat,
-        p_lon: lon,
-        p_radius_meters: 200,
-        p_limit: 10,
-      })
-
-      type NearbyLoc = {
-        id: string
-        name: string
-        distance: number
-        fromGooglePlaces: boolean
-        placeData?: GooglePlaceTransformed
-      }
-
-      let locations: NearbyLoc[] = []
-
-      if (dbLocations && dbLocations.length > 0) {
-        locations = dbLocations.map((loc: { id: string; name: string; distance_meters: number }) => ({
-          id: loc.id,
-          name: loc.name,
-          distance: loc.distance_meters,
-          fromGooglePlaces: false,
-        }))
-      } else {
-        // Fallback to Google Places
-        const result = await searchNearbyPlaces({
-          latitude: lat,
-          longitude: lon,
-          radius_meters: 200,
-          max_results: 10,
-        })
-
-        if (result.success && result.places.length > 0) {
-          const transformed = transformGooglePlaces(result.places, false)
-          locations = transformed.map(place => ({
-            id: '',
-            name: place.name,
-            distance: 0,
-            fromGooglePlaces: true,
-            placeData: place,
-          }))
-        }
-      }
-
-      if (locations.length === 0) {
-        await errorFeedback()
-        Alert.alert(
-          'No Venues Found',
-          'No venues found nearby. Please try again when you\'re at a bar, restaurant, or other venue.'
-        )
-        return
-      }
-
-      // Show location picker via Alert
-      const buttons = locations.slice(0, 5).map(loc => ({
-        text: loc.fromGooglePlaces ? `${loc.name} (new)` : loc.name,
-        onPress: async () => {
-          let locationId = loc.id
-          if (loc.fromGooglePlaces && loc.placeData) {
-            const cacheResult = await cacheVenueToSupabase(supabase, loc.placeData)
-            if (!cacheResult.success || !cacheResult.location) {
-              await errorFeedback()
-              Alert.alert('Error', 'Could not save this venue. Please try again.')
-              return
-            }
-            locationId = cacheResult.location.id
-          }
-
-          const result = await checkIn(locationId)
-          if (result.success) {
-            await successFeedback()
-            if (result.alreadyCheckedIn) {
-              Alert.alert('Already Checked In', `You're already checked in at ${loc.name}`)
-            }
-          } else {
-            await errorFeedback()
-            Alert.alert('Check-In Failed', result.error || 'Failed to check in')
-          }
-        },
-      }))
-
-      buttons.push({ text: 'Cancel', onPress: async () => {} })
-
-      Alert.alert(
-        'Select a Venue',
-        'Choose a venue to check in:',
-        buttons
-      )
-    } catch (err) {
-      await errorFeedback()
-      Alert.alert(
-        'Error',
-        err instanceof Error ? err.message : 'Failed to get your location'
-      )
-    }
-  }, [activeCheckin, checkIn, checkOut])
+    // TODO: Implement check-in flow when check-in feature is added
+    if (__DEV__) console.log('Check-in flow not yet implemented')
+  }, [])
 
   const handleCreatePost = useCallback(async () => {
     await selectionFeedback()
