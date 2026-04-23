@@ -2,219 +2,89 @@
  * SceneStep Component (Moment 1: Where & When)
  *
  * First step in the new 3-moment CreatePost wizard flow.
- * Combines location selection and time specification into a single screen.
+ * Combines location selection and time range specification.
  *
  * Features:
  * - Location picker at top (required)
- * - Simplified time selector with day dropdown + fuzzy period
- * - Skip button for time (optional)
+ * - Start/End time pickers with checkin bounds (defaults from checkin time)
  * - Back/Next navigation buttons
- *
- * @example
- * ```tsx
- * <SceneStep
- *   locations={visitedLocations}
- *   selectedLocation={formData.location}
- *   onLocationSelect={handleLocationSelect}
- *   userCoordinates={{ latitude: 37.78, longitude: -122.41 }}
- *   sightingDate={formData.sightingDate}
- *   timeGranularity={formData.timeGranularity}
- *   onDateChange={handleDateChange}
- *   onGranularityChange={handleGranularityChange}
- *   onNext={handleNext}
- *   onBack={handleBack}
- * />
- * ```
  */
 
-import React, { memo, useCallback, useMemo, useState } from 'react'
+import React, { memo, useCallback, useState } from 'react'
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Platform,
   ViewStyle,
 } from 'react-native'
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
 import { LocationPicker, type LocationItem } from '../../../components/LocationPicker'
 import { Button, OutlineButton } from '../../../components/Button'
 import { EmptyState } from '../../../components/EmptyState'
 import { lightFeedback } from '../../../lib/haptics'
-import type { TimeGranularity } from '../../../types/database'
 import { COLORS } from '../styles'
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-/**
- * User coordinates for distance calculation
- */
 interface Coordinates {
   latitude: number
   longitude: number
 }
 
-/**
- * Day option for simplified time selection
- */
-type DayOption = 'today' | 'yesterday' | 'this-week' | 'earlier'
-
-/**
- * Fuzzy time period option - matches TimeGranularity values
- */
-type FuzzyPeriod = 'morning' | 'afternoon' | 'evening'
-
-/**
- * Props for the SceneStep component
- */
 export interface SceneStepProps {
-  /**
-   * Array of recently visited locations to display
-   */
   locations: LocationItem[]
-
-  /**
-   * Currently selected location (null if none selected)
-   */
   selectedLocation: LocationItem | null
-
-  /**
-   * Callback when a location is selected
-   */
   onLocationSelect: (location: LocationItem) => void
-
-  /**
-   * User's current coordinates for distance calculation
-   */
   userCoordinates: Coordinates | null
-
-  /**
-   * Whether locations are being loaded
-   */
   loadingLocations?: boolean
-
-  /**
-   * Whether the selected location was pre-filled from navigation params
-   */
   isPreselected?: boolean
-
-  /**
-   * Currently selected sighting date (null if none)
-   */
+  /** Start time for the sighting (null = not set) */
   sightingDate: Date | null
-
-  /**
-   * Selected time granularity
-   */
-  timeGranularity: TimeGranularity | null
-
-  /**
-   * Callback when date is changed
-   */
-  onDateChange: (date: Date | null) => void
-
-  /**
-   * Callback when granularity is changed
-   */
-  onGranularityChange: (granularity: TimeGranularity | null) => void
-
-  /**
-   * Callback when user wants to proceed to next step
-   */
+  /** End time for the sighting (null = instant/no end) */
+  sightingEndDate: Date | null
+  /** Callback when start time changes */
+  onStartTimeChange: (date: Date | null) => void
+  /** Callback when end time changes */
+  onEndTimeChange: (date: Date | null) => void
+  /** Clear all time fields */
+  onClearTime: () => void
+  /** Earliest valid start time (checkin time) */
+  checkinTime?: Date | null
+  /** Latest valid end time (checkout time or now) */
+  checkoutTime?: Date | null
   onNext: () => void
-
-  /**
-   * Callback when user wants to go back
-   */
   onBack: () => void
-
-  /**
-   * Test ID prefix for testing purposes
-   */
   testID?: string
 }
 
 // ============================================================================
-// CONSTANTS
+// HELPERS
 // ============================================================================
 
-const DAY_OPTIONS: { value: DayOption; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: 'this-week', label: 'This week' },
-  { value: 'earlier', label: 'Earlier' },
-]
-
-const PERIOD_OPTIONS: { value: FuzzyPeriod; label: string }[] = [
-  { value: 'morning', label: 'Morning' },
-  { value: 'afternoon', label: 'Afternoon' },
-  { value: 'evening', label: 'Evening/Night' },
-]
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Calculate date from day option
- */
-function getDateFromDayOption(dayOption: DayOption): Date {
-  const now = new Date()
-  switch (dayOption) {
-    case 'today':
-      return now
-    case 'yesterday':
-      const yesterday = new Date(now)
-      yesterday.setDate(yesterday.getDate() - 1)
-      return yesterday
-    case 'this-week':
-      // Use 3 days ago as a middle point
-      const thisWeek = new Date(now)
-      thisWeek.setDate(thisWeek.getDate() - 3)
-      return thisWeek
-    case 'earlier':
-      // Use 7 days ago
-      const earlier = new Date(now)
-      earlier.setDate(earlier.getDate() - 7)
-      return earlier
-    default:
-      return now
-  }
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
 /**
- * Get day option from date
+ * Clamp a date between min and max bounds (time-only comparison).
+ * Returns the clamped date, or the original if no bounds apply.
  */
-function getDayOptionFromDate(date: Date | null): DayOption | null {
-  if (!date) return null
-
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const diffDays = Math.floor((today.getTime() - dateDay.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'today'
-  if (diffDays === 1) return 'yesterday'
-  if (diffDays <= 7) return 'this-week'
-  return 'earlier'
+function clampTime(date: Date, min: Date | null, max: Date | null): Date {
+  if (min && date < min) return min
+  if (max && date > max) return max
+  return date
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-/**
- * SceneStep - Combined location and time step (Moment 1)
- *
- * Layout:
- * 1. Location picker (required)
- * 2. Divider with "When? (optional)" label
- * 3. Simplified time selector with day + period dropdowns
- * 4. Skip button for time
- * 5. Back/Next navigation
- */
 export const SceneStep = memo(function SceneStep({
   locations,
   selectedLocation,
@@ -223,83 +93,64 @@ export const SceneStep = memo(function SceneStep({
   loadingLocations = false,
   isPreselected = false,
   sightingDate,
-  timeGranularity,
-  onDateChange,
-  onGranularityChange,
+  sightingEndDate,
+  onStartTimeChange,
+  onEndTimeChange,
+  onClearTime,
+  checkinTime = null,
+  checkoutTime = null,
   onNext,
   onBack,
   testID = 'create-post',
 }: SceneStepProps): JSX.Element {
-  // ---------------------------------------------------------------------------
-  // STATE
-  // ---------------------------------------------------------------------------
-
-  const [selectedDay, setSelectedDay] = useState<DayOption | null>(
-    getDayOptionFromDate(sightingDate)
-  )
-  const [selectedPeriod, setSelectedPeriod] = useState<FuzzyPeriod | null>(
-    (timeGranularity as FuzzyPeriod) || null
-  )
-  const [showTimeSelector, setShowTimeSelector] = useState(!!sightingDate)
-
-  // ---------------------------------------------------------------------------
-  // COMPUTED VALUES
-  // ---------------------------------------------------------------------------
+  // DateTimePicker is toggled on/off via button press on both platforms
+  const [showStartPicker, setShowStartPicker] = useState(false)
+  const [showEndPicker, setShowEndPicker] = useState(false)
 
   const isLocationSelected = selectedLocation !== null
   const hasNoVisits = !loadingLocations && locations.length === 0 && !isPreselected
-  const canProceed = isLocationSelected
+  const hasTime = sightingDate !== null
+  // Start time is required; end time must be > start time if set
+  const isTimeValid = hasTime && (
+    !sightingEndDate || sightingEndDate > sightingDate!
+  )
+  const canProceed = isLocationSelected && isTimeValid
 
   // ---------------------------------------------------------------------------
   // HANDLERS
   // ---------------------------------------------------------------------------
-
-  const handleDaySelect = useCallback(async (day: DayOption) => {
-    await lightFeedback()
-    setSelectedDay(day)
-    const newDate = getDateFromDayOption(day)
-    onDateChange(newDate)
-
-    // Auto-show period selector if not already visible
-    if (!selectedPeriod) {
-      setSelectedPeriod('afternoon')
-      onGranularityChange('afternoon')
-    }
-  }, [onDateChange, onGranularityChange, selectedPeriod])
-
-  const handlePeriodSelect = useCallback(async (period: FuzzyPeriod) => {
-    await lightFeedback()
-    setSelectedPeriod(period)
-    onGranularityChange(period)
-
-    // Set a default date if none selected
-    if (!selectedDay) {
-      setSelectedDay('today')
-      onDateChange(new Date())
-    }
-  }, [onGranularityChange, selectedDay, onDateChange])
-
-  const handleSkipTime = useCallback(async () => {
-    await lightFeedback()
-    setSelectedDay(null)
-    setSelectedPeriod(null)
-    setShowTimeSelector(false)
-    onDateChange(null)
-    onGranularityChange(null)
-  }, [onDateChange, onGranularityChange])
-
-  const handleAddTime = useCallback(async () => {
-    await lightFeedback()
-    setShowTimeSelector(true)
-  }, [])
 
   const handleLocationSelectWithFeedback = useCallback(async (location: LocationItem) => {
     await lightFeedback()
     onLocationSelect(location)
   }, [onLocationSelect])
 
+  const handleStartTimeChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
+    setShowStartPicker(Platform.OS === 'ios') // iOS keeps spinner open, Android closes
+    if (date) {
+      // Clamp to checkin/checkout bounds
+      const clamped = clampTime(date, checkinTime, checkoutTime)
+      onStartTimeChange(clamped)
+    }
+  }, [onStartTimeChange, checkinTime, checkoutTime])
+
+  const handleEndTimeChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
+    setShowEndPicker(Platform.OS === 'ios') // iOS keeps spinner open, Android closes
+    if (date) {
+      // Clamp: min = start time, max = checkout
+      const clamped = clampTime(date, sightingDate, checkoutTime)
+      onEndTimeChange(clamped)
+    }
+  }, [onEndTimeChange, sightingDate, checkoutTime])
+
+  const handleClearEndTime = useCallback(async () => {
+    await lightFeedback()
+    setShowEndPicker(false)
+    onEndTimeChange(null)
+  }, [onEndTimeChange])
+
   // ---------------------------------------------------------------------------
-  // RENDER: EMPTY STATE (no locations)
+  // RENDER: EMPTY STATE
   // ---------------------------------------------------------------------------
 
   if (hasNoVisits) {
@@ -328,7 +179,7 @@ export const SceneStep = memo(function SceneStep({
   }
 
   // ---------------------------------------------------------------------------
-  // RENDER: MAIN CONTENT
+  // RENDER: MAIN
   // ---------------------------------------------------------------------------
 
   return (
@@ -364,82 +215,120 @@ export const SceneStep = memo(function SceneStep({
         {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>When? (optional)</Text>
+          <Text style={styles.dividerText}>When?</Text>
           <View style={styles.dividerLine} />
         </View>
 
         {/* Time Section */}
-        {showTimeSelector ? (
-          <View style={styles.section}>
-            {/* Day Selection */}
-            <Text style={styles.fieldLabel}>What day?</Text>
-            <View style={styles.chipRow}>
-              {DAY_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.chip,
-                    selectedDay === option.value && styles.chipSelected,
-                  ]}
-                  onPress={() => handleDaySelect(option.value)}
-                  testID={`${testID}-day-${option.value}`}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selectedDay === option.value && styles.chipTextSelected,
-                    ]}
+        <View style={styles.section}>
+          {hasTime ? (
+            <>
+              {/* Time pickers row */}
+              <View style={styles.timeRow}>
+                {/* Start time */}
+                <View style={styles.timeColumn}>
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={styles.fieldLabel}>From</Text>
+                    <View style={styles.requiredBadge}>
+                      <Text style={styles.requiredText}>Required</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.timeButton, showStartPicker && styles.timeButtonActive]}
+                    onPress={() => {
+                      setShowEndPicker(false)
+                      setShowStartPicker(!showStartPicker)
+                    }}
+                    testID={`${testID}-start-time-button`}
                   >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <Text style={styles.timeButtonText}>
+                      {formatTime(sightingDate!)}
+                    </Text>
+                  </TouchableOpacity>
+                  {showStartPicker && (
+                    <DateTimePicker
+                      value={sightingDate!}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      themeVariant="dark"
+                      onChange={handleStartTimeChange}
+                      testID={`${testID}-start-time-picker`}
+                    />
+                  )}
+                </View>
 
-            {/* Period Selection */}
-            <Text style={styles.fieldLabel}>What time of day?</Text>
-            <View style={styles.chipRow}>
-              {PERIOD_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.chip,
-                    selectedPeriod === option.value && styles.chipSelected,
-                  ]}
-                  onPress={() => handlePeriodSelect(option.value)}
-                  testID={`${testID}-period-${option.value}`}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selectedPeriod === option.value && styles.chipTextSelected,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                {/* End time */}
+                <View style={styles.timeColumn}>
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={styles.fieldLabel}>To</Text>
+                    <Text style={styles.optionalLabel}>(optional)</Text>
+                  </View>
+                  {sightingEndDate ? (
+                    <>
+                      <View style={styles.endTimeRow}>
+                        <TouchableOpacity
+                          style={[styles.timeButton, styles.endTimeButton, showEndPicker && styles.timeButtonActive]}
+                          onPress={() => {
+                            setShowStartPicker(false)
+                            setShowEndPicker(!showEndPicker)
+                          }}
+                          testID={`${testID}-end-time-button`}
+                        >
+                          <Text style={styles.timeButtonText}>
+                            {formatTime(sightingEndDate)}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.clearButton}
+                          onPress={handleClearEndTime}
+                          testID={`${testID}-clear-end-time`}
+                        >
+                          <Text style={styles.clearButtonText}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                      {showEndPicker && (
+                        <DateTimePicker
+                          value={sightingEndDate}
+                          mode="time"
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          themeVariant="dark"
+                          onChange={handleEndTimeChange}
+                          testID={`${testID}-end-time-picker`}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.addEndTimeButton}
+                      onPress={() => {
+                        onEndTimeChange(checkoutTime ?? new Date())
+                        if (Platform.OS === 'android') setShowEndPicker(true)
+                      }}
+                      testID={`${testID}-add-end-time`}
+                    >
+                      <Text style={styles.addEndTimeText}>+ Add end time</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
 
-            {/* Skip Time Button */}
-            <TouchableOpacity
-              style={styles.skipButton}
-              onPress={handleSkipTime}
-              testID={`${testID}-skip-time`}
-            >
-              <Text style={styles.skipButtonText}>Skip – I don't remember exactly</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.addTimeButton}
-            onPress={handleAddTime}
-            testID={`${testID}-add-time`}
-          >
-            <Text style={styles.addTimeIcon}>🕐</Text>
-            <Text style={styles.addTimeText}>Add when you saw them</Text>
-          </TouchableOpacity>
-        )}
+              {/* Time range hint */}
+              {checkinTime && (
+                <Text style={styles.timeHintText}>
+                  Based on your check-in{checkoutTime ? ` (${formatTime(checkinTime)} – ${formatTime(checkoutTime)})` : ` at ${formatTime(checkinTime)}`}
+                </Text>
+              )}
+            </>
+          ) : (
+            <View style={styles.noTimeState}>
+              <Text style={styles.noTimeText}>
+                {isLocationSelected
+                  ? 'Time auto-fills when you pick a location'
+                  : 'Select a location first'}
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* Action buttons */}
@@ -510,14 +399,14 @@ const styles = StyleSheet.create({
   requiredBadge: {
     backgroundColor: COLORS.primary,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 10,
   },
 
   requiredText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    color: COLORS.background,
+    color: '#FFFFFF',
   },
 
   divider: {
@@ -539,76 +428,112 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
 
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+
   fieldLabel: {
     fontSize: 14,
     fontWeight: '500',
     color: COLORS.textSecondary,
-    marginBottom: 8,
   },
 
-  chipRow: {
+  optionalLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    opacity: 0.7,
+  },
+
+  timeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: 16,
   },
 
-  chip: {
+  timeColumn: {
+    flex: 1,
+  },
+
+  timeButton: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
     backgroundColor: COLORS.backgroundSecondary,
     borderWidth: 1,
     borderColor: COLORS.border,
+    alignItems: 'center',
   },
 
-  chipSelected: {
-    backgroundColor: COLORS.primary,
+  timeButtonActive: {
     borderColor: COLORS.primary,
   },
 
-  chipText: {
-    fontSize: 14,
+  timeButtonText: {
+    fontSize: 16,
     fontWeight: '500',
     color: COLORS.textPrimary,
   },
 
-  chipTextSelected: {
-    color: COLORS.background,
+  endTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 
-  skipButton: {
-    alignSelf: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  endTimeButton: {
+    flex: 1,
   },
 
-  skipButtonText: {
+  clearButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  clearButtonText: {
     fontSize: 14,
     color: COLORS.textSecondary,
   },
 
-  addTimeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  addEndTimeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderStyle: 'dashed',
+    alignItems: 'center',
   },
 
-  addTimeIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-
-  addTimeText: {
+  addEndTimeText: {
     fontSize: 14,
     color: COLORS.textSecondary,
+  },
+
+  timeHintText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic',
+  },
+
+  noTimeState: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+
+  noTimeText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
   },
 
   actions: {
