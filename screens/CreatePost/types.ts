@@ -38,8 +38,10 @@ export interface CreatePostFormData {
   note: string
   /** Location where the connection happened */
   location: LocationItem | null
-  /** Date/time when the sighting occurred (optional) */
+  /** Start date/time when the sighting occurred (optional) */
   sightingDate: Date | null
+  /** End date/time for the sighting window (null = instant) */
+  sightingEndDate: Date | null
   /** Granularity of the sighting time: specific time or approximate period */
   timeGranularity: TimeGranularity | null
 }

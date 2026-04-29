@@ -153,12 +153,25 @@ export interface UseCreatePostFormResult {
   handlePhotoSelect: (photoId: string) => void
   /** Handle sighting date change */
   handleSightingDateChange: (date: Date | null) => void
+  /** Handle sighting end date change */
+  handleSightingEndDateChange: (date: Date | null) => void
   /** Handle time granularity change */
   handleTimeGranularityChange: (granularity: TimeGranularity | null) => void
+  /** Clear all sighting time fields */
+  handleClearSightingTime: () => void
   /** Handle form submission */
   handleSubmit: () => Promise<void>
   /** Navigate to a specific step */
   goToStep: (step: CreatePostStep) => void
+
+  // ---------------------------------------------------------------------------
+  // Time Bounds (for constraining time pickers)
+  // ---------------------------------------------------------------------------
+
+  /** Earliest valid start time (checkin time) */
+  checkinTime: Date | null
+  /** Latest valid end time (checkout time, or now if still checked in) */
+  checkoutTime: Date | null
 }
 
 // ============================================================================
@@ -174,6 +187,7 @@ const INITIAL_FORM_DATA: CreatePostFormData = {
   note: '',
   location: null,
   sightingDate: null,
+  sightingEndDate: null,
   timeGranularity: null,
 }
 
@@ -226,6 +240,8 @@ export function useCreatePostForm(
   const [preselectedLocation, setPreselectedLocation] = useState<LocationEntity | null>(null)
   const [canPost, setCanPost] = useState<boolean | null>(null)
   const [checkingCanPost, setCheckingCanPost] = useState(false)
+  const [checkinTime, setCheckinTime] = useState<Date | null>(null)
+  const [checkoutTime, setCheckoutTime] = useState<Date | null>(null)
 
   // Fetch recently visited locations (within 3 hours) for post creation
   const {
@@ -302,13 +318,14 @@ export function useCreatePostForm(
   const isCurrentStepValid = useMemo(() => {
     switch (currentStep) {
       case 'scene':
-        // Scene requires location + permission to post, time is optional
-        // If a date is set, validate it's not in the future
-        if (formData.sightingDate) {
-          const validation = validateSightingDate(formData.sightingDate)
-          if (!validation.valid) return false
-        }
-        return formData.location !== null && canPost === true
+        // Scene requires location + permission to post + start time
+        if (!formData.location || canPost !== true || !formData.sightingDate) return false
+        // Validate start time is not in the future
+        const validation = validateSightingDate(formData.sightingDate)
+        if (!validation.valid) return false
+        // End time must be after start time if set
+        if (formData.sightingEndDate && formData.sightingEndDate <= formData.sightingDate) return false
+        return true
       case 'moment':
         // Moment requires avatar and note (min length)
         return formData.targetAvatar !== null && formData.note.trim().length >= MIN_NOTE_LENGTH
@@ -318,7 +335,7 @@ export function useCreatePostForm(
       default:
         return false
     }
-  }, [currentStep, formData, isFormValid])
+  }, [currentStep, formData, canPost, isFormValid])
 
   // ---------------------------------------------------------------------------
   // EFFECTS
@@ -534,10 +551,30 @@ export function useCreatePostForm(
   }, [])
 
   /**
-   * Handle location select
+   * Handle location select — auto-populates sighting times from visit data
    */
   const handleLocationSelect = useCallback((location: LocationItem) => {
-    setFormData((prev) => ({ ...prev, location }))
+    // Derive checkin/checkout bounds from location data
+    const ciTime = location.checked_in_at
+      ? new Date(location.checked_in_at)
+      : location.visited_at
+        ? new Date(location.visited_at)
+        : new Date()
+    const coTime = location.checked_out_at
+      ? new Date(location.checked_out_at)
+      : new Date() // still checked in → "now" is the upper bound
+
+    setCheckinTime(ciTime)
+    setCheckoutTime(coTime)
+
+    // Default start time to checkin, end time to checkout/now
+    setFormData((prev) => ({
+      ...prev,
+      location,
+      sightingDate: ciTime,
+      sightingEndDate: coTime,
+      timeGranularity: 'specific',
+    }))
   }, [])
 
   /**
@@ -558,10 +595,41 @@ export function useCreatePostForm(
   }, [])
 
   /**
-   * Handle sighting date change
+   * Handle sighting date (start time) change
+   * If start time moves past end time, auto-clear end time
    */
   const handleSightingDateChange = useCallback((date: Date | null) => {
-    setFormData((prev) => ({ ...prev, sightingDate: date }))
+    setFormData((prev) => {
+      const updated: typeof prev = {
+        ...prev,
+        sightingDate: date,
+        timeGranularity: date ? 'specific' : null,
+      }
+      // If start time >= end time, clear end time
+      if (date && prev.sightingEndDate && date >= prev.sightingEndDate) {
+        updated.sightingEndDate = null
+      }
+      return updated
+    })
+  }, [])
+
+  /**
+   * Handle sighting end date change
+   */
+  const handleSightingEndDateChange = useCallback((date: Date | null) => {
+    setFormData((prev) => ({ ...prev, sightingEndDate: date }))
+  }, [])
+
+  /**
+   * Clear all sighting time fields (skip time)
+   */
+  const handleClearSightingTime = useCallback(() => {
+    setFormData((prev) => ({
+      ...prev,
+      sightingDate: null,
+      sightingEndDate: null,
+      timeGranularity: null,
+    }))
   }, [])
 
   /**
@@ -623,10 +691,13 @@ export function useCreatePostForm(
           // selfie_url is required but we use photo_id for new posts
           // Use the storage path from the profile_photo for backwards compatibility
           selfie_url: formData.selectedPhotoId || 'photo_id_reference',
-          // Optional sighting time fields - only include if date is set
+          // Optional sighting time fields - only include if start date is set
           ...(formData.sightingDate && {
             sighting_date: formData.sightingDate.toISOString(),
-            time_granularity: formData.timeGranularity,
+            time_granularity: 'specific' as const,
+            ...(formData.sightingEndDate && {
+              sighting_end_date: formData.sightingEndDate.toISOString(),
+            }),
           }),
         })
 
@@ -643,6 +714,7 @@ export function useCreatePostForm(
       // Track successful post creation (no PII - just metadata)
       trackEvent(AnalyticsEvent.POST_CREATED, {
         has_time: formData.sightingDate !== null,
+        has_time_range: formData.sightingEndDate !== null,
         has_note: formData.note.trim().length > 0,
       })
 
@@ -714,9 +786,15 @@ export function useCreatePostForm(
     handleLocationSelect,
     handleNoteChange,
     handleSightingDateChange,
+    handleSightingEndDateChange,
     handleTimeGranularityChange,
+    handleClearSightingTime,
     handleSubmit,
     goToStep,
+
+    // Time Bounds
+    checkinTime,
+    checkoutTime,
   }
 }
 

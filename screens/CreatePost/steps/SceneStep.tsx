@@ -17,14 +17,13 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Platform,
   ViewStyle,
 } from 'react-native'
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
 import { LocationPicker, type LocationItem } from '../../../components/LocationPicker'
 import { Button, OutlineButton } from '../../../components/Button'
 import { EmptyState } from '../../../components/EmptyState'
+import { TimePickerModal } from '../../../components/pickers/TimePickerModal'
 import { lightFeedback } from '../../../lib/haptics'
 import { COLORS } from '../styles'
 
@@ -125,22 +124,16 @@ export const SceneStep = memo(function SceneStep({
     onLocationSelect(location)
   }, [onLocationSelect])
 
-  const handleStartTimeChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
-    setShowStartPicker(Platform.OS === 'ios') // iOS keeps spinner open, Android closes
-    if (date) {
-      // Clamp to checkin/checkout bounds
-      const clamped = clampTime(date, checkinTime, checkoutTime)
-      onStartTimeChange(clamped)
-    }
+  const handleStartTimeConfirm = useCallback((date: Date) => {
+    setShowStartPicker(false)
+    const clamped = clampTime(date, checkinTime, checkoutTime)
+    onStartTimeChange(clamped)
   }, [onStartTimeChange, checkinTime, checkoutTime])
 
-  const handleEndTimeChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
-    setShowEndPicker(Platform.OS === 'ios') // iOS keeps spinner open, Android closes
-    if (date) {
-      // Clamp: min = start time, max = checkout
-      const clamped = clampTime(date, sightingDate, checkoutTime)
-      onEndTimeChange(clamped)
-    }
+  const handleEndTimeConfirm = useCallback((date: Date) => {
+    setShowEndPicker(false)
+    const clamped = clampTime(date, sightingDate, checkoutTime)
+    onEndTimeChange(clamped)
   }, [onEndTimeChange, sightingDate, checkoutTime])
 
   const handleClearEndTime = useCallback(async () => {
@@ -245,16 +238,6 @@ export const SceneStep = memo(function SceneStep({
                       {formatTime(sightingDate!)}
                     </Text>
                   </TouchableOpacity>
-                  {showStartPicker && (
-                    <DateTimePicker
-                      value={sightingDate!}
-                      mode="time"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      themeVariant="dark"
-                      onChange={handleStartTimeChange}
-                      testID={`${testID}-start-time-picker`}
-                    />
-                  )}
                 </View>
 
                 {/* End time */}
@@ -286,23 +269,12 @@ export const SceneStep = memo(function SceneStep({
                           <Text style={styles.clearButtonText}>✕</Text>
                         </TouchableOpacity>
                       </View>
-                      {showEndPicker && (
-                        <DateTimePicker
-                          value={sightingEndDate}
-                          mode="time"
-                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                          themeVariant="dark"
-                          onChange={handleEndTimeChange}
-                          testID={`${testID}-end-time-picker`}
-                        />
-                      )}
                     </>
                   ) : (
                     <TouchableOpacity
                       style={styles.addEndTimeButton}
                       onPress={() => {
                         onEndTimeChange(checkoutTime ?? new Date())
-                        if (Platform.OS === 'android') setShowEndPicker(true)
                       }}
                       testID={`${testID}-add-end-time`}
                     >
@@ -347,6 +319,32 @@ export const SceneStep = memo(function SceneStep({
           testID={`${testID}-scene-next`}
         />
       </View>
+
+      {/* Time picker modals — rendered outside ScrollView as overlays */}
+      {sightingDate && (
+        <TimePickerModal
+          visible={showStartPicker}
+          onClose={() => setShowStartPicker(false)}
+          onConfirm={handleStartTimeConfirm}
+          value={sightingDate}
+          minimumDate={checkinTime}
+          maximumDate={checkoutTime}
+          title="Start Time"
+          testID={`${testID}-start-time-picker`}
+        />
+      )}
+      {sightingEndDate && (
+        <TimePickerModal
+          visible={showEndPicker}
+          onClose={() => setShowEndPicker(false)}
+          onConfirm={handleEndTimeConfirm}
+          value={sightingEndDate}
+          minimumDate={sightingDate}
+          maximumDate={checkoutTime}
+          title="End Time"
+          testID={`${testID}-end-time-picker`}
+        />
+      )}
     </View>
   )
 })

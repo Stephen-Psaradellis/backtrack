@@ -343,10 +343,10 @@ describe('useCreatePostForm', () => {
       const { result } = renderHook(() => useCreatePostForm(options))
 
       act(() => {
-        result.current.handleTimeGranularityChange('approximate')
+        result.current.handleTimeGranularityChange('morning')
       })
 
-      expect(result.current.formData.timeGranularity).toBe('approximate')
+      expect(result.current.formData.timeGranularity).toBe('morning')
     })
 
     it('should clear sighting date when set to null', () => {

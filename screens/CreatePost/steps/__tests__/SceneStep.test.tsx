@@ -46,6 +46,12 @@ vi.mock('../../../../lib/haptics', () => ({
   errorFeedback: vi.fn().mockResolvedValue(undefined),
 }))
 
+vi.mock('../../../../components/pickers/TimePickerModal', () => ({
+  TimePickerModal: (props: any) => (
+    props.visible ? <div data-testid={props.testID}>TimePickerModal</div> : null
+  ),
+}))
+
 vi.mock('../../styles', () => ({
   COLORS: {
     primary: '#FF6B47',
@@ -64,31 +70,41 @@ import { SceneStep } from '../SceneStep'
 import type { LocationItem } from '../../../../components/LocationPicker'
 
 describe('SceneStep', () => {
+  const now = new Date()
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+
   const mockLocationItem: LocationItem = {
     id: 'loc-1',
     name: 'Coffee Shop',
+    address: '123 Main St',
     latitude: 37.7749,
     longitude: -122.4194,
-    visitedAt: new Date().toISOString(),
+    visited_at: oneHourAgo.toISOString(),
+    checked_in_at: oneHourAgo.toISOString(),
+    checked_out_at: null,
   }
 
   const mockOnLocationSelect = vi.fn()
-  const mockOnDateChange = vi.fn()
-  const mockOnGranularityChange = vi.fn()
+  const mockOnStartTimeChange = vi.fn()
+  const mockOnEndTimeChange = vi.fn()
+  const mockOnClearTime = vi.fn()
   const mockOnNext = vi.fn()
   const mockOnBack = vi.fn()
 
   const defaultProps = {
     locations: [mockLocationItem],
-    selectedLocation: null,
+    selectedLocation: null as LocationItem | null,
     onLocationSelect: mockOnLocationSelect,
     userCoordinates: { latitude: 37.7749, longitude: -122.4194 },
     loadingLocations: false,
     isPreselected: false,
-    sightingDate: null,
-    timeGranularity: null,
-    onDateChange: mockOnDateChange,
-    onGranularityChange: mockOnGranularityChange,
+    sightingDate: null as Date | null,
+    sightingEndDate: null as Date | null,
+    onStartTimeChange: mockOnStartTimeChange,
+    onEndTimeChange: mockOnEndTimeChange,
+    onClearTime: mockOnClearTime,
+    checkinTime: oneHourAgo,
+    checkoutTime: null as Date | null,
     onNext: mockOnNext,
     onBack: mockOnBack,
     testID: 'create-post',
@@ -105,10 +121,10 @@ describe('SceneStep', () => {
     expect(screen.getByTestId('create-post-location-picker')).toBeInTheDocument()
   })
 
-  it('renders "When? (optional)" divider', () => {
+  it('renders "When?" divider', () => {
     render(<SceneStep {...defaultProps} />)
 
-    expect(screen.getByText('When? (optional)')).toBeInTheDocument()
+    expect(screen.getByText('When?')).toBeInTheDocument()
   })
 
   it('shows empty state when no locations and not preselected', () => {
@@ -124,11 +140,30 @@ describe('SceneStep', () => {
     expect(nextButton).toBeDisabled()
   })
 
-  it('enables Next button when location selected', () => {
-    render(<SceneStep {...defaultProps} selectedLocation={mockLocationItem} />)
+  it('enables Next button when location and start time are set', () => {
+    render(
+      <SceneStep
+        {...defaultProps}
+        selectedLocation={mockLocationItem}
+        sightingDate={oneHourAgo}
+      />
+    )
 
     const nextButton = screen.getByTestId('create-post-scene-next')
     expect(nextButton).not.toBeDisabled()
+  })
+
+  it('disables Next button when location set but no start time', () => {
+    render(
+      <SceneStep
+        {...defaultProps}
+        selectedLocation={mockLocationItem}
+        sightingDate={null}
+      />
+    )
+
+    const nextButton = screen.getByTestId('create-post-scene-next')
+    expect(nextButton).toBeDisabled()
   })
 
   it('calls onBack when back button is pressed', () => {
@@ -141,7 +176,13 @@ describe('SceneStep', () => {
   })
 
   it('calls onNext when Next button is pressed', () => {
-    render(<SceneStep {...defaultProps} selectedLocation={mockLocationItem} />)
+    render(
+      <SceneStep
+        {...defaultProps}
+        selectedLocation={mockLocationItem}
+        sightingDate={oneHourAgo}
+      />
+    )
 
     const nextButton = screen.getByTestId('create-post-scene-next')
     fireEvent.click(nextButton)
@@ -152,7 +193,8 @@ describe('SceneStep', () => {
   it('shows Required badge on location section', () => {
     render(<SceneStep {...defaultProps} />)
 
-    expect(screen.getByText('Required')).toBeInTheDocument()
+    // At least one Required badge should be present
+    expect(screen.getAllByText('Required').length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders LocationPicker component', () => {
@@ -203,6 +245,38 @@ describe('SceneStep', () => {
   it('shows time selector section when locations provided', () => {
     render(<SceneStep {...defaultProps} />)
 
-    expect(screen.getByText('When? (optional)')).toBeInTheDocument()
+    expect(screen.getByText('When?')).toBeInTheDocument()
+  })
+
+  it('shows time buttons when sighting date is set', () => {
+    render(
+      <SceneStep
+        {...defaultProps}
+        selectedLocation={mockLocationItem}
+        sightingDate={oneHourAgo}
+        sightingEndDate={now}
+        checkinTime={oneHourAgo}
+        checkoutTime={null}
+      />
+    )
+
+    // Time labels should be visible
+    expect(screen.getByText('From')).toBeInTheDocument()
+    expect(screen.getByText('To')).toBeInTheDocument()
+  })
+
+  it('disables Next when end time equals start time', () => {
+    const sameTime = new Date()
+    render(
+      <SceneStep
+        {...defaultProps}
+        selectedLocation={mockLocationItem}
+        sightingDate={sameTime}
+        sightingEndDate={sameTime}
+      />
+    )
+
+    const nextButton = screen.getByTestId('create-post-scene-next')
+    expect(nextButton).toBeDisabled()
   })
 })

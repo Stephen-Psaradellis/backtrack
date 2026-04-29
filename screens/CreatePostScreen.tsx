@@ -156,9 +156,12 @@ export function CreatePostScreen(): React.ReactNode {
             loadingLocations={form.loadingLocations || form.locationLoading}
             isPreselected={form.preselectedLocation !== null}
             sightingDate={form.formData.sightingDate}
-            timeGranularity={form.formData.timeGranularity}
-            onDateChange={form.handleSightingDateChange}
-            onGranularityChange={form.handleTimeGranularityChange}
+            sightingEndDate={form.formData.sightingEndDate}
+            onStartTimeChange={form.handleSightingDateChange}
+            onEndTimeChange={form.handleSightingEndDateChange}
+            onClearTime={form.handleClearSightingTime}
+            checkinTime={form.checkinTime}
+            checkoutTime={form.checkoutTime}
             onNext={handleNextWithFeedback}
             onBack={handleBackWithFeedback}
             testID="create-post"
@@ -185,6 +188,7 @@ export function CreatePostScreen(): React.ReactNode {
             note={form.formData.note}
             location={form.formData.location}
             sightingDate={form.formData.sightingDate}
+            sightingEndDate={form.formData.sightingEndDate}
             timeGranularity={form.formData.timeGranularity}
             selectedPhotoId={form.formData.selectedPhotoId}
             onPhotoSelect={handlePhotoSelectWithFeedback}

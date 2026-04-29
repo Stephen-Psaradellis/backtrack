@@ -56,7 +56,7 @@ import { darkTheme } from '../../../constants/glassStyles'
 import { colors } from '../../../constants/theme'
 import type { LocationItem } from '../../../components/LocationPicker'
 import type { TimeGranularity } from '../../../types/database'
-import { formatSightingTime } from '../../../utils/dateTime'
+import { formatSightingTimeRange } from '../../../utils/dateTime'
 import { COLORS } from '../styles'
 
 // ============================================================================
@@ -88,9 +88,14 @@ export interface SealStepProps {
   location: LocationItem | null
 
   /**
-   * The sighting date (optional)
+   * The sighting start date (optional)
    */
   sightingDate: Date | null
+
+  /**
+   * The sighting end date (optional)
+   */
+  sightingEndDate: Date | null
 
   /**
    * Time granularity (optional)
@@ -254,6 +259,7 @@ export const SealStep = memo(function SealStep({
   note,
   location,
   sightingDate,
+  sightingEndDate,
   timeGranularity,
   selectedPhotoId,
   onPhotoSelect,
@@ -295,7 +301,7 @@ export const SealStep = memo(function SealStep({
 
   // Format time for preview
   const timePreview = sightingDate && timeGranularity
-    ? formatSightingTime(sightingDate, timeGranularity)
+    ? formatSightingTimeRange(sightingDate, sightingEndDate ?? null, timeGranularity)
     : null
 
   // ---------------------------------------------------------------------------
