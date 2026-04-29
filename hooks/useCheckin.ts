@@ -97,6 +97,12 @@ export interface UseCheckinResult {
   isCheckedInAt: (locationId: string) => boolean
   /** Clear error state */
   clearError: () => void
+  /** Scheduled checkout time (ISO string) for manual check-in users, or null */
+  scheduledCheckoutAt: string | null
+  /** Schedule an auto-checkout after the given number of minutes */
+  scheduleCheckout: (minutes: number) => void
+  /** Whether user has always-on tracking enabled (no duration picker needed) */
+  hasAlwaysOnTracking: boolean
 }
 
 // ============================================================================

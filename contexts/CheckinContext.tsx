@@ -16,10 +16,12 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
   type ReactNode,
 } from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import * as Location from 'expo-location'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { supabase } from '../lib/supabase'
 import { reduceCoordinatePrecision } from '../lib/utils/geoPrivacy'
@@ -39,6 +41,9 @@ import type {
 /** Check-ins expire after 3 hours for users without background tracking */
 const CHECKIN_EXPIRY_MS = 3 * 60 * 60 * 1000
 
+/** AsyncStorage key for scheduled checkout time */
+const SCHEDULED_CHECKOUT_KEY = 'backtrack.scheduled_checkout_at'
+
 // ============================================================================
 // CONTEXT
 // ============================================================================
@@ -57,8 +62,11 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [scheduledCheckoutAt, setScheduledCheckoutAt] = useState<string | null>(null)
+  const [hasAlwaysOnTracking, setHasAlwaysOnTracking] = useState(false)
 
   const isMountedRef = useRef(true)
+  const scheduledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const getActiveCheckin = useCallback(async () => {
     if (!isMountedRef.current) return
@@ -158,6 +166,25 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
       }
 
       await getActiveCheckin()
+
+      // Sync dwell state so departure detection monitors this location
+      // (important for always-on tracking users who check in manually)
+      try {
+        const dwellStateKey = 'backtrack.dwell_state'
+        const dwellState = {
+          currentLocation: {
+            latitude: reducedLat,
+            longitude: reducedLon,
+            locationId,
+          },
+          arrivedAt: Date.now(),
+          notificationSent: true, // Already checked in, don't re-prompt
+          userId,
+        }
+        await AsyncStorage.setItem(dwellStateKey, JSON.stringify(dwellState))
+      } catch {
+        // Non-critical — departure detection may not work but check-in still succeeded
+      }
 
       return {
         success: true,
@@ -268,6 +295,42 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
     setError(null)
   }, [])
 
+  /**
+   * Schedule an auto-checkout after the given number of minutes.
+   * Persists the scheduled time to AsyncStorage for app restart recovery.
+   */
+  const scheduleCheckout = useCallback((minutes: number) => {
+    const checkoutTime = new Date(Date.now() + minutes * 60 * 1000).toISOString()
+    setScheduledCheckoutAt(checkoutTime)
+    AsyncStorage.setItem(SCHEDULED_CHECKOUT_KEY, checkoutTime).catch(() => {})
+
+    // Clear any existing timer
+    if (scheduledTimerRef.current) {
+      clearTimeout(scheduledTimerRef.current)
+    }
+
+    // Set timer
+    scheduledTimerRef.current = setTimeout(async () => {
+      if (isMountedRef.current) {
+        await checkOut()
+        setScheduledCheckoutAt(null)
+        AsyncStorage.removeItem(SCHEDULED_CHECKOUT_KEY).catch(() => {})
+      }
+    }, minutes * 60 * 1000)
+  }, [checkOut])
+
+  /**
+   * Clear scheduled checkout (on manual checkout or expiry)
+   */
+  const clearScheduledCheckout = useCallback(() => {
+    if (scheduledTimerRef.current) {
+      clearTimeout(scheduledTimerRef.current)
+      scheduledTimerRef.current = null
+    }
+    setScheduledCheckoutAt(null)
+    AsyncStorage.removeItem(SCHEDULED_CHECKOUT_KEY).catch(() => {})
+  }, [])
+
   // Fetch active check-in on mount
   useEffect(() => {
     isMountedRef.current = true
@@ -289,6 +352,33 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
     const subscription = AppState.addEventListener('change', handleAppState)
     return () => subscription.remove()
   }, [getActiveCheckin])
+
+  // Subscribe to realtime checkin changes so the header updates live
+  useEffect(() => {
+    if (!userId) return
+
+    const channel = supabase
+      .channel(`my-checkins-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_checkins',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          if (isMountedRef.current) {
+            getActiveCheckin()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [userId, getActiveCheckin])
 
   // Auto-expire client-side checkin after 3 hours
   useEffect(() => {
@@ -312,7 +402,74 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer)
   }, [activeCheckin?.checked_in_at, getActiveCheckin])
 
-  const value: UseCheckinResult = {
+  // Fetch always-on tracking setting
+  useEffect(() => {
+    if (!userId) return
+    const fetchTracking = async () => {
+      try {
+        const { data } = await supabase.rpc('get_tracking_settings')
+        if (isMountedRef.current) {
+          setHasAlwaysOnTracking(data?.always_on_tracking_enabled ?? false)
+        }
+      } catch {
+        // Non-critical
+      }
+    }
+    fetchTracking()
+  }, [userId])
+
+  // Restore scheduled checkout from AsyncStorage on mount and foreground
+  useEffect(() => {
+    const restoreScheduledCheckout = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(SCHEDULED_CHECKOUT_KEY)
+        if (!stored || !isMountedRef.current) return
+
+        const checkoutTime = new Date(stored).getTime()
+        const remaining = checkoutTime - Date.now()
+
+        if (remaining <= 0) {
+          // Already expired while app was closed — auto-checkout now
+          await checkOut()
+          await AsyncStorage.removeItem(SCHEDULED_CHECKOUT_KEY)
+          setScheduledCheckoutAt(null)
+        } else {
+          setScheduledCheckoutAt(stored)
+          if (scheduledTimerRef.current) clearTimeout(scheduledTimerRef.current)
+          scheduledTimerRef.current = setTimeout(async () => {
+            if (isMountedRef.current) {
+              await checkOut()
+              setScheduledCheckoutAt(null)
+              AsyncStorage.removeItem(SCHEDULED_CHECKOUT_KEY).catch(() => {})
+            }
+          }, remaining)
+        }
+      } catch {
+        // Non-critical
+      }
+    }
+
+    restoreScheduledCheckout()
+
+    // Also restore on foreground
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'active') restoreScheduledCheckout()
+    }
+    const sub = AppState.addEventListener('change', handleAppState)
+    return () => {
+      sub.remove()
+      if (scheduledTimerRef.current) clearTimeout(scheduledTimerRef.current)
+    }
+  }, [checkOut])
+
+  // Clear scheduled checkout when user is no longer checked in
+  useEffect(() => {
+    if (!activeCheckin && scheduledCheckoutAt) {
+      clearScheduledCheckout()
+    }
+  }, [activeCheckin, scheduledCheckoutAt, clearScheduledCheckout])
+
+  const value: UseCheckinResult = useMemo(() => ({
     activeCheckin,
     isCheckingIn,
     isCheckingOut,
@@ -323,7 +480,10 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
     getActiveCheckin,
     isCheckedInAt,
     clearError,
-  }
+    scheduledCheckoutAt,
+    scheduleCheckout,
+    hasAlwaysOnTracking,
+  }), [activeCheckin, isCheckingIn, isCheckingOut, isLoading, error, checkIn, checkOut, getActiveCheckin, isCheckedInAt, clearError, scheduledCheckoutAt, scheduleCheckout, hasAlwaysOnTracking])
 
   return (
     <CheckinContext.Provider value={value}>

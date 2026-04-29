@@ -36,6 +36,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Location from 'expo-location'
 
 import { useCheckin } from '../../hooks/useCheckin'
+import { CheckinDurationPicker } from './CheckinDurationPicker'
 import { supabase } from '../../lib/supabase'
 import { successFeedback, errorFeedback, selectionFeedback } from '../../lib/haptics'
 import {
@@ -72,8 +73,22 @@ interface NearbyLocation {
 // Search radius for finding locations (200m to account for indoor GPS drift)
 const CHECKIN_SEARCH_RADIUS_METERS = 200
 
-// Google Places search radius (200m to account for indoor GPS drift)
-const GOOGLE_PLACES_SEARCH_RADIUS_METERS = 200
+// Google Places search radius (500m for better coverage with indoor GPS drift)
+const GOOGLE_PLACES_SEARCH_RADIUS_METERS = 500
+
+// Broad venue types for Nearby Search (API requires at least one includedType)
+const CHECKIN_VENUE_TYPES = [
+  'restaurant', 'bar', 'cafe', 'coffee_shop', 'night_club',
+  'store', 'shopping_mall', 'supermarket',
+  'gym', 'fitness_center', 'sports_club',
+  'hotel', 'lodging',
+  'park', 'museum', 'art_gallery', 'movie_theater',
+  'library', 'university', 'church',
+  'hospital', 'pharmacy',
+  'airport', 'train_station', 'bus_station',
+  'gas_station', 'car_wash',
+  'beauty_salon', 'hair_care', 'spa',
+]
 
 // ============================================================================
 // COMPONENT
@@ -91,6 +106,8 @@ export function CheckInButton({
     checkIn,
     checkOut,
     error,
+    scheduleCheckout,
+    hasAlwaysOnTracking,
   } = useCheckin()
 
   const [isSearching, setIsSearching] = useState(false)
@@ -99,13 +116,15 @@ export function CheckInButton({
   const [showLocationPicker, setShowLocationPicker] = useState(false)
   const [availableLocations, setAvailableLocations] = useState<NearbyLocation[]>([])
   const [isCreatingLocation, setIsCreatingLocation] = useState(false)
+  const [showDurationPicker, setShowDurationPicker] = useState(false)
+  const [lastCheckinLocationName, setLastCheckinLocationName] = useState<string | null>(null)
 
   /**
    * Find locations within search radius from database
    */
   const findNearbyLocations = useCallback(async (lat: number, lon: number): Promise<NearbyLocation[]> => {
     try {
-      // Query locations within 500m using PostGIS (increased from 200m for better GPS tolerance)
+      // Query locations within 200m using PostGIS
       const { data, error: queryError } = await supabase.rpc('get_locations_near_point', {
         p_lat: lat,
         p_lon: lon,
@@ -113,7 +132,14 @@ export function CheckInButton({
         p_limit: 10,
       })
 
-      if (queryError || !data || data.length === 0) {
+      if (queryError) {
+        if (__DEV__) {
+          console.warn('[CheckInButton] DB venue search error:', queryError.message)
+        }
+        return []
+      }
+
+      if (!data || data.length === 0) {
         return []
       }
 
@@ -124,7 +150,10 @@ export function CheckInButton({
         address: loc.address,
         fromGooglePlaces: false,
       }))
-    } catch {
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[CheckInButton] DB venue search exception:', err)
+      }
       return []
     }
   }, [])
@@ -135,16 +164,23 @@ export function CheckInButton({
    */
   const searchGooglePlacesNearby = useCallback(async (lat: number, lon: number): Promise<NearbyLocation[]> => {
     try {
-      // Use Nearby Search to find venues by type near the user's location
-      // Return all nearby POIs - no type filtering needed at 200m radius
+      // Use Nearby Search with venue types to find places near the user
       const result = await searchNearbyPlaces({
         latitude: lat,
         longitude: lon,
         radius_meters: GOOGLE_PLACES_SEARCH_RADIUS_METERS,
         max_results: 10,
+        includedTypes: CHECKIN_VENUE_TYPES,
       })
 
-      if (!result.success || result.places.length === 0) {
+      if (!result.success) {
+        if (__DEV__) {
+          console.warn('[CheckInButton] Google Places search failed:', result.error)
+        }
+        return []
+      }
+
+      if (result.places.length === 0) {
         return []
       }
 
@@ -174,7 +210,10 @@ export function CheckInButton({
           placeData: place, // Store for direct caching later
         }
       }).sort((a, b) => a.distance - b.distance)
-    } catch {
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[CheckInButton] Google Places search exception:', err)
+      }
       return []
     }
   }, [])
@@ -263,34 +302,31 @@ export function CheckInButton({
       const lat = location.coords.latitude
       const lon = location.coords.longitude
 
-      // First, try to find locations in our database (within 500m)
-      const dbLocations = await findNearbyLocations(lat, lon)
+      // Search both database and Google Places in parallel for a full venue list
+      const [dbLocations, googleLocations] = await Promise.all([
+        findNearbyLocations(lat, lon),
+        searchGooglePlacesNearby(lat, lon),
+      ])
 
-      if (dbLocations.length > 0) {
-        // Found locations in database - show picker if multiple, or confirm if single
-        if (dbLocations.length === 1) {
-          setNearbyLocation(dbLocations[0])
-          setShowModal(true)
-        } else {
-          setAvailableLocations(dbLocations)
-          setShowLocationPicker(true)
-        }
+      // Merge results, deduplicating by google_place_id
+      const dbPlaceIds = new Set(
+        dbLocations.filter(l => l.googlePlaceId).map(l => l.googlePlaceId)
+      )
+      const uniqueGoogleLocations = googleLocations.filter(
+        g => !g.googlePlaceId || !dbPlaceIds.has(g.googlePlaceId)
+      )
+      const allLocations = [...dbLocations, ...uniqueGoogleLocations]
+        .sort((a, b) => a.distance - b.distance)
+
+      if (allLocations.length > 0) {
+        setAvailableLocations(allLocations)
+        setShowLocationPicker(true)
       } else {
-        // No database locations found - search Google Places
-        const googleLocations = await searchGooglePlacesNearby(lat, lon)
-
-        if (googleLocations.length > 0) {
-          // Found Google Places results - show picker
-          setAvailableLocations(googleLocations)
-          setShowLocationPicker(true)
-        } else {
-          // No locations found at all
-          await errorFeedback()
-          Alert.alert(
-            'No Venues Found',
-            'No venues found nearby. Please try again when you\'re at a bar, restaurant, or other venue.'
-          )
-        }
+        await errorFeedback()
+        Alert.alert(
+          'No Venues Found',
+          'No venues found nearby. Make sure you have a good GPS signal and try again.\n\nIf this keeps happening, venue search may be temporarily unavailable.'
+        )
       }
     } catch (err) {
       await errorFeedback()
@@ -332,19 +368,26 @@ export function CheckInButton({
       await successFeedback()
       if (result.alreadyCheckedIn) {
         Alert.alert('Already Checked In', `You're already checked in at ${nearbyLocation.name}`)
-      } else if (result.verified && result.accuracyInfo) {
-        // Show verification details on successful check-in
-        const accuracyStatus = result.accuracyInfo.status
-        if (accuracyStatus === 'poor') {
-          Alert.alert(
-            'Checked In',
-            `You're checked in at ${nearbyLocation.name}.\n\nYour GPS signal is weak. If this isn't the right spot, try again outdoors or away from tall buildings.`
-          )
-        } else if (accuracyStatus === 'fair') {
-          Alert.alert(
-            'Checked In',
-            `You're checked in at ${nearbyLocation.name}.\n\nGPS accuracy is moderate — your location may be slightly off.`
-          )
+      } else {
+        // Show duration picker for users without always-on tracking
+        if (!hasAlwaysOnTracking) {
+          setLastCheckinLocationName(nearbyLocation.name)
+          setShowDurationPicker(true)
+        }
+
+        if (result.verified && result.accuracyInfo) {
+          const accuracyStatus = result.accuracyInfo.status
+          if (accuracyStatus === 'poor') {
+            Alert.alert(
+              'Checked In',
+              `You're checked in at ${nearbyLocation.name}.\n\nYour GPS signal is weak. If this isn't the right spot, try again outdoors or away from tall buildings.`
+            )
+          } else if (accuracyStatus === 'fair') {
+            Alert.alert(
+              'Checked In',
+              `You're checked in at ${nearbyLocation.name}.\n\nGPS accuracy is moderate — your location may be slightly off.`
+            )
+          }
         }
       }
     } else {
@@ -371,6 +414,23 @@ export function CheckInButton({
     setAvailableLocations([])
     setNearbyLocation(location)
     setShowModal(true)
+  }, [])
+
+  /**
+   * Handle duration selection from picker
+   */
+  const handleSelectDuration = useCallback((minutes: number) => {
+    setShowDurationPicker(false)
+    setLastCheckinLocationName(null)
+    scheduleCheckout(minutes)
+  }, [scheduleCheckout])
+
+  /**
+   * Handle duration picker dismiss (skip)
+   */
+  const handleDurationPickerClose = useCallback(() => {
+    setShowDurationPicker(false)
+    setLastCheckinLocationName(null)
   }, [])
 
   /**
@@ -551,6 +611,15 @@ export function CheckInButton({
           </View>
         </View>
       </Modal>
+
+      {/* Duration Picker (shown after check-in for non-tracking users) */}
+      <CheckinDurationPicker
+        visible={showDurationPicker}
+        onClose={handleDurationPickerClose}
+        onSelectDuration={handleSelectDuration}
+        locationName={lastCheckinLocationName ?? undefined}
+        testID={`${testID}-duration-picker`}
+      />
     </>
   )
 }
