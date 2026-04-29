@@ -690,6 +690,91 @@ This includes:
 - Integration ecosystem (agentic-flow, agentdb, ruv-swarm, flow-nexus, agentic-jujutsu)
 - Performance targets and status
 
+## Wiki Maintenance
+
+The project has a persistent LLM-maintained wiki at `docs/`. The wiki compiles codebase knowledge into ~109 interlinked markdown pages — read once, kept current.
+
+### Wiki Structure
+
+```
+docs/
+  index.md          # Master catalog — read this first to find pages
+  log.md            # Chronological changelog of wiki operations
+  overview.md       # High-level app summary
+  architecture/     # 7 pages — tech stack, navigation, database, auth, etc.
+  entities/         # 13 pages — data model (profiles, posts, conversations, etc.)
+  concepts/         # 17 pages — domain concepts (matching, trust, check-ins, etc.)
+  product/          # 5 pages — user flows, feature map, UX, ideation archive, roadmap
+  source/           # ~67 pages — code documentation grouped by module
+    screens/        # 16 pages (one per screen)
+    components/     # 17 pages (grouped by feature area)
+    hooks/          # 8 pages (grouped by domain)
+    contexts/       # 4 pages
+    services/       # 5 pages
+    lib/            # 7 pages
+    types/          # 1 page
+    backend/        # 3 pages (edge functions, migrations, RLS)
+    config/         # 2 pages
+    other/          # 4 pages (web, packages, scripts, tests)
+```
+
+### When to Update the Wiki
+
+Update wiki pages when:
+- A new screen, component, hook, or service is added
+- Database schema changes (new migration, table, or column)
+- A feature is added or significantly changed
+- Navigation structure changes
+- A concept or business rule changes (matching, trust, tiers, etc.)
+
+### Update Protocol
+
+1. **Identify affected pages**: Read `docs/index.md` to find pages related to the change
+2. **Update each page**: Edit content, update `updated:` date in frontmatter, update `sources:` if new files
+3. **Update index**: If a new page was created, add it to `docs/index.md`
+4. **Log the change**: Append an entry to `docs/log.md` with format: `## [YYYY-MM-DD] operation | Description`
+
+### Page Format
+
+All wiki pages use this frontmatter:
+```yaml
+---
+title: Page Title
+type: entity | concept | architecture | product | source-summary
+domain: tag
+updated: YYYY-MM-DD
+sources: [file paths that informed this page]
+---
+```
+
+Cross-reference other pages using relative markdown links: `[Page Name](../category/page.md)`
+
+### Ingestion Workflow (New Source)
+
+When a new source file or feature is added:
+1. Read the source file
+2. Create or update the relevant wiki page(s)
+3. Update cross-references on related pages
+4. Update `docs/index.md` if a new page was created
+5. Append to `docs/log.md`
+
+### Query Workflow
+
+When answering questions about the codebase:
+1. Read `docs/index.md` to find relevant pages
+2. Read the relevant wiki pages
+3. If needed, drill into source files for current details
+4. Synthesize an answer with citations to wiki pages
+
+### Lint Workflow (Periodic Health Check)
+
+Periodically check wiki health:
+- Orphan pages (in docs/ but not in index.md)
+- Broken cross-references (links to non-existent pages)
+- Stale pages (source files changed significantly since page was last updated)
+- Missing pages (new source files with no wiki coverage)
+- Contradictions between pages
+
 ## Support
 
 - Documentation: https://github.com/ruvnet/claude-flow
