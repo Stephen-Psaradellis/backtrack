@@ -86,6 +86,10 @@ export interface LocationItem {
   distance?: number
   /** Timestamp when the user visited this location (for visited locations) */
   visited_at?: string | null
+  /** Timestamp when the user checked in at this location */
+  checked_in_at?: string | null
+  /** Timestamp when the user checked out (null if still checked in) */
+  checked_out_at?: string | null
 }
 
 /**
@@ -113,6 +117,8 @@ export function locationToItem(location: {
   longitude: number
   google_place_id?: string | null
   visited_at?: string | null
+  checked_in_at?: string | null
+  checked_out_at?: string | null
 }): LocationItem {
   return {
     id: location.id,
@@ -122,6 +128,8 @@ export function locationToItem(location: {
     longitude: location.longitude,
     place_id: location.google_place_id ?? null,
     visited_at: location.visited_at ?? null,
+    checked_in_at: location.checked_in_at ?? null,
+    checked_out_at: location.checked_out_at ?? null,
   }
 }
 
@@ -196,12 +204,12 @@ interface LocationListItemProps {
 const COLORS = {
   primary: '#FF6B47',
   secondary: '#8E8E93',
-  background: '#F2F2F7',
-  cardBackground: '#FFFFFF',
-  border: '#E5E5EA',
-  text: '#000000',
+  background: '#0D0D14',
+  cardBackground: '#1A1A2E',
+  border: 'rgba(255, 255, 255, 0.08)',
+  text: '#F5F5F7',
   textSecondary: '#8E8E93',
-  selectedBackground: '#FFE8E3',
+  selectedBackground: 'rgba(255, 107, 71, 0.15)',
   danger: '#FF3B30',
 } as const
 
@@ -763,6 +771,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: 2,
+    flexShrink: 1,
   },
 
   locationNameSelected: {
@@ -777,11 +786,11 @@ const styles = StyleSheet.create({
   locationNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
 
   visitedBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -790,7 +799,7 @@ const styles = StyleSheet.create({
 
   visitedBadgeText: {
     fontSize: 10,
-    color: '#2E7D32',
+    color: '#66BB6A',
     fontWeight: '600',
   },
 
@@ -815,7 +824,7 @@ const styles = StyleSheet.create({
 
   selectedIndicatorText: {
     fontSize: 14,
-    color: COLORS.cardBackground,
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
 
@@ -849,14 +858,14 @@ const styles = StyleSheet.create({
 
   currentLocationIconText: {
     fontSize: 14,
-    color: COLORS.cardBackground,
+    color: '#FFFFFF',
   },
 
   currentLocationText: {
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.cardBackground,
+    color: '#FFFFFF',
   },
 
   currentLocationArrow: {

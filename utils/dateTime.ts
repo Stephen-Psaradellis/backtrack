@@ -326,6 +326,37 @@ export function formatSightingTime(
 }
 
 /**
+ * Format a sighting time range (start + optional end).
+ *
+ * @example
+ * formatSightingTimeRange(start, end)    // => "Today 2:30 PM – 4:15 PM"
+ * formatSightingTimeRange(start, null)   // => "Today at 2:30 PM"
+ * formatSightingTimeRange(start, end, 'afternoon') // => "Yesterday afternoon"
+ */
+export function formatSightingTimeRange(
+  start: Date,
+  end: Date | null,
+  granularity: TimeGranularity,
+  options: FormatTimeOptions = {}
+): string {
+  // Non-specific granularity: fall back to existing display
+  if (granularity !== 'specific') {
+    return formatSightingTime(start, granularity, options)
+  }
+
+  const config = { ...DEFAULT_FORMAT_OPTIONS, ...options }
+  const dayLabel = formatRelativeDay(start, options.referenceDate)
+  const startStr = formatTimeOfDay(start, config.use12HourFormat)
+
+  if (!end) {
+    return `${dayLabel} at ${startStr}`
+  }
+
+  const endStr = formatTimeOfDay(end, config.use12HourFormat)
+  return `${dayLabel} ${startStr} – ${endStr}`
+}
+
+/**
  * Check if a date is older than 30 days
  *
  * Used to determine if a post should be deprioritized in listing order.

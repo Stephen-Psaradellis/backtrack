@@ -223,6 +223,7 @@ export function createMockPost(overrides?: Partial<Post>): Post {
     message: 'Hope to connect!',
     note: null,
     sighting_date: timestamp,
+    sighting_end_date: null,
     time_granularity: 'exact',
     seen_at: timestamp,
     is_active: true,

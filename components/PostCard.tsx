@@ -21,7 +21,7 @@ import { AvatarDisplay } from './AvatarDisplay'
 import { VerifiedBadge } from './VerifiedBadge'
 import { PressableScale } from './native/PressableScale'
 import { PostReactions } from './PostReactions'
-import { formatSightingTime, parseDate } from '../utils/dateTime'
+import { formatSightingTimeRange, parseDate } from '../utils/dateTime'
 import { darkTheme } from '../constants/glassStyles'
 import { useAuthState } from '../contexts/AuthContext'
 import type { Post, PostWithDetails, Location, Profile } from '../types/database'
@@ -206,9 +206,10 @@ export const PostCard = memo(function PostCard({
   const showSightingTime = detailLevel === 'full'
 
   const sightingDate = post.sighting_date ? parseDate(post.sighting_date) : null
+  const sightingEndDate = post.sighting_end_date ? parseDate(post.sighting_end_date) : null
   const hasSightingTime = sightingDate !== null && post.time_granularity !== null
   const formattedSightingTime = hasSightingTime && sightingDate
-    ? formatSightingTime(sightingDate, post.time_granularity!)
+    ? formatSightingTimeRange(sightingDate, sightingEndDate, post.time_granularity!)
     : null
 
   const showMatchIndicator = matchScore !== undefined
@@ -300,14 +301,12 @@ export const PostCard = memo(function PostCard({
           {/* ── Header: Poster info + time + share ── */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              {postProducer && (
-                <AvatarDisplay
-                  avatar={hasProducerDetails(post) ? (post.producer as any)?.avatar : undefined}
-                  initials={producerName[0]}
-                  pixelSize={28}
-                  testID={`${testID}-poster-avatar`}
-                />
-              )}
+              <AvatarDisplay
+                avatar={hasProducerDetails(post) ? (post.producer as any)?.avatar : undefined}
+                initials={producerName[0]}
+                pixelSize={28}
+                testID={`${testID}-poster-avatar`}
+              />
               <View style={styles.headerInfo}>
                 <View style={styles.headerNameRow}>
                   <Text style={styles.posterName} numberOfLines={1}>{producerName}</Text>

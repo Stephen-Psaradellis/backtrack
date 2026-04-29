@@ -185,6 +185,14 @@ export function useNearbyPosts(
           longitude: row.location_longitude,
           google_place_id: row.google_place_id,
         } : undefined,
+        // Attach producer profile for avatar display
+        producer: (row.producer_display_name || row.producer_username || row.producer_avatar) ? {
+          id: row.producer_id,
+          display_name: row.producer_display_name,
+          username: row.producer_username,
+          avatar: row.producer_avatar,
+          is_verified: row.producer_is_verified ?? false,
+        } : undefined,
       }))
     }
 
@@ -211,6 +219,13 @@ export function useNearbyPosts(
           latitude,
           longitude,
           google_place_id
+        ),
+        profiles!posts_producer_id_fkey (
+          id,
+          display_name,
+          username,
+          avatar,
+          is_verified
         )
       `)
       .eq('is_active', true)
@@ -226,7 +241,7 @@ export function useNearbyPosts(
       throw new Error(fallbackError.message)
     }
 
-    // Filter by exact distance using Haversine formula
+    // Filter by exact distance using Haversine formula and remap relations
     const filteredPosts = (fallbackData ?? [])
       .filter((post) => {
         const loc = post.locations as { latitude: number; longitude: number } | null
@@ -234,6 +249,11 @@ export function useNearbyPosts(
         const distance = haversineDistance(latitude!, longitude!, loc.latitude, loc.longitude)
         return distance <= radius
       })
+      .map((post: any) => ({
+        ...post,
+        location: post.locations,
+        producer: post.profiles,
+      }))
       .slice(0, DEFAULT_LIMIT)
 
     return filteredPosts
