@@ -484,8 +484,10 @@ export interface Post {
   message: string
   /** Additional note for the post */
   note: string | null
-  /** Date when the sighting occurred */
+  /** Date when the sighting occurred (start time) */
   sighting_date: Timestamp | null
+  /** End date for the sighting window (null = instant/point-in-time) */
+  sighting_end_date: Timestamp | null
   /** Time granularity for the sighting (exact, hour, day, week) */
   time_granularity: TimeGranularity | null
   /** Timestamp when the post was seen */
@@ -512,6 +514,7 @@ export interface PostInsert {
   message: string
   note?: string | null
   sighting_date?: Timestamp | null
+  sighting_end_date?: Timestamp | null
   time_granularity?: TimeGranularity | null
   seen_at?: Timestamp | null
   is_active?: boolean
@@ -530,6 +533,7 @@ export interface PostUpdate {
   message?: string
   note?: string | null
   sighting_date?: Timestamp | null
+  sighting_end_date?: Timestamp | null
   time_granularity?: TimeGranularity | null
   seen_at?: Timestamp | null
   is_active?: boolean
@@ -1228,6 +1232,9 @@ export interface MySharedPhotoForConversation extends PhotoShare {
 export interface LocationWithVisit extends Location {
   last_visited_at?: Timestamp
   visit_count?: number
+  visited_at?: Timestamp
+  checked_in_at?: Timestamp | null
+  checked_out_at?: Timestamp | null
 }
 
 /**
