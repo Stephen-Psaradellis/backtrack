@@ -84,6 +84,11 @@ import { useBlockUser } from '../components/chat/hooks/useBlockUser'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { EmptyState, ErrorState } from '../components/EmptyState'
 import { ReportMessageModal, ReportUserModal } from '../components/ReportModal'
+import { CoPresenceBadge } from '../components/CoPresenceBadge'
+import { useConversationCoPresence } from '../hooks/useConversationCoPresence'
+import { SocialShareModal } from '../components/social/SocialShareModal'
+import { SharedSocialsRow } from '../components/social/SharedSocialsRow'
+import { useMatchSocials } from '../hooks/useMatchSocials'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -958,6 +963,17 @@ export function ChatScreen(): React.ReactNode {
     ? `Missed Connection at ${locationName}`
     : 'Conversation'
 
+  // Feature 4.3 — Co-presence trust badge. Only renders for active
+  // conversations once we have an overlap row from the RPC.
+  const { copresence } = useConversationCoPresence(
+    conversation?.status === 'active' ? conversationId : null
+  )
+
+  // Feature 5.6 — Verified socials. Active conversations only.
+  const socialsConvId = conversation?.status === 'active' ? conversationId : null
+  const { them: theirSocials } = useMatchSocials(socialsConvId)
+  const [socialShareVisible, setSocialShareVisible] = React.useState(false)
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -991,6 +1007,48 @@ export function ChatScreen(): React.ReactNode {
           <Ionicons name="ellipsis-vertical" size={20} color={darkTheme.textPrimary} />
         </TouchableOpacity>
       </View>
+
+      {/* Feature 4.3 — Co-presence trust badge */}
+      {copresence && (
+        <View style={styles.copresenceBanner}>
+          <CoPresenceBadge
+            overlapMinutes={copresence.overlap_minutes}
+            bothVerified={copresence.both_verified}
+            locationName={copresence.location_name ?? undefined}
+            variant="banner"
+            testID="chat-copresence-badge"
+          />
+        </View>
+      )}
+
+      {/* Feature 5.6 — Verified socials (active conversations only) */}
+      {socialsConvId && (theirSocials.length > 0 || conversation?.status === 'active') && (
+        <View style={styles.socialsBanner}>
+          {theirSocials.length > 0 && (
+            <SharedSocialsRow
+              socials={theirSocials}
+              caption="They shared their socials"
+              testID="chat-shared-socials"
+            />
+          )}
+          <TouchableOpacity
+            onPress={() => setSocialShareVisible(true)}
+            style={styles.socialsShareButton}
+            testID="chat-open-social-share"
+          >
+            <Ionicons name="share-social-outline" size={14} color={darkTheme.textSecondary} />
+            <Text style={styles.socialsShareButtonText}>Share my verified socials</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {socialsConvId && (
+        <SocialShareModal
+          visible={socialShareVisible}
+          onClose={() => setSocialShareVisible(false)}
+          conversationId={socialsConvId}
+          testID="chat-social-share-modal"
+        />
+      )}
 
       {/* Offline indicator banner */}
       {!isConnected && (
@@ -1088,6 +1146,34 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: darkTheme.cardBorder,
+  },
+  copresenceBanner: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: darkTheme.background,
+    borderBottomWidth: 1,
+    borderBottomColor: darkTheme.cardBorder,
+  },
+  socialsBanner: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: darkTheme.background,
+    borderBottomWidth: 1,
+    borderBottomColor: darkTheme.cardBorder,
+    gap: 8,
+  },
+  socialsShareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  socialsShareButtonText: {
+    fontSize: 12,
+    color: darkTheme.textSecondary,
+    fontWeight: '500',
   },
   chatHeaderBackButton: {
     width: 44,

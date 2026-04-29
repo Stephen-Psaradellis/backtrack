@@ -39,6 +39,7 @@ import { TrendingVenues } from '../components/TrendingVenues'
 import { HangoutsList } from '../components/HangoutsList'
 import { CreateHangoutModal } from '../components/CreateHangoutModal'
 import { useNearbyPosts, RADIUS_TIERS } from '../hooks/useNearbyPosts'
+import { useMyOverlappingCheckins } from '../hooks/useMyOverlappingCheckins'
 import { useTrendingVenues } from '../hooks/useTrendingVenues'
 import { useHangouts } from '../hooks/useHangouts'
 import { useLocation } from '../hooks/useLocation'
@@ -236,6 +237,14 @@ export function FeedScreen(): React.ReactNode {
     return sorted
   }, [posts, sortBy, timeFilter])
 
+  // Feature 2.1 — fetch the viewer's overlapping check-ins for visible posts
+  // in a single round trip. Stable identity (string array sorted in the hook).
+  const visiblePostIds = useMemo(
+    () => (sortedPosts ?? []).map(p => p.id),
+    [sortedPosts]
+  )
+  const { overlaps } = useMyOverlappingCheckins(visiblePostIds)
+
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
@@ -355,12 +364,14 @@ export function FeedScreen(): React.ReactNode {
             showLocation={true}
             detailLevel={detailLevel}
             distance={distance}
+            overlap={overlaps.get(item.id)}
+            expandable={true}
             testID={`feed-post-${item.id}`}
           />
         </AnimatedPostItem>
       )
     },
-    [handlePostPress, effectiveRadius]
+    [handlePostPress, effectiveRadius, overlaps]
   )
 
   const keyExtractor = useCallback((item: Post) => item.id, [])
@@ -496,9 +507,10 @@ export function FeedScreen(): React.ReactNode {
       post={post}
       onPress={handlePostPress}
       showLocation={true}
+      overlap={overlaps.get(post.id)}
       testID={`feed-swipe-card-${post.id}`}
     />
-  ), [handlePostPress])
+  ), [handlePostPress, overlaps])
 
   // ---------------------------------------------------------------------------
   // Loading State

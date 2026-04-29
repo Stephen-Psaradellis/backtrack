@@ -84,7 +84,6 @@ export {
 // Post Card
 export {
   PostCard,
-  CompactPostCard,
   formatRelativeTime,
   truncateText,
   getMatchColor,

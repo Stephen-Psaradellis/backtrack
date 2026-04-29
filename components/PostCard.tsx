@@ -21,10 +21,12 @@ import { AvatarDisplay } from './AvatarDisplay'
 import { VerifiedBadge } from './VerifiedBadge'
 import { PressableScale } from './native/PressableScale'
 import { PostReactions } from './PostReactions'
+import { TimelineOverlay } from './TimelineOverlay'
 import { formatSightingTimeRange, parseDate } from '../utils/dateTime'
 import { darkTheme } from '../constants/glassStyles'
 import { useAuthState } from '../contexts/AuthContext'
 import type { Post, PostWithDetails, Location, Profile } from '../types/database'
+import type { PostOverlap } from '../hooks/useMyOverlappingCheckins'
 
 // ============================================================================
 // TYPES
@@ -37,7 +39,6 @@ export interface PostCardProps {
   matchScore?: number
   isMatch?: boolean
   onPress?: (post: Post | PostWithDetails) => void
-  compact?: boolean
   showLocation?: boolean
   onLongPress?: (post: Post | PostWithDetails) => void
   enableReporting?: boolean
@@ -49,6 +50,18 @@ export interface PostCardProps {
   distance?: number
   /** Number of responses/replies on this post */
   responseCount?: number
+  /** Viewer's overlapping check-in for this post (Feature 2.1). Undefined = no overlap. */
+  overlap?: PostOverlap
+  /**
+   * Feature 3.3 — Progressive disclosure mode.
+   * When true, the card collapses by default to avatars + sighting time +
+   * match badge + timeline overlay, expanding on tap to reveal note/meta/
+   * reactions. The onPress prop still fires (e.g. for navigation) — expansion
+   * is in addition to whatever onPress does.
+   */
+  expandable?: boolean
+  /** Initial expanded state when expandable=true. Default false. */
+  defaultExpanded?: boolean
 }
 
 // ============================================================================
@@ -64,7 +77,6 @@ const MATCH_COLORS = {
 } as const
 
 const NOTE_PREVIEW_LENGTH = 160
-const NOTE_PREVIEW_LENGTH_COMPACT = 60
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -163,7 +175,6 @@ export const PostCard = memo(function PostCard({
   matchScore,
   isMatch,
   onPress,
-  compact = false,
   showLocation = true,
   onLongPress,
   enableReporting = true,
@@ -173,8 +184,12 @@ export const PostCard = memo(function PostCard({
   testID = 'post-card',
   distance,
   responseCount,
+  overlap,
+  expandable = false,
+  defaultExpanded = false,
 }: PostCardProps) {
   const [reportModalVisible, setReportModalVisible] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const { userId } = useAuthState()
 
   // Computed values
@@ -196,8 +211,7 @@ export const PostCard = memo(function PostCard({
   }
 
   const locationDisplay = getLocationDisplay()
-  const maxLength = compact ? NOTE_PREVIEW_LENGTH_COMPACT : NOTE_PREVIEW_LENGTH
-  const notePreview = truncateText(post.message, maxLength)
+  const notePreview = truncateText(post.message, NOTE_PREVIEW_LENGTH)
 
   const useApproximateTime = detailLevel === 'reduced' || detailLevel === 'minimal'
   const timeAgo = formatRelativeTime(post.created_at, useApproximateTime)
@@ -226,7 +240,16 @@ export const PostCard = memo(function PostCard({
   }, [notePreview, hasSightingTime, formattedSightingTime, postLocation, showLocation, isProducerVerified, timeAgo, showMatchIndicator, isMatch, matchScore])
 
   // Handlers
-  const handlePress = useCallback(() => { onPress?.(post) }, [onPress, post])
+  // Feature 3.3 progressive disclosure: in expandable mode, the first tap
+  // expands; once expanded, a tap navigates via onPress. This makes tap a
+  // single, escalating gesture rather than firing both at once.
+  const handlePress = useCallback(() => {
+    if (expandable && !expanded) {
+      setExpanded(true)
+      return
+    }
+    onPress?.(post)
+  }, [expandable, expanded, onPress, post])
 
   const handleLongPress = useCallback(() => {
     if (onLongPress) { onLongPress(post); return }
@@ -254,46 +277,19 @@ export const PostCard = memo(function PostCard({
     }
   }, [post.message, postLocation])
 
-  // Compact render (unchanged behavior for dense lists)
-  if (compact) {
-    return (
-      <>
-        <PressableScale style={style} onPress={handlePress} disabled={!onPress && !enableReporting && !onLongPress} testID={testID}>
-          <View style={[styles.containerCompact]} accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
-            {showAvatar && (
-              <View style={styles.avatarContainerCompact}>
-                <AvatarDisplay avatar={post.target_avatar_v2} size="sm" />
-              </View>
-            )}
-            <View style={styles.contentContainerCompact}>
-              <Text style={styles.noteTextCompact} numberOfLines={2}>{notePreview}</Text>
-              <View style={styles.metaContainerCompact}>
-                {showLocation && locationDisplay ? (
-                  <Text style={styles.metaTextCompact} numberOfLines={1}>
-                    {locationDisplay} · {timeAgo}
-                  </Text>
-                ) : (
-                  <Text style={styles.metaTextCompact}>{timeAgo}</Text>
-                )}
-              </View>
-            </View>
-          </View>
-        </PressableScale>
-        {enableReporting && (
-          <ReportPostModal visible={reportModalVisible} onClose={handleCloseReportModal} reportedId={post.id} onSuccess={handleReportSuccess} testID={`${testID}-report-modal`} />
-        )}
-      </>
-    )
-  }
-
   // Full glass card render
+  // Feature 3.3 — when expandable, hide the message body, full meta row, and
+  // reactions until the card is expanded by tap. The header, sighting time,
+  // timeline overlay, and target avatar / match badge always render so the
+  // collapsed card still communicates the essentials.
+  const showDetails = !expandable || expanded
   return (
     <>
       <PressableScale
         style={style}
         onPress={handlePress}
         onLongPress={handleLongPress}
-        disabled={!onPress && !enableReporting && !onLongPress}
+        disabled={!onPress && !enableReporting && !onLongPress && !expandable}
         testID={testID}
       >
         <View style={styles.card} accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
@@ -317,19 +313,30 @@ export const PostCard = memo(function PostCard({
                 <Text style={styles.headerTime}>{timeAgo}</Text>
               </View>
             </View>
+            {expandable && (
+              <Ionicons
+                name={expanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={darkTheme.textMuted}
+                style={styles.expandChevron}
+                testID={`${testID}-expand-chevron`}
+              />
+            )}
             <PressableScale onPress={handleShare} testID={`${testID}-share`} style={styles.shareButton}>
               <Ionicons name="share-outline" size={18} color={darkTheme.textSecondary} />
             </PressableScale>
           </View>
 
-          {/* ── Body: Message text ── */}
-          <Text
-            style={styles.noteText}
-            numberOfLines={4}
-            testID={`${testID}-note`}
-          >
-            {notePreview}
-          </Text>
+          {/* ── Body: Message text (only when expanded) ── */}
+          {showDetails && (
+            <Text
+              style={styles.noteText}
+              numberOfLines={4}
+              testID={`${testID}-note`}
+            >
+              {notePreview}
+            </Text>
+          )}
 
           {/* ── Sighting Time ── */}
           {showSightingTime && hasSightingTime && formattedSightingTime && (
@@ -337,6 +344,11 @@ export const PostCard = memo(function PostCard({
               <Ionicons name="time-outline" size={13} color={darkTheme.textSecondary} />
               <Text style={styles.sightingTimeText}>Seen {formattedSightingTime}</Text>
             </View>
+          )}
+
+          {/* ── Timeline Overlay (Feature 2.1) ── */}
+          {detailLevel !== 'minimal' && (
+            <TimelineOverlay overlap={overlap} testID={`${testID}-timeline`} />
           )}
 
           {/* ── Target Avatar Section ── */}
@@ -359,46 +371,51 @@ export const PostCard = memo(function PostCard({
             </View>
           )}
 
-          {/* ── Meta Row: Location + Distance + Expiry + Responses ── */}
-          <View style={styles.metaRow}>
-            <View style={styles.metaLeft}>
-              {showLocation && locationDisplay ? (
-                <View style={styles.metaItem}>
-                  <Ionicons name="location-outline" size={14} color={darkTheme.accent} />
-                  <Text style={styles.metaText} numberOfLines={1}>{locationDisplay}</Text>
-                  {distance != null && distance > 0 && (
-                    <View style={styles.distanceBadge}>
-                      <Text style={styles.distanceBadgeText}>{formatDistance(distance)}</Text>
+          {/* ── Meta Row + Reactions (only when expanded) ── */}
+          {showDetails && (
+            <>
+              <View style={styles.metaRow}>
+                <View style={styles.metaLeft}>
+                  {showLocation && locationDisplay ? (
+                    <View style={styles.metaItem}>
+                      <Ionicons name="location-outline" size={14} color={darkTheme.accent} />
+                      <Text style={styles.metaText} numberOfLines={1}>{locationDisplay}</Text>
+                      {distance != null && distance > 0 && (
+                        <View style={styles.distanceBadge}>
+                          <Text style={styles.distanceBadgeText}>{formatDistance(distance)}</Text>
+                        </View>
+                      )}
                     </View>
-                  )}
+                  ) : null}
+                  <View style={styles.metaSecondRow}>
+                    {expiryText && (
+                      <View style={styles.metaItem}>
+                        <Ionicons name="hourglass-outline" size={13} color={darkTheme.textMuted} />
+                        <Text style={styles.metaTextMuted}>{expiryText}</Text>
+                      </View>
+                    )}
+                    {responseCount != null && responseCount > 0 && (
+                      <View style={styles.metaItem}>
+                        <Ionicons name="chatbubble-outline" size={13} color={darkTheme.textMuted} />
+                        <Text style={styles.metaTextMuted}>
+                          {responseCount} {responseCount === 1 ? 'reply' : 'replies'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-              ) : null}
-              <View style={styles.metaSecondRow}>
-                {expiryText && (
-                  <View style={styles.metaItem}>
-                    <Ionicons name="hourglass-outline" size={13} color={darkTheme.textMuted} />
-                    <Text style={styles.metaTextMuted}>{expiryText}</Text>
-                  </View>
-                )}
-                {responseCount != null && responseCount > 0 && (
-                  <View style={styles.metaItem}>
-                    <Ionicons name="chatbubble-outline" size={13} color={darkTheme.textMuted} />
-                    <Text style={styles.metaTextMuted}>
-                      {responseCount} {responseCount === 1 ? 'reply' : 'replies'}
-                    </Text>
-                  </View>
-                )}
               </View>
-            </View>
-          </View>
 
-          {/* ── Reactions ── */}
-          <PostReactions
-            postId={post.id}
-            userId={userId}
-            compact
-            testID={`${testID}-reactions`}
-          />
+              {/* PostReactions runs queries on mount; only mount when expanded
+                  to avoid N reaction queries on feed scroll. */}
+              <PostReactions
+                postId={post.id}
+                userId={userId}
+                compact
+                testID={`${testID}-reactions`}
+              />
+            </>
+          )}
         </View>
       </PressableScale>
 
@@ -413,16 +430,6 @@ export const PostCard = memo(function PostCard({
       )}
     </>
   )
-})
-
-// ============================================================================
-// PRESET VARIANTS
-// ============================================================================
-
-export const CompactPostCard = memo(function CompactPostCard(
-  props: Omit<PostCardProps, 'compact'>
-) {
-  return <PostCard {...props} compact={true} />
 })
 
 // ============================================================================
@@ -485,6 +492,9 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: darkTheme.surfaceElevated,
+  },
+  expandChevron: {
+    marginRight: 4,
   },
 
   // ── Note / Body ──
@@ -588,38 +598,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: darkTheme.accent,
-  },
-
-  // ── Compact Mode ──
-  containerCompact: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: darkTheme.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: darkTheme.cardBorder,
-  },
-  avatarContainerCompact: {
-    marginRight: 10,
-    marginTop: 2,
-  },
-  contentContainerCompact: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  noteTextCompact: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: darkTheme.textPrimary,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  metaContainerCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaTextCompact: {
-    fontSize: 12,
-    color: darkTheme.textSecondary,
   },
 })

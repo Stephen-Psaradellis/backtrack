@@ -30,7 +30,7 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { GlobalHeader } from '../components/navigation/GlobalHeader'
 import { FloatingActionButtons } from '../components/navigation/FloatingActionButtons'
-import { PostCard, CompactPostCard } from '../components/PostCard'
+import { PostCard } from '../components/PostCard'
 import { useNotificationCounts } from '../hooks/useNotificationCounts'
 import { useFavoriteLocations } from '../hooks/useFavoriteLocations'
 import { useLocationHistory } from '../hooks/useLocationHistory'
@@ -311,13 +311,14 @@ export function MySpotsScreen(): React.ReactNode {
       )
     }
 
-    // Post item
+    // Post item — Feature 3.3 progressive disclosure
     return (
       <View style={styles.postItem}>
-        <CompactPostCard
+        <PostCard
           post={item as Post}
           onPress={handlePostPress}
           showLocation={true}
+          expandable={true}
           testID={`myspots-post-${(item as Post).id}`}
         />
       </View>

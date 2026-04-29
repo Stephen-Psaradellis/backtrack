@@ -73,6 +73,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-task-manager": "~14.0.9",
     "expo-updates": "~29.0.16",
+    "expo-web-browser": "~15.0.8",
     "graphql": "^16.9.0",
     "graphql-request": "^7.1.2",
     "lucide-react": "^0.562.0",

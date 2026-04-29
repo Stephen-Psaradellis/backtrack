@@ -27,6 +27,12 @@ interface MatchNotificationRequest {
   locationName?: string
 }
 
+interface PostTimeWindow {
+  sighting_date: string | null
+  sighting_end_date: string | null
+  time_granularity: string | null
+}
+
 interface TierOneMatch {
   user_id: string
   checkin_id: string
@@ -76,11 +82,14 @@ function delay(ms: number): Promise<void> {
 async function getPostLocation(
   supabase: ReturnType<typeof createServiceClient>,
   postId: string
-): Promise<{ locationId: string, locationName: string } | null> {
+): Promise<{ locationId: string, locationName: string, timeWindow: PostTimeWindow } | null> {
   const { data, error } = await supabase
     .from('posts')
     .select(`
       location_id,
+      sighting_date,
+      sighting_end_date,
+      time_granularity,
       locations (name)
     `)
     .eq('id', postId)
@@ -93,7 +102,63 @@ async function getPostLocation(
   return {
     locationId: data.location_id,
     locationName: (data.locations as { name: string })?.name || 'a location',
+    timeWindow: {
+      sighting_date: data.sighting_date,
+      sighting_end_date: data.sighting_end_date,
+      time_granularity: data.time_granularity,
+    },
   }
+}
+
+/**
+ * Builds a short, human-readable time phrase for the push body.
+ * Examples: "Saturday evening", "yesterday afternoon", "around 9pm Saturday".
+ * Returns null if no usable sighting time is available — caller should fall
+ * back to a generic message.
+ *
+ * Kept inline (not imported from utils/dateTime.ts) because that module is
+ * React Native code and would pull in the wrong runtime types under Deno.
+ */
+function formatPushTimeWindow(tw: PostTimeWindow): string | null {
+  if (!tw.sighting_date) return null
+
+  const start = new Date(tw.sighting_date)
+  if (isNaN(start.getTime())) return null
+
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfPostDay = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+  const dayDiff = Math.round((startOfToday.getTime() - startOfPostDay.getTime()) / 86400000)
+
+  let dayLabel: string
+  if (dayDiff === 0) dayLabel = 'today'
+  else if (dayDiff === 1) dayLabel = 'yesterday'
+  else if (dayDiff > 1 && dayDiff < 7) {
+    dayLabel = start.toLocaleDateString('en-US', { weekday: 'long' })
+  } else {
+    dayLabel = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const granularity = tw.time_granularity
+  if (granularity === 'morning' || granularity === 'afternoon' || granularity === 'evening') {
+    return `${dayLabel} ${granularity}`
+  }
+
+  // Specific / hour granularity → include time of day
+  const hour = start.getHours()
+  const period = hour >= 5 && hour < 12 ? 'morning'
+    : hour >= 12 && hour < 17 ? 'afternoon'
+    : hour >= 17 && hour < 22 ? 'evening'
+    : 'night'
+
+  if (granularity === 'day' || granularity === 'week') {
+    return dayLabel
+  }
+
+  // specific / hour: include approximate clock time
+  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+  const ampm = hour < 12 ? 'am' : 'pm'
+  return `${dayLabel} around ${hour12}${ampm} (${period})`
 }
 
 async function getTierOneMatches(
@@ -215,18 +280,18 @@ Deno.serve(withMiddleware(async (_req, { supabase, body, origin }) => {
     )
   }
 
-  // Get location details if not provided
-  let locationName = requestBody.locationName
-  if (!locationName) {
-    const postLocation = await getPostLocation(supabase, requestBody.postId)
-    if (!postLocation) {
-      return new Response(
-        JSON.stringify({ error: 'Post not found' }),
-        { status: 404, headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin) }
-      )
-    }
-    locationName = postLocation.locationName
+  // Always fetch post details — we need the sighting time window for the push
+  // body, and locationName as a fallback. The optional locationName in the
+  // request body is treated as a hint, not authoritative.
+  const postLocation = await getPostLocation(supabase, requestBody.postId)
+  if (!postLocation) {
+    return new Response(
+      JSON.stringify({ error: 'Post not found' }),
+      { status: 404, headers: addCorsHeaders({ 'Content-Type': 'application/json' }, origin) }
+    )
   }
+  const locationName = requestBody.locationName || postLocation.locationName
+  const timePhrase = formatPushTimeWindow(postLocation.timeWindow)
 
   // Find Tier 1 matches
   const matches = await getTierOneMatches(supabase, requestBody.postId)
@@ -249,7 +314,9 @@ Deno.serve(withMiddleware(async (_req, { supabase, body, origin }) => {
     .map(match => ({
       to: match.push_token,
       title: 'Someone may be looking for you!',
-      body: `A new post was created at ${locationName} - were you there?`,
+      body: timePhrase
+        ? `Someone posted about ${timePhrase} at ${locationName} — were you there?`
+        : `A new post was created at ${locationName} — were you there?`,
       data: {
         type: 'tier_1_match',
         postId: requestBody.postId,

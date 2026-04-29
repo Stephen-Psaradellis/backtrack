@@ -57,6 +57,7 @@ import { useLocationStreaks } from '../hooks/useLocationStreaks'
 import { RegularsModeToggle } from '../components/regulars/RegularsModeToggle'
 import { FellowRegularsList } from '../components/regulars/RegularsList'
 import { NotificationSettings, LocationTrackingSettings } from '../components/settings'
+import { SocialConnectModal } from '../components/social/SocialConnectModal'
 import { useGhostMode, type GhostModeDuration } from '../hooks/useGhostMode'
 import { useRadar, RADAR_RADIUS_OPTIONS } from '../hooks/useRadar'
 
@@ -74,6 +75,7 @@ export function SettingsScreen(): React.ReactNode {
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
+  const [socialConnectVisible, setSocialConnectVisible] = useState(false)
 
   // Location streaks data
   const { topStreaks, isLoading: isLoadingStreaks, error: streaksError } = useLocationStreaks({ limit: 5 })
@@ -432,6 +434,27 @@ export function SettingsScreen(): React.ReactNode {
           </View>
         </View>
 
+        {/* Verified Socials Section (Feature 5.6) */}
+        <View style={styles.section} testID="settings-verified-socials-section">
+          <View style={styles.sectionHeader}>
+            <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary[400]} />
+            <Text style={styles.sectionTitle}>Verified Socials</Text>
+          </View>
+          <View style={[glassStyles.card, styles.glassCard]}>
+            <Text style={styles.sectionDescription}>
+              Connect via OAuth to verify your handles. Stays private until you share with a match.
+            </Text>
+            <TouchableOpacity
+              style={styles.linkRow}
+              onPress={() => setSocialConnectVisible(true)}
+              testID="settings-open-social-connect"
+            >
+              <Text style={styles.linkRowText}>Manage verified accounts</Text>
+              <Ionicons name="chevron-forward" size={18} color={darkTheme.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Location Tracking Section */}
         <View style={styles.section} testID="settings-location-tracking-section">
           <View style={styles.sectionHeader}>
@@ -769,6 +792,12 @@ export function SettingsScreen(): React.ReactNode {
           <Text style={styles.footerVersion}>Version 1.0.0</Text>
         </View>
       </ScrollView>
+
+      <SocialConnectModal
+        visible={socialConnectVisible}
+        onClose={() => setSocialConnectVisible(false)}
+        testID="settings-social-connect-modal"
+      />
     </View>
   )
 }
@@ -850,6 +879,17 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     marginVertical: 16,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  linkRowText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
   },
 
   // Empty states
