@@ -85,7 +85,8 @@
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-maps": "1.20.1",
-    "react-native-reanimated": "~3.17.0",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-worklets": "0.5.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
@@ -107,14 +108,15 @@
     "@types/node": "^20",
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.7",
-    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/coverage-v8": "4.0.18",
     "babel-plugin-module-resolver": "^5.0.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.9",
+    "jsdom": "^20.0.3",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "vitest": "^4.0.16"
+    "vitest": "4.0.18"
   },
   "overrides": {
     "react-test-renderer": "19.1.0",
