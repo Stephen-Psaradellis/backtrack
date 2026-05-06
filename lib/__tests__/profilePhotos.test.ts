@@ -999,21 +999,23 @@ describe('profilePhotos', () => {
   })
 
   describe('subscribeToPhotoChanges', () => {
-    it('should subscribe to changes and return unsubscribe function', () => {
+    it('should subscribe to changes and return unsubscribe function', async () => {
       const callback = vi.fn()
 
       const unsubscribe = subscribeToPhotoChanges(callback)
+      // Channel is built after the session resolves; flush microtasks.
+      await vi.waitFor(() => expect(mockChannel).toHaveBeenCalledWith('profile_photos_changes'))
 
-      expect(mockChannel).toHaveBeenCalledWith('profile_photos_changes')
       expect(mockOn).toHaveBeenCalled()
       expect(mockSubscribe).toHaveBeenCalled()
       expect(typeof unsubscribe).toBe('function')
     })
 
-    it('should call unsubscribe when returned function is called', () => {
+    it('should call unsubscribe when returned function is called', async () => {
       const callback = vi.fn()
 
       const unsubscribe = subscribeToPhotoChanges(callback)
+      await vi.waitFor(() => expect(mockSubscribe).toHaveBeenCalled())
       unsubscribe()
 
       expect(mockUnsubscribe).toHaveBeenCalled()

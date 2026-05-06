@@ -22,6 +22,7 @@
  */
 
 import * as Crypto from 'expo-crypto'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 import { supabase, supabaseUrl } from './supabase'
 import { captureException } from './sentry'
@@ -768,33 +769,40 @@ export async function getPhotoCount(): Promise<number> {
 export function subscribeToPhotoChanges(
   callback: (photos: ProfilePhoto[]) => void
 ): () => void {
-  // P-015: Filter subscription to current user only
-  // Get user ID synchronously from session cache
-  let userId: string | null = null
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    userId = session?.user?.id ?? null
-  })
+  let unsubscribed = false
+  let channel: RealtimeChannel | null = null
 
-  const channel = supabase
-    .channel('profile_photos_changes')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'profile_photos',
-        filter: userId ? `user_id=eq.${userId}` : undefined,
-      },
-      async () => {
-        // Refetch all photos when any change occurs
-        const photos = await getProfilePhotos()
-        callback(photos)
-      }
-    )
-    .subscribe()
+  // Resolve the session before building the channel so the user_id filter is set.
+  // Without awaiting, the filter falls back to undefined and Supabase realtime
+  // does not deliver row-level events through RLS — leaving pending photos stuck.
+  void (async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (unsubscribed) return
+
+    const userId = session?.user?.id
+    if (!userId) return
+
+    channel = supabase
+      .channel('profile_photos_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profile_photos',
+          filter: `user_id=eq.${userId}`,
+        },
+        async () => {
+          const photos = await getProfilePhotos()
+          callback(photos)
+        }
+      )
+      .subscribe()
+  })()
 
   return () => {
-    channel.unsubscribe()
+    unsubscribed = true
+    channel?.unsubscribe()
   }
 }
 

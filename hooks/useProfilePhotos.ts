@@ -196,22 +196,6 @@ export function useProfilePhotos(): UseProfilePhotosResult {
 
   const hasReachedLimit = photoCount >= MAX_PROFILE_PHOTOS
 
-  // Check for timeouts periodically
-  useEffect(() => {
-    const hasPendingPhotos = photos.some((p) => p.moderation_status === 'pending')
-
-    if (!hasPendingPhotos) {
-      return
-    }
-
-    const intervalId = setInterval(() => {
-      // Force re-render to update timeout status
-      forceUpdate((n) => n + 1)
-    }, TIMEOUT_CHECK_INTERVAL_MS)
-
-    return () => clearInterval(intervalId)
-  }, [photos])
-
   // Clean up pending start times when photos are no longer pending
   useEffect(() => {
     const currentPendingIds = new Set(
@@ -236,6 +220,37 @@ export function useProfilePhotos(): UseProfilePhotosResult {
       setError('Failed to load photos')
     }
   }, [])
+
+  // Check for timeouts periodically and re-fetch pending photos as a realtime fallback.
+  // The realtime subscription can miss updates (filter race, dropped websocket, missing
+  // table in publication), which would leave a pending photo's spinner stuck even after
+  // the moderation row has transitioned. Poll until no photo is pending, or until the
+  // longest pending photo has exceeded the timeout window — at which point the timeout
+  // UI takes over and further polling is wasted.
+  useEffect(() => {
+    const oldestPendingStart = Math.min(
+      ...photos
+        .filter((p) => p.moderation_status === 'pending')
+        .map((p) => pendingStartTimes.current.get(p.id) ?? Date.now())
+    )
+    const hasPendingPhotos = Number.isFinite(oldestPendingStart)
+
+    if (!hasPendingPhotos) {
+      return
+    }
+
+    const intervalId = setInterval(() => {
+      forceUpdate((n) => n + 1)
+
+      const stillPending = photos.some((p) => p.moderation_status === 'pending')
+      const exceededTimeout = Date.now() - oldestPendingStart > MODERATION_TIMEOUT_MS
+      if (stillPending && !exceededTimeout) {
+        loadPhotos()
+      }
+    }, TIMEOUT_CHECK_INTERVAL_MS)
+
+    return () => clearInterval(intervalId)
+  }, [photos, loadPhotos])
 
   // Initial load
   useEffect(() => {
